@@ -96,6 +96,7 @@ import {
   upsertMarketDataGapEvent,
   type MarketDataGapEventRecord,
   type MarketDataConfig,
+  type MarketBarsUpsertResult,
   type MarketBarTimeframe,
 } from './market-data-store';
 import {
@@ -1621,6 +1622,38 @@ function formatError(error: unknown): string {
   }
 }
 
+const scannerCacheUpsertSkipWarnings = new Set<string>();
+
+export function scannerMarketBarsUpsertSkipAuditLine(args: {
+  label: string;
+  timeframe: MarketBarTimeframe;
+  result: MarketBarsUpsertResult;
+}): string | null {
+  if (!args.result.skipped) return null;
+  const integrity = args.result.integrity;
+  return [
+    `[${args.label}] ${args.timeframe}: market_bars upsert skipped`,
+    `reason=${args.result.skipReason}`,
+    `rows=${integrity.rows}`,
+    `invalidAlignmentRows=${integrity.invalidAlignmentRows}`,
+    `invalidShortIntervalRows=${integrity.invalidShortIntervalRows}`,
+    `observedIntervals=${JSON.stringify(integrity.observedIntervalMinutes)}`,
+  ].join(' | ');
+}
+
+function warnScannerMarketBarsUpsertSkippedOnce(args: {
+  label: string;
+  timeframe: MarketBarTimeframe;
+  result: MarketBarsUpsertResult;
+}): void {
+  const line = scannerMarketBarsUpsertSkipAuditLine(args);
+  if (!line) return;
+  const key = `${args.label}:${args.timeframe}:${args.result.skipReason}:${JSON.stringify(args.result.integrity.observedIntervalMinutes)}:${args.result.integrity.invalidAlignmentRows}:${args.result.integrity.invalidShortIntervalRows}`;
+  if (scannerCacheUpsertSkipWarnings.has(key)) return;
+  scannerCacheUpsertSkipWarnings.add(key);
+  console.warn(line);
+}
+
 function money(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? String(value) : 'N/A';
 }
@@ -2053,6 +2086,11 @@ async function writeScannerDiscordAuditLog(args: {
       priceLevelMap: args.levelMap,
       ...(args.chartMarkup && args.levelMap ? buildDiscordTradePlanVisualProvenance(args.planVersionId) : {}),
     },
+    deliveryOutcome: {
+      status: 'pending_final_delivery',
+      reason: 'Discord artifact built; final delivery outcome has not been recorded yet.',
+      recordedAt: new Date().toISOString(),
+    },
   }).value;
   await writeRuntimeJsonAtomic(file, auditPayload);
   await verifyScannerAuditWrite({
@@ -2061,6 +2099,40 @@ async function writeScannerDiscordAuditLog(args: {
     expectedPlanVersionId: args.planVersionId,
   });
   return file;
+}
+
+export interface ScannerDiscordFinalDeliveryOutcome {
+  status: 'sent' | 'hard_suppressed' | 'duplicate_blocked' | 'delivery_failed';
+  reason: string;
+  recordedAt?: string;
+  discordMessageId?: string | null;
+  httpStatus?: number | null;
+  webhookSource?: string | null;
+  priorPlanVersionId?: string | null;
+  priorDiscordMessageId?: string | null;
+}
+
+export async function writeScannerDiscordFinalDeliveryOutcomeAuditLog(args: {
+  auditLogPath: string | null | undefined;
+  outcome: ScannerDiscordFinalDeliveryOutcome;
+}): Promise<boolean> {
+  if (!args.auditLogPath) return false;
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = (await readRuntimeJson<Record<string, unknown>>(args.auditLogPath)).value || {};
+  } catch {
+    return false;
+  }
+  const outcome = {
+    ...args.outcome,
+    recordedAt: args.outcome.recordedAt || new Date().toISOString(),
+  };
+  await writeRuntimeJsonAtomic(args.auditLogPath, {
+    ...parsed,
+    updatedAt: new Date().toISOString(),
+    deliveryOutcome: outcome,
+  });
+  return true;
 }
 
 export async function writeScannerDiscordReceiptAuditLog(args: {
@@ -2753,13 +2825,14 @@ async function fetchFiveMinuteBarsForHtfAggregation(args: {
     }
     if (args.marketConfig) {
       try {
-        await upsertMarketBars({
+        const upsertResult = await upsertMarketBars({
           bars: repair5m,
           instrument: args.config.instrument,
           bridgeInstrument: args.config.bridgeInstrument,
           timeframe: '5m',
           config: args.marketConfig,
         });
+        warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-history', timeframe: '5m', result: upsertResult });
       } catch (error) {
         console.warn(`[scanner-history] 5m: HTF aggregation repair bars loaded but cache upsert failed: ${formatError(error)}`);
       }
@@ -2778,13 +2851,14 @@ async function fetchLiveBars(config: ScannerConfig): Promise<Record<MarketBarTim
     const marketConfig = loadMarketDataConfig();
     if (marketConfig) {
       try {
-        await upsertMarketBars({
+        const upsertResult = await upsertMarketBars({
           bars,
           instrument: config.instrument,
           bridgeInstrument: config.bridgeInstrument,
           timeframe,
           config: marketConfig,
         });
+        warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-cache', timeframe, result: upsertResult });
       } catch (error) {
         console.warn(`[scanner-cache] ${timeframe}: cache upsert skipped: ${formatError(error)}`);
       }
@@ -2840,13 +2914,14 @@ async function fetchScannerHistoryFrame(args: {
         console.warn(`[scanner-history] ${args.timeframe}: bridge self-heal returned no bars for ${args.from} to ${args.to}: ${historical.error || 'unknown error'}`);
       } else if (marketConfig) {
         try {
-          await upsertMarketBars({
+          const upsertResult = await upsertMarketBars({
             bars: repaired,
             instrument: args.config.instrument,
             bridgeInstrument: args.config.bridgeInstrument,
             timeframe: args.timeframe,
             config: marketConfig,
           });
+          warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-history', timeframe: args.timeframe, result: upsertResult });
         } catch (error) {
           console.warn(`[scanner-history] ${args.timeframe}: self-healed bars loaded but cache upsert failed: ${formatError(error)}`);
         }
@@ -2874,13 +2949,14 @@ async function fetchScannerHistoryFrame(args: {
       bars = mergeBars(repaired, cached);
       if (marketConfig) {
         try {
-          await upsertMarketBars({
+          const upsertResult = await upsertMarketBars({
             bars: segmented,
             instrument: args.config.instrument,
             bridgeInstrument: args.config.bridgeInstrument,
             timeframe: args.timeframe,
             config: marketConfig,
           });
+          warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-history', timeframe: args.timeframe, result: upsertResult });
         } catch (error) {
           console.warn(`[scanner-history] ${args.timeframe}: segmented self-healed bars loaded but cache upsert failed: ${formatError(error)}`);
         }
@@ -2924,13 +3000,14 @@ async function fetchScannerHistoryFrame(args: {
       }
       if (marketConfig) {
         try {
-          await upsertMarketBars({
+          const upsertResult = await upsertMarketBars({
             bars: rebuilt,
             instrument: args.config.instrument,
             bridgeInstrument: args.config.bridgeInstrument,
             timeframe: args.timeframe,
             config: marketConfig,
           });
+          warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-history', timeframe: args.timeframe, result: upsertResult });
         } catch (error) {
           console.warn(`[scanner-history] ${args.timeframe}: 5M-derived self-healed bars loaded but cache upsert failed: ${formatError(error)}`);
         }
@@ -7753,14 +7830,15 @@ async function resolveCompletedFiveMinuteWithSelfHealing(args: {
       attempts.push(`historical_bridge=loaded (${repairedBars.length} bars)`);
       if (marketConfig) {
         try {
-          await upsertMarketBars({
+          const upsertResult = await upsertMarketBars({
             bars: repairedBars,
             instrument: args.config.instrument,
             bridgeInstrument: args.config.bridgeInstrument,
             timeframe: '5m',
             config: marketConfig,
           });
-          attempts.push('market_bars_upsert=ok');
+          warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-5m-assurance', timeframe: '5m', result: upsertResult });
+          attempts.push(upsertResult.skipped ? `market_bars_upsert=skipped (${upsertResult.skipReason})` : 'market_bars_upsert=ok');
         } catch (error) {
           attempts.push(`market_bars_upsert=error (${formatError(error)})`);
         }
@@ -9138,6 +9216,16 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           cleanupRecordKey: cleanupRecord?.key || null,
           ragReceiptAttached,
         });
+        await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+          auditLogPath: alertArtifacts.auditLogPath,
+          outcome: {
+            status: 'sent',
+            reason: 'Discord trade/review artifact delivered.',
+            discordMessageId: receipt.discordMessageId,
+            httpStatus: receipt.httpStatus,
+            webhookSource: receipt.webhookSource,
+          },
+        });
         state.alertDeliveries[alertKey] = markScannerAlertDeliverySent(pendingDelivery, {
           sentAt,
           httpStatus: receipt.httpStatus,
@@ -9145,6 +9233,16 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           discordMessageId: receipt.discordMessageId,
         });
       } else {
+        await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+          auditLogPath: alertArtifacts.auditLogPath,
+          outcome: {
+            status: 'hard_suppressed',
+            reason: `Discord delivery skipped: ${receipt.webhookSource || 'unknown'}.`,
+            discordMessageId: receipt.discordMessageId,
+            httpStatus: receipt.httpStatus,
+            webhookSource: receipt.webhookSource,
+          },
+        });
         state.alertDeliveries[alertKey] = markScannerAlertDeliverySkipped(pendingDelivery, {
           reason: `Discord delivery skipped: ${receipt.webhookSource || 'unknown'}.`,
           webhookSource: receipt.webhookSource === 'discord_disabled'
@@ -9179,6 +9277,15 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     } catch (error) {
       const httpStatus = error instanceof ScannerDiscordPostError ? error.httpStatus : null;
       const webhookSource = error instanceof ScannerDiscordPostError ? error.webhookSource : null;
+      await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+        auditLogPath: alertArtifacts.auditLogPath,
+        outcome: {
+          status: 'delivery_failed',
+          reason: sanitizedError(error),
+          httpStatus,
+          webhookSource,
+        },
+      });
       state.alertDeliveries[alertKey] = markScannerAlertDeliveryFailed(pendingDelivery, {
         error,
         httpStatus,

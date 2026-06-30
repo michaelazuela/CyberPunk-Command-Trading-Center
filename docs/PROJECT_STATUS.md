@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-06-30
+Task: Install Phase 1/2 HTF cache-noise cleanup and no-silent-drop Discord delivery proof.
+Files changed: tools/automation/market-data-store.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Live scanner logs were repeatedly warning on malformed 120m/240m cache upserts, and review-map artifacts could show Discord eligibility without the same artifact carrying a final sent/suppressed/failed delivery outcome.
+Tests run: `npx tsx tools/automation/market-data-ingestion.test.ts`; `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/live-discord-rollout.test.ts`; `npx tsx tools/automation/no-silent-drop-policy-audit.test.ts`; 2026-06-30 review-artifact final-outcome loopback; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Malformed timeframe cache writes now return structured `timeframe_interval_mismatch` skip results instead of throwing repeated scanner-cycle warnings; scanner cache/history callers summarize those skips once per distinct reason. Live scanner Discord artifacts now start with `pending_final_delivery` and are stamped with `sent`, `hard_suppressed`, or `delivery_failed` after delivery resolution. The June 30 eligible review artifact loopback confirmed the final outcome can no longer remain unknown.
+Trading logic changed: No. This changes cache persistence/logging and Discord audit accountability only; it does not change canExecute, execution approval, setup definitions, ranking, risk gates, stop/target math, model definitions, or 5M bar-close handling.
+Bridge impact: No bridge contract change. Malformed HTF bars are not cached as fake 120m/240m candles.
+Journal/RAG impact: None.
+Supabase impact: No schema migration. Invalid HTF cache writes are skipped before Supabase upsert.
+Known risks: None known.
+Next recommended action: Install the next separate phase for primary-side arbitration and HTF target-to-line review-map promotion so bullish HTF/FVG continuation maps are not crowded out by counter-structure shorts.
+
+## Previous Change
+
+Date: 2026-06-30
 Task: Clean active trading-language drift around target-room suppression and high-confidence conflict review visibility.
 Files changed: src/config/setupRegistry.ts, src/config/setupRegistry.test.ts, src/agents/bridgeDiagnosticReplayAgent.ts, src/lib/gemini.ts, src/lib/tradeDecisionPipeline.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: Active metadata and advisory prompt text still carried old 2R-minimum style language after the target-room rule moved to clean 1.5R viability. The Desk Play review-map selector also excluded HTF-conflict wording before a fresh complete high-confidence conditional map could be shown as review-only, which risked hiding counter-structure plans instead of explaining them.

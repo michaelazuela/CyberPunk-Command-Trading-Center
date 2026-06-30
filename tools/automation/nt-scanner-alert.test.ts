@@ -83,7 +83,9 @@ import {
   verifyScannerActiveCampaignLedgerReady,
   writeLocalMarketDataGapEvent,
   writeScannerDiscordReceiptAuditLog,
+  writeScannerDiscordFinalDeliveryOutcomeAuditLog,
   writeScannerDecisionTapeAuditLog,
+  scannerMarketBarsUpsertSkipAuditLine,
   upsertScannerDiscordAlertRagRecord,
   upsertScannerReversalWatchRagRecord,
   normalizeScannerBarTimestampMode,
@@ -117,6 +119,87 @@ assert.equal(shouldLogBridgeInstrumentResolution({
   source: 'front-month-rollover',
   warning: null,
 }, 'MES'), false);
+
+const malformedHtfSkipLine = scannerMarketBarsUpsertSkipAuditLine({
+  label: 'scanner-cache',
+  timeframe: '120m',
+  result: {
+    upserted: 0,
+    skipped: true,
+    skipReason: 'timeframe_interval_mismatch',
+    integrity: {
+      timeframe: '120m',
+      expectedIntervalMinutes: 120,
+      rows: 3,
+      oldestCandleTimeEt: '2026-06-30T10:00:00',
+      newestCandleTimeEt: '2026-06-30T10:10:00',
+      observedIntervalMinutes: { '5': 2 },
+      invalidAlignmentRows: 2,
+      invalidShortIntervalRows: 2,
+      invalidRows: [],
+      valid: false,
+    },
+  },
+});
+assert.ok(malformedHtfSkipLine?.includes('reason=timeframe_interval_mismatch'));
+assert.ok(malformedHtfSkipLine?.includes('invalidShortIntervalRows=2'));
+
+await fs.mkdir(auditDir, { recursive: true });
+const finalOutcomeAuditFile = path.join(auditDir, 'scanner-final-delivery-outcome-loopback.json');
+await fs.writeFile(finalOutcomeAuditFile, JSON.stringify({
+  source: 'live-scanner',
+  planVersionId: 'FINAL-OUTCOME-LOOPBACK',
+  visibility: {
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    authority: { discordEligible: true, canExecute: false },
+  },
+  candidateLifecycleTrace: {
+    alertDecision: { shouldSend: true, reason: 'eligible high-confidence review map' },
+  },
+  deliveryOutcome: {
+    status: 'pending_final_delivery',
+    reason: 'fixture pending',
+    recordedAt: '2026-06-30T15:05:00.000Z',
+  },
+}, null, 2));
+assert.equal(await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+  auditLogPath: finalOutcomeAuditFile,
+  outcome: {
+    status: 'sent',
+    reason: 'Discord review map delivered in loopback.',
+    discordMessageId: 'loopback-message-id',
+    httpStatus: 204,
+    webhookSource: 'scanner',
+  },
+}), true);
+let finalOutcomeAudit = JSON.parse(await fs.readFile(finalOutcomeAuditFile, 'utf8'));
+assert.equal(finalOutcomeAudit.deliveryOutcome.status, 'sent');
+assert.equal(finalOutcomeAudit.deliveryOutcome.discordMessageId, 'loopback-message-id');
+assert.equal(await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+  auditLogPath: finalOutcomeAuditFile,
+  outcome: {
+    status: 'hard_suppressed',
+    reason: 'stale/no-chase loopback suppression',
+    httpStatus: null,
+    webhookSource: 'phase11_boundary',
+  },
+}), true);
+finalOutcomeAudit = JSON.parse(await fs.readFile(finalOutcomeAuditFile, 'utf8'));
+assert.equal(finalOutcomeAudit.deliveryOutcome.status, 'hard_suppressed');
+assert.match(finalOutcomeAudit.deliveryOutcome.reason, /stale\/no-chase/);
+assert.equal(await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+  auditLogPath: finalOutcomeAuditFile,
+  outcome: {
+    status: 'delivery_failed',
+    reason: 'Discord webhook failed in loopback',
+    httpStatus: 500,
+    webhookSource: 'scanner',
+  },
+}), true);
+finalOutcomeAudit = JSON.parse(await fs.readFile(finalOutcomeAuditFile, 'utf8'));
+assert.equal(finalOutcomeAudit.deliveryOutcome.status, 'delivery_failed');
+assert.equal(finalOutcomeAudit.deliveryOutcome.httpStatus, 500);
 
 function counterStructureDeskStateFixture(direction: 'LONG' | 'SHORT', lowerBias: 'BULL' | 'BEAR' | 'RANGE'): DeskState {
   const matchingBias = direction === 'LONG' ? 'BULL' : 'BEAR';

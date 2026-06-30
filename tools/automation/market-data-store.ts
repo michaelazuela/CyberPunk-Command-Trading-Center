@@ -25,6 +25,21 @@ export interface MarketBarRecord {
   metadata: Record<string, unknown>;
 }
 
+export interface MarketBarsUpsertSkipped {
+  skipped: true;
+  skipReason: 'timeframe_interval_mismatch';
+  integrity: MarketBarTimeframeIntegrityReport;
+}
+
+export interface MarketBarsUpsertApplied {
+  upserted: number;
+  skipped?: false;
+  skipReason?: null;
+  integrity?: MarketBarTimeframeIntegrityReport;
+}
+
+export type MarketBarsUpsertResult = MarketBarsUpsertApplied | ({ upserted: 0 } & MarketBarsUpsertSkipped);
+
 export interface MarketDataGapEventRecord {
   user_id: string;
   instrument: string;
@@ -264,10 +279,15 @@ export async function upsertMarketBars({
   bridgeInstrument: string;
   timeframe: MarketBarTimeframe;
   config: MarketDataConfig;
-}): Promise<{ upserted: number }> {
-  const intervalMismatches = countMarketBarTimeframeIntervalMismatches(bars, timeframe);
-  if (intervalMismatches > 0) {
-    throw new Error(`Refusing to upsert ${bridgeInstrument} ${timeframe} market_bars: ${intervalMismatches} candle interval(s) are smaller than the requested timeframe.`);
+}): Promise<MarketBarsUpsertResult> {
+  const integrity = buildMarketBarTimeframeIntegrityReport(bars, timeframe);
+  if (!integrity.valid) {
+    return {
+      upserted: 0,
+      skipped: true,
+      skipReason: 'timeframe_interval_mismatch',
+      integrity,
+    };
   }
   const records = toMarketBarRecords({
     bars,
@@ -276,7 +296,7 @@ export async function upsertMarketBars({
     bridgeInstrument,
     timeframe,
   });
-  if (!records.length) return { upserted: 0 };
+  if (!records.length) return { upserted: 0, skipped: false, skipReason: null, integrity };
 
   const supabase = createMarketDataClient(config);
   const { error } = await supabase
@@ -287,7 +307,7 @@ export async function upsertMarketBars({
     });
 
   if (error) throw error;
-  return { upserted: records.length };
+  return { upserted: records.length, skipped: false, skipReason: null, integrity };
 }
 
 export function toMarketDataGapEventRecord({
