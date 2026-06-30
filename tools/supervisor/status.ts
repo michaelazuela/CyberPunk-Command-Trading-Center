@@ -4,6 +4,7 @@ import type { EndOfDayEvidenceSummary } from './endOfDayEvidenceSummary';
 import type { SupervisorHealthReport } from './health';
 import type { PreWindowBackfillResult } from './preWindowBackfill';
 import type { SupervisorState } from './processManager';
+import { readQuantDeskMaintenanceStatus, type QuantDeskMaintenanceStatus } from '../automation/quant-desk-maintenance';
 
 export type SupervisorRuntimeStatus = 'starting' | 'ready' | 'config_error';
 
@@ -41,6 +42,7 @@ export interface SupervisorStatusPayload {
   delivery: DeliveryVisibilityReport | null;
   preWindowBackfill: PreWindowBackfillResult | null;
   endOfDayEvidenceSummary: EndOfDayEvidenceSummary | null;
+  maintenance: QuantDeskMaintenanceStatus;
   boundaries: {
     startsChildProcesses: boolean;
     autoRestartsChildProcesses: boolean;
@@ -64,6 +66,7 @@ export function buildSupervisorStatus(
   endOfDayEvidenceSummary: EndOfDayEvidenceSummary | null = null,
 ): SupervisorStatusPayload {
   const runtimeById = new Map((state?.services || []).map((service) => [service.id, service]));
+  const maintenance = readQuantDeskMaintenanceStatus();
 
   return {
     supervisor: {
@@ -101,6 +104,7 @@ export function buildSupervisorStatus(
     delivery,
     preWindowBackfill,
     endOfDayEvidenceSummary,
+    maintenance,
     boundaries: {
       startsChildProcesses: true,
       autoRestartsChildProcesses: configResult.config.health.restartEnabled,

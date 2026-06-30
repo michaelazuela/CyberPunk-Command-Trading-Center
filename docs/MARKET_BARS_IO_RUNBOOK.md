@@ -17,6 +17,26 @@ Do not use this workflow to delete trades, RAG records, research records, Discor
 
 ## Commands
 
+Stop all Quant Desk automation and create a maintenance lock:
+
+```bash
+npm run quant-desk:stop-all
+```
+
+Check process/maintenance status:
+
+```bash
+npm run quant-desk:status
+```
+
+Maintenance lock controls:
+
+```bash
+npm run quant-desk:maintenance:on
+npm run quant-desk:maintenance:status
+npm run quant-desk:maintenance:off
+```
+
 Read-only audit:
 
 ```bash
@@ -35,18 +55,36 @@ Apply retention:
 npm run market-bars:retention:apply
 ```
 
+Retention apply requires maintenance mode and a stopped Quant Desk automation stack. This prevents the recorder from writing `market_bars` while cleanup is deleting old cache rows. Use `npm run quant-desk:stop-all` before production retention apply.
+
 The tool writes receipts under `tools/automation/diagnostic-reports/`. Receipts include cutoff, dry-run/apply status, rows selected/deleted, timeframe counts, errors, risk status, and the boundary statement that this is market-data cache hardening only.
 
 ## Disk IO Warning Response
 
 When Supabase reports Disk IO pressure:
 
-1. Run the read-only audit.
-2. Run retention dry-run.
-3. Review receipt counts and errors.
-4. Apply retention only when the dry-run is sane.
-5. Confirm recorder/scanner health.
-6. Consider Supabase compute/IO upgrade only after retention, recorder throttling, and backfill hardening are verified.
+1. Run `npm run quant-desk:stop-all`.
+2. Confirm `npm run quant-desk:status` shows no Quant Desk automation processes and maintenance mode is active.
+3. Run the read-only audit.
+4. Run retention dry-run.
+5. Review receipt counts and errors.
+6. Apply retention only when the dry-run is sane.
+7. Clear maintenance mode with `npm run quant-desk:maintenance:off` after cleanup is complete.
+8. Restart supervisor services only when Supabase IO is stable.
+9. Consider Supabase compute/IO upgrade only after retention, recorder throttling, and backfill hardening are verified.
+
+## Scanner Stop vs Stop-All
+
+Scanner-only stop is not enough for Supabase cleanup. The candle recorder can still run under supervisor ownership and continue upserting OHLC rows. Use stop-all when you need the entire automation stack stopped:
+
+- supervisor
+- scanner
+- candle recorder
+- startup/pre-window backfill
+- Discord scheduler
+- npm/cmd/tsx wrappers launched by these services
+
+The tray `Stop All` action calls the same stop-all path. During maintenance mode, supervisor health notifications must not report misleading heartbeat recovered/warning events; the services are intentionally stopped.
 
 ## Recorder And Backfill Behavior
 

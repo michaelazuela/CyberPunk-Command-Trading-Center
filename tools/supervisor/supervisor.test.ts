@@ -34,6 +34,7 @@ import {
 import type { SupervisorState } from './processManager';
 import { buildSupervisorStatus } from './status';
 import { isAddressInUseError } from './index';
+import { clearQuantDeskMaintenanceLock, createQuantDeskMaintenanceLock } from '../automation/quant-desk-maintenance';
 
 async function waitForProcessExit(pid: number | null, timeoutMs = 5000): Promise<boolean> {
   const startedAt = Date.now();
@@ -121,6 +122,7 @@ assert.equal(status.supervisor.status, 'ready');
 assert.equal(status.supervisor.timestamp, '2026-06-05T12:00:00.000Z');
 assert.equal(status.config.status, 'valid');
 assert.equal(status.endOfDayEvidenceSummary, null);
+assert.equal(status.maintenance.active, false);
 assert.equal(status.boundaries.startsChildProcesses, true);
 assert.equal(status.boundaries.autoRestartsChildProcesses, true);
 assert.equal(status.boundaries.restartPolicy, 'owned_failed_child_process_only');
@@ -135,6 +137,24 @@ assert.equal(isAddressInUseError(new Error('listen EADDRINUSE')), false);
 assert.equal(status.boundaries.changesCanExecuteBehavior, false);
 assert.equal(JSON.stringify(status).includes('"canExecute":true'), false);
 assert.equal(status.boundaries.changesDiscordBehavior, false);
+const maintenanceCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'quant-desk-supervisor-maintenance-'));
+createQuantDeskMaintenanceLock({ cwd: maintenanceCwd, reason: 'supervisor test', owner: 'test', action: 'test' });
+const previousCwd = process.cwd();
+process.chdir(maintenanceCwd);
+try {
+  const maintenanceStatus = buildSupervisorStatus(defaultConfig);
+  assert.equal(maintenanceStatus.maintenance.active, true);
+  const notificationResult = buildSupervisorNotifications(maintenanceStatus, {
+    lastStatuses: { 'service:scanner': 'stopped', recorder_heartbeat: 'warn' },
+    lastSentAtByKey: {},
+  });
+  assert.equal(notificationResult.notifications.length, 0);
+  assert.equal(notificationResult.nextState.lastStatuses.recorder_heartbeat, 'maintenance');
+} finally {
+  process.chdir(previousCwd);
+  clearQuantDeskMaintenanceLock({ cwd: maintenanceCwd });
+  fs.rmSync(maintenanceCwd, { recursive: true, force: true });
+}
 const phase6SignoffSource = await import('./phase6Signoff');
 assert.equal('runTradeDecisionPipeline' in phase6SignoffSource, false);
 assert.equal('scanSetupCandidates' in phase6SignoffSource, false);
@@ -192,6 +212,8 @@ const trayStartScriptPath = path.join(repoRoot, 'Start-QuantDeskSupervisorTray.p
 const trayStartScript = fs.readFileSync(trayStartScriptPath, 'utf8');
 const supervisorStartScriptPath = path.join(repoRoot, 'Start-QuantDesk-Supervisor.ps1');
 const supervisorStartScript = fs.readFileSync(supervisorStartScriptPath, 'utf8');
+const supervisorStopScriptPath = path.join(repoRoot, 'Stop-QuantDesk-Supervisor.ps1');
+const supervisorStopScript = fs.readFileSync(supervisorStopScriptPath, 'utf8');
 const liveSignoffScriptPath = path.join(repoRoot, 'Open-QuantDesk-LiveSignoff.ps1');
 const liveSignoffScript = fs.readFileSync(liveSignoffScriptPath, 'utf8');
 const evidenceSummaryScriptPath = path.join(repoRoot, 'Open-QuantDesk-EvidenceSummary.ps1');
@@ -210,6 +232,7 @@ assert.ok(trayScript.includes('Open Research Status'));
 assert.ok(trayScript.includes('Open-QuantDesk-ResearchReview.ps1'));
 assert.ok(trayScript.includes('open-research-status'));
 assert.ok(trayScript.includes('Stop All'));
+assert.ok(supervisorStopScript.includes('quant-desk:stop-all'));
 assert.ok(trayScript.includes('Repair Market Cache Now'));
 assert.ok(trayScript.includes('manual-market-cache-repair'));
 assert.ok(trayScript.includes('Restart Supervisor Services'));

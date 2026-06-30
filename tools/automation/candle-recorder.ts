@@ -6,6 +6,7 @@ import { getNinjaBridgeBars, getNinjaHistoricalBars } from '../../src/lib/ninjaT
 import { assessBridgeBarStaleness, latestCompletedBar, type BridgeTimestampMode, type BridgeTimeZoneMode } from '../../src/lib/localScannerEngine';
 import { loadMarketDataConfig, normalizeCandleTimeEt, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
+import { readQuantDeskMaintenanceStatus } from './quant-desk-maintenance';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -324,6 +325,11 @@ async function resolveRecorderBridgeInstrument(args: {
 }
 
 async function main() {
+  const startupMaintenance = readQuantDeskMaintenanceStatus();
+  if (startupMaintenance.active) {
+    console.log(`[market-cache] maintenance lock active; recorder exiting before market_bars writes. ${startupMaintenance.reason}`);
+    return;
+  }
   const bridgeUrl = argValue('bridge-url') || process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765';
   const instrument = ((argValue('instrument') || 'MES') as Instrument);
   const requestedBridgeInstrument = argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES';
@@ -356,6 +362,11 @@ async function main() {
 
   do {
     try {
+      const maintenance = readQuantDeskMaintenanceStatus();
+      if (maintenance.active) {
+        console.log(`[market-cache] maintenance lock active; recorder stopping before market_bars writes. ${maintenance.reason}`);
+        return;
+      }
       const resolution = await resolveRecorderBridgeInstrument({
         bridgeUrl,
         instrument,

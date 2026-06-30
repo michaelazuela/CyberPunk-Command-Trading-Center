@@ -135,6 +135,7 @@ import {
 } from './professional-report-language';
 import { resolveCurrentBridgeInstrument, type BridgeInstrumentResolution } from './bridge-instrument-resolver';
 import { etDateTime } from './et-time';
+import { readQuantDeskMaintenanceStatus } from './quant-desk-maintenance';
 import { isGeminiAdvisoryFallbackEnabled } from '../../src/config/geminiFallback';
 import {
   attachDiscordMessageReceiptToRagPayload,
@@ -9192,6 +9193,11 @@ async function main() {
     printHelp();
     return;
   }
+  const startupMaintenance = readQuantDeskMaintenanceStatus();
+  if (startupMaintenance.active) {
+    console.log(`[scanner] maintenance lock active; scanner exiting before Discord or trade-plan delivery. ${startupMaintenance.reason}`);
+    return;
+  }
 
   const config = loadConfig();
   if (hasArg('preflight-active-campaign-ledger')) {
@@ -9216,6 +9222,11 @@ async function main() {
 
   do {
     try {
+      const maintenance = readQuantDeskMaintenanceStatus();
+      if (maintenance.active) {
+        console.log(`[scanner] maintenance lock active; scanner stopping before Discord or trade-plan delivery. ${maintenance.reason}`);
+        return;
+      }
       await runCycle(config);
     } catch (error) {
       console.error(`[scanner] cycle failed: ${formatError(error)}`);

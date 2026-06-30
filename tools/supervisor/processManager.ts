@@ -2,6 +2,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { readRuntimeJsonSync, writeRuntimeJsonAtomicSync } from '../runtimeJson';
+import { readQuantDeskMaintenanceStatus } from '../automation/quant-desk-maintenance';
 import type { SupervisorChildService, SupervisorConfig } from './config';
 import type { SupervisorLogger } from './logger';
 
@@ -215,6 +216,27 @@ export function getSupervisorState(config: SupervisorConfig): SupervisorState {
 
 export function launchEnabledServices(config: SupervisorConfig, logger: SupervisorLogger): SupervisorState {
   let state = getSupervisorState(config);
+  const maintenance = readQuantDeskMaintenanceStatus();
+  if (maintenance.active) {
+    const stoppedState = {
+      ...state,
+      supervisorPid: process.pid,
+      statePath: statePath(config.logsDir),
+      services: config.childServices.map((service) => ({
+        ...(state.services.find((item) => item.id === service.id) || serviceStateFromConfig(config, service)),
+        pid: null,
+        startedAt: null,
+        status: service.enabled ? 'stopped' as ChildRuntimeStatus : 'disabled' as ChildRuntimeStatus,
+        error: service.enabled ? `Maintenance lock active: ${maintenance.reason}` : null,
+      })),
+    };
+    writeSupervisorState(config, stoppedState);
+    logger.log('info', 'Child service launch skipped because maintenance lock is active.', {
+      lockPath: maintenance.path,
+      reason: maintenance.reason,
+    });
+    return stoppedState;
+  }
 
   state = {
     ...state,
@@ -316,6 +338,14 @@ function canRestartService(config: SupervisorConfig, service: SupervisorServiceS
 }
 
 export function restartFailedOwnedServices(config: SupervisorConfig, logger: SupervisorLogger, now = new Date()): SupervisorState {
+  const maintenance = readQuantDeskMaintenanceStatus();
+  if (maintenance.active) {
+    logger.log('info', 'Child service restart skipped because maintenance lock is active.', {
+      lockPath: maintenance.path,
+      reason: maintenance.reason,
+    });
+    return stopOwnedServices(config, logger);
+  }
   let state = getSupervisorState(config);
   const byId = new Map(state.services.map((service) => [service.id, service]));
 

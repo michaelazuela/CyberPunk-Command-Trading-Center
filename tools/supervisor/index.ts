@@ -8,6 +8,8 @@ import { buildHealthReport } from './health';
 import { runHtfPreloadStartup } from './htfPreload';
 import { createSupervisorLogger } from './logger';
 import { sendSupervisorNotifications, sendSupervisorSelfHealNotification } from './notifications';
+import { readQuantDeskMaintenanceStatus } from '../automation/quant-desk-maintenance';
+import { stopAllQuantDeskAutomation } from '../automation/quant-desk-process-control';
 import { runPreWindowBackfillIfDue } from './preWindowBackfill';
 import {
   getSupervisorState,
@@ -110,6 +112,14 @@ export async function runSupervisorStop(): Promise<void> {
   stopSupervisorProcess(configResult.config, logger);
 }
 
+export async function runSupervisorStopAll(): Promise<void> {
+  const report = stopAllQuantDeskAutomation({
+    reason: 'Supervisor stop-all requested; scanner, recorder, backfill, and Discord scheduler intentionally stopped.',
+  });
+  printJson(report);
+  if (!report.ok) process.exitCode = 1;
+}
+
 export async function runSupervisorPhase6Signoff(args = process.argv.slice(3)): Promise<void> {
   const options = parseSupervisorPhase6SignoffArgs(args);
   const status = await buildSupervisorPhase6SignoffStatus(options);
@@ -141,6 +151,24 @@ export function startSupervisor(): http.Server {
     }
     monitorInFlight = true;
     try {
+      const maintenance = readQuantDeskMaintenanceStatus();
+      if (maintenance.active) {
+        supervisorState = withCurrentSupervisorPid(stopOwnedServices(configResult.config, logger));
+        lastPreWindowBackfill = {
+          enabled: false,
+          attempted: false,
+          due: false,
+          run: null,
+          reason: `Maintenance mode active; pre-window backfill and child restarts are intentionally stopped. ${maintenance.reason}`,
+        };
+        lastHealthReport = await buildHealthReport(configResult.config, supervisorState);
+        lastDeliveryReport = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
+        logger.log('info', 'Supervisor monitor held in maintenance mode.', {
+          lockPath: maintenance.path,
+          reason: maintenance.reason,
+        });
+        return;
+      }
       supervisorState = withCurrentSupervisorPid(restartFailedOwnedServices(configResult.config, logger));
       lastPreWindowBackfill = runPreWindowBackfillIfDue(configResult.config, logger);
       lastHealthReport = await buildHealthReport(configResult.config, supervisorState);
@@ -231,17 +259,25 @@ export function startSupervisor(): http.Server {
       `Quant Desk Local Supervisor listening on http://${configResult.config.host}:${configResult.config.port}${configResult.config.statusPath}\n`,
     );
 
+    const maintenance = readQuantDeskMaintenanceStatus();
     supervisorState = launchEnabledServices(configResult.config, logger);
-    const preloadResult = runHtfPreloadStartup(configResult.config, logger);
-    logger.log(preloadResult.ok ? 'info' : 'warn', 'HTF preload startup result.', {
-      enabled: preloadResult.enabled,
-      attempted: preloadResult.attempted,
-      ok: preloadResult.ok,
-      reason: preloadResult.reason,
-      stdoutLog: preloadResult.stdoutLog,
-      stderrLog: preloadResult.stderrLog,
-      childServicesLaunchedBeforePreload: true,
-    });
+    if (maintenance.active) {
+      logger.log('info', 'HTF preload skipped because maintenance lock is active.', {
+        lockPath: maintenance.path,
+        reason: maintenance.reason,
+      });
+    } else {
+      const preloadResult = runHtfPreloadStartup(configResult.config, logger);
+      logger.log(preloadResult.ok ? 'info' : 'warn', 'HTF preload startup result.', {
+        enabled: preloadResult.enabled,
+        attempted: preloadResult.attempted,
+        ok: preloadResult.ok,
+        reason: preloadResult.reason,
+        stdoutLog: preloadResult.stdoutLog,
+        stderrLog: preloadResult.stderrLog,
+        childServicesLaunchedBeforePreload: true,
+      });
+    }
     monitorTimer = setInterval(() => {
       monitor().catch((error) => logger.log('warn', 'Supervisor monitor failed safely.', { error: String(error) }));
     }, configResult.config.health.monitorIntervalMs);
@@ -262,6 +298,8 @@ if (isDirectCliEntrypoint()) {
     await runSupervisorStatus();
   } else if (command === 'stop') {
     await runSupervisorStop();
+  } else if (command === 'stop-all') {
+    await runSupervisorStopAll();
   } else if (command === 'phase6-signoff') {
     await runSupervisorPhase6Signoff();
   } else if (command === 'notify-self-heal') {
@@ -269,7 +307,7 @@ if (isDirectCliEntrypoint()) {
     const result = await sendSupervisorSelfHealNotification(configResult.config.logsDir);
     printJson(result);
   } else {
-    process.stderr.write('Usage: tsx tools/supervisor/index.ts [start|check|status|stop|phase6-signoff|notify-self-heal]\n');
+    process.stderr.write('Usage: tsx tools/supervisor/index.ts [start|check|status|stop|stop-all|phase6-signoff|notify-self-heal]\n');
     process.exitCode = 1;
   }
 }

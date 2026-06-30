@@ -202,6 +202,14 @@ export function buildSupervisorNotifications(
     lastSentAtByKey: { ...previous.lastSentAtByKey },
     postedMessages: { ...(previous.postedMessages || {}) },
   };
+  if (status.maintenance?.active) {
+    nextState.lastStatuses.maintenance = 'active';
+    nextState.lastStatuses['service:scanner'] = serviceStatus(status, 'scanner');
+    nextState.lastStatuses['service:candle-recorder'] = serviceStatus(status, 'candle-recorder');
+    nextState.lastStatuses.recorder_heartbeat = 'maintenance';
+    return { notifications, nextState };
+  }
+  nextState.lastStatuses.maintenance = 'inactive';
 
   if (
     isReadyStatus(status) &&

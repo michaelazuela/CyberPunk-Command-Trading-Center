@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { getNinjaHistoricalBars } from '../../src/lib/ninjaTraderBridge';
 import { fetchRawCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
+import { readQuantDeskMaintenanceStatus } from './quant-desk-maintenance';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -81,6 +82,11 @@ function etDateTime(dateText: string, time: string): string {
 }
 
 async function main() {
+  const maintenance = readQuantDeskMaintenanceStatus();
+  if (maintenance.active) {
+    console.log(`[backfill] maintenance lock active; backfill exiting before market_bars writes. ${maintenance.reason}`);
+    return;
+  }
   const bridgeUrl = argValue('bridge-url') || process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765';
   const instrument = ((argValue('instrument') || 'MES') as Instrument);
   let bridgeInstrument = argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || instrument;

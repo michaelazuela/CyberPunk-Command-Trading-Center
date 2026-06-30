@@ -2,6 +2,21 @@
 
 ## Latest Change
 
+Date: 2026-06-30
+Task: Add Quant Desk stop-all and maintenance lock for Supabase IO cleanup.
+Files changed: tools/automation/quant-desk-maintenance.ts, tools/automation/quant-desk-process-control.ts, tools/automation/quant-desk-process-control.test.ts, tools/automation/candle-recorder.ts, tools/automation/nt-scanner.ts, tools/automation/backfill-market-bars.ts, tools/automation/market-bars-retention.ts, tools/supervisor/index.ts, tools/supervisor/processManager.ts, tools/supervisor/status.ts, tools/supervisor/notifications.ts, tools/supervisor/supervisor.test.ts, Stop-QuantDesk-Supervisor.ps1, package.json, docs/MARKET_BARS_IO_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Tray scanner shutdown could leave supervisor-owned or orphaned candle-recorder processes running, which continued `market_bars` Supabase writes during IO recovery/retention cleanup.
+Tests run: Quant Desk process-control loopback, supervisor/health tests, recorder throttle test, retention tests, retention audit test, guards, lint, and build.
+Result: Passed. Stop-all process matching excludes unrelated Vite/Node processes, maintenance lock suppresses supervisor heartbeat notifications, recorder/scanner/backfill exit before writes or Discord delivery under maintenance, retention apply refuses without maintenance, and guards/lint/build completed cleanly.
+Trading logic changed: No.
+Bridge impact: No market-data interpretation change. Automation can now intentionally stop before bridge fetch/write loops during maintenance.
+Journal/RAG impact: None.
+Supabase impact: No schema migration. Retention apply is now guarded by maintenance mode and stopped automation to prevent concurrent recorder writes.
+Known risks: None known.
+Next recommended action: Use `npm run quant-desk:stop-all` before Supabase cleanup; clear maintenance with `npm run quant-desk:maintenance:off` before restarting live services.
+
+## Previous Change
+
 Date: 2026-06-29
 Task: Add market_bars IO retention, recorder throttle, and backfill hardening.
 Files changed: tools/automation/market-bars-retention-core.ts, tools/automation/market-bars-retention-audit.ts, tools/automation/market-bars-retention.ts, tools/automation/market-bars-retention-audit.test.ts, tools/automation/market-bars-retention.test.ts, tools/automation/candle-recorder.ts, tools/automation/candle-recorder-throttle.test.ts, tools/automation/backfill-market-bars.ts, tools/automation/backfill-market-bars.test.ts, tools/supervisor/index.ts, package.json, docs/MARKET_BARS_IO_RUNBOOK.md, docs/PROJECT_STATUS.md.
