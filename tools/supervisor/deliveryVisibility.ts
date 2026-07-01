@@ -3,6 +3,11 @@ import path from 'node:path';
 import { readRuntimeJsonSync } from '../runtimeJson';
 
 export type ScannerDeliveryStatus = 'sent' | 'failed' | 'pending' | 'skipped' | 'unknown';
+export type ScannerDeliveryHistoricalClassification = 'current' | 'pre_fix_historical';
+
+const DISCORD_VISIBILITY_FIX_COMMIT = 'bb30bc4';
+const DISCORD_VISIBILITY_FIX_RESTARTED_AT = '2026-07-01T01:36:13.130Z';
+const DISCORD_VISIBILITY_FIX_RESTARTED_AT_MS = parseDateMs(DISCORD_VISIBILITY_FIX_RESTARTED_AT);
 
 export interface ScannerDeliveryRecord {
   alertKey: string;
@@ -22,6 +27,8 @@ export interface ScannerDeliveryRecord {
   auditLogPath: string | null;
   stale: boolean | null;
   retryEligible: boolean | null;
+  historicalClassification?: ScannerDeliveryHistoricalClassification;
+  historicalReason?: string | null;
 }
 
 export interface ScannerSentRecord {
@@ -61,6 +68,14 @@ export interface DeliveryVisibilityReport {
   lastDiscordSend: ScannerDeliveryRecord | null;
   lastHistoricalDelivery: ScannerDeliveryRecord | null;
   lastHistoricalDiscordSend: ScannerDeliveryRecord | null;
+  historicalAuditCutoff?: {
+    classification: 'pre_fix_historical';
+    commit: string;
+    restartedAt: string;
+    ignoredFromActiveRisk: true;
+    reason: string;
+  };
+  preFixHistoricalDeliveries?: ScannerDeliveryRecord[];
   failedDeliveries: ScannerDeliveryRecord[];
   pendingDeliveries: ScannerDeliveryRecord[];
   skippedDeliveries: ScannerDeliveryRecord[];
@@ -165,14 +180,28 @@ function deliveryStatus(value: unknown): ScannerDeliveryStatus {
   return 'unknown';
 }
 
+function deliveryAttemptMs(delivery: Pick<ScannerDeliveryRecord, 'attemptedAt' | 'sentAt'>): number {
+  return parseDateMs(delivery.attemptedAt || delivery.sentAt);
+}
+
+function isPreFixHistoricalDelivery(delivery: Pick<ScannerDeliveryRecord, 'attemptedAt' | 'sentAt' | 'webhookSource' | 'error'>): boolean {
+  const attemptedMs = deliveryAttemptMs(delivery);
+  return Boolean(attemptedMs && attemptedMs < DISCORD_VISIBILITY_FIX_RESTARTED_AT_MS);
+}
+
+function historicalReason(delivery: Pick<ScannerDeliveryRecord, 'attemptedAt' | 'sentAt' | 'webhookSource' | 'error'>): string | null {
+  if (!isPreFixHistoricalDelivery(delivery)) return null;
+  return `pre_fix_historical: before scanner restart ${DISCORD_VISIBILITY_FIX_RESTARTED_AT} after commit ${DISCORD_VISIBILITY_FIX_COMMIT}; kept as evidence, excluded from active suppression risk.`;
+}
+
 function sortByRecentDate<T>(items: T[], getDate: (item: T) => string | null): T[] {
   return [...items].sort((a, b) => parseDateMs(getDate(b)) - parseDateMs(getDate(a)));
 }
 
-function toDelivery(alertKey: string, raw: unknown): ScannerDeliveryRecord {
+function toDelivery(alertKey: string, raw: unknown, historicalCutoffActive = true): ScannerDeliveryRecord {
   const record = asRecord(raw);
   const candidate = asRecord(record.candidate);
-  return {
+  const delivery = {
     alertKey,
     planVersionId: stringOrNull(record.planVersionId),
     instrument: stringOrNull(record.instrument),
@@ -192,6 +221,12 @@ function toDelivery(alertKey: string, raw: unknown): ScannerDeliveryRecord {
     retryEligible: boolOrNull(record.retryEligible),
     // Touch candidate fields only to preserve visibility in future expansion without exposing executable claims.
     ...(Object.keys(candidate).length ? {} : {}),
+  };
+  const reason = historicalCutoffActive ? historicalReason(delivery) : null;
+  return {
+    ...delivery,
+    historicalClassification: reason ? 'pre_fix_historical' : 'current',
+    historicalReason: reason,
   };
 }
 
@@ -366,17 +401,20 @@ export function buildDeliveryVisibilityReport(args: {
     stateError = stateRead.error;
   }
 
+  const historicalCutoffActive = now.getTime() >= DISCORD_VISIBILITY_FIX_RESTARTED_AT_MS;
   const sent = sortByRecentDate(
     Object.entries(asRecord(state.sent)).map(([key, value]) => toSent(key, value)),
     (item) => item.sentAt,
   );
   const deliveries = sortByRecentDate(
-    Object.entries(asRecord(state.alertDeliveries)).map(([key, value]) => toDelivery(key, value)),
+    Object.entries(asRecord(state.alertDeliveries)).map(([key, value]) => toDelivery(key, value, historicalCutoffActive)),
     (item) => item.sentAt || item.attemptedAt,
   );
   const operationalDeliveries = deliveries.filter((delivery) => !isDryRunDelivery(delivery));
+  const activeRiskOperationalDeliveries = operationalDeliveries.filter((delivery) => delivery.historicalClassification !== 'pre_fix_historical');
+  const preFixHistoricalDeliveries = operationalDeliveries.filter((delivery) => delivery.historicalClassification === 'pre_fix_historical');
   const activeTradeDate = latestTradeDate(state, now);
-  const currentOperationalDeliveries = operationalDeliveries.filter((delivery) => {
+  const currentOperationalDeliveries = activeRiskOperationalDeliveries.filter((delivery) => {
     if (delivery.stale === true) return false;
     if (delivery.deliveryStatus === 'skipped') return false;
     if (!activeTradeDate) return false;
@@ -387,9 +425,9 @@ export function buildDeliveryVisibilityReport(args: {
     (item) => item.sentAt,
   );
 
-  const failedDeliveries = operationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'failed');
-  const pendingDeliveries = operationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'pending');
-  const skippedDeliveries = operationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'skipped');
+  const failedDeliveries = activeRiskOperationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'failed');
+  const pendingDeliveries = activeRiskOperationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'pending');
+  const skippedDeliveries = activeRiskOperationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'skipped');
   const heartbeatFreshness = recorderHeartbeatFreshness(recorderHeartbeatPath, now, staleAfterMs);
   const blockers = stateReadable ? staleBlockers(state, now, staleAfterMs, heartbeatFreshness) : ['Scanner state file is not readable.'];
   const pendingGapSync = pendingMarketDataGapSyncSummary(marketDataGapLedgerPath, now, staleAfterMs);
@@ -414,6 +452,14 @@ export function buildDeliveryVisibilityReport(args: {
     lastDiscordSend: currentOperationalDeliveries.find((delivery) => delivery.deliveryStatus === 'sent' && Boolean(delivery.discordMessageId)) || null,
     lastHistoricalDelivery: operationalDeliveries[0] || null,
     lastHistoricalDiscordSend: operationalDeliveries.find((delivery) => delivery.deliveryStatus === 'sent' && Boolean(delivery.discordMessageId)) || null,
+    historicalAuditCutoff: {
+      classification: 'pre_fix_historical',
+      commit: DISCORD_VISIBILITY_FIX_COMMIT,
+      restartedAt: DISCORD_VISIBILITY_FIX_RESTARTED_AT,
+      ignoredFromActiveRisk: true,
+      reason: 'Delivery records before this fixed scanner restart are retained for evidence but excluded from current delivery suppression risk.',
+    },
+    preFixHistoricalDeliveries,
     failedDeliveries,
     pendingDeliveries,
     skippedDeliveries,

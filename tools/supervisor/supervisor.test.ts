@@ -893,6 +893,76 @@ assert.equal(staleHistoricalDeliveryReport.lastDiscordSend, null);
 assert.equal(staleHistoricalDeliveryReport.lastHistoricalDelivery?.alertKey, '2026-06-18|MES|evening|SHORT|TurtleSoup|7575|Missed');
 assert.equal(staleHistoricalDeliveryReport.lastHistoricalDiscordSend?.discordMessageId, 'discord-old');
 
+const preFixHistoricalStatePath = path.join(deliveryFixtureDir, '.nt-scanner-prefix-historical-state.json');
+fs.writeFileSync(preFixHistoricalStatePath, JSON.stringify({
+  alertDeliveries: {
+    '2026-06-30:LONG:HTF-FAILED-AUCTION': {
+      alertKey: '2026-06-30:LONG:HTF-FAILED-AUCTION',
+      planVersionId: 'EVENING-20260630-210500',
+      instrument: 'MES',
+      tradeDate: '2026-06-30',
+      session: 'evening',
+      state: 'Skipped',
+      confidence: 90,
+      deliveryStatus: 'skipped',
+      webhookSource: 'phase11_boundary',
+      error: 'Discord delivery skipped by phase11_boundary.',
+      attemptedAt: '2026-07-01T01:34:38.000Z',
+      stale: true,
+      retryEligible: false,
+    },
+    '2026-06-30:LONG:RECOVERED-PENDING': {
+      alertKey: '2026-06-30:LONG:RECOVERED-PENDING',
+      planVersionId: 'EVENING-20260630-211000',
+      instrument: 'MES',
+      tradeDate: '2026-06-30',
+      session: 'evening',
+      state: 'Failed',
+      confidence: 90,
+      deliveryStatus: 'failed',
+      webhookSource: 'scanner_audit_recovery',
+      error: 'Recovered stale pending final delivery outcome.',
+      attemptedAt: '2026-07-01T01:35:01.000Z',
+      stale: true,
+      retryEligible: false,
+    },
+    '2026-06-30:LONG:CURRENT-FAILED': {
+      alertKey: '2026-06-30:LONG:CURRENT-FAILED',
+      planVersionId: 'EVENING-20260630-213500',
+      instrument: 'MES',
+      tradeDate: '2026-06-30',
+      session: 'evening',
+      state: 'Failed',
+      confidence: 90,
+      deliveryStatus: 'failed',
+      webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+      error: 'Discord webhook failed.',
+      attemptedAt: '2026-07-01T01:40:01.000Z',
+      stale: false,
+      retryEligible: true,
+    },
+  },
+  lastCompleted5mBySession: {
+    '2026-06-30:evening': '2026-06-30T21:35:00.0000000',
+  },
+  lastMarketMapRefreshBySession: {
+    '2026-06-30:evening': '2026-07-01T01:39:00.000Z',
+  },
+  lastHealthStatus: 'READY',
+}, null, 2), 'utf8');
+const preFixHistoricalReport = buildDeliveryVisibilityReport({
+  scannerStatePath: preFixHistoricalStatePath,
+  auditDir,
+  now: new Date('2026-07-01T01:41:00.000Z'),
+  staleAfterMs: 4 * 60 * 60 * 1000,
+});
+assert.equal(preFixHistoricalReport.preFixHistoricalDeliveries?.length, 2);
+assert.ok(preFixHistoricalReport.preFixHistoricalDeliveries?.every((delivery) => delivery.historicalClassification === 'pre_fix_historical'));
+assert.equal(preFixHistoricalReport.skippedDeliveries.length, 0);
+assert.equal(preFixHistoricalReport.failedDeliveries.length, 1);
+assert.equal(preFixHistoricalReport.failedDeliveries[0]?.alertKey, '2026-06-30:LONG:CURRENT-FAILED');
+assert.equal(preFixHistoricalReport.historicalAuditCutoff?.commit, 'bb30bc4');
+
 const activeScannerFreshStatePath = path.join(deliveryFixtureDir, '.nt-scanner-active-fresh-state.json');
 fs.writeFileSync(activeScannerFreshStatePath, JSON.stringify({
   lastCompleted5mBySession: {
