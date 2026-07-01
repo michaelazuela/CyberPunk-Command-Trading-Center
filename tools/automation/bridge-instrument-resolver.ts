@@ -62,6 +62,10 @@ function fallbackContract(root: string, asOf: Date): string {
   return frontMonthContract(root, asOf);
 }
 
+function requestedOrFallbackContract(requested: string, root: string, asOf: Date): string {
+  return requested && !isRootOnly(requested) ? requested : fallbackContract(root, asOf);
+}
+
 function thirdFriday(year: number, month: number): Date {
   const first = new Date(Date.UTC(year, month - 1, 1));
   const daysToFriday = (5 - first.getUTCDay() + 7) % 7;
@@ -172,7 +176,7 @@ export async function resolveCurrentBridgeInstrument(
           warning: `Bridge health defaultInstrument ${healthInstrument} does not match requested ${requestedRoot}, and configured ${requested} is stale after rollover; using active front-month contract ${instrument}.`,
         };
       }
-      const instrument = requested || fallbackContract(requestedRoot, now);
+      const instrument = requestedOrFallbackContract(requested, requestedRoot, now);
       return {
         instrument,
         requestedInstrument: requested || null,
@@ -191,7 +195,7 @@ export async function resolveCurrentBridgeInstrument(
       };
     }
     return {
-      instrument: requested || fallbackContract(requestedRoot, now),
+      instrument: requestedOrFallbackContract(requested, requestedRoot, now),
       requestedInstrument: requested || null,
       source: requested ? 'configured-root-fallback' : 'fallback',
       warning: `Could not resolve active bridge contract from NinjaTrader health: ${error instanceof Error ? error.message : String(error)}.`,
@@ -215,7 +219,7 @@ export async function resolveCurrentBridgeInstrument(
     };
   }
 
-  const instrument = requested || fallbackContract(requestedRoot, now);
+  const instrument = requestedOrFallbackContract(requested, requestedRoot, now);
   return {
     instrument,
     requestedInstrument: requested || null,

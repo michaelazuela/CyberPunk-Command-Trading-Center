@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadSupervisorConfig } from './config';
+import { preResolveSupervisorBridgeInstrument } from './contractPreResolve';
 import { buildDeliveryVisibilityReport } from './deliveryVisibility';
 import { buildHealthReport } from './health';
 import { buildHtfPreloadCommand, parseHtfPreloadAssurance, runHtfPreloadStartup } from './htfPreload';
@@ -89,6 +90,73 @@ const preWindowCommand = buildPreWindowBackfillCommand(defaultConfig.config);
 assert.deepEqual(preWindowCommand.args.slice(0, 4), ['run', 'nt:backfill', '--', '--instrument']);
 assert.ok(preWindowCommand.args.includes('--days'));
 assert.ok(preWindowCommand.args.includes('2'));
+function commandArg(args: string[], name: string): string | null {
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] || null : null;
+}
+
+function serviceBridgeInstrument(config: typeof defaultConfig.config, serviceId: string): string | null {
+  const service = config.childServices.find((item) => item.id === serviceId);
+  return service ? commandArg(service.args, '--bridge-instrument') : null;
+}
+
+const currentContractConfig = loadSupervisorConfig(
+  {
+    SUPERVISOR_INSTRUMENT: 'MES',
+    SUPERVISOR_BRIDGE_INSTRUMENT: 'MES',
+    SUPERVISOR_BRIDGE_URL: 'http://127.0.0.1:8765',
+  },
+  'C:\\quant-desk',
+);
+const currentContractPreResolve = await preResolveSupervisorBridgeInstrument(
+  currentContractConfig.config,
+  { asOf: new Date('2026-07-01T12:00:00.000Z') },
+  { getHealth: async () => ({ ok: true, defaultInstrument: 'MES 09-26' }) },
+);
+assert.equal(currentContractPreResolve.report.resolvedBridgeInstrument, 'MES 09-26');
+assert.equal(serviceBridgeInstrument(currentContractPreResolve.config, 'scanner'), 'MES 09-26');
+assert.equal(serviceBridgeInstrument(currentContractPreResolve.config, 'candle-recorder'), 'MES 09-26');
+
+const decemberContractPreResolve = await preResolveSupervisorBridgeInstrument(
+  currentContractConfig.config,
+  { asOf: new Date('2026-09-15T12:00:00.000Z') },
+  { getHealth: async () => ({ ok: true, defaultInstrument: 'MES DEC26' }) },
+);
+assert.equal(decemberContractPreResolve.report.resolvedBridgeInstrument, 'MES 12-26');
+assert.equal(serviceBridgeInstrument(decemberContractPreResolve.config, 'scanner'), 'MES 12-26');
+assert.equal(serviceBridgeInstrument(decemberContractPreResolve.config, 'candle-recorder'), 'MES 12-26');
+
+const staleSeptemberConfig = loadSupervisorConfig(
+  {
+    SUPERVISOR_INSTRUMENT: 'MES',
+    SUPERVISOR_BRIDGE_INSTRUMENT: 'MES 09-26',
+    SUPERVISOR_BRIDGE_URL: 'http://127.0.0.1:8765',
+  },
+  'C:\\quant-desk',
+);
+const staleSeptemberPreResolve = await preResolveSupervisorBridgeInstrument(
+  staleSeptemberConfig.config,
+  { asOf: new Date('2026-09-15T12:00:00.000Z') },
+  { getHealth: async () => ({ ok: true, defaultInstrument: 'MES DEC26' }) },
+);
+assert.equal(staleSeptemberPreResolve.report.resolvedBridgeInstrument, 'MES 12-26');
+assert.equal(serviceBridgeInstrument(staleSeptemberPreResolve.config, 'scanner'), 'MES 12-26');
+assert.equal(serviceBridgeInstrument(staleSeptemberPreResolve.config, 'candle-recorder'), 'MES 12-26');
+
+const bridgeUnavailablePreResolve = await preResolveSupervisorBridgeInstrument(
+  currentContractConfig.config,
+  { asOf: new Date('2026-07-01T12:00:00.000Z') },
+  { getHealth: async () => { throw new Error('bridge unavailable'); } },
+);
+assert.equal(bridgeUnavailablePreResolve.report.resolvedBridgeInstrument, 'MES 09-26');
+assert.equal(bridgeUnavailablePreResolve.report.source, 'configured-root-fallback');
+assert.equal(serviceBridgeInstrument(bridgeUnavailablePreResolve.config, 'scanner'), 'MES 09-26');
+assert.equal(serviceBridgeInstrument(bridgeUnavailablePreResolve.config, 'candle-recorder'), 'MES 09-26');
+
+const alignedBackfillCommand = buildPreWindowBackfillCommand(currentContractPreResolve.config);
+const alignedHtfPreloadCommand = buildHtfPreloadCommand(currentContractPreResolve.config);
+assert.equal(commandArg(alignedBackfillCommand.args, '--bridge-instrument'), 'MES 09-26');
+assert.equal(commandArg(alignedHtfPreloadCommand.args, '--bridge-instrument'), 'MES 09-26');
 const safeSpawnCommand = buildWindowsSafeSpawnCommand('npm.cmd', ['run', 'nt:backfill', '--', '--bridge-instrument', 'MES 06-26']);
 assert.equal(safeSpawnCommand.command, process.execPath);
 assert.equal(safeSpawnCommand.args.at(1), path.join('tools', 'automation', 'backfill-market-bars.ts'));

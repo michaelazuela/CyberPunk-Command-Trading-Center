@@ -89,7 +89,7 @@ const mismatchedHealth = await resolveCurrentBridgeInstrument({
 }, {
   getHealth: async () => ({ ok: true, defaultInstrument: 'MNQ 06-26' }),
 });
-assert.equal(mismatchedHealth.instrument, 'MES');
+assert.equal(mismatchedHealth.instrument, 'MES 06-26');
 assert.equal(mismatchedHealth.source, 'configured-root-fallback');
 assert.ok(mismatchedHealth.warning?.includes('does not match requested MES'));
 

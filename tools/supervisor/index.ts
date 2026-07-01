@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { loadSupervisorConfig } from './config';
+import { preResolveSupervisorBridgeInstrument } from './contractPreResolve';
 import { buildDeliveryVisibilityReport } from './deliveryVisibility';
 import { buildHealthReport } from './health';
 import { runHtfPreloadStartup } from './htfPreload';
@@ -129,7 +130,7 @@ export async function runSupervisorPhase6Signoff(args = process.argv.slice(3)): 
 }
 
 export function startSupervisor(): http.Server {
-  const configResult = loadSupervisorConfig();
+  let configResult = loadSupervisorConfig();
   const logger = createSupervisorLogger(configResult.config.logsDir);
   logger.log('info', 'Supervisor starting.', {
     phase: 'phase_3_health_restart',
@@ -259,29 +260,49 @@ export function startSupervisor(): http.Server {
       `Quant Desk Local Supervisor listening on http://${configResult.config.host}:${configResult.config.port}${configResult.config.statusPath}\n`,
     );
 
-    const maintenance = readQuantDeskMaintenanceStatus();
-    supervisorState = launchEnabledServices(configResult.config, logger);
-    if (maintenance.active) {
-      logger.log('info', 'HTF preload skipped because maintenance lock is active.', {
-        lockPath: maintenance.path,
-        reason: maintenance.reason,
+    void (async () => {
+      const maintenance = readQuantDeskMaintenanceStatus();
+      if (!maintenance.active) {
+        try {
+          const preResolve = await preResolveSupervisorBridgeInstrument(configResult.config);
+          configResult = { ...configResult, config: preResolve.config };
+          logger.log(preResolve.report.warning ? 'warn' : 'info', 'Supervisor bridge contract pre-resolved.', { ...preResolve.report });
+        } catch (error) {
+          logger.log('warn', 'Supervisor bridge contract pre-resolve failed safely; configured child service contract will be used.', {
+            error: String(error),
+            changesTradingLogic: false,
+            changesCanExecute: false,
+            changesExecutionApproval: false,
+          });
+        }
+      }
+      supervisorState = launchEnabledServices(configResult.config, logger);
+      if (maintenance.active) {
+        logger.log('info', 'HTF preload skipped because maintenance lock is active.', {
+          lockPath: maintenance.path,
+          reason: maintenance.reason,
+        });
+      } else {
+        const preloadResult = runHtfPreloadStartup(configResult.config, logger);
+        logger.log(preloadResult.ok ? 'info' : 'warn', 'HTF preload startup result.', {
+          enabled: preloadResult.enabled,
+          attempted: preloadResult.attempted,
+          ok: preloadResult.ok,
+          reason: preloadResult.reason,
+          stdoutLog: preloadResult.stdoutLog,
+          stderrLog: preloadResult.stderrLog,
+          childServicesLaunchedBeforePreload: true,
+        });
+      }
+      monitorTimer = setInterval(() => {
+        monitor().catch((error) => logger.log('warn', 'Supervisor monitor failed safely.', { error: String(error) }));
+      }, configResult.config.health.monitorIntervalMs);
+      monitor().catch((error) => logger.log('warn', 'Initial supervisor monitor failed safely.', { error: String(error) }));
+    })().catch((error) => {
+      logger.log('error', 'Supervisor startup failed after listen.', {
+        error: String(error),
       });
-    } else {
-      const preloadResult = runHtfPreloadStartup(configResult.config, logger);
-      logger.log(preloadResult.ok ? 'info' : 'warn', 'HTF preload startup result.', {
-        enabled: preloadResult.enabled,
-        attempted: preloadResult.attempted,
-        ok: preloadResult.ok,
-        reason: preloadResult.reason,
-        stdoutLog: preloadResult.stdoutLog,
-        stderrLog: preloadResult.stderrLog,
-        childServicesLaunchedBeforePreload: true,
-      });
-    }
-    monitorTimer = setInterval(() => {
-      monitor().catch((error) => logger.log('warn', 'Supervisor monitor failed safely.', { error: String(error) }));
-    }, configResult.config.health.monitorIntervalMs);
-    monitor().catch((error) => logger.log('warn', 'Initial supervisor monitor failed safely.', { error: String(error) }));
+    });
   });
 
   return server;
