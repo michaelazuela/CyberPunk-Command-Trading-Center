@@ -88,6 +88,8 @@ import {
   writeLocalMarketDataGapEvent,
   writeScannerDiscordReceiptAuditLog,
   writeScannerDiscordFinalDeliveryOutcomeAuditLog,
+  writeScannerDiscordFinalDeliveryOutcomeFromReceipt,
+  writeScannerDiscordFinalDeliveryFailureOutcome,
   writeScannerDecisionTapeAuditLog,
   scannerMarketBarsUpsertSkipAuditLine,
   upsertScannerDiscordAlertRagRecord,
@@ -220,6 +222,40 @@ assert.equal(validateScannerDiscordFinalDeliveryOutcome({
   audit: finalOutcomeAudit,
   requireTerminalForEligible: true,
 }).ok, true);
+assert.equal(await writeScannerDiscordFinalDeliveryOutcomeFromReceipt({
+  auditLogPath: finalOutcomeAuditFile,
+  artifactLabel: 'Discord loopback artifact',
+  receipt: {
+    deliveryStatus: 'sent',
+    webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+    httpStatus: 204,
+    discordMessageId: 'receipt-helper-message-id',
+  },
+}), true);
+finalOutcomeAudit = JSON.parse(await fs.readFile(finalOutcomeAuditFile, 'utf8'));
+assert.equal(finalOutcomeAudit.deliveryOutcome.status, 'sent');
+assert.equal(finalOutcomeAudit.deliveryOutcome.discordMessageId, 'receipt-helper-message-id');
+assert.equal(await writeScannerDiscordFinalDeliveryOutcomeFromReceipt({
+  auditLogPath: finalOutcomeAuditFile,
+  artifactLabel: 'Discord loopback artifact',
+  receipt: {
+    deliveryStatus: 'skipped',
+    webhookSource: 'phase11_boundary',
+    httpStatus: null,
+    discordMessageId: null,
+  },
+}), true);
+finalOutcomeAudit = JSON.parse(await fs.readFile(finalOutcomeAuditFile, 'utf8'));
+assert.equal(finalOutcomeAudit.deliveryOutcome.status, 'hard_suppressed');
+assert.match(finalOutcomeAudit.deliveryOutcome.reason, /phase11_boundary/);
+assert.equal(await writeScannerDiscordFinalDeliveryFailureOutcome({
+  auditLogPath: finalOutcomeAuditFile,
+  artifactLabel: 'Discord loopback artifact',
+  error: new Error('loopback webhook failure'),
+}), true);
+finalOutcomeAudit = JSON.parse(await fs.readFile(finalOutcomeAuditFile, 'utf8'));
+assert.equal(finalOutcomeAudit.deliveryOutcome.status, 'delivery_failed');
+assert.match(finalOutcomeAudit.deliveryOutcome.reason, /loopback webhook failure/);
 
 const nonTerminalEligibleOutcome = validateScannerDiscordFinalDeliveryOutcome({
   audit: {
@@ -4641,7 +4677,20 @@ function scannerReadyHealthFixture(): ScannerHealthReport {
   };
 }
 
-function phase11BoundaryDeskStateFixture(): DeskState {
+function phase11BoundaryDeskStateFixture(direction: 'LONG' | 'SHORT' = 'LONG'): DeskState {
+  const fixtureCandidate: SetupCandidate = direction === 'LONG'
+    ? candidate
+    : {
+        ...candidate,
+        direction: 'SHORT',
+        scenarioLabel: 'Liquidity sweep failure',
+        entry: 5324.25,
+        stop: 5329.25,
+        target1: 5316.75,
+        target2: 5314.25,
+        invalidation: 'Invalid if price reclaims the protected sweep high.',
+        requiredTrigger: 'Wait for completed 5M rejection close below the swept high.',
+      };
   const visibilityMetadata: ScannerVisibilityMetadata = {
     sourceOfTruth: 'scanner_desk_state_visibility_metadata',
     visibilityMode: 'POST_WATCH',
@@ -4666,11 +4715,11 @@ function phase11BoundaryDeskStateFixture(): DeskState {
   };
   return buildDeskState({
     state: 'Watching',
-    candidate,
+    candidate: fixtureCandidate,
     visibilityMetadata,
     candidateLifecycleTrace: buildCandidateLifecycleTrace({
-      candidates: [candidate],
-      selectedCandidate: candidate,
+      candidates: [fixtureCandidate],
+      selectedCandidate: fixtureCandidate,
       state: 'Watching',
       alertDecision: { shouldSend: true, reason: 'Phase 11B fixture.' },
       canExecute: false,
@@ -4788,11 +4837,33 @@ const liveBoundaryWithoutChecklist = buildScannerLiveDiscordSendBoundaryReport({
   discordPayloadValidated: true,
   webhookConfigured: true,
 });
-assert.equal(liveBoundaryWithoutChecklist.eligible, false);
-assert.ok(liveBoundaryWithoutChecklist.blockers.some((item) => item.includes('fresh dry scan')));
-assert.ok(liveBoundaryWithoutChecklist.blockers.some((item) => item.includes('Diagnostic replay')));
+assert.equal(liveBoundaryWithoutChecklist.eligible, true);
+assert.equal(liveBoundaryWithoutChecklist.blockers.length, 0);
 assert.equal(liveBoundaryWithoutChecklist.authorityBoundary.changesCanExecute, false);
 assert.equal(liveBoundaryWithoutChecklist.authorityBoundary.createsTradeApproval, false);
+
+for (const direction of ['LONG', 'SHORT'] as const) {
+  const freshScannerMapBoundary = buildScannerLiveDiscordSendBoundaryReport({
+    config: {
+      dryRun: false,
+      liveDiscordPolicyConfirmed: false,
+    },
+    healthReport: scannerReadyHealthFixture(),
+    bridgeConnected: true,
+    bridgeInstrumentResolved: true,
+    completedFiveMinuteFresh: true,
+    htfContextPresent: true,
+    deskState: phase11BoundaryDeskStateFixture(direction),
+    decisionTapePath: path.join(auditDir, `scanner-decision-tape-2026-06-02-MES-${direction}-fresh-map.json`),
+    auditPath: path.join(auditDir, `scanner-morning-2026-06-02-MES-${direction}-FRESH-MAP.json`),
+    discordPayloadValidated: true,
+    webhookConfigured: true,
+  });
+  assert.equal(freshScannerMapBoundary.eligible, true, `${direction} fresh scanner-owned Discord map should not be blocked by Phase 11 checklist gates`);
+  assert.equal(freshScannerMapBoundary.blockers.length, 0);
+  assert.equal(freshScannerMapBoundary.authorityBoundary.changesCanExecute, false);
+  assert.equal(freshScannerMapBoundary.authorityBoundary.createsTradeApproval, false);
+}
 
 const highConfidenceConditionalBoundaryWithoutChecklist = buildScannerLiveDiscordSendBoundaryReport({
   config: {

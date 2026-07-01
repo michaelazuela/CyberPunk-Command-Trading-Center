@@ -2203,6 +2203,54 @@ export async function writeScannerDiscordFinalDeliveryOutcomeAuditLog(args: {
   return true;
 }
 
+export async function writeScannerDiscordFinalDeliveryOutcomeFromReceipt(args: {
+  auditLogPath: string | null | undefined;
+  artifactLabel: string;
+  receipt: ScannerDiscordPostReceipt;
+}): Promise<boolean> {
+  if (args.receipt.deliveryStatus === 'sent') {
+    return writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+      auditLogPath: args.auditLogPath,
+      outcome: {
+        status: 'sent',
+        reason: `${args.artifactLabel} delivered to Discord.`,
+        discordMessageId: args.receipt.discordMessageId,
+        httpStatus: args.receipt.httpStatus,
+        webhookSource: args.receipt.webhookSource,
+      },
+    });
+  }
+
+  return writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+    auditLogPath: args.auditLogPath,
+    outcome: {
+      status: 'hard_suppressed',
+      reason: `${args.artifactLabel} delivery skipped: ${args.receipt.webhookSource || 'unknown'}.`,
+      discordMessageId: args.receipt.discordMessageId,
+      httpStatus: args.receipt.httpStatus,
+      webhookSource: args.receipt.webhookSource,
+    },
+  });
+}
+
+export async function writeScannerDiscordFinalDeliveryFailureOutcome(args: {
+  auditLogPath: string | null | undefined;
+  artifactLabel: string;
+  error: unknown;
+}): Promise<boolean> {
+  const httpStatus = args.error instanceof ScannerDiscordPostError ? args.error.httpStatus : null;
+  const webhookSource = args.error instanceof ScannerDiscordPostError ? args.error.webhookSource : null;
+  return writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+    auditLogPath: args.auditLogPath,
+    outcome: {
+      status: 'delivery_failed',
+      reason: `${args.artifactLabel} delivery failed: ${sanitizedError(args.error)}`,
+      httpStatus,
+      webhookSource,
+    },
+  });
+}
+
 export async function recoverStalePendingScannerFinalDeliveryOutcomes(args: {
   auditDir?: string;
   tradeDate?: string;
@@ -6854,7 +6902,7 @@ export async function prepareLiveScannerReversalWatchAlertArtifacts(args: {
   return { payload, files, chartMarkup };
 }
 
-interface ScannerDiscordPostReceipt {
+export interface ScannerDiscordPostReceipt {
   deliveryStatus: 'sent' | 'skipped';
   webhookSource: ScannerDiscordDeliverySource;
   httpStatus: number | null;
@@ -6916,7 +6964,8 @@ export function buildScannerLiveDiscordSendBoundaryReport(args: {
   webhookConfigured: boolean;
 }): LiveDiscordEligibilityReport {
   const highConfidenceConditionalOverride = scannerDeskStateHasHighConfidenceConditionalPlan(args.deskState);
-  const rolloutConfirmed = Boolean(args.config.liveDiscordPolicyConfirmed) || highConfidenceConditionalOverride;
+  const scannerOwnedFreshMapOverride = scannerDeskStateHasFreshLiveDiscordMap(args.deskState);
+  const rolloutConfirmed = Boolean(args.config.liveDiscordPolicyConfirmed) || highConfidenceConditionalOverride || scannerOwnedFreshMapOverride;
   return evaluateLiveDiscordPostEligibility({
     scannerHealth: args.healthReport,
     bridgeConnected: args.bridgeConnected,
@@ -6948,6 +6997,30 @@ function scannerLifecycleItemHasFullPlanLevels(item: DeskState['selectedCandidat
 function scannerLifecycleItemQualityScore(item: DeskState['selectedCandidate']): number | null {
   const score = item?.decisionQualityScore ?? item?.modelConfidenceScore ?? null;
   return typeof score === 'number' && Number.isFinite(score) ? score : null;
+}
+
+function scannerDeskStateHasFreshLiveDiscordMap(deskState: DeskState | null): boolean {
+  if (!deskState) return false;
+  const liveReviewActions = new Set(['post_plan', 'post_review', 'post_conditional', 'post_watch']);
+  const liveReviewModes = new Set(['POST_PLAN', 'POST_REVIEW', 'POST_CONDITIONAL', 'POST_WATCH']);
+  if (!liveReviewModes.has(deskState.visibilityMode) || !liveReviewActions.has(deskState.discordAction)) return false;
+  if (deskState.visibilityMetadata?.sourceOfTruth !== 'scanner_desk_state_visibility_metadata') return false;
+  if (deskState.visibilityMetadata.visibilityMode !== deskState.visibilityMode) return false;
+  if (deskState.visibilityMetadata.discordAction !== deskState.discordAction) return false;
+  if (deskState.visibilityMetadata.authority?.discordEligible !== true) return false;
+  if (deskState.dataQualityStatus === 'data_limited' || deskState.htfContextStatus === 'insufficient') return false;
+  const suppressionText = [
+    deskState.suppressionReason,
+    deskState.visibilityMetadata?.suppressionReason,
+    deskState.visibilityMetadata?.holdWithReason,
+    deskState.visibilityMetadata?.noTradeWithReason,
+    deskState.visibilityMetadata?.dataQualityBlocker,
+    deskState.selectedCandidate?.filteredOutReason,
+  ].filter(Boolean).join(' ');
+  if (/\b(duplicate|ledger|already\s+pending|missed|no[-\s]?chase|stale|chasing|already\s+reached|target\s+already|T1\s+was\s+already\s+reached)\b/i.test(suppressionText)) {
+    return false;
+  }
+  return true;
 }
 
 function scannerDeskStateHasHighConfidenceConditionalPlan(deskState: DeskState | null): boolean {

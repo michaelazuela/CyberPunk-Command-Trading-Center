@@ -856,11 +856,13 @@ function checkPhase11LiveDiscordEligibilityPolicy() {
   if (
     !scannerAlertTestContent.includes('liveBoundaryWithoutChecklist') ||
     !scannerAlertTestContent.includes('liveBoundaryWithChecklist') ||
-    !scannerAlertTestContent.includes('fresh dry scan') ||
-    !scannerAlertTestContent.includes('Diagnostic replay') ||
+    !scannerAlertTestContent.includes('freshScannerMapBoundary') ||
+    !scannerAlertTestContent.includes('fresh scanner-owned Discord map should not be blocked by Phase 11 checklist gates') ||
+    !scannerAlertTestContent.includes("for (const direction of ['LONG', 'SHORT'] as const)") ||
+    !scannerAlertTestContent.includes('missed_no_chase') ||
     !scannerAlertTestContent.includes('createsTradeApproval, false')
   ) {
-    fail('nt-scanner-alert.test.ts must cover Phase 11B live Discord send-boundary checklist enforcement and no-approval-change flags.');
+    fail('nt-scanner-alert.test.ts must cover Phase 11B live Discord fresh-map pass-through for LONG/SHORT, stale/no-chase hold, and no-approval-change flags.');
   }
 
   const rolloutPath = path.join(ROOT, 'tools', 'automation', 'live-discord-rollout.ts');
