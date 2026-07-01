@@ -135,6 +135,7 @@ import {
   professionalizeReportText,
 } from './professional-report-language';
 import { resolveCurrentBridgeInstrument, type BridgeInstrumentResolution } from './bridge-instrument-resolver';
+import { readCliArgValue } from './cli-args';
 import { etDateTime } from './et-time';
 import { readQuantDeskMaintenanceStatus } from './quant-desk-maintenance';
 import { isGeminiAdvisoryFallbackEnabled } from '../../src/config/geminiFallback';
@@ -1211,11 +1212,7 @@ export function markScannerAlertDeliverySkipped(
 }
 
 function argValue(name: string): string | null {
-  const prefix = `--${name}=`;
-  const directIndex = process.argv.indexOf(`--${name}`);
-  if (directIndex >= 0 && process.argv[directIndex + 1]) return process.argv[directIndex + 1];
-  const matched = process.argv.find((arg) => arg.startsWith(prefix));
-  return matched ? matched.slice(prefix.length) : null;
+  return readCliArgValue(process.argv, name);
 }
 
 function hasArg(name: string): boolean {

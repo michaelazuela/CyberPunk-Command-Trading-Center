@@ -3,6 +3,7 @@ import { getNinjaHistoricalBars } from '../../src/lib/ninjaTraderBridge';
 import { fetchRawCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
 import { readQuantDeskMaintenanceStatus } from './quant-desk-maintenance';
+import { readCliArgValue } from './cli-args';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -32,11 +33,7 @@ function errorLooksLikeIoPressure(error: unknown): boolean {
 }
 
 function argValue(name: string): string | null {
-  const prefix = `--${name}=`;
-  const directIndex = process.argv.indexOf(`--${name}`);
-  if (directIndex >= 0 && process.argv[directIndex + 1]) return process.argv[directIndex + 1];
-  const matched = process.argv.find((arg) => arg.startsWith(prefix));
-  return matched ? matched.slice(prefix.length) : null;
+  return readCliArgValue(process.argv, name);
 }
 
 function sleep(ms: number): Promise<void> {
