@@ -84,6 +84,10 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
   const barTimeZone = env.SUPERVISOR_BAR_TIME_ZONE?.trim() || 'eastern';
   const enabledServices = env.SUPERVISOR_SERVICES;
   const scannerDiscordEnabled = boolEnv(env.SUPERVISOR_SCANNER_DISCORD_ENABLED, true);
+  const scannerLiveDiscordPolicyConfirmed = scannerDiscordEnabled && boolEnv(
+    env.SUPERVISOR_SCANNER_LIVE_DISCORD_POLICY_CONFIRMED || env.QUANT_DESK_LIVE_DISCORD_POLICY_CONFIRMED,
+    true,
+  );
 
   return [
     {
@@ -116,6 +120,7 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
         '--bridge-url', bridgeUrl,
         '--poll-seconds', pollSeconds,
         '--bar-time-zone', barTimeZone,
+        ...(scannerLiveDiscordPolicyConfirmed ? ['--live-discord-policy-confirmed'] : []),
         ...(scannerDiscordEnabled ? [] : ['--discord', 'false']),
       ],
       enabled: csvIncludes(enabledServices, 'scanner', true),

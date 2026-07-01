@@ -70,6 +70,7 @@ assert.equal(defaultConfig.config.statusPath, '/status');
 assert.equal(defaultConfig.config.childServices.length, 4);
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'candle-recorder')?.enabled, true);
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'scanner')?.enabled, true);
+assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'scanner')?.args.includes('--live-discord-policy-confirmed'), true);
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'companion-proxy')?.enabled, false);
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'discord-alerts')?.enabled, false);
 assert.equal(defaultConfig.config.htfPreload.enabled, true);
@@ -269,6 +270,7 @@ const scannerDiscordDisabledService = scannerDiscordDisabledConfig.config.childS
 assert.ok(scannerDiscordDisabledService);
 assert.deepEqual(scannerDiscordDisabledService.args.slice(-2), ['--discord', 'false']);
 assert.equal(scannerDiscordDisabledService.args.includes('--instrument'), true);
+assert.equal(scannerDiscordDisabledService.args.includes('--live-discord-policy-confirmed'), false);
 
 const statusSource = await import('./status');
 assert.equal('runTradeDecisionPipeline' in statusSource, false);

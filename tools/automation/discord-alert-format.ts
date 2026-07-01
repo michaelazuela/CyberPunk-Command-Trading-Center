@@ -2999,6 +2999,12 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
   const activeReaction = play?.htfFvgReactionMemory?.activeReaction;
   const childConfirmation = play?.htfFvgReactionMemory?.childConfirmation;
   const reaction = play?.targetReactionLevel;
+  const activeLine = play?.activeTacticalLine;
+  const activeZone = play?.activeTacticalZone?.direction === displayDirection ? play.activeTacticalZone : null;
+  const activeZoneText = activeZone && isFinitePrice(activeZone.lower) && isFinitePrice(activeZone.upper)
+    ? zoneRangeLine(activeZone.lower, activeZone.upper)
+    : null;
+  const status = reportStatus(candidate, args.normalized, args.statusOverride || args.decisionOverride);
   const sideLine = displayDirection === 'SHORT'
     ? sideBreakoutLabel('SHORT', 'BELOW', lineInSand)
     : displayDirection === 'LONG'
@@ -3035,17 +3041,35 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
       ? deskPlayTargetToLinePromotionLines(play, displayDirection)
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayHtfRegimeLines(play, displayDirection)
+      : []),
+    ...(activeLine && isFinitePrice(activeLine.originalLine)
+      ? [`Original campaign line: ${priceLine(activeLine.originalLine)}`]
+      : []),
+    ...(activeLine && isFinitePrice(activeLine.activeLine)
+      ? [`Active tactical line: ${priceLine(activeLine.activeLine)}`]
+      : []),
+    ...(activeZoneText ? [`Active tactical zone: ${activeZoneText}`] : []),
+    ...(activeZoneText && activeZone?.migrated && isFinitePrice(activeZone.migratedFromLine)
+      ? [`Zone migration: ${priceLine(activeZone.migratedFromLine)} -> ${activeZoneText}; fresh decision area, not execution approval.`]
+      : []),
+    ...(activeZone?.noChase ? [`Zone no chase: ${compactInstruction(activeZone.noChase, 'do not chase away from the active tactical zone.')}`] : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlaySameSideCampaignStackLines(play, displayDirection).slice(0, 9)
       : []),
     `Line in sand: ${priceLine(lineInSand)}`,
+    displayDirection === 'LONG' || displayDirection === 'SHORT'
+      ? `Overall play: ${displayDirection} ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`
+      : 'Overall play: WAIT for one side to confirm.',
     sideLine,
     ...(play?.shortBelow != null && displayDirection !== 'SHORT' ? [sideBreakoutLabel('SHORT', 'BELOW', play.shortBelow)] : []),
     ...(play?.longAbove != null && displayDirection !== 'LONG' ? [sideBreakoutLabel('LONG', 'ABOVE', play.longAbove)] : []),
     levels ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}` : 'Entry: pending',
     levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'Stop: pending | T1: pending | T2: pending',
-    `Trigger: ${compactInstruction(freshBest?.requiredTrigger || freshBest?.nextAction || candidate?.requiredTrigger || candidate?.nextAction || play?.nextTrigger, 'wait for completed 5M proof.' ).slice(0, 150)}`,
+    `Next trigger: ${compactInstruction(activeZone?.nextTrigger || freshBest?.requiredTrigger || freshBest?.nextAction || candidate?.requiredTrigger || candidate?.nextAction || play?.nextTrigger, 'wait for completed 5M proof.' ).slice(0, 170)}`,
     `Invalidation: ${compactInstruction(freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `invalid through ${priceLine(levels?.stop ?? lineInSand)}.`).slice(0, 130)}`,
     ...(isFinitePrice(reaction) ? [`Reaction: ${compactLine(play?.targetReactionLabel || 'HTF/session level', 34)} ${priceLine(reaction)}.`] : []),
+    `Status: ${status === 'EXECUTABLE' ? 'Executable only while completed 5M trigger + canExecute remain true.' : 'Review only until 5M trigger + canExecute.'}`,
     'Decision support only. No automated orders.',
     'Chart: attached.',
   ];

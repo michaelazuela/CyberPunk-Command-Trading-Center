@@ -47,6 +47,7 @@ import {
   candidateForNormalizedVisualAuthority,
   prepareLiveScannerDeskPlayAlertArtifacts,
   prepareLiveScannerDiscordAlertArtifacts,
+  prepareScannerMorningHtfDeskMapArtifacts,
   prepareLiveScannerReversalWatchAlertArtifacts,
   prepareLiveScannerWatchlistAlertArtifacts,
   resolveScannerDiscordWebhookUrl,
@@ -2025,7 +2026,7 @@ assert.equal(shouldSendScannerMorningHtfDeskMap({
   completed5m: morningMapCompleted5m,
   barTimeZone: 'eastern',
   sent: {
-    '2026-06-19:MES:morning:MORNING_HTF_DESK_MAP': {
+    '2026-06-19:MES:morning:SESSION_HTF_DESK_MAP': {
       fingerprint: 'already-sent',
       tradeDate: '2026-06-19',
       instrument: 'MES',
@@ -2037,9 +2038,34 @@ assert.equal(shouldSendScannerMorningHtfDeskMap({
     },
   },
 }), false);
+assert.equal(shouldSendScannerMorningHtfDeskMap({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'lunch',
+  completed5m: { ...morningMapCompleted5m, time: '2026-06-19T12:05:00.0000000' },
+  barTimeZone: 'eastern',
+  sent: {},
+}), true);
+assert.equal(shouldSendScannerMorningHtfDeskMap({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'evening',
+  completed5m: { ...morningMapCompleted5m, time: '2026-06-19T18:50:00.0000000' },
+  barTimeZone: 'eastern',
+  sent: {},
+}), true);
+assert.equal(shouldSendScannerMorningHtfDeskMap({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'evening',
+  completed5m: { ...morningMapCompleted5m, time: '2026-06-19T18:45:00.0000000' },
+  barTimeZone: 'eastern',
+  sent: {},
+}), false);
 const morningMapPayload = buildScannerMorningHtfDeskMapPayload({
   tradeDate: '2026-06-19',
   instrument: 'MES',
+  session: 'morning',
   deskState: morningHtfDeskMapState,
   completed5m: morningMapCompleted5m,
   currentPrice: 7563.75,
@@ -2054,6 +2080,53 @@ assert.match(morningMapText, /🐂 2H: BULL/);
 assert.match(morningMapText, /⚖️ 15M: RANGE/);
 assert.match(morningMapText, /5M remains execution authority/);
 assert.equal(morningMapPayload.components, undefined);
+const eveningMapPayload = buildScannerMorningHtfDeskMapPayload({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'evening',
+  deskState: morningHtfDeskMapState,
+  completed5m: { ...morningMapCompleted5m, time: '2026-06-19T18:50:00.0000000' },
+  currentPrice: 7563.75,
+});
+const eveningMapText = flattenDiscordPayloadText(eveningMapPayload);
+assert.match(eveningMapPayload.content || '', /MES Evening HTF Desk Map - 2026-06-19/);
+assert.match(eveningMapText, /MES Evening High Timeframe Desk Map - 2026-06-19/);
+assert.match(eveningMapText, /Evening HTF map only/);
+const htfMapChartArtifacts = await prepareScannerMorningHtfDeskMapArtifacts({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'morning',
+  deskState: counterStructureDeskStateFixture('LONG', 'BULL'),
+  normalized: {
+    canExecute: false,
+    entry: 5320,
+    stop: 5316,
+    t1: 5326,
+    t2: 5328,
+    riskPoints: 4,
+  } as any,
+  chartContext: {
+    candles: [
+      { index: 0, timestamp: '2026-06-19T09:20:00.0000000', open: 5315, high: 5318, low: 5314, close: 5317 },
+      { index: 1, timestamp: '2026-06-19T09:25:00.0000000', open: 5317, high: 5321, low: 5316, close: 5320 },
+      { index: 2, timestamp: '2026-06-19T09:30:00.0000000', open: 5320, high: 5324, low: 5319, close: 5323 },
+      { index: 3, timestamp: '2026-06-19T09:35:00.0000000', open: 5323, high: 5325, low: 5321, close: 5324 },
+      { index: 4, timestamp: '2026-06-19T09:40:00.0000000', open: 5324, high: 5327, low: 5322, close: 5326 },
+    ],
+    liquiditySweeps: [],
+    reclaimEvents: [],
+    displacementCandles: [],
+  } as any,
+  completed5m: { ...morningMapCompleted5m, time: '2026-06-19T09:40:00.0000000' },
+  currentPrice: 5326,
+  outputDir: auditDir,
+});
+assert.match(htfMapChartArtifacts.payload.content || '', /MES Morning HTF Desk Map - 2026-06-19/);
+assert.equal(htfMapChartArtifacts.files.length, 2);
+assert.match(path.basename(htfMapChartArtifacts.files[0]), /^scanner-htf-desk-map-morning-2026-06-19-MES.*\.png$/);
+assert.match(path.basename(htfMapChartArtifacts.files[1]), /^scanner-htf-desk-map-morning-2026-06-19-MES-level-map.*\.png$/);
+await fs.access(htfMapChartArtifacts.files[0]);
+await fs.access(htfMapChartArtifacts.files[1]);
 const eodCompleted5m = { time: '2026-06-19T15:55:00.0000000', open: 7570, high: 7572, low: 7568, close: 7571, volume: 1000 };
 assert.equal(shouldSendScannerEndOfDayMarketRecap({
   tradeDate: '2026-06-19',

@@ -138,6 +138,13 @@ function staleSeverity(stale: StaleChaseResult): number {
   return 1;
 }
 
+function executionReadinessSort(a: SetupCandidate, b: SetupCandidate): number {
+  const aExecutable = a.executionStatus === ExecutionStatus.Executable;
+  const bExecutable = b.executionStatus === ExecutionStatus.Executable;
+  if (aExecutable !== bExecutable) return aExecutable ? -1 : 1;
+  return 0;
+}
+
 function freshCandidateFromFallbackPool(
   normalized: NormalizedTradePlan,
   currentPrice: number | null,
@@ -155,6 +162,9 @@ function freshCandidateFromFallbackPool(
       const aSeverity = staleSeverity(applyStaleChaseGuard({ candidate: a, currentPrice, guards }));
       const bSeverity = staleSeverity(applyStaleChaseGuard({ candidate: b, currentPrice, guards }));
       if (aSeverity !== bSeverity) return aSeverity - bSeverity;
+
+      const readinessDiff = executionReadinessSort(a, b);
+      if (readinessDiff !== 0) return readinessDiff;
 
       const aFull = hasFullPlanLevels(a);
       const bFull = hasFullPlanLevels(b);
@@ -202,6 +212,9 @@ function freshOppositeEarlyMoveCandidateFromFallbackPool(
       const aSeverity = staleSeverity(applyStaleChaseGuard({ candidate: a, currentPrice, guards }));
       const bSeverity = staleSeverity(applyStaleChaseGuard({ candidate: b, currentPrice, guards }));
       if (aSeverity !== bSeverity) return aSeverity - bSeverity;
+
+      const readinessDiff = executionReadinessSort(a, b);
+      if (readinessDiff !== 0) return readinessDiff;
 
       const aFull = hasFullPlanLevels(a);
       const bFull = hasFullPlanLevels(b);

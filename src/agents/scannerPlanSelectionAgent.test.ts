@@ -810,6 +810,79 @@ assert.equal(solidPlanSelection.reviewStatus, 'already_triggered_no_fresh_entry'
 assert.equal(solidPlanSelection.stale.stale, true);
 assert.ok(solidPlanSelection.stale.reason?.includes('Do not chase'));
 
+const julyOneTurtleSoupLong = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Bullish Turtle Soup failed-low reclaim',
+  direction: 'LONG',
+  executionStatus: ExecutionStatus.Executable,
+  entry: 7548.25,
+  stop: 7539.75,
+  target1: 7561,
+  target2: 7565.25,
+  riskPoints: 8.5,
+  priority: 99,
+  rankScore: 99,
+  decisionQualityScore: 82,
+  evidence: [
+    'Failed-low / Turtle Soup long line in the sand: 7548.25.',
+    'Structured 5M reclaim and protected stop are present.',
+  ],
+});
+const julyOneWideIntradayMssLong = candidate({
+  setupType: SetupType.IntradayMssMicroContinuation,
+  scenarioLabel: 'Intraday MSS Micro Continuation',
+  direction: 'LONG',
+  executionStatus: ExecutionStatus.Conditional,
+  candidateState: 'HUMAN_REVIEW_READY',
+  entry: 7552.25,
+  stop: 7523.5,
+  target1: 7595.5,
+  target2: 7609.75,
+  riskPoints: 28.75,
+  priority: 96,
+  rankScore: 253,
+  decisionQualityScore: 84,
+  modelConfidenceScore: 100,
+  requiredTrigger: 'Completed 5M or 15M close above 7555.50 required before long continuation is active.',
+  evidence: [
+    'Bullish 15M MSS context.',
+    'Bullish 5M FVG execution trigger.',
+  ],
+  missingEvidence: [
+    'No chase: wait for a completed 5M or 15M close above 7555.50.',
+  ],
+});
+const julyOneSelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [julyOneWideIntradayMssLong, julyOneTurtleSoupLong],
+  } as any,
+  currentPrice: 7549,
+  latestCompletedBar: { high: 7549.75, low: 7547.5 },
+});
+assert.equal(julyOneSelection.candidate?.setupType, SetupType.TurtleSoup);
+assert.equal(julyOneSelection.candidate?.entry, 7548.25);
+assert.equal(julyOneSelection.candidate?.stop, 7539.75);
+assert.equal(julyOneSelection.candidate?.target1, 7561);
+assert.equal(julyOneSelection.candidate?.activeRuleset?.htfLineInSand?.lineInSand, 7548.25);
+assert.equal(julyOneSelection.stateForAlert, 'Executable');
+assert.equal(julyOneSelection.visibilityMetadata?.authority.canExecute, false);
+
+const julyOneLateSelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [julyOneWideIntradayMssLong, julyOneTurtleSoupLong],
+  } as any,
+  currentPrice: 7555,
+  latestCompletedBar: { high: 7555.5, low: 7547.5 },
+});
+assert.equal(julyOneLateSelection.candidate, julyOneWideIntradayMssLong);
+assert.equal(julyOneLateSelection.stateForAlert, 'Conditional');
+
 const morningMoveBars: NinjaBridgeBar[] = [
   bar('2026-05-28T09:30:00-04:00', 7535.75, 7538.75, 7534.75, 7535.25),
   bar('2026-05-28T09:35:00-04:00', 7535.25, 7537.25, 7527.75, 7530.00),

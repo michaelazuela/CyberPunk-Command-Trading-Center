@@ -214,7 +214,7 @@ interface ScannerStateReadResult {
 
 export type ScannerAlertDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped' | 'failed_stale_no_retry';
 export type ScannerActiveCampaignResetPolicy = 'trade_date_direction_campaign';
-export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'morning_htf_desk_map' | 'end_of_day_market_recap' | 'watchlist' | 'window_start' | 'health' | 'data_quality' | 'live_hold_notice';
+export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'session_htf_desk_map' | 'end_of_day_market_recap' | 'watchlist' | 'window_start' | 'health' | 'data_quality' | 'live_hold_notice';
 export type ScannerDiscordDeliverySource = ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | 'phase11_boundary' | null;
 
 export interface ScannerDiscordCleanupRecord {
@@ -314,7 +314,7 @@ export interface ScannerMorningHtfDeskMapLedgerRecord {
   fingerprint: string;
   tradeDate: string;
   instrument: Instrument;
-  session: 'morning';
+  session: LiveSession | string;
   primary: string;
   latestCompleted5m: string | null;
   keyBattleArea: string;
@@ -5195,8 +5195,9 @@ function scannerDeskPlanRefreshRecord(args: {
 function scannerMorningHtfDeskMapKey(args: {
   tradeDate: string;
   instrument: Instrument;
+  session?: string;
 }): string {
-  return `${args.tradeDate}:${args.instrument}:morning:MORNING_HTF_DESK_MAP`;
+  return `${args.tradeDate}:${args.instrument}:${args.session || 'morning'}:SESSION_HTF_DESK_MAP`;
 }
 
 function scannerHtfBiasEmoji(bias: string | null | undefined): string {
@@ -5279,6 +5280,7 @@ function scannerMorningHtfDeskMapFingerprint(args: {
 function scannerMorningHtfDeskMapRecord(args: {
   tradeDate: string;
   instrument: Instrument;
+  session?: LiveSession | string;
   deskState: DeskState;
   latestCompleted5m?: string | null;
   sentAt: string;
@@ -5288,7 +5290,7 @@ function scannerMorningHtfDeskMapRecord(args: {
     fingerprint: scannerMorningHtfDeskMapFingerprint({ deskState: args.deskState, keyBattleArea }),
     tradeDate: args.tradeDate,
     instrument: args.instrument,
-    session: 'morning',
+    session: args.session || 'morning',
     primary: args.deskState.primaryDeskPlay.direction,
     latestCompleted5m: args.latestCompleted5m || null,
     keyBattleArea,
@@ -5304,13 +5306,19 @@ export function shouldSendScannerMorningHtfDeskMap(args: {
   barTimeZone: BridgeTimeZoneMode;
   sent: Record<string, ScannerMorningHtfDeskMapLedgerRecord>;
 }): boolean {
-  if (args.session !== 'morning') return false;
   if (!args.completed5m) return false;
   const parsed = parseBridgeTime(args.completed5m.time, args.barTimeZone);
   if (!parsed) return false;
   const minutes = toEtMinutes(parsed);
-  if (minutes < 9 * 60 + 20 || minutes > 10 * 60) return false;
-  return !args.sent[scannerMorningHtfDeskMapKey({ tradeDate: args.tradeDate, instrument: args.instrument })];
+  const inSessionMapOpen = args.session === 'morning'
+    ? minutes >= 9 * 60 + 20 && minutes <= 10 * 60
+    : args.session === 'lunch'
+      ? minutes >= 12 * 60 + 5 && minutes <= 12 * 60 + 45
+      : args.session === 'evening'
+        ? minutes >= 18 * 60 + 50 && minutes <= 19 * 60 + 30
+        : false;
+  if (!inSessionMapOpen) return false;
+  return !args.sent[scannerMorningHtfDeskMapKey({ tradeDate: args.tradeDate, instrument: args.instrument, session: args.session })];
 }
 
 function scannerEndOfDayMarketRecapKey(args: {
@@ -6657,7 +6665,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
         riskPoints: contextCandidate.riskPoints ?? args.normalized.riskPoints ?? null,
       }
     : args.normalized;
-  const payload = buildDiscordPayload({
+  let payload = buildDiscordPayload({
     session: args.session,
     tradeDate: args.tradeDate,
     config: args.config,
@@ -6675,7 +6683,25 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
     },
     deskState,
   });
-  validateDiscordPayload(payload, files);
+  try {
+    validateDiscordPayload(payload, files);
+  } catch (error) {
+    const message = sanitizedError(error);
+    if (!/compact alert text|image-backed trade alerts|2000 character limit|preferred normal output/i.test(message)) {
+      throw error;
+    }
+    payload = scannerDeskPlayLiveCompactFallbackPayload({
+      session: args.session,
+      tradeDate: args.tradeDate,
+      instrument: args.config.instrument,
+      deskState,
+      candidate: contextCandidate,
+      normalized: normalizedForPayload,
+      currentPrice: args.currentPrice,
+      originalPayload: payload,
+    });
+    validateDiscordPayload(payload, files);
+  }
   return { payload, files, chartMarkup, levelMap };
 }
 
@@ -6683,9 +6709,78 @@ function scannerDiscordLine(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
 }
 
+function scannerDeskPlayLiveCompactFallbackPayload(args: {
+  session: LiveSession;
+  tradeDate: string;
+  instrument: Instrument;
+  deskState: DeskState;
+  candidate: SetupCandidate | null;
+  normalized: ReturnType<typeof buildAppTradePlan>;
+  currentPrice: number | null;
+  originalPayload: DiscordWebhookPayload;
+}): DiscordWebhookPayload {
+  const play = args.deskState.primaryDeskPlay;
+  const candidateDirection = args.candidate?.direction === 'LONG' || args.candidate?.direction === 'SHORT'
+    ? args.candidate.direction
+    : null;
+  const direction = play.direction === 'LONG' || play.direction === 'SHORT'
+    ? play.direction
+    : candidateDirection || 'WAIT';
+  const line = play.activeTacticalZone?.direction === direction && typeof play.activeTacticalZone.lower === 'number'
+    ? play.activeTacticalZone.lower
+    : play.activeTacticalLine?.activeLine ?? play.lineInSand ?? args.deskState.lineInSand ?? args.candidate?.entry ?? null;
+  const entry = args.candidate?.entry ?? args.normalized.entry ?? null;
+  const stop = args.candidate?.stop ?? args.normalized.stop ?? null;
+  const t1 = args.candidate?.target1 ?? args.normalized.t1 ?? null;
+  const t2 = args.candidate?.target2 ?? args.normalized.t2 ?? null;
+  const trigger = play.activeTacticalZone?.nextTrigger ||
+    play.activeTacticalLine?.nextTrigger ||
+    args.candidate?.requiredTrigger ||
+    args.candidate?.nextAction ||
+    play.nextTrigger ||
+    args.deskState.nextTrigger ||
+    'Wait for completed 5M proof.';
+  const invalidation = args.candidate?.invalidation || play.invalidation || args.deskState.invalidation || 'Invalidation pending protected 5M structure.';
+  const noChase = play.activeTacticalZone?.noChase || play.noChase || 'No chase; wait for a fresh completed 5M trigger/retest.';
+  const content = `🟠 [${args.session.toUpperCase()} DESK PLAY] ${args.instrument} - ${direction} REVIEW | ${args.tradeDate}`;
+  const description = [
+    `Primary: ${direction}`,
+    `Current: ${scannerDiscordLine(args.currentPrice)}`,
+    `HTF: ${args.deskState.htfContextStatus || 'unknown'} / ${play.htfProtectedStructureMap?.reliability || 'unknown'}`,
+    `Line in sand: ${scannerDiscordLine(line)}`,
+    direction === 'SHORT'
+      ? `Condition: completed 5M proof below ${scannerDiscordLine(line)}.`
+      : direction === 'LONG'
+        ? `Condition: completed 5M proof above ${scannerDiscordLine(line)}.`
+        : 'Condition: wait until one side confirms with completed 5M proof.',
+    `Entry: ${scannerDiscordLine(entry)} | Stop: ${scannerDiscordLine(stop)}`,
+    `T1: ${scannerDiscordLine(t1)} | T2: ${scannerDiscordLine(t2)}`,
+    `Trigger: ${clip(trigger, 220)}`,
+    `Invalidation: ${clip(invalidation, 180)}`,
+    `No chase: ${clip(noChase, 180)}`,
+    'Review only. No automated orders. canExecute unchanged.',
+  ].join('\n');
+  return {
+    username: args.originalPayload.username || 'Quant Desk',
+    content,
+    embeds: [
+      {
+        title: `${args.instrument} Current Desk Plan`,
+        description: professionalizeReportText(description),
+        color: direction === 'LONG' ? 0x00a86b : direction === 'SHORT' ? 0xff6d00 : 0xffa000,
+        fields: [],
+        footer: { text: 'Quant Desk • Compact live DeskState play • Not execution approval' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+    ...(args.originalPayload.components?.length ? { components: args.originalPayload.components } : {}),
+  };
+}
+
 export function buildScannerMorningHtfDeskMapPayload(args: {
   tradeDate: string;
   instrument: Instrument;
+  session?: LiveSession | string;
   deskState: DeskState;
   completed5m: NinjaBridgeBar | null;
   currentPrice: number | null;
@@ -6715,12 +6810,17 @@ export function buildScannerMorningHtfDeskMapPayload(args: {
   const bottomLine = play.direction === 'WAIT'
     ? `Wait. Key battle area is ${keyBattleArea}. A completed close+hold through the tactical line improves one side; failure/rejection keeps the opposite side on review until the scanner-owned 5M gate confirms.`
     : `${play.direction} map is active around ${scannerDiscordLine(play.lineInSand)}. Do not chase; wait for completed 5M confirmation and app-owned canExecute.`;
+  const sessionLabel = args.session === 'evening'
+    ? 'Evening'
+    : args.session === 'lunch'
+      ? 'Lunch/PM'
+      : 'Morning';
 
   return {
     username: 'Quant Desk',
-    content: `📊 ${args.instrument} Morning HTF Desk Map - ${args.tradeDate}`,
+    content: `📊 ${args.instrument} ${sessionLabel} HTF Desk Map - ${args.tradeDate}`,
     embeds: [{
-      title: `${args.instrument} Morning High Timeframe Desk Map - ${args.tradeDate}`,
+      title: `${args.instrument} ${sessionLabel} High Timeframe Desk Map - ${args.tradeDate}`,
       color: play.direction === 'LONG' ? 0x22c55e : play.direction === 'SHORT' ? 0xef4444 : 0xf97316,
       description: [
         `Primary: ${primary}`,
@@ -6746,10 +6846,72 @@ export function buildScannerMorningHtfDeskMapPayload(args: {
           inline: false,
         },
       ],
-      footer: { text: `Quant Desk • Morning HTF map only • Data ${dataQuality} • Not execution approval` },
+      footer: { text: `Quant Desk • ${sessionLabel} HTF map only • Data ${dataQuality} • Not execution approval` },
       timestamp: new Date().toISOString(),
     }],
   };
+}
+
+export async function prepareScannerMorningHtfDeskMapArtifacts(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  deskState: DeskState;
+  normalized: ReturnType<typeof buildAppTradePlan>;
+  chartContext: AnalysisResult['structuredChartContext'] | null | undefined;
+  completed5m: NinjaBridgeBar | null;
+  currentPrice: number | null;
+  outputDir?: string;
+}): Promise<{
+  payload: DiscordWebhookPayload;
+  files: string[];
+  chartMarkup: string | null;
+  levelMap: string | null;
+}> {
+  const payload = buildScannerMorningHtfDeskMapPayload({
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+    deskState: args.deskState,
+    completed5m: args.completed5m,
+    currentPrice: args.currentPrice,
+  });
+  const deskState = withScannerReviewMapPresentation({
+    deskState: args.deskState,
+    candidate: candidateForDeskPlayContextChart(args.deskState, args.normalized),
+    normalized: args.normalized,
+  });
+  const contextCandidate = candidateForDeskPlayContextChart(deskState, args.normalized);
+  const play = deskState.primaryDeskPlay;
+  const contextLine = play.activeTacticalLine?.activeLine ?? play.lineInSand;
+  const chartMarkup = contextCandidate
+    ? await renderChartMarkup({
+        chartContext: args.chartContext || null,
+        candidate: contextCandidate,
+        instrument: args.instrument,
+        tradeDate: args.tradeDate,
+        sessionLabel: args.session,
+        renderMode: 'desk_play_context',
+        contextLine,
+        contextLabel: play.activeTacticalLine?.migrated ? 'Active tactical line' : 'Line in the sand',
+        outputDir: args.outputDir,
+        filePrefix: `scanner-htf-desk-map-${args.session}-${args.tradeDate}-${args.instrument}`,
+      })
+    : null;
+  const levelMap = contextCandidate
+    ? await renderPriceLevelMap({
+        chartContext: args.chartContext || null,
+        candidate: contextCandidate,
+        instrument: args.instrument,
+        tradeDate: args.tradeDate,
+        sessionLabel: args.session,
+        outputDir: args.outputDir,
+        filePrefix: `scanner-htf-desk-map-${args.session}-${args.tradeDate}-${args.instrument}`,
+      })
+    : null;
+  const files = [chartMarkup, levelMap].filter((file): file is string => Boolean(file));
+  validateDiscordPayload(payload, files);
+  return { payload, files, chartMarkup, levelMap };
 }
 
 function compactScannerDiscordText(value: string | null | undefined, max = 260): string {
@@ -7540,6 +7702,57 @@ async function postDiscord(
     httpStatus: response.status,
     discordMessageId,
   };
+}
+
+async function postScannerDiscordManaged(args: {
+  kind: ScannerDiscordCleanupKind;
+  key: string;
+  payload: DiscordWebhookPayload;
+  config: ScannerConfig;
+  files?: string[];
+  webhookOverride?: ScannerWebhookResolution;
+  liveSendBoundary?: LiveDiscordEligibilityReport;
+  holdNotice?: {
+    state: ScannerStateFile;
+    tradeDate: string;
+    session: LiveSession;
+    windowLabel: string;
+    currentPrice: number | null;
+    completed5m: NinjaBridgeBar | null;
+    deskState: DeskState;
+  };
+}): Promise<ScannerDiscordPostReceipt> {
+  const receipt = await postDiscord(
+    args.payload,
+    args.config,
+    args.files || [],
+    args.webhookOverride,
+    args.liveSendBoundary,
+  );
+  const source = receipt.webhookSource || 'unknown';
+  if (receipt.deliveryStatus === 'sent') {
+    console.log(`[scanner-discord] posted kind=${args.kind} key=${args.key} source=${source} http=${receipt.httpStatus ?? 'N/A'} message=${receipt.discordMessageId || 'N/A'}`);
+    return receipt;
+  }
+  const blockers = args.liveSendBoundary?.blockers?.length
+    ? ` blockers=${args.liveSendBoundary.blockers.join(' | ')}`
+    : '';
+  console.log(`[scanner-discord] held kind=${args.kind} key=${args.key} source=${source} status=${receipt.deliveryStatus}${blockers}`);
+  if (receipt.webhookSource === 'phase11_boundary' && args.liveSendBoundary && args.holdNotice) {
+    await sendScannerLiveHoldNoticeIfNeeded({
+      state: args.holdNotice.state,
+      config: args.config,
+      tradeDate: args.holdNotice.tradeDate,
+      session: args.holdNotice.session,
+      windowLabel: args.holdNotice.windowLabel,
+      currentPrice: args.holdNotice.currentPrice,
+      completed5m: args.holdNotice.completed5m,
+      deskState: args.holdNotice.deskState,
+      boundary: args.liveSendBoundary,
+      postKind: args.kind,
+    });
+  }
+  return receipt;
 }
 
 async function sendScannerHealthAlertIfNeeded(args: {
@@ -9292,30 +9505,39 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     barTimeZone: config.barTimeZone,
     sent: state.morningHtfDeskMapSent,
   })) {
-    const morningMapKey = scannerMorningHtfDeskMapKey({ tradeDate, instrument: config.instrument });
+    const morningMapKey = scannerMorningHtfDeskMapKey({ tradeDate, instrument: config.instrument, session });
     try {
-      const payload = buildScannerMorningHtfDeskMapPayload({
+      const htfMapArtifacts = await prepareScannerMorningHtfDeskMapArtifacts({
         tradeDate,
         instrument: config.instrument,
+        session,
         deskState,
+        normalized,
+        chartContext: analysis.structuredChartContext || null,
         completed5m,
         currentPrice,
       });
-      const morningMapLiveBoundary = liveDiscordSendBoundary(decisionTapePath);
-      const receipt = await postDiscord(payload, config, [], undefined, morningMapLiveBoundary);
+      const receipt = await postScannerDiscordManaged({
+        kind: 'session_htf_desk_map',
+        key: morningMapKey,
+        payload: htfMapArtifacts.payload,
+        files: htfMapArtifacts.files,
+        config,
+      });
       if (receipt.deliveryStatus === 'sent') {
         const sentAt = new Date().toISOString();
         state.morningHtfDeskMapSent[morningMapKey] = scannerMorningHtfDeskMapRecord({
           tradeDate,
           instrument: config.instrument,
+          session,
           deskState,
           latestCompleted5m: completed5m.time,
           sentAt,
         });
         await writeScannerDiscordReceiptAuditLog({
-          kind: 'morning_htf_desk_map',
+          kind: 'session_htf_desk_map',
           key: morningMapKey,
-          planVersionId: `${planVersionId}-MORNING-HTF-DESK-MAP`,
+          planVersionId: `${planVersionId}-SESSION-HTF-DESK-MAP`,
           tradeDate,
           instrument: config.instrument,
           session,
@@ -9324,26 +9546,12 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           cleanupRecordKey: null,
           ragReceiptAttached: false,
         });
-        console.log(`[scanner] Sent Morning HTF Desk Map: ${morningMapKey}`);
+        console.log(`[scanner] Sent ${window.label} HTF Desk Map: ${morningMapKey}`);
       } else {
-        console.log(`[scanner] Morning HTF Desk Map skipped (${receipt.webhookSource || 'unknown'}): ${morningMapKey}`);
-        if (receipt.webhookSource === 'phase11_boundary') {
-          await sendScannerLiveHoldNoticeIfNeeded({
-            state,
-            config,
-            tradeDate,
-            session,
-            windowLabel: window.label,
-            currentPrice,
-            completed5m,
-            deskState,
-            boundary: morningMapLiveBoundary,
-            postKind: 'morning_htf_desk_map',
-          });
-        }
+        console.log(`[scanner] ${window.label} HTF Desk Map skipped (${receipt.webhookSource || 'unknown'}): ${morningMapKey}`);
       }
     } catch (error) {
-      console.warn(`[scanner] Morning HTF Desk Map delivery failed safely; scanner will continue evaluating watch and trade alerts: ${sanitizedError(error)}`);
+      console.warn(`[scanner] ${window.label} HTF Desk Map delivery failed safely; scanner will continue evaluating watch and trade alerts: ${sanitizedError(error)}`);
     }
   }
 
@@ -9396,7 +9604,23 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           planVersionId: reversalWatchPlanVersionId,
         });
         const reversalLiveBoundary = liveDiscordSendBoundary(decisionTapePath);
-        const receipt = await postDiscord(reversalArtifacts.payload, config, reversalArtifacts.files, undefined, reversalLiveBoundary);
+        const receipt = await postScannerDiscordManaged({
+          kind: 'reversal_watch',
+          key: reversalWatchKey,
+          payload: reversalArtifacts.payload,
+          config,
+          files: reversalArtifacts.files,
+          liveSendBoundary: reversalLiveBoundary,
+          holdNotice: {
+            state,
+            tradeDate,
+            session,
+            windowLabel: window.label,
+            currentPrice,
+            completed5m,
+            deskState,
+          },
+        });
         if (receipt.deliveryStatus === 'sent') {
           const sentAt = new Date().toISOString();
           state.reversalWatchSent[reversalWatchKey] = scannerReversalWatchRecord({
@@ -9447,20 +9671,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           console.log(`[scanner] Sent Reversal Watch update: ${reversalWatchKey}`);
         } else {
           console.log(`[scanner] Reversal Watch update skipped (${receipt.webhookSource || 'unknown'}): ${reversalWatchKey}`);
-          if (receipt.webhookSource === 'phase11_boundary') {
-            await sendScannerLiveHoldNoticeIfNeeded({
-              state,
-              config,
-              tradeDate,
-              session,
-              windowLabel: window.label,
-              currentPrice,
-              completed5m,
-              deskState,
-              boundary: reversalLiveBoundary,
-              postKind: 'reversal_watch',
-            });
-          }
         }
       } catch (error) {
         console.warn(`[scanner] Reversal Watch delivery failed safely; scanner will continue evaluating Desk Play/trade alerts: ${sanitizedError(error)}`);
@@ -9529,7 +9739,23 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
             console.warn(`Scanner Desk Play RAG pending save failed safely: ${sanitizedError(error)}`);
           }
         }
-        const receipt = await postDiscord(deskPlayArtifacts.payload, config, deskPlayArtifacts.files, undefined, deskPlayLiveBoundary);
+        const receipt = await postScannerDiscordManaged({
+          kind: 'desk_play',
+          key: deskPlayKey,
+          payload: deskPlayArtifacts.payload,
+          config,
+          files: deskPlayArtifacts.files,
+          liveSendBoundary: deskPlayLiveBoundary,
+          holdNotice: {
+            state,
+            tradeDate,
+            session,
+            windowLabel: window.label,
+            currentPrice,
+            completed5m,
+            deskState,
+          },
+        });
         if (receipt.deliveryStatus === 'sent') {
           const sentAt = new Date().toISOString();
           const replaceResult = await replacePriorScannerDiscordCurrentDeskPlans({
@@ -9595,20 +9821,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           console.log(`[scanner] Sent Desk Play update: ${deskPlayKey}`);
         } else {
           console.log(`[scanner] Desk Play update skipped (${receipt.webhookSource || 'unknown'}): ${deskPlayKey}`);
-          if (receipt.webhookSource === 'phase11_boundary') {
-            await sendScannerLiveHoldNoticeIfNeeded({
-              state,
-              config,
-              tradeDate,
-              session,
-              windowLabel: window.label,
-              currentPrice,
-              completed5m,
-              deskState,
-              boundary: deskPlayLiveBoundary,
-              postKind: 'desk_play',
-            });
-          }
         }
       } catch (error) {
         console.warn(`[scanner] Desk Play delivery failed safely; scanner will continue evaluating trade alerts: ${sanitizedError(error)}`);
@@ -9694,7 +9906,23 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     await writeState(state);
 
     try {
-      const receipt = await postDiscord(alertArtifacts.payload, config, alertArtifacts.files, undefined, alertLiveBoundary);
+      const receipt = await postScannerDiscordManaged({
+        kind: 'trade_alert',
+        key: alertKey,
+        payload: alertArtifacts.payload,
+        config,
+        files: alertArtifacts.files,
+        liveSendBoundary: alertLiveBoundary,
+        holdNotice: {
+          state,
+          tradeDate,
+          session,
+          windowLabel: window.label,
+          currentPrice,
+          completed5m,
+          deskState,
+        },
+      });
       if (receipt.deliveryStatus === 'sent') {
         const sentAt = new Date().toISOString();
         const recoveredOperational = await cleanupRecoveredScannerOperationalDiscordMessages({
@@ -9784,20 +10012,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
               ? 'phase11_boundary'
               : 'dry_run',
         });
-        if (receipt.webhookSource === 'phase11_boundary') {
-          await sendScannerLiveHoldNoticeIfNeeded({
-            state,
-            config,
-            tradeDate,
-            session,
-            windowLabel: window.label,
-            currentPrice,
-            completed5m,
-            deskState,
-            boundary: alertLiveBoundary,
-            postKind: 'trade_alert',
-          });
-        }
         await releaseDurableActiveCampaignScannerAlertClaim({
           config: activeCampaignClaim.source === 'supabase' ? durableLedgerConfig : null,
           campaignId: activeCampaignClaim.campaignId,
