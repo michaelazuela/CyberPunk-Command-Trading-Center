@@ -90,13 +90,9 @@ assert.deepEqual(preWindowCommand.args.slice(0, 4), ['run', 'nt:backfill', '--',
 assert.ok(preWindowCommand.args.includes('--days'));
 assert.ok(preWindowCommand.args.includes('2'));
 const safeSpawnCommand = buildWindowsSafeSpawnCommand('npm.cmd', ['run', 'nt:backfill', '--', '--bridge-instrument', 'MES 06-26']);
-if (process.platform === 'win32') {
-  assert.equal(safeSpawnCommand.command, 'cmd.exe');
-  assert.deepEqual(safeSpawnCommand.args.slice(0, 3), ['/d', '/c', 'npm.cmd run nt:backfill -- --bridge-instrument "MES 06-26"']);
-} else {
-  assert.equal(safeSpawnCommand.command, 'npm.cmd');
-  assert.deepEqual(safeSpawnCommand.args, ['run', 'nt:backfill', '--', '--bridge-instrument', 'MES 06-26']);
-}
+assert.equal(safeSpawnCommand.command, process.execPath);
+assert.equal(safeSpawnCommand.args.at(1), path.join('tools', 'automation', 'backfill-market-bars.ts'));
+assert.deepEqual(safeSpawnCommand.args.slice(-2), ['--bridge-instrument', 'MES 06-26']);
 
 const recorderService = defaultConfig.config.childServices.find((service) => service.id === 'candle-recorder');
 assert.ok(recorderService);
@@ -110,6 +106,12 @@ assert.equal(
 assert.equal(
   isTrackedServiceProcessRunning(recorderService, process.pid, [
     { pid: process.pid, commandLine: `cmd.exe /c npm.cmd run ${recorderService.npmScript} -- ${recorderService.args.join(' ')}` },
+  ]),
+  process.platform === 'win32' ? true : isProcessRunning(process.pid),
+);
+assert.equal(
+  isTrackedServiceProcessRunning(recorderService, process.pid, [
+    { pid: process.pid, commandLine: `node.exe node_modules\\tsx\\dist\\cli.mjs tools\\automation\\candle-recorder.ts ${recorderService.args.join(' ')}` },
   ]),
   process.platform === 'win32' ? true : isProcessRunning(process.pid),
 );

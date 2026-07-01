@@ -4,6 +4,7 @@ import path from 'node:path';
 import { readRuntimeJsonSync, writeRuntimeJsonAtomicSync } from '../runtimeJson';
 import type { SupervisorConfig } from './config';
 import type { SupervisorLogger } from './logger';
+import { buildSupervisorSyncCommand } from './spawnCommand';
 
 export type PreWindowBackfillSession = 'morning' | 'lunch' | 'evening';
 
@@ -36,17 +37,8 @@ function npmCommand(): string {
   return process.platform === 'win32' ? 'npm.cmd' : 'npm';
 }
 
-function quoteWindowsArg(value: string): string {
-  if (value && !/\s|"/.test(value)) return value;
-  return `"${value.replace(/"/g, '""')}"`;
-}
-
 export function buildWindowsSafeSpawnCommand(command: string, args: string[]): { command: string; args: string[] } {
-  if (process.platform !== 'win32') return { command, args };
-  return {
-    command: 'cmd.exe',
-    args: ['/d', '/c', [command, ...args.map(quoteWindowsArg)].join(' ')],
-  };
+  return buildSupervisorSyncCommand(command, args);
 }
 
 function statePath(logsDir: string): string {

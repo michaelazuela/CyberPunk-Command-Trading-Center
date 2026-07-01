@@ -5,6 +5,7 @@ import { readRuntimeJsonSync, writeRuntimeJsonAtomicSync } from '../runtimeJson'
 import { readQuantDeskMaintenanceStatus } from '../automation/quant-desk-maintenance';
 import type { SupervisorChildService, SupervisorConfig } from './config';
 import type { SupervisorLogger } from './logger';
+import { buildSupervisorSpawnCommand, directScriptPathForNpmScript } from './spawnCommand';
 
 export type ChildRuntimeStatus = 'disabled' | 'running' | 'external_running' | 'stopped' | 'missing' | 'launch_error';
 
@@ -37,21 +38,8 @@ function logPath(logsDir: string, serviceId: string, stream: 'stdout' | 'stderr'
   return path.join(logsDir, `${serviceId}.${stream}.log`);
 }
 
-function npmCommand(): string {
-  return process.platform === 'win32' ? 'npm.cmd' : 'npm';
-}
-
-function quoteWindowsArg(value: string): string {
-  if (value && !/\s|"/.test(value)) return value;
-  return `"${value.replace(/"/g, '""')}"`;
-}
-
 function spawnCommandArgs(args: string[]): { file: string; args: string[] } {
-  if (process.platform !== 'win32') return { file: npmCommand(), args };
-  return {
-    file: 'cmd.exe',
-    args: ['/d', '/c', [npmCommand(), ...args.map(quoteWindowsArg)].join(' ')],
-  };
+  return buildSupervisorSpawnCommand(args);
 }
 
 export function readSupervisorState(logsDir: string): SupervisorState | null {
@@ -139,9 +127,11 @@ export interface SupervisorProcessInfo {
 }
 
 export function serviceMatchesCommandLine(service: SupervisorChildService, commandLine: string): boolean {
+  const directScriptPath = directScriptPathForNpmScript(service.npmScript);
   const scriptMatches = commandLine.includes(`run ${service.npmScript}`)
     || commandLine.includes(`run ${service.npmScript.replace(/:/g, '\\:')}`)
-    || commandLine.includes(service.npmScript);
+    || commandLine.includes(service.npmScript)
+    || Boolean(directScriptPath && commandLine.includes(directScriptPath));
   if (!scriptMatches) return false;
   return service.args.every((arg) => commandLine.includes(arg));
 }
