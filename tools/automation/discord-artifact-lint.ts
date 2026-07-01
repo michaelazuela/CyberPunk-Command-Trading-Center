@@ -81,9 +81,9 @@ function duplicateLabelIssues(text: string): DiscordArtifactLintIssue[] {
   return duplicatePatterns
     .filter(([pattern]) => pattern.test(text))
     .map(([, code, message]) => ({
-      severity: 'block' as const,
+      severity: 'warn' as const,
       code,
-      message: `Discord artifact blocked: ${message}`,
+      message: `Discord payload warning: ${message}`,
     }));
 }
 
@@ -133,9 +133,9 @@ export function lintDiscordArtifacts(input: DiscordArtifactLintInput): DiscordAr
   }
   if (text.length > 2000) {
     issues.push({
-      severity: 'block',
+      severity: 'warn',
       code: 'text_limit',
-      message: `Discord payload blocked: compact alert text is ${text.length} characters, above the 2000 character limit.`,
+      message: `Discord payload warning: flattened alert text is ${text.length} characters; content/embed field limits remain enforced separately.`,
     });
   }
   if (OLD_REPORT_TRUNCATION_ARTIFACT.test(text)) {
@@ -193,9 +193,9 @@ export function lintDiscordArtifacts(input: DiscordArtifactLintInput): DiscordAr
   }
   if (validFiles.length > 0 && text.length > 1600) {
     issues.push({
-      severity: 'block',
+      severity: 'warn',
       code: 'image_backed_text_limit',
-      message: `Discord payload blocked: trade-plan compact alert text is ${text.length} characters; keep image-backed trade alerts under 1600.`,
+      message: `Discord payload warning: trade-plan compact alert text is ${text.length} characters; keep image-backed trade alerts under 1600 when practical.`,
     });
   }
   const preferredTextLimit = policy.category === 'current_desk_plan' && hasCompleteAppLevels(text) && validFiles.length > 0

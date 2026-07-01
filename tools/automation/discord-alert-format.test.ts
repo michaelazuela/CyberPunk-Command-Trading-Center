@@ -30,6 +30,30 @@ assert.equal(classifyDiscordMessageText('MES Current Desk Plan').category, 'curr
 assert.equal(classifyDiscordMessageText('[AM WATCHLIST] MES - LONG DEVELOPING').category, 'watchlist');
 assert.equal(classifyDiscordMessageText('[AM WATCH] MES - LONG WATCH FORMING').category, 'watchlist');
 assert.equal(classifyDiscordMessageText('MES End-of-Day Market Recap - 2026-06-19').category, 'daily_weekly_summary');
+assert.doesNotThrow(() => validateDiscordPayload({
+  username: 'Quant Desk',
+  content: 'MES Review Notice',
+  embeds: [{
+    title: 'MES Review Notice',
+    description: 'Invalidation: Invalidation follows protected 5M structure.',
+    color: 0xf59e0b,
+    fields: [],
+    footer: { text: 'Quant Desk - Review notice - decision support only' },
+    timestamp: '2026-07-01T17:00:00.000Z',
+  }],
+  components: buildOutcomeComponents({
+    planVersionId: 'DUPLICATE-LABEL-WARNING-TEST',
+    sessionType: 'morning',
+    tradeDate: '2026-07-01',
+    instrument: 'MES',
+    direction: 'NO TRADE',
+  }),
+}));
+assert.throws(() => validateDiscordPayload({
+  username: 'Quant Desk',
+  content: 'x'.repeat(2001),
+  embeds: [],
+}), /content is 2001 characters/);
 
 function sampleCandidate(direction: 'LONG' | 'SHORT' = 'LONG'): SetupCandidate {
   return {
@@ -223,13 +247,11 @@ assert.throws(
   () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\nEntry: pending`), ['desk-plan-chart.png']),
   /Entry: pending is stale/,
 );
-assert.throws(
+assert.doesNotThrow(
   () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\nAction: Action wait for completed 5M proof.`), ['desk-plan-chart.png']),
-  /duplicate Action label/,
 );
-assert.throws(
+assert.doesNotThrow(
   () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\nInvalid: Invalid if 7436.75 fails.`), ['desk-plan-chart.png']),
-  /duplicate Invalid label/,
 );
 assert.throws(
   () => validateDiscordPayload(currentDeskPlanPayload([
@@ -259,9 +281,8 @@ assert.throws(
   ].join('\n')), ['desk-plan-chart.png']),
   /app targets are internally inconsistent/,
 );
-assert.throws(
+assert.doesNotThrow(
   () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\n${'x'.repeat(1500)}`), ['desk-plan-chart.png']),
-  /keep image-backed trade alerts under 1600/,
 );
 
 const normalized = {

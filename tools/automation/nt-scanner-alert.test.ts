@@ -5000,6 +5000,67 @@ assert.equal(liveBoundaryWithChecklist.eligible, true);
 assert.equal(liveBoundaryWithChecklist.blockers.length, 0);
 assert.equal(scannerLiveDiscordHoldNoticeEligible(liveBoundaryWithoutChecklist), false);
 
+const deskPlayReviewWithNoChaseContext = {
+  ...phase11BoundaryDeskStateFixture('SHORT'),
+  visibilityMode: 'POST_REVIEW',
+  discordAction: 'post_review',
+  suppressionReason: 'SHORT high-quality review map kept local: current price already reached/passed T1.',
+  visibilityMetadata: {
+    ...phase11BoundaryDeskStateFixture('SHORT').visibilityMetadata,
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    suppressionReason: 'SHORT high-quality review map kept local: current price already reached/passed T1.',
+    authority: {
+      ...phase11BoundaryDeskStateFixture('SHORT').visibilityMetadata.authority,
+      planEligible: true,
+      discordEligible: true,
+      executionEligible: false,
+      humanReviewOnly: true,
+      canExecute: false,
+    },
+  },
+} satisfies DeskState;
+const deskPlayBoundaryWithNoChaseContext = buildScannerLiveDiscordSendBoundaryReport({
+  postKind: 'desk_play',
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: true,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: deskPlayReviewWithNoChaseContext,
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-07-01-MES-lunch.json'),
+  auditPath: path.join(auditDir, 'scanner-lunch-2026-07-01-MES-DESK-PLAY-NO-CHASE.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+});
+assert.equal(deskPlayBoundaryWithNoChaseContext.eligible, true);
+assert.equal(deskPlayBoundaryWithNoChaseContext.blockers.length, 0);
+assert.equal(scannerLiveDiscordHoldNoticeEligible(deskPlayBoundaryWithNoChaseContext), false);
+
+const tradeAlertWithNoChaseContext = buildScannerLiveDiscordSendBoundaryReport({
+  postKind: 'trade_alert',
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: true,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: deskPlayReviewWithNoChaseContext,
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-07-01-MES-lunch.json'),
+  auditPath: path.join(auditDir, 'scanner-lunch-2026-07-01-MES-TRADE-ALERT-NO-CHASE.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+});
+assert.equal(tradeAlertWithNoChaseContext.eligible, false);
+assert.ok(tradeAlertWithNoChaseContext.blockers.some((item) => item.includes('missed/no-chase')));
+
 const heldDeskState = {
   ...phase11BoundaryDeskStateFixture(),
   visibilityMode: 'HOLD_WITH_REASON',

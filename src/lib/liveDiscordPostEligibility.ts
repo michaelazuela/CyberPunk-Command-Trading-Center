@@ -28,6 +28,7 @@ export interface LiveDiscordEligibilityCheck {
 }
 
 export interface LiveDiscordEligibilityInput {
+  postKind?: 'trade_alert' | 'desk_play' | 'reversal_watch' | 'session_htf_desk_map' | 'watchlist' | 'window_start' | 'health' | 'data_quality' | 'live_hold_notice' | string;
   scannerHealth: ScannerHealthReport | null;
   bridgeConnected: boolean;
   bridgeInstrumentResolved: boolean;
@@ -84,7 +85,14 @@ function deskStateBoundaryPreserved(deskState: DeskState | null): boolean {
 const LIVE_POST_ACTIONS = new Set(['post_plan', 'post_review', 'post_conditional', 'post_watch']);
 const LIVE_POST_VISIBILITY_MODES = new Set(['POST_PLAN', 'POST_REVIEW', 'POST_CONDITIONAL', 'POST_WATCH']);
 
-function deskStateLivePostActionable(deskState: DeskState | null): boolean {
+function deskStateLivePostActionable(deskState: DeskState | null, postKind = 'trade_alert'): boolean {
+  if (postKind !== 'trade_alert' && postKind !== 'desk_play') {
+    return Boolean(
+      deskState &&
+      deskState.visibilityMetadata &&
+      deskState.visibilityMetadata.sourceOfTruth === 'scanner_desk_state_visibility_metadata',
+    );
+  }
   return Boolean(
     deskState &&
     LIVE_POST_ACTIONS.has(deskState.discordAction) &&
@@ -140,18 +148,24 @@ function deskStateHasQualifiedSelectedPlan(deskState: DeskState): boolean {
   );
 }
 
-function deskStateOperationallySuppressed(deskState: DeskState | null): boolean {
+function deskStateOperationallySuppressed(deskState: DeskState | null, postKind = 'trade_alert'): boolean {
   if (!deskState) return true;
-  if (deskState.discordAction === 'hold' || deskState.discordAction === 'no_trade') return true;
-  if (
-    deskState.visibilityMode === 'HOLD_WITH_REASON' ||
-    deskState.visibilityMode === 'NO_TRADE_WITH_REASON' ||
-    deskState.visibilityMode === 'DATA_QUALITY_BLOCKER'
-  ) {
-    return true;
+  const isTradeLikePost = postKind === 'trade_alert' || postKind === 'desk_play';
+  if (isTradeLikePost) {
+    if (deskState.discordAction === 'hold' || deskState.discordAction === 'no_trade') return true;
+    if (
+      deskState.visibilityMode === 'HOLD_WITH_REASON' ||
+      deskState.visibilityMode === 'NO_TRADE_WITH_REASON' ||
+      deskState.visibilityMode === 'DATA_QUALITY_BLOCKER'
+    ) {
+      return true;
+    }
   }
   if (deskState.dataQualityStatus === 'data_limited' || deskState.htfContextStatus === 'insufficient') return true;
   const text = collectDeskStateSuppressionText(deskState);
+  if (postKind !== 'trade_alert') {
+    return /\b(duplicate|ledger|already\s+pending)\b/i.test(text);
+  }
   return /\b(duplicate|ledger|already\s+pending|missed|no[-\s]?chase|stale|chasing|already\s+reached|target\s+already|T1\s+was\s+already\s+reached)\b/i.test(text);
 }
 
@@ -185,13 +199,17 @@ export function evaluateLiveDiscordPostEligibility(input: LiveDiscordEligibility
     ),
     check(
       'desk_state_live_post_actionable',
-      deskStateLivePostActionable(input.deskState),
-      'DeskState must be a scanner-owned POST_PLAN, POST_REVIEW, POST_CONDITIONAL, or POST_WATCH action before live Discord posting.',
+      deskStateLivePostActionable(input.deskState, input.postKind),
+      input.postKind && input.postKind !== 'trade_alert' && input.postKind !== 'desk_play'
+        ? 'Review/status Discord posts require scanner-owned DeskState visibility metadata before live Discord posting.'
+        : 'DeskState must be a scanner-owned POST_PLAN, POST_REVIEW, POST_CONDITIONAL, or POST_WATCH action before live Discord posting.',
     ),
     check(
       'desk_state_not_operationally_suppressed',
-      !deskStateOperationallySuppressed(input.deskState),
-      'DeskState must not be held for duplicate ledger, missed/no-chase, stale/chasing, already-reached target, data-quality, hold, or no-trade reasons.',
+      !deskStateOperationallySuppressed(input.deskState, input.postKind),
+      input.postKind && input.postKind !== 'trade_alert'
+        ? 'Review/status Discord posts must not be duplicate ledger/already-pending, data-quality, hold, or no-trade states.'
+        : 'Trade-alert Discord posts must not be held for duplicate ledger, missed/no-chase, stale/chasing, already-reached target, data-quality, hold, or no-trade reasons.',
     ),
     check('decision_tape_writable', input.decisionTapeWritable, 'Decision tape must be writable.'),
     check('audit_path_present', Boolean(input.auditPath), 'Discord/scanner audit path must be available.'),

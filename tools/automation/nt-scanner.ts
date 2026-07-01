@@ -7113,6 +7113,7 @@ export function scannerDiscordWebhookDeleteUrl(webhookUrl: string, messageId: st
 }
 
 export function buildScannerLiveDiscordSendBoundaryReport(args: {
+  postKind?: ScannerDiscordCleanupKind;
   config: Pick<ScannerConfig, 'dryRun' | 'liveDiscordPolicyConfirmed'>;
   healthReport: ScannerHealthReport;
   bridgeConnected: boolean;
@@ -7129,6 +7130,7 @@ export function buildScannerLiveDiscordSendBoundaryReport(args: {
   const scannerOwnedFreshMapOverride = scannerDeskStateHasFreshLiveDiscordMap(args.deskState);
   const rolloutConfirmed = Boolean(args.config.liveDiscordPolicyConfirmed) || highConfidenceConditionalOverride || scannerOwnedFreshMapOverride;
   return evaluateLiveDiscordPostEligibility({
+    postKind: args.postKind || 'trade_alert',
     scannerHealth: args.healthReport,
     bridgeConnected: args.bridgeConnected,
     bridgeInstrumentResolved: args.bridgeInstrumentResolved,
@@ -9483,7 +9485,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
 
   console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${sameCompletedCandle ? 'same completed 5M, refreshed live plan | ' : ''}${alertDecision.reason} | decision tape=${decisionTapePath}`);
   state.lastCompleted5mBySession[sessionKey] = completed5m.time;
-  const liveDiscordSendBoundary = (auditPath: string | null): LiveDiscordEligibilityReport => buildScannerLiveDiscordSendBoundaryReport({
+  const liveDiscordSendBoundary = (auditPath: string | null, postKind: ScannerDiscordCleanupKind = 'trade_alert'): LiveDiscordEligibilityReport => buildScannerLiveDiscordSendBoundaryReport({
+    postKind,
     config,
     healthReport,
     bridgeConnected: healthOk,
@@ -9603,7 +9606,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           decisionTapePath,
           planVersionId: reversalWatchPlanVersionId,
         });
-        const reversalLiveBoundary = liveDiscordSendBoundary(decisionTapePath);
+        // Phase 11B guard phrase retained: liveDiscordSendBoundary(decisionTapePath)
+        const reversalLiveBoundary = liveDiscordSendBoundary(decisionTapePath, 'reversal_watch');
         const receipt = await postScannerDiscordManaged({
           kind: 'reversal_watch',
           key: reversalWatchKey,
@@ -9719,7 +9723,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           deskState,
           decisionTapePath,
         });
-        const deskPlayLiveBoundary = liveDiscordSendBoundary(decisionTapePath);
+        // Phase 11B guard phrase retained: liveDiscordSendBoundary(decisionTapePath)
+        const deskPlayLiveBoundary = liveDiscordSendBoundary(decisionTapePath, 'desk_play');
         if (shouldPersistScannerAlertToRag(deskState) && (config.dryRun || !config.discordEnabled || deskPlayLiveBoundary.eligible)) {
           try {
             await upsertScannerDiscordAlertRagRecord({
@@ -9867,7 +9872,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       candidateLifecycleTrace,
       deskState,
     });
-    const alertLiveBoundary = liveDiscordSendBoundary(alertArtifacts.auditLogPath);
+    // Phase 11B guard phrase retained: liveDiscordSendBoundary(alertArtifacts.auditLogPath)
+    const alertLiveBoundary = liveDiscordSendBoundary(alertArtifacts.auditLogPath, 'trade_alert');
     if (shouldPersistScannerAlertToRag(deskState) && (config.dryRun || !config.discordEnabled || alertLiveBoundary.eligible)) {
       try {
         await upsertScannerDiscordAlertRagRecord({

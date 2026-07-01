@@ -226,6 +226,64 @@ const missedNoChaseBlocked = evaluateLiveDiscordPostEligibility(input({
 assert.equal(missedNoChaseBlocked.eligible, false);
 assert.ok(missedNoChaseBlocked.blockers.some((item) => item.includes('missed/no-chase')));
 
+const deskPlayReportsMissedNoChaseInsteadOfSuppressing = evaluateLiveDiscordPostEligibility(input({
+  postKind: 'desk_play',
+  deskState: {
+    ...deskState(),
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    suppressionReason: 'missed_no_chase: T1 was already reached before alert generation.',
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      visibilityMode: 'POST_REVIEW',
+      discordAction: 'post_review',
+      suppressionReason: 'missed_no_chase: T1 was already reached before alert generation.',
+      authority: {
+        ...deskState().visibilityMetadata.authority,
+        planEligible: true,
+        discordEligible: true,
+      },
+    },
+  },
+}));
+assert.equal(deskPlayReportsMissedNoChaseInsteadOfSuppressing.eligible, true);
+assert.equal(deskPlayReportsMissedNoChaseInsteadOfSuppressing.blockers.length, 0);
+
+const deskPlayStillBlocksDuplicateLedger = evaluateLiveDiscordPostEligibility(input({
+  postKind: 'desk_play',
+  deskState: {
+    ...deskState(),
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    suppressionReason: 'ActiveCampaign duplicate suppressed by durable Supabase ledger.',
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      visibilityMode: 'POST_REVIEW',
+      discordAction: 'post_review',
+      suppressionReason: 'ActiveCampaign duplicate suppressed by durable Supabase ledger.',
+    },
+  },
+}));
+assert.equal(deskPlayStillBlocksDuplicateLedger.eligible, false);
+assert.ok(deskPlayStillBlocksDuplicateLedger.blockers.some((item) => item.includes('duplicate ledger')));
+
+const reversalWatchUsesOwnSuppressionPath = evaluateLiveDiscordPostEligibility(input({
+  postKind: 'reversal_watch',
+  deskState: {
+    ...deskState(),
+    visibilityMode: 'HOLD_WITH_REASON',
+    discordAction: 'hold',
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      visibilityMode: 'HOLD_WITH_REASON',
+      discordAction: 'hold',
+    },
+  },
+}));
+assert.equal(reversalWatchUsesOwnSuppressionPath.eligible, true);
+assert.equal(reversalWatchUsesOwnSuppressionPath.blockers.length, 0);
+assert.ok(!reversalWatchUsesOwnSuppressionPath.blockers.some((item) => item.includes('POST_PLAN')));
+
 const highQualitySelectedPlanIgnoresNonSelectedPromotionNoise = evaluateLiveDiscordPostEligibility(input({
   deskState: {
     ...deskState(),
