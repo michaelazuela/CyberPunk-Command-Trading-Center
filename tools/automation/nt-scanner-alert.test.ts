@@ -2248,6 +2248,59 @@ const eveningMapText = flattenDiscordPayloadText(eveningMapPayload);
 assert.match(eveningMapPayload.content || '', /MES Evening HTF Desk Map - 2026-06-19/);
 assert.match(eveningMapText, /MES Evening High Timeframe Desk Map - 2026-06-19/);
 assert.match(eveningMapText, /Evening HTF map only/);
+const unalignedLongHtfMapState = counterStructureDeskStateFixture('LONG', 'BULL') as any;
+unalignedLongHtfMapState.primaryDeskPlay.longBias = {
+  ...unalignedLongHtfMapState.primaryDeskPlay.longBias,
+  tradeReadiness: { status: 'not_aligned' },
+};
+unalignedLongHtfMapState.primaryDeskPlay.shortBias = {
+  ...unalignedLongHtfMapState.primaryDeskPlay.shortBias,
+  tradeReadiness: { status: 'not_aligned' },
+};
+const unalignedLongHtfMapPayload = buildScannerMorningHtfDeskMapPayload({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'evening',
+  deskState: unalignedLongHtfMapState,
+  completed5m: { ...morningMapCompleted5m, time: '2026-06-19T18:50:00.0000000' },
+  currentPrice: 5326,
+});
+const unalignedLongHtfMapText = flattenDiscordPayloadText(unalignedLongHtfMapPayload);
+assert.match(unalignedLongHtfMapText, /Primary: 🛑 WAIT/);
+assert.match(unalignedLongHtfMapText, /No single primary side is active/);
+assert.doesNotMatch(unalignedLongHtfMapText, /Primary: 🐂 LONG/);
+assert.doesNotMatch(unalignedLongHtfMapText, /LONG is the current desk map side/);
+const unalignedLongHtfMapArtifacts = await prepareScannerMorningHtfDeskMapArtifacts({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'evening',
+  deskState: unalignedLongHtfMapState,
+  normalized: {
+    canExecute: false,
+    entry: 5320,
+    stop: 5316,
+    t1: 5326,
+    t2: 5328,
+    riskPoints: 4,
+  } as any,
+  chartContext: {
+    candles: [
+      { index: 0, timestamp: '2026-06-19T18:40:00.0000000', open: 5315, high: 5318, low: 5314, close: 5317 },
+      { index: 1, timestamp: '2026-06-19T18:45:00.0000000', open: 5317, high: 5321, low: 5316, close: 5320 },
+      { index: 2, timestamp: '2026-06-19T18:50:00.0000000', open: 5320, high: 5324, low: 5319, close: 5323 },
+    ],
+    liquiditySweeps: [],
+    reclaimEvents: [],
+    displacementCandles: [],
+  } as any,
+  completed5m: { ...morningMapCompleted5m, time: '2026-06-19T18:50:00.0000000' },
+  currentPrice: 5326,
+  outputDir: auditDir,
+});
+assert.equal(unalignedLongHtfMapArtifacts.files.length, 0);
+assert.equal(unalignedLongHtfMapArtifacts.chartMarkup, null);
+assert.equal(unalignedLongHtfMapArtifacts.levelMap, null);
+assert.match(flattenDiscordPayloadText(unalignedLongHtfMapArtifacts.payload), /Primary: 🛑 WAIT/);
 const htfMapChartArtifacts = await prepareScannerMorningHtfDeskMapArtifacts({
   tradeDate: '2026-06-19',
   instrument: 'MES',

@@ -5245,6 +5245,15 @@ function scannerPrimaryDeskEmoji(primary: string | null | undefined): string {
   return '🛑 WAIT';
 }
 
+function scannerHtfDeskMapDisplayDirection(play: DeskState['primaryDeskPlay']): 'LONG' | 'SHORT' | 'WAIT' {
+  const direction = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : 'WAIT';
+  if (direction === 'WAIT') return 'WAIT';
+  const readiness = direction === 'LONG'
+    ? play.longBias.tradeReadiness?.status
+    : play.shortBias.tradeReadiness?.status;
+  return readiness === 'not_aligned' ? 'WAIT' : direction;
+}
+
 function scannerHtfRowChangeSide(
   row: DeskState['primaryDeskPlay']['htfProtectedStructureMap']['rows'][number],
 ): string {
@@ -5294,13 +5303,14 @@ function scannerMorningHtfDeskMapFingerprint(args: {
   keyBattleArea: string;
 }): string {
   const play = args.deskState.primaryDeskPlay;
+  const displayDirection = scannerHtfDeskMapDisplayDirection(play);
   const rowParts = play.htfProtectedStructureMap.rows.map((row) => [
     row.timeframe,
     row.currentBias || row.bias || 'UNKNOWN',
     deskPlanRefreshPrice(scannerHtfRowLine(row)),
   ].join('='));
   return [
-    `primary=${play.direction}`,
+    `primary=${displayDirection}`,
     `keyBattle=${args.keyBattleArea}`,
     `htf=${rowParts.join(',')}`,
     `context=${args.deskState.htfContextStatus || 'unknown'}:${args.deskState.dataQualityStatus || 'unknown'}`,
@@ -5321,7 +5331,7 @@ function scannerMorningHtfDeskMapRecord(args: {
     tradeDate: args.tradeDate,
     instrument: args.instrument,
     session: args.session || 'morning',
-    primary: args.deskState.primaryDeskPlay.direction,
+    primary: scannerHtfDeskMapDisplayDirection(args.deskState.primaryDeskPlay),
     latestCompleted5m: args.latestCompleted5m || null,
     keyBattleArea,
     sentAt: args.sentAt,
@@ -6816,7 +6826,8 @@ export function buildScannerMorningHtfDeskMapPayload(args: {
   currentPrice: number | null;
 }): DiscordWebhookPayload {
   const play = args.deskState.primaryDeskPlay;
-  const primary = scannerPrimaryDeskEmoji(play.direction);
+  const displayDirection = scannerHtfDeskMapDisplayDirection(play);
+  const primary = scannerPrimaryDeskEmoji(displayDirection);
   const keyBattleArea = scannerMorningHtfDeskMapKeyBattleArea(args.deskState);
   const htfRows = play.htfProtectedStructureMap.rows
     .filter((row) => ['4H', '2H', '1H', '15M', '5M'].includes(row.timeframe))
@@ -6828,18 +6839,18 @@ export function buildScannerMorningHtfDeskMapPayload(args: {
   const shortReadiness = play.shortBias.tradeReadiness?.status || 'review';
   const htfStatus = args.deskState.htfContextStatus || 'unknown';
   const dataQuality = args.deskState.dataQualityStatus || 'unknown';
-  const primaryReason = play.direction === 'WAIT'
+  const primaryReason = displayDirection === 'WAIT'
     ? 'No single primary side is active. Wait for completed 5M proof and clean map alignment.'
-    : `${play.direction} is the current desk map side, but execution still requires app-owned 5M trigger, stop, risk, target room, model, session, and canExecute gates.`;
+    : `${displayDirection} is the current desk map side, but execution still requires app-owned 5M trigger, stop, risk, target room, model, session, and canExecute gates.`;
   const tacticalMeaning = [
     `Macro read: ${htfStatus === 'sufficient' ? 'HTF context is sufficient for map reading.' : `HTF context status is ${htfStatus}; treat as context only if data-limited.`}`,
     `Long: ${longReadiness}.`,
     `Short: ${shortReadiness}.`,
     `Execution: no Discord map approves a trade; 5M remains execution authority.`,
   ].join('\n');
-  const bottomLine = play.direction === 'WAIT'
+  const bottomLine = displayDirection === 'WAIT'
     ? `Wait. Key battle area is ${keyBattleArea}. A completed close+hold through the tactical line improves one side; failure/rejection keeps the opposite side on review until the scanner-owned 5M gate confirms.`
-    : `${play.direction} map is active around ${scannerDiscordLine(play.lineInSand)}. Do not chase; wait for completed 5M confirmation and app-owned canExecute.`;
+    : `${displayDirection} map is active around ${scannerDiscordLine(play.lineInSand)}. Do not chase; wait for completed 5M confirmation and app-owned canExecute.`;
   const sessionLabel = args.session === 'evening'
     ? 'Evening'
     : args.session === 'lunch'
@@ -6851,7 +6862,7 @@ export function buildScannerMorningHtfDeskMapPayload(args: {
     content: `📊 ${args.instrument} ${sessionLabel} HTF Desk Map - ${args.tradeDate}`,
     embeds: [{
       title: `${args.instrument} ${sessionLabel} High Timeframe Desk Map - ${args.tradeDate}`,
-      color: play.direction === 'LONG' ? 0x22c55e : play.direction === 'SHORT' ? 0xef4444 : 0xf97316,
+      color: displayDirection === 'LONG' ? 0x22c55e : displayDirection === 'SHORT' ? 0xef4444 : 0xf97316,
       description: [
         `Primary: ${primary}`,
         `Current: ${scannerDiscordLine(args.currentPrice)}`,
@@ -6911,8 +6922,11 @@ export async function prepareScannerMorningHtfDeskMapArtifacts(args: {
     candidate: candidateForDeskPlayContextChart(args.deskState, args.normalized),
     normalized: args.normalized,
   });
-  const contextCandidate = candidateForDeskPlayContextChart(deskState, args.normalized);
   const play = deskState.primaryDeskPlay;
+  const displayDirection = scannerHtfDeskMapDisplayDirection(play);
+  const contextCandidate = displayDirection === 'WAIT'
+    ? null
+    : candidateForDeskPlayContextChart(deskState, args.normalized);
   const contextLine = play.activeTacticalLine?.activeLine ?? play.lineInSand;
   const chartMarkup = contextCandidate
     ? await renderChartMarkup({
