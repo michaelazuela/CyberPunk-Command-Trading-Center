@@ -23,6 +23,8 @@ import {
   evaluateScannerDeskPlayDiscordSuppression,
   evaluateScannerReversalWatchDiscordSuppression,
   evaluateScannerPrimaryAlertPublishingGate,
+  evaluateScannerDiscordCampaignTransition,
+  latestSentScannerTradeAlertDelivery,
   applyScannerCompletedFiveMinuteZoneFailureSuppression,
   applyScannerHardDuplicateAlertSuppression,
   evaluatePreMarketDataReadinessBackfillGate,
@@ -96,6 +98,7 @@ import {
   upsertScannerDiscordAlertRagRecord,
   upsertScannerReversalWatchRagRecord,
   normalizeScannerBarTimestampMode,
+  type ScannerAlertDeliveryRecord,
   type ScannerActiveCampaignDurableLedgerConfig,
   type ScannerActiveCampaignLedgerRecord,
   type ScannerConfig,
@@ -1158,6 +1161,137 @@ const throughTargetHighConfidenceGate = evaluateScannerPrimaryAlertPublishingGat
 });
 assert.equal(throughTargetHighConfidenceGate.shouldSend, false);
 assert.match(throughTargetHighConfidenceGate.reason, /already reached\/passed T1 7415\.75/);
+
+const priorShortCampaignDelivery: ScannerAlertDeliveryRecord = {
+  alertKey: '2026-07-02|MES|morning|SHORT|IntradayMssMicroContinuation|7526.75|Conditional',
+  planVersionId: 'MORNING-20260702-152114',
+  instrument: 'MES' as const,
+  tradeDate: '2026-07-02',
+  session: 'morning' as const,
+  state: 'Conditional' as ScannerState,
+  confidence: 75,
+  candidate: {
+    setupType: 'IntradayMssMicroContinuation',
+    direction: 'SHORT',
+    entry: 7526.75,
+    stop: 7577,
+    target1: 7451.5,
+    target2: 7426.25,
+    activeTimeframeMssRuleset: null,
+    activeCampaign: {
+      id: '2026-07-02:SHORT:15M5M-MSS',
+      status: 'active',
+      direction: 'SHORT',
+      htfRelationship: 'support',
+      lineInSand: 7544.5,
+      deDuplication: {
+        oneTradePerCampaignRecommended: true,
+        enforced: true,
+        resetPolicy: 'trade_date_direction_campaign',
+      },
+    },
+  },
+  deliveryStatus: 'sent' as const,
+  webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL' as const,
+  httpStatus: 200,
+  discordMessageId: 'prior-short-message',
+  error: null,
+  attemptedAt: '2026-07-02T15:21:18.355Z',
+  sentAt: '2026-07-02T15:21:19.383Z',
+  auditLogPath: 'scanner-morning-2026-07-02-MES-MORNING-20260702-152114.json',
+  stale: false,
+  retryEligible: false,
+};
+const campaignTransitionBlocksLong = evaluateScannerDiscordCampaignTransition({
+  candidate: {
+    ...reviewOnlyPrimaryAlertGateFixture.candidate!,
+    direction: 'LONG',
+    entry: 7548,
+    stop: 7535,
+    target1: 7567.5,
+    target2: 7574,
+  } as SetupCandidate,
+  priorActiveDelivery: priorShortCampaignDelivery,
+  completed5m: { time: '2026-07-02T12:00:00-04:00', open: 7538, high: 7542, low: 7520, close: 7536, volume: 1 },
+});
+assert.equal(campaignTransitionBlocksLong.blocksOppositeDirection, true);
+assert.match(campaignTransitionBlocksLong.reason || '', /SHORT campaign still active/);
+const oppositeLongWhileShortActiveGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...reviewOnlyPrimaryAlertGateFixture,
+  alertDecision: { shouldSend: true, reason: 'Long conditional qualified.' },
+  candidate: {
+    ...reviewOnlyPrimaryAlertGateFixture.candidate!,
+    direction: 'LONG',
+    entry: 7548,
+    stop: 7535,
+    target1: 7567.5,
+    target2: 7574,
+  } as SetupCandidate,
+  priorActiveDelivery: priorShortCampaignDelivery,
+  completed5m: { time: '2026-07-02T12:00:00-04:00', open: 7538, high: 7542, low: 7520, close: 7536, volume: 1 },
+});
+assert.equal(oppositeLongWhileShortActiveGate.shouldSend, false);
+assert.match(oppositeLongWhileShortActiveGate.reason, /SHORT campaign still active/);
+assert.match(oppositeLongWhileShortActiveGate.reason, /line in the sand 7544\.50 has not been crossed/);
+const campaignTransitionAllowsLongAfterLineCross = evaluateScannerDiscordCampaignTransition({
+  candidate: {
+    ...reviewOnlyPrimaryAlertGateFixture.candidate!,
+    direction: 'LONG',
+    entry: 7550,
+    stop: 7538,
+    target1: 7568,
+    target2: 7574,
+  } as SetupCandidate,
+  priorActiveDelivery: priorShortCampaignDelivery,
+  completed5m: { time: '2026-07-02T12:05:00-04:00', open: 7538, high: 7551, low: 7535, close: 7548, volume: 1 },
+});
+assert.equal(campaignTransitionAllowsLongAfterLineCross.blocksOppositeDirection, false);
+assert.match(campaignTransitionAllowsLongAfterLineCross.reason || '', /SHORT campaign line crossed/);
+const oppositeLongAfterShortLineCrossGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...reviewOnlyPrimaryAlertGateFixture,
+  alertDecision: { shouldSend: true, reason: 'Long conditional qualified.' },
+  candidate: {
+    ...reviewOnlyPrimaryAlertGateFixture.candidate!,
+    direction: 'LONG',
+    entry: 7550,
+    stop: 7538,
+    target1: 7568,
+    target2: 7574,
+  } as SetupCandidate,
+  deskState: {
+    primaryDeskPlay: {
+      direction: 'LONG',
+      htfConflict: false,
+      longBias: {
+        tradeReadiness: { status: 'aligned' },
+      },
+      shortBias: {
+        tradeReadiness: { status: 'not_aligned' },
+      },
+    },
+  } as unknown as DeskState,
+  priorActiveDelivery: priorShortCampaignDelivery,
+  completed5m: { time: '2026-07-02T12:05:00-04:00', open: 7538, high: 7551, low: 7535, close: 7548, volume: 1 },
+});
+assert.equal(oppositeLongAfterShortLineCrossGate.shouldSend, true);
+assert.match(oppositeLongAfterShortLineCrossGate.reason, /Campaign transition: SHORT campaign line crossed/);
+const latestPriorCampaignDelivery = latestSentScannerTradeAlertDelivery({
+  deliveries: {
+    oldFailed: { ...priorShortCampaignDelivery, deliveryStatus: 'failed', sentAt: null, discordMessageId: null },
+    oldLong: {
+      ...priorShortCampaignDelivery,
+      alertKey: 'old-long',
+      candidate: { ...priorShortCampaignDelivery.candidate, direction: 'LONG' },
+      sentAt: '2026-07-02T14:00:00.000Z',
+    },
+    latestShort: priorShortCampaignDelivery,
+  },
+  tradeDate: '2026-07-02',
+  instrument: 'MES',
+  session: 'morning',
+  excludeAlertKey: 'current-alert',
+});
+assert.equal(latestPriorCampaignDelivery?.alertKey, priorShortCampaignDelivery.alertKey);
 
 assert.equal(
   scannerDiscordWebhookUrlForPost('https://discord.com/api/webhooks/123/token', undefined, true),

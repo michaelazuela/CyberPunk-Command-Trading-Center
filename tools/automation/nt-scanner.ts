@@ -530,6 +530,11 @@ export interface ScannerAlertDeliveryRecord {
   retryEligible: boolean;
 }
 
+export interface ScannerDiscordCampaignTransitionReview {
+  blocksOppositeDirection: boolean;
+  reason: string | null;
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_FILE = path.join(__dirname, '.nt-scanner-state.json');
@@ -7954,6 +7959,59 @@ function isHighQualityConditionalPrimaryAlertCandidate(candidate?: SetupCandidat
   );
 }
 
+function completedCloseCrossedCampaignLine(args: {
+  campaignDirection: 'LONG' | 'SHORT';
+  lineInSand: number | null;
+  completed5m?: NinjaBridgeBar | null;
+}): boolean {
+  if (!isFiniteTradePrice(args.lineInSand) || !isFiniteTradePrice(args.completed5m?.close)) return false;
+  return args.campaignDirection === 'LONG'
+    ? args.completed5m!.close < args.lineInSand!
+    : args.completed5m!.close > args.lineInSand!;
+}
+
+export function evaluateScannerDiscordCampaignTransition(args: {
+  candidate?: SetupCandidate | null;
+  priorActiveDelivery?: ScannerAlertDeliveryRecord | null;
+  completed5m?: NinjaBridgeBar | null;
+}): ScannerDiscordCampaignTransitionReview {
+  const candidateDirection = args.candidate?.direction === 'LONG' || args.candidate?.direction === 'SHORT'
+    ? args.candidate.direction
+    : null;
+  const priorDirection = args.priorActiveDelivery?.candidate?.direction === 'LONG' || args.priorActiveDelivery?.candidate?.direction === 'SHORT'
+    ? args.priorActiveDelivery.candidate.direction
+    : null;
+  if (!candidateDirection || !priorDirection || candidateDirection === priorDirection) {
+    return { blocksOppositeDirection: false, reason: null };
+  }
+  if (args.priorActiveDelivery?.deliveryStatus !== 'sent') {
+    return { blocksOppositeDirection: false, reason: null };
+  }
+  const priorLine = args.priorActiveDelivery.candidate.activeCampaign?.lineInSand ??
+    args.priorActiveDelivery.candidate.entry ??
+    null;
+  const crossed = completedCloseCrossedCampaignLine({
+    campaignDirection: priorDirection,
+    lineInSand: priorLine,
+    completed5m: args.completed5m,
+  });
+  if (crossed) {
+    return {
+      blocksOppositeDirection: false,
+      reason: `${priorDirection} campaign line crossed by completed 5M close at ${args.completed5m?.close?.toFixed(2) ?? 'unknown'} through ${priorLine?.toFixed?.(2) ?? 'unknown'}; Discord may present the state transition before any ${candidateDirection} review.`,
+    };
+  }
+  return {
+    blocksOppositeDirection: true,
+    reason: [
+      `${priorDirection} campaign still active`,
+      `candidate side ${candidateDirection} is opposite prior Discord campaign ${priorDirection}`,
+      `line in the sand ${priorLine?.toFixed?.(2) ?? 'unknown'} has not been crossed by a completed 5M candle`,
+      `${candidateDirection} cannot be promoted until Discord shows ${priorDirection} paused/invalidated or the scanner proves a completed line-cross transition.`,
+    ].join('; '),
+  };
+}
+
 export function evaluateScannerPrimaryAlertPublishingGate(args: {
   alertDecision: ScannerAlertDecision;
   deskState: DeskState;
@@ -7963,6 +8021,8 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   currentPrice?: number | null;
   staleReason?: string | null;
   scannerReviewStatus?: string | null;
+  priorActiveDelivery?: ScannerAlertDeliveryRecord | null;
+  completed5m?: NinjaBridgeBar | null;
 }): ScannerAlertDecision {
   const reasons: string[] = [];
   const play = args.deskState.primaryDeskPlay;
@@ -7999,6 +8059,14 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   }
   const candidateStaleReason = highQualityConditionalReviewStaleReason(args.candidate || null, args.currentPrice ?? null);
   if (candidateStaleReason) reasons.push(candidateStaleReason);
+  const campaignTransition = evaluateScannerDiscordCampaignTransition({
+    candidate: args.candidate,
+    priorActiveDelivery: args.priorActiveDelivery,
+    completed5m: args.completed5m,
+  });
+  if (campaignTransition.blocksOppositeDirection && campaignTransition.reason) {
+    reasons.push(campaignTransition.reason);
+  }
   const activeZone = play.activeTacticalZone;
   const currentPrice = args.currentPrice;
   if (
@@ -8020,22 +8088,28 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
     reasons.push(`current price ${currentPrice.toFixed(2)} is below active tactical zone ${activeZone.lower.toFixed(2)}-${activeZone.upper?.toFixed?.(2) || 'N/A'}`);
   }
 
-  if (!reasons.length) return args.alertDecision;
+  if (!reasons.length) {
+    return campaignTransition.reason
+      ? { ...args.alertDecision, reason: `${args.alertDecision.reason} Campaign transition: ${campaignTransition.reason}` }
+      : args.alertDecision;
+  }
 
   if (
     isHighQualityConditionalPrimaryAlertCandidate(args.candidate) &&
     args.state !== 'Missed' &&
     !/stale|missed|no chase|already_triggered|no_fresh_entry/i.test(staleText) &&
     !candidateStaleReason &&
+    !campaignTransition.blocksOppositeDirection &&
     args.deskState.dataQualityStatus !== 'data_limited' &&
     args.deskState.htfContextStatus !== 'insufficient' &&
     !reasons.some((reason) => /conflicts with DeskState/i.test(reason)) &&
     !reasons.some((reason) => /conflicts with active HTF FVG routing/i.test(reason)) &&
     !reasons.some((reason) => /current price .* active tactical zone/i.test(reason))
   ) {
+    const transitionText = campaignTransition.reason ? ` Campaign transition: ${campaignTransition.reason}` : '';
     return {
       shouldSend: true,
-      reason: `${args.alertDecision.reason} Primary trade-card DeskState/readiness suppression bypassed for high-confidence conditional publication: ${Array.from(new Set(reasons)).join('; ')}. Discord publication is REVIEW ONLY / NOT EXECUTION APPROVAL; it becomes execution-approved only if the named completed 5M condition closes and the app-owned canExecute gate turns true.`,
+      reason: `${args.alertDecision.reason}${transitionText} Primary trade-card DeskState/readiness suppression bypassed for high-confidence conditional publication: ${Array.from(new Set(reasons)).join('; ')}. Discord publication is REVIEW ONLY / NOT EXECUTION APPROVAL; it becomes execution-approved only if the named completed 5M condition closes and the app-owned canExecute gate turns true.`,
     };
   }
 
@@ -8055,6 +8129,28 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
     shouldSend: false,
     reason: `Primary trade-card suppressed by DeskState/readiness gate: ${Array.from(new Set(reasons)).join('; ')}. Publish as Current Desk Plan/review map only if eligible.`,
   };
+}
+
+export function latestSentScannerTradeAlertDelivery(args: {
+  deliveries: Record<string, ScannerAlertDeliveryRecord>;
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  excludeAlertKey?: string | null;
+}): ScannerAlertDeliveryRecord | null {
+  const rows = Object.entries(args.deliveries)
+    .filter(([key, delivery]) =>
+      key !== args.excludeAlertKey &&
+      delivery.deliveryStatus === 'sent' &&
+      delivery.tradeDate === args.tradeDate &&
+      delivery.instrument === args.instrument &&
+      delivery.session === args.session &&
+      Boolean(delivery.discordMessageId) &&
+      (delivery.candidate.direction === 'LONG' || delivery.candidate.direction === 'SHORT')
+    )
+    .map(([, delivery]) => delivery)
+    .sort((a, b) => Date.parse(b.sentAt || b.attemptedAt) - Date.parse(a.sentAt || a.attemptedAt));
+  return rows[0] || null;
 }
 
 export function applyScannerHardDuplicateAlertSuppression(args: {
@@ -9223,6 +9319,13 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   const existing = state.sent[alertKey];
   const planVersionId = createPlanVersionId(session, tradeDate);
   const previousDelivery = state.alertDeliveries[alertKey];
+  const priorActiveDelivery = latestSentScannerTradeAlertDelivery({
+    deliveries: state.alertDeliveries,
+    tradeDate,
+    instrument: config.instrument,
+    session,
+    excludeAlertKey: alertKey,
+  });
   let alertDecision = shouldSendScannerAlert({
     state: stateForAlert,
     confidence: confidence.score,
@@ -9329,6 +9432,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     currentPrice,
     staleReason: stale.reason,
     scannerReviewStatus: selection.reviewStatus,
+    priorActiveDelivery,
+    completed5m,
   });
   if (deskStateGatedAlertDecision.shouldSend !== alertDecision.shouldSend || deskStateGatedAlertDecision.reason !== alertDecision.reason) {
     alertDecision = deskStateGatedAlertDecision;
