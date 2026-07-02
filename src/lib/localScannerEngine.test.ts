@@ -2751,4 +2751,221 @@ assert.equal(
   2
 );
 
+function htfFvgMicroMssCandidate(direction: 'LONG' | 'SHORT', overrides: Partial<SetupCandidate> = {}): SetupCandidate {
+  const line = direction === 'LONG' ? 7500.75 : 7490.25;
+  const entry = direction === 'LONG' ? 7501.75 : 7489.25;
+  const stop = direction === 'LONG' ? 7492.75 : 7498.75;
+  const target1 = direction === 'LONG' ? 7515.25 : 7475;
+  const target2 = direction === 'LONG' ? 7519.75 : 7470.25;
+  return candidate({
+    setupType: SetupType.IntradayMssMicroContinuation,
+    scenarioLabel: `${direction} HTF FVG Reaction + 5M Micro MSS Reversal`,
+    direction,
+    candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
+    detectedStatus: SetupCandidateStatus.Conditional,
+    executionStatus: ExecutionStatus.Conditional,
+    priority: 96,
+    rankScore: 236,
+    decisionQualityScore: 72,
+    modelConfidenceScore: 72,
+    entry,
+    stop,
+    target1,
+    target2,
+    riskPoints: Math.abs(entry - stop),
+    evidence: [
+      `${direction} 60M HTF FVG parent reaction support from structured OHLC.`,
+      `Completed ${direction === 'LONG' ? 'bullish' : 'bearish'} 5M MSS close-through.`,
+      `${direction} HTF FVG reaction plus 5M micro MSS supports a human-review campaign.`,
+    ],
+    missingEvidence: [],
+    blockReason: NoTradeReason.EntryTriggerPending,
+    requiredTrigger: direction === 'LONG'
+      ? 'Human-review long: completed bullish 5M MSS close-through, then completed 5M retest/hold above 7500.75.'
+      : 'Human-review short: completed bearish 5M MSS close-through, then completed 5M retest/failure below 7490.25.',
+    nextAction: direction === 'LONG'
+      ? 'Long MSS forming from 60M HTF FVG reaction. Line in the sand 7500.75; wait for completed 5M retest/hold above it.'
+      : 'Short MSS forming from 60M HTF FVG reaction. Line in the sand 7490.25; wait for completed 5M retest/failure below it.',
+    invalidation: direction === 'LONG'
+      ? 'Invalid if completed 5M acceptance fails below protected retest swing.'
+      : 'Invalid if completed 5M acceptance fails above protected retest swing.',
+    activeRuleset: {
+      htfLineInSand: {
+        applied: true,
+        status: 'passed',
+        required: 'completed_5m_or_15m_close_beyond_htf_line',
+        appliesToAllModels: true,
+        affectsExecution: false,
+        direction,
+        lineInSand: line,
+        lineReason: direction === 'LONG'
+          ? '7500.75 is the completed 5M MSS close-through/reclaim line after the 60M HTF FVG reaction.'
+          : '7490.25 is the completed 5M MSS close-through/rejection line after the 60M HTF FVG reaction.',
+        requiredClose: direction === 'LONG'
+          ? 'Completed 5M close and hold above 7500.75.'
+          : 'Completed 5M close and hold below 7490.25.',
+        obstacleType: 'imbalance_zone',
+        obstacleSource: 'ninjatrader',
+        evidence: ['60M HTF FVG reaction is mapped from NinjaTrader OHLC.'],
+        blockers: [],
+      },
+    },
+    ...overrides,
+  });
+}
+
+const july2OldShort = htfFvgMicroMssCandidate('SHORT', {
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'Old short campaign still visible',
+  rankScore: 258,
+  decisionQualityScore: 93,
+  entry: 7504.5,
+  stop: 7509,
+  target1: 7497.75,
+  target2: 7495.5,
+  riskPoints: 4.5,
+  evidence: ['Earlier bearish 5M FVG retest candidate.'],
+  activeRuleset: {
+    htfLineInSand: {
+      applied: true,
+      status: 'passed',
+      required: 'completed_5m_or_15m_close_beyond_htf_line',
+      appliesToAllModels: true,
+      affectsExecution: false,
+      direction: 'SHORT',
+      lineInSand: 7503,
+      lineReason: '7503.00 is the older bearish tactical retest line.',
+      requiredClose: 'Completed 5M close below 7503.00.',
+      obstacleType: 'imbalance_zone',
+      obstacleSource: 'ninjatrader',
+      evidence: ['Older bearish 5M imbalance retest.'],
+      blockers: [],
+    },
+  },
+  requiredTrigger: 'Entry only on retrace into bearish imbalance 7503-7505.75.',
+  nextAction: 'Old short remains management only if the new long transition holds.',
+});
+const july2LongWatch = htfFvgMicroMssCandidate('LONG', {
+  entry: 7501.75,
+  stop: null,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  missingEvidence: [
+    'Protected 5M retest swing stop blocked: retest low is not a confirmed protected 5M swing low.',
+    'App T1/T2 from actual entry/stop risk',
+  ],
+});
+const july2LongWatchTrace = buildCandidateLifecycleTrace({
+  candidates: [july2OldShort, july2LongWatch],
+  selectedCandidate: july2LongWatch,
+  state: 'Conditional',
+  window: noonLunchPmWindow,
+  alertDecision: { shouldSend: false, reason: 'July 2 HTF FVG micro MSS watch fixture.' },
+  canExecute: false,
+});
+const july2LongWatchDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: july2LongWatch,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: july2LongWatch,
+    window: noonLunchPmWindow,
+    alertDecision: { shouldSend: false, reason: 'July 2 HTF FVG micro MSS watch fixture.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: july2LongWatchTrace,
+  currentPrice: 7504.25,
+  canExecute: false,
+});
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.direction, 'LONG');
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.longBias.state, 'primary');
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.longBias.modelFit.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.longBias.modelFit.status, 'best_fit');
+assert.match(july2LongWatchDeskState.primaryDeskPlay.longBias.modelFit.reason, /HTF FVG reaction plus completed 5M micro MSS/);
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.longBias.lineInSand, 7500.75);
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.longBias.tradeReadiness.status, 'wait_for_pullback_or_new_5m_structure');
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.discordEligible, true);
+assert.equal(july2LongWatchDeskState.canExecute, false);
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+
+const july2LongFullPlan = htfFvgMicroMssCandidate('LONG', {
+  entry: 7501.25,
+  stop: 7492.75,
+  target1: 7514,
+  target2: 7518.25,
+  riskPoints: 8.5,
+  candidateState: 'QUALIFIED_CONDITIONAL',
+  requiredTrigger: 'Completed 5M retest/hold above 7500.75 after the 14:20 ET protected swing low at 7493.00.',
+  nextAction: 'Human-review long plan from 60M HTF FVG reaction and 5M retest/hold above 7500.75.',
+});
+const july2LongFullTrace = buildCandidateLifecycleTrace({
+  candidates: [july2OldShort, july2LongFullPlan],
+  selectedCandidate: july2LongFullPlan,
+  state: 'Conditional',
+  window: noonLunchPmWindow,
+  alertDecision: { shouldSend: true, reason: 'July 2 protected retest/hold long qualified.' },
+  canExecute: false,
+});
+const july2LongFullDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: july2LongFullPlan,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: july2LongFullPlan,
+    window: noonLunchPmWindow,
+    alertDecision: { shouldSend: true, reason: 'July 2 protected retest/hold long qualified.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: july2LongFullTrace,
+  currentPrice: 7501.25,
+  canExecute: false,
+});
+assert.equal(july2LongFullDeskState.primaryDeskPlay.direction, 'LONG');
+assert.equal(july2LongFullDeskState.primaryDeskPlay.longBias.state, 'primary');
+assert.equal(july2LongFullDeskState.primaryDeskPlay.longBias.modelFit.status, 'best_fit');
+assert.equal(july2LongFullDeskState.primaryDeskPlay.longBias.executableConsideration.canExecuteNow, false);
+assert.equal(july2LongFullDeskState.primaryDeskPlay.longBias.lineInSand, 7500.75);
+assert.equal(july2LongFullDeskState.bestLongPlan?.entry, 7501.25);
+assert.equal(july2LongFullDeskState.bestLongPlan?.stop, 7492.75);
+assert.equal(july2LongFullDeskState.bestLongPlan?.target1, 7514);
+assert.equal(july2LongFullDeskState.bestLongPlan?.target2, 7518.25);
+assert.equal(july2LongFullDeskState.canExecute, false);
+
+const mirroredShortWatch = htfFvgMicroMssCandidate('SHORT', {
+  stop: null,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  missingEvidence: ['Protected 5M retest swing stop blocked: retest high is not a confirmed protected 5M swing high.'],
+});
+const mirroredShortTrace = buildCandidateLifecycleTrace({
+  candidates: [mirroredShortWatch],
+  selectedCandidate: mirroredShortWatch,
+  state: 'Conditional',
+  window: noonLunchPmWindow,
+  alertDecision: { shouldSend: false, reason: 'Mirrored HTF FVG short watch fixture.' },
+  canExecute: false,
+});
+const mirroredShortDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: mirroredShortWatch,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: mirroredShortWatch,
+    window: noonLunchPmWindow,
+    alertDecision: { shouldSend: false, reason: 'Mirrored HTF FVG short watch fixture.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: mirroredShortTrace,
+  currentPrice: 7488.5,
+  canExecute: false,
+});
+assert.equal(mirroredShortDeskState.primaryDeskPlay.direction, 'SHORT');
+assert.equal(mirroredShortDeskState.primaryDeskPlay.shortBias.state, 'primary');
+assert.equal(mirroredShortDeskState.primaryDeskPlay.shortBias.modelFit.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(mirroredShortDeskState.primaryDeskPlay.shortBias.lineInSand, 7490.25);
+assert.equal(mirroredShortDeskState.primaryDeskPlay.shortBias.tradeReadiness.status, 'wait_for_pullback_or_new_5m_structure');
+assert.equal(mirroredShortDeskState.canExecute, false);
+
 console.log('localScannerEngine tests passed');

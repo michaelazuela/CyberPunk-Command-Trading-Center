@@ -3636,6 +3636,152 @@ assert.match(sameSideCampaignText, /wait for a fresh pullback\/retest/);
 assert.doesNotMatch(sameSideCampaignText, /Lead Entry: 7532\.50 \| Stop: 7492\.00/);
 assert.doesNotMatch(sameSideCampaignText, /T1: 7536\.75 \| T2: 7544\.00/);
 
+const htfFvgMicroMssCandidate = sampleCandidate('LONG');
+htfFvgMicroMssCandidate.setupType = SetupType.IntradayMssMicroContinuation;
+htfFvgMicroMssCandidate.scenarioLabel = 'HTF FVG Reaction + 5M Micro MSS Reversal';
+htfFvgMicroMssCandidate.entry = 7501.25;
+htfFvgMicroMssCandidate.stop = 7492.75;
+htfFvgMicroMssCandidate.target1 = 7514;
+htfFvgMicroMssCandidate.target2 = 7518.25;
+htfFvgMicroMssCandidate.riskPoints = 8.5;
+htfFvgMicroMssCandidate.requiredTrigger = 'Completed 5M retest/hold above 7500.75 after the 14:20 ET protected swing low at 7493.00.';
+htfFvgMicroMssCandidate.nextAction = 'Human-review long plan from 60M HTF FVG reaction and 5M retest/hold above 7500.75.';
+htfFvgMicroMssCandidate.invalidation = 'Invalid if completed 5M accepts below the protected 5M retest swing stop 7492.75.';
+htfFvgMicroMssCandidate.activeRuleset = {
+  htfLineInSand: {
+    applied: true,
+    status: 'passed',
+    required: 'completed_5m_or_15m_close_beyond_htf_line',
+    appliesToAllModels: true,
+    affectsExecution: false,
+    direction: 'LONG',
+    lineInSand: 7500.75,
+    lineReason: '7500.75 is the completed 5M MSS close-through/reclaim line after the 60M HTF FVG reaction.',
+    requiredClose: 'Completed 5M close and hold above 7500.75.',
+    obstacleType: 'imbalance_zone',
+    obstacleSource: 'ninjatrader',
+    evidence: ['60M HTF FVG reaction is mapped from NinjaTrader OHLC.'],
+    blockers: [],
+  },
+};
+const htfFvgMicroMssPayload = compactDiscordSummary({
+  session: 'lunch',
+  tradeDate: '2026-07-02',
+  instrument: 'MES',
+  planVersionId: 'HTF-FVG-MICRO-MSS-TEST',
+  normalized: {
+    decision: 'LONG',
+    decisionStatus: TradeDecisionStatus.Wait,
+    canExecute: false,
+    entry: 7501.25,
+    stop: 7492.75,
+    t1: 7514,
+    t2: 7518.25,
+  },
+  candidates: [htfFvgMicroMssCandidate],
+  currentPrice: 7501.25,
+  attachments: { chartPlan: true, priceLevelMap: true },
+  deskState: {
+    discordAction: 'post_review',
+    canExecute: false,
+    htfContextStatus: 'sufficient',
+    primaryDeskPlay: {
+      discordEligible: true,
+      direction: 'LONG',
+      lineInSand: 7500.75,
+      longAbove: 7500.75,
+      shortBelow: 7503,
+      nextTrigger: 'Completed 5M retest/hold above 7500.75 creates the human-review long plan.',
+      invalidation: 'Invalid if completed 5M accepts below the protected 5M retest swing stop 7492.75.',
+      longBias: {
+        state: 'primary',
+        decisionQualityScore: 88,
+        tradeReadiness: {
+          status: 'review_only_missing_proof',
+          displayLabel: 'HUMAN REVIEW READY',
+          displayAction: 'Review only; trader confirms. canExecute remains false.',
+          displayReason: 'HTF FVG reaction plus completed 5M micro MSS/retest hold created the plan.',
+        },
+      },
+      shortBias: { state: 'secondary', lineInSand: 7503 },
+      activeTacticalLine: {
+        originalLine: 7500.75,
+        activeLine: 7500.75,
+        nextTrigger: 'Active line 7500.75: completed 5M hold/retest above required before fresh execution consideration.',
+        standDown: 'Fresh LONG stand down on completed 5M acceptance below 7500.75.',
+      },
+      htfFvgReactionMemory: {
+        activeReaction: {
+          direction: 'LONG',
+          timeframe: '60M',
+          lower: 7481.75,
+          upper: 7491.25,
+          state: 'rejected',
+          latestReaction: {
+            state: 'rejected',
+            timestamp: '2026-07-02T14:00:00.0000000',
+            close: 7482,
+          },
+        },
+        childConfirmation: {
+          direction: 'LONG',
+          state: 'child_fvg_confirmed',
+          lower: 7500.75,
+          upper: 7504.5,
+        },
+        parentZones: [{
+          direction: 'LONG',
+          timeframe: '60M',
+          lower: 7481.75,
+          upper: 7491.25,
+          state: 'rejected',
+          confidence: 'High',
+        }],
+      },
+      htfFvgReactionRouting: {
+        status: 'routed_active_reaction',
+        direction: 'LONG',
+        lineInSand: 7491.25,
+        lineLabel: 'LONG ABOVE 7491.25 from 60M parent FVG 7481.75-7491.25',
+        lifecycleState: 'rejected',
+        standDown: 'Stand down on completed 5M acceptance below parent zone 7481.75.',
+      },
+      htfFvgCascade: {
+        direction: 'LONG',
+        parentZone: {
+          direction: 'LONG',
+          timeframe: '60M',
+          lower: 7481.75,
+          upper: 7491.25,
+          state: 'rejected',
+        },
+        childExecutionZone: {
+          direction: 'LONG',
+          lower: 7500.75,
+          upper: 7504.5,
+          triggerNeeded: 'Completed 5M retest/hold above 7500.75.',
+        },
+        routingSummary: '60M parent FVG frames the map; 5M micro MSS supplies execution route.',
+        standDown: 'Stand down on completed 5M acceptance below parent zone 7481.75.',
+      },
+      htfProtectedStructureMap: { reliability: 'sufficient', rows: [] },
+    },
+  },
+});
+validateDiscordPayload(htfFvgMicroMssPayload, ['chart-plan.png', 'price-level-map.png']);
+const htfFvgMicroMssText = flattenDiscordPayloadText(htfFvgMicroMssPayload);
+assert.match(htfFvgMicroMssText, /HTF (?:FVG|imbalance)(?: Reaction)?|HTF FVG Reaction Memory|Defended HTF FVG Reaction Memory/);
+assert.match(htfFvgMicroMssText, /60M/);
+assert.match(htfFvgMicroMssText, /Line in sand: (?:LONG ABOVE )?7500\.75|Line in the Sand:/i);
+assert.match(htfFvgMicroMssText, /Entry: 7501\.25/);
+assert.match(htfFvgMicroMssText, /Stop: 7492\.75/);
+assert.match(htfFvgMicroMssText, /T1: 7514\.00/);
+assert.match(htfFvgMicroMssText, /T2: 7518\.25/);
+assert.match(htfFvgMicroMssText, /completed 5M retest\/hold above 7500\.75/i);
+assert.match(htfFvgMicroMssText, /Invalidation:/);
+assert.match(htfFvgMicroMssText, /Review only|Decision support only|canExecute/i);
+assert.doesNotMatch(htfFvgMicroMssText, /No active plan candidate available|Stand down\. Recheck at next scheduled scan/);
+
 console.log('Discord compact alert formatter verified.');
 
 if (previousOutcomeBaseUrl === undefined) delete process.env.DISCORD_OUTCOME_BASE_URL;

@@ -4229,6 +4229,30 @@ function lifecycleItemShowsFiveMinuteTacticalShift(
   return /5M|MSS|displacement|retest|rejection|close-through|close below|close above|sweep|reclaim/i.test(proofText);
 }
 
+function tacticalCampaignHtfFvgTimeframes(item: ScannerCandidateLifecycleTraceItem | null): string[] {
+  if (!item || item.direction === 'NO TRADE' || item.setupType !== SetupType.IntradayMssMicroContinuation) return [];
+  const text = [
+    item.scenarioLabel,
+    item.candidateState,
+    item.nextTrigger,
+    item.requiredTrigger,
+    item.lineInSandReason,
+    item.targetReactionReason,
+    item.blockReason,
+    item.filteredOutReason,
+    ...item.missingEvidence,
+    ...item.missingLevels,
+  ].filter(Boolean).join(' ').toUpperCase();
+  if (!/\b(FVG|FAIR VALUE GAP|PARENT FVG|HTF)\b/.test(text)) return [];
+  const timeframes = [
+    /\b15M\b|\b15\s*MIN/.test(text) ? '15M' : null,
+    /\b60M\b|\b1H\b|\b60\s*MIN/.test(text) ? '60M' : null,
+    /\b120M\b|\b2H\b|\b120\s*MIN/.test(text) ? '120M' : null,
+    /\b240M\b|\b4H\b|\b240\s*MIN/.test(text) ? '240M' : null,
+  ].filter((value): value is string => Boolean(value));
+  return Array.from(new Set(timeframes.length ? timeframes : ['HTF_FVG']));
+}
+
 export function scannerTacticalCampaignMapFromDeskState(args: {
   deskState: DeskState;
   normalized?: ReturnType<typeof buildAppTradePlan> | null;
@@ -4276,10 +4300,11 @@ export function scannerTacticalCampaignMapFromDeskState(args: {
     .map((row) => row.timeframe);
   const protectedFiveMinuteAligned = rows.some((row) => row.timeframe === '5M' && htfRowSupportsDirection(row, direction));
   const lifecycleFiveMinuteAligned = lifecycleItemShowsFiveMinuteTacticalShift(scannerDeskPlayPrimaryLifecycle(args.deskState), direction);
+  const htfFvgTimeframes = tacticalCampaignHtfFvgTimeframes(scannerDeskPlayPrimaryLifecycle(args.deskState));
   const executionTimeframeAligned = protectedFiveMinuteAligned || lifecycleFiveMinuteAligned;
   const campaignMap = {
     ...base,
-    supportingTimeframes: Array.from(new Set(supportingTimeframes)),
+    supportingTimeframes: Array.from(new Set([...supportingTimeframes, ...htfFvgTimeframes])),
     executionTimeframeAligned,
     executionEvidenceSource: protectedFiveMinuteAligned
       ? 'protected_structure_5m' as const

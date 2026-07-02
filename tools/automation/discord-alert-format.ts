@@ -1,7 +1,7 @@
 import { roundToTradeTick, targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
 import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
 import { candidateTargetReactionObjective } from '../../src/lib/localScannerEngine';
-import { NoTradeReason, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
+import { NoTradeReason, SetupType, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
 import {
   assertDiscordReportDesignerIsAdvisoryOnly,
   designDiscordVisualReport,
@@ -1025,6 +1025,35 @@ function missingProofLines(candidate: SetupCandidate): string[] {
   ];
 }
 
+function htfFvgReactionCandidateLines(candidate: SetupCandidate): string[] {
+  if (candidate.setupType !== SetupType.IntradayMssMicroContinuation) return [];
+  const sourceText = [
+    candidate.scenarioLabel,
+    candidate.activeRuleset?.htfLineInSand?.lineReason,
+    candidate.activeRuleset?.htfLineInSand?.requiredClose,
+    ...(candidate.activeRuleset?.htfLineInSand?.evidence || []),
+    ...(candidate.evidence || []),
+    ...(candidate.missingEvidence || []),
+    candidate.requiredTrigger,
+    candidate.nextAction,
+  ].filter(Boolean).join(' ');
+  if (!/HTF|FVG|fair value gap|parent FVG|15M|60M|120M|240M|1H|2H|4H/i.test(sourceText)) return [];
+  const timeframes = [
+    /\b15M\b|\b15\s*MIN/i.test(sourceText) ? '15M' : null,
+    /\b60M\b|\b1H\b|\b60\s*MIN/i.test(sourceText) ? '60M' : null,
+    /\b120M\b|\b2H\b|\b120\s*MIN/i.test(sourceText) ? '120M' : null,
+    /\b240M\b|\b4H\b|\b240\s*MIN/i.test(sourceText) ? '240M' : null,
+  ].filter((value): value is string => Boolean(value));
+  const line = candidate.activeRuleset?.htfLineInSand?.lineInSand ?? null;
+  const direction = candidate.direction === 'LONG' || candidate.direction === 'SHORT' ? candidate.direction : null;
+  const lineText = direction && isFinitePrice(line)
+    ? `${direction === 'LONG' ? 'LONG ABOVE' : 'SHORT BELOW'} ${priceLine(line)}`
+    : 'line pending';
+  return [
+    `HTF FVG: ${timeframes.length ? timeframes.join('/') : 'HTF'}; ${lineText}; 5M controls.`,
+  ];
+}
+
 function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
   const levels = appTargetLevels(candidate, normalized);
   const modelConfidenceScore =
@@ -1051,6 +1080,7 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
       'Trader must confirm entry before action.',
     ] : []),
     ...failedPlanReversalLines(candidate),
+    ...htfFvgReactionCandidateLines(candidate),
     ...lineInSandLines(candidate),
     `Entry: ${priceLine(candidate.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
@@ -1100,6 +1130,7 @@ function compactReviewPlanLines(candidate: SetupCandidate, normalized: CompactNo
       'Trader must confirm entry before action.',
     ] : []),
     ...failedPlanReversalLines(candidate),
+    ...htfFvgReactionCandidateLines(candidate),
     ...lineLines,
     ...(!lineLines.length && isFinitePrice(htfLine) ? [
       'Line in the Sand:',
@@ -1818,6 +1849,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     discordPromotionDecisionLine(candidate, normalized, status),
     `Bias: ${biasEmoji(direction === 'LONG' ? 'BULL' : 'BEAR')} ${candidateBiasSummary(candidate)}`,
     ...(candidateHtfContextLine(candidate) ? [candidateHtfContextLine(candidate)!] : []),
+    ...htfFvgReactionCandidateLines(candidate),
     `Line in sand: ${priceLine(lineInSand)}`,
     `Overall play: ${direction} ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`,
     `Next trigger: ${compactInstruction(candidate.requiredTrigger || candidate.nextAction, `completed 5M acceptance ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`)}`,

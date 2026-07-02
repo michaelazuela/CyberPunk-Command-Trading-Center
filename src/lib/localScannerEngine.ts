@@ -2460,6 +2460,29 @@ function lifecycleItemHasHtfSupport(item: ScannerCandidateLifecycleTraceItem | n
   return /htf mss support in campaign direction|active campaign htf support|active timeframe mss context aligned on|higher-timeframe bias aligned|higher-timeframe (?:structure|bias|mss).*supports|(?:15m|60m|120m|240m|1h|2h|4h).*htf support/i.test(text);
 }
 
+function lifecycleItemIsHtfFvgMicroMssReaction(item: ScannerCandidateLifecycleTraceItem | null | undefined): boolean {
+  if (!item || (item.direction !== 'LONG' && item.direction !== 'SHORT')) return false;
+  if (item.setupType !== SetupType.IntradayMssMicroContinuation) return false;
+  if (item.executionStatus !== ExecutionStatus.Conditional && item.executionStatus !== ExecutionStatus.Executable) return false;
+  const text = [
+    item.scenarioLabel,
+    item.candidateState,
+    item.nextTrigger,
+    item.requiredTrigger,
+    item.lineInSandReason,
+    item.targetReactionReason,
+    item.blockReason,
+    item.filteredOutReason,
+    ...item.missingEvidence,
+    ...item.missingLevels,
+  ].filter(Boolean).join(' ');
+  const hasLine = typeof lineForLifecycleItem(item) === 'number' && Number.isFinite(lineForLifecycleItem(item) as number);
+  const hasMicroMss = /5m.*mss|mss.*5m|close-through|close through|retest\/hold|retest\/failure|micro[-\s]?continuation/i.test(text);
+  const hasHtfFvgReaction = item.htfSupported ||
+    /htf.*fvg|fvg.*htf|parent fvg|15m.*fvg|60m.*fvg|120m.*fvg|240m.*fvg|1h.*fvg|2h.*fvg|4h.*fvg|higher-timeframe.*fvg/i.test(text);
+  return hasLine && hasMicroMss && hasHtfFvgReaction;
+}
+
 function opposingHtfStructureLabel(direction: SetupCandidate['direction']): string {
   if (direction === 'SHORT') return 'bullish HTF/session structure';
   if (direction === 'LONG') return 'bearish HTF/session structure';
@@ -2935,6 +2958,20 @@ function buildApprovedModelFit(args: {
   const protectedDirection = protectedStructureSupportDirection(args.htfProtectedStructureMap);
   const aligned = protectedDirection === args.direction;
   if (!aligned) {
+    if (lifecycleItemIsHtfFvgMicroMssReaction(args.item)) {
+      const entry = primaryRegistryEntryForSetup(SetupType.IntradayMssMicroContinuation);
+      return {
+        sourceOfTruth: 'scanner_protected_structure_model_fit',
+        setupType: SetupType.IntradayMssMicroContinuation,
+        modelName: entry?.label || 'Intraday MSS Micro Continuation',
+        parentModelFamily: entry?.parentModelFamily || 'HTF_DISPLACEMENT_CONTINUATION',
+        fitScore: Math.max(70, Math.min(100, Math.round(lifecycleItemScore(args.item) + 6))),
+        status: 'best_fit',
+        reason: `${args.direction} routes to Intraday MSS Micro Continuation from HTF FVG reaction plus completed 5M micro MSS/close-through. HTF conflict remains caution/management, not an eraser; execution still requires protected 5M stop proof and normal gates.`,
+        missingProof: existingModelFitMissingProof(args.item),
+        approvalBoundary: boundary,
+      };
+    }
     return {
       sourceOfTruth: 'scanner_protected_structure_model_fit',
       setupType: null,
@@ -3633,6 +3670,7 @@ function biasStateForLifecycleItem(
 ): DeskPlayBiasState {
   if (!item) return 'not_present';
   if (item.executionStatus === ExecutionStatus.Blocked) return 'blocked';
+  if (item.direction === primaryDirection && lifecycleItemIsHtfFvgMicroMssReaction(item)) return 'primary';
   if ((item.countertrend || lifecycleItemHasHtfConflict(item)) && !lifecycleItemHasProtectedStructureSupport(item, htfProtectedStructureMap)) return 'countertrend_review';
   if (item.direction === primaryDirection) return 'primary';
   return 'secondary';
@@ -3974,9 +4012,21 @@ function lifecycleItemPrimaryEligible(
   htfProtectedStructureMap: DeskHtfProtectedStructureMap,
 ): boolean {
   if (!item) return false;
+  if (lifecycleItemIsHtfFvgMicroMssReaction(item)) return true;
   if (lifecycleItemHasProtectedStructureSupport(item, htfProtectedStructureMap)) return true;
   if (lifecycleItemIsHighQualityConditionalReview(item)) return true;
   return lifecycleItemHasHtfSupport(item) && !lifecycleItemHasHtfConflict(item);
+}
+
+function htfFvgMicroMssPrimaryDirection(trace: ScannerCandidateLifecycleTrace): Exclude<DeskPlayDirection, 'WAIT'> | null {
+  const long = lifecycleItemIsHtfFvgMicroMssReaction(trace.bestLongPlan) ? trace.bestLongPlan : null;
+  const short = lifecycleItemIsHtfFvgMicroMssReaction(trace.bestShortPlan) ? trace.bestShortPlan : null;
+  if (long && !short) return 'LONG';
+  if (short && !long) return 'SHORT';
+  if (!long && !short) return null;
+  const longScore = lifecycleItemScore(long);
+  const shortScore = lifecycleItemScore(short);
+  return longScore >= shortScore ? 'LONG' : 'SHORT';
 }
 
 function htfFvgMemoryRoutableDirection(
@@ -4021,6 +4071,8 @@ function selectPrimaryDeskPlayDirection(
   htfProtectedStructureMap: DeskHtfProtectedStructureMap,
   htfFvgReactionMemory?: HtfFvgReactionMemory | null,
 ): DeskPlayDirection {
+  const htfFvgMicroMssDirection = htfFvgMicroMssPrimaryDirection(trace);
+  if (htfFvgMicroMssDirection) return htfFvgMicroMssDirection;
   const htfFvgDirection = htfFvgMemoryRoutableDirection(trace, htfFvgReactionMemory || null);
   if (htfFvgDirection) return htfFvgDirection;
   const long = trace.bestLongPlan;

@@ -3954,6 +3954,185 @@ assert.equal(waitHighQualityConditionalDeskPlaySuppression.shouldPost, true);
 assert.equal(waitHighQualityConditionalDeskPlaySuppression.category, 'post');
 assert.match(waitHighQualityConditionalDeskPlaySuppression.reason, /SHORT high-confidence conditional trade plan is eligible/);
 assert.match(waitHighQualityConditionalDeskPlaySuppression.reason, /execution arms only after the named completed 5M condition/);
+const htfFvgMicroMssLongWatchDeskState = {
+  ...baseDeskPlanRefreshState,
+  htfContextStatus: 'sufficient',
+  dataQualityStatus: 'ready',
+  activeCampaign: { id: '2026-07-02:LONG:HTF-FVG-MICRO-MSS' },
+  bestLongPlan: {
+    setupType: SetupType.IntradayMssMicroContinuation,
+    direction: 'LONG',
+    candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
+    lineInSand: 7500.75,
+    entry: 7501.75,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    decisionQualityScore: 72,
+    lineInSandReason: '7500.75 is the completed 5M MSS close-through/reclaim line after the 60M HTF FVG reaction.',
+    nextTrigger: 'Human-review long: completed bullish 5M MSS close-through from the 60M HTF FVG, then completed 5M retest/hold above 7500.75.',
+    requiredTrigger: 'Completed 5M close-through and retest/hold above 7500.75.',
+    missingEvidence: ['Protected 5M retest swing stop is not confirmed.'],
+    missingLevels: ['Protected 5M stop', 'App T1/T2 from actual entry/stop risk'],
+  },
+  bestShortPlan: null,
+  primaryDeskPlay: {
+    ...baseDeskPlanRefreshState.primaryDeskPlay,
+    direction: 'LONG',
+    lineInSand: 7500.75,
+    targetReactionLevel: null,
+    longAbove: 7500.75,
+    shortBelow: 7503,
+    nextTrigger: 'Completed 5M retest/hold above 7500.75 creates the human-review long plan.',
+    activeTacticalLine: {
+      activeLine: 7500.75,
+      nextTrigger: 'Active line 7500.75: completed 5M hold/retest above required before fresh execution consideration.',
+    },
+    longBias: {
+      state: 'primary',
+      lineInSand: 7500.75,
+      decisionQualityScore: 72,
+      tradeReadiness: {
+        status: 'wait_for_pullback_or_new_5m_structure',
+        reason: 'HTF FVG reaction plus completed 5M micro MSS is active; protected retest swing stop still required.',
+      },
+      nextTrigger: 'Completed 5M retest/hold above 7500.75.',
+    },
+    shortBias: { state: 'secondary', lineInSand: 7503, tradeReadiness: { status: 'not_aligned' } },
+    htfConflict: true,
+    htfProtectedStructureMap: { rows: [] },
+  },
+} as any;
+const htfFvgMicroMssWatchSuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-07-02',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: '2026-07-02:MES:lunch:DESK_PLAN_REFRESH:2026-07-02T14:10:00.0000000:no-campaign:LONG',
+  deskState: htfFvgMicroMssLongWatchDeskState,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: NoTradeReason.EntryTriggerPending,
+    setupCandidates: [],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7504.25,
+  latestCompleted5m: '2026-07-02T14:10:00.0000000',
+});
+assert.equal(htfFvgMicroMssWatchSuppression.shouldPost, true);
+assert.equal(htfFvgMicroMssWatchSuppression.category, 'post');
+assert.match(htfFvgMicroMssWatchSuppression.reason, /LONG early line-in-sand watch is eligible|Tactical campaign watch is eligible/);
+assert.doesNotMatch(htfFvgMicroMssWatchSuppression.reason, /NO TRADE|low_quality_map|suppressed/i);
+
+const htfFvgMicroMssLongPlanDeskState = {
+  ...htfFvgMicroMssLongWatchDeskState,
+  bestLongPlan: {
+    ...htfFvgMicroMssLongWatchDeskState.bestLongPlan,
+    entry: 7501.25,
+    stop: 7492.75,
+    target1: 7514,
+    target2: 7518.25,
+    riskPoints: 8.5,
+    decisionQualityScore: 88,
+    candidateState: 'QUALIFIED_CONDITIONAL',
+    missingEvidence: [],
+    missingLevels: [],
+  },
+  primaryDeskPlay: {
+    ...htfFvgMicroMssLongWatchDeskState.primaryDeskPlay,
+    longBias: {
+      ...htfFvgMicroMssLongWatchDeskState.primaryDeskPlay.longBias,
+      decisionQualityScore: 88,
+      tradeReadiness: { status: 'review_only_missing_proof', reason: 'Human-review only; canExecute remains false.' },
+    },
+  },
+} as any;
+const htfFvgMicroMssFullPlanSuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-07-02',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: '2026-07-02:MES:lunch:DESK_PLAN_REFRESH:2026-07-02T14:25:00.0000000:no-campaign:LONG',
+  deskState: htfFvgMicroMssLongPlanDeskState,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'LONG',
+    noTradeReason: NoTradeReason.EntryTriggerPending,
+    setupCandidates: [{
+      setupType: SetupType.IntradayMssMicroContinuation,
+      scenarioLabel: 'HTF FVG Reaction + 5M Micro MSS Reversal',
+      direction: 'LONG',
+      detectedStatus: SetupCandidateStatus.Conditional,
+      executionStatus: ExecutionStatus.Conditional,
+      blockReason: NoTradeReason.EntryTriggerPending,
+      entry: 7501.25,
+      stop: 7492.75,
+      target1: 7514,
+      target2: 7518.25,
+      riskPoints: 8.5,
+      decisionQualityScore: 88,
+    }],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7501.25,
+  latestCompleted5m: '2026-07-02T14:25:00.0000000',
+});
+assert.equal(htfFvgMicroMssFullPlanSuppression.shouldPost, true);
+assert.equal(htfFvgMicroMssFullPlanSuppression.category, 'post');
+assert.doesNotMatch(htfFvgMicroMssFullPlanSuppression.reason, /NO TRADE|low_quality_map|suppressed/i);
+
+const htfFvgMicroMssTransitionGate = evaluateScannerPrimaryAlertPublishingGate({
+  alertDecision: { shouldSend: true, reason: 'HTF FVG micro MSS long full plan qualified.' },
+  deskState: {
+    ...htfFvgMicroMssLongPlanDeskState,
+    primaryDeskPlay: {
+      ...htfFvgMicroMssLongPlanDeskState.primaryDeskPlay,
+      htfConflict: false,
+      longBias: { tradeReadiness: { status: 'aligned' } },
+      shortBias: { tradeReadiness: { status: 'not_aligned' } },
+    },
+  } as unknown as DeskState,
+  candidate: {
+    setupType: SetupType.IntradayMssMicroContinuation,
+    scenarioLabel: 'HTF FVG Reaction + 5M Micro MSS Reversal',
+    direction: 'LONG',
+    detectedStatus: SetupCandidateStatus.Conditional,
+    confidence: 'High',
+    priority: 96,
+    entry: 7501.25,
+    stop: 7492.75,
+    target1: 7514,
+    target2: 7518.25,
+    riskPoints: 8.5,
+    decisionQualityScore: 88,
+    evidence: ['60M HTF FVG reaction', 'completed bullish 5M MSS close-through'],
+    missingEvidence: [],
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: NoTradeReason.EntryTriggerPending,
+    requiredTrigger: 'Completed 5M retest/hold above 7500.75.',
+    nextAction: 'Human-review long only.',
+    reducedRiskPlan: null,
+  } as SetupCandidate,
+  normalizedCanExecute: false,
+  state: 'Conditional' as ScannerState,
+  currentPrice: 7501.25,
+  priorActiveDelivery: {
+    ...priorShortCampaignDelivery,
+    candidate: {
+      ...priorShortCampaignDelivery.candidate,
+      activeCampaign: {
+        ...priorShortCampaignDelivery.candidate.activeCampaign!,
+        lineInSand: 7500.75,
+      },
+    },
+  },
+  completed5m: { time: '2026-07-02T14:25:00.0000000', open: 7496.25, high: 7502.75, low: 7496, close: 7501.25, volume: 1 },
+});
+assert.equal(htfFvgMicroMssTransitionGate.shouldSend, true);
+assert.match(htfFvgMicroMssTransitionGate.reason, /Campaign transition|REVIEW ONLY \/ NOT EXECUTION APPROVAL/);
+
 const waitDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
