@@ -804,6 +804,28 @@ const priceAwayFromZonePrimaryAlertGate = evaluateScannerPrimaryAlertPublishingG
 assert.equal(priceAwayFromZonePrimaryAlertGate.shouldSend, false);
 assert.match(priceAwayFromZonePrimaryAlertGate.reason, /current price 7470\.50 is above active tactical zone 7429\.25-7431\.50/);
 assert.doesNotMatch(priceAwayFromZonePrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
+const oppositeDeskStatePrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...reviewOnlyPrimaryAlertGateFixture,
+  candidate: {
+    ...reviewOnlyPrimaryAlertGateFixture.candidate!,
+    direction: 'SHORT',
+  },
+  deskState: {
+    primaryDeskPlay: {
+      direction: 'LONG',
+      htfConflict: true,
+      longBias: {
+        tradeReadiness: { status: 'aligned' },
+      },
+      shortBias: {
+        tradeReadiness: { status: 'not_aligned' },
+      },
+    },
+  } as unknown as DeskState,
+});
+assert.equal(oppositeDeskStatePrimaryAlertGate.shouldSend, false);
+assert.match(oppositeDeskStatePrimaryAlertGate.reason, /candidate side SHORT conflicts with DeskState LONG/);
+assert.doesNotMatch(oppositeDeskStatePrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
 const oppositeHtfRoutingPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
   ...reviewOnlyPrimaryAlertGateFixture,
   candidate: {

@@ -148,14 +148,14 @@ function incompleteCandidate(item: MatrixCase): SetupCandidate {
   } as SetupCandidate;
 }
 
-function hostileDeskState(candidate: SetupCandidate): any {
+function neutralReviewDeskState(candidate: SetupCandidate): any {
   const longBias = {
-    state: candidate.direction === 'LONG' ? 'secondary' : 'primary',
+    state: candidate.direction === 'LONG' ? 'primary' : 'secondary',
     lineInSand: candidate.direction === 'LONG' ? candidate.entry : null,
     tradeReadiness: { status: 'not_aligned' },
   };
   const shortBias = {
-    state: candidate.direction === 'SHORT' ? 'secondary' : 'primary',
+    state: candidate.direction === 'SHORT' ? 'primary' : 'secondary',
     lineInSand: candidate.direction === 'SHORT' ? candidate.entry : null,
     tradeReadiness: { status: 'not_aligned' },
   };
@@ -164,7 +164,7 @@ function hostileDeskState(candidate: SetupCandidate): any {
     dataQualityStatus: 'sufficient',
     htfContextStatus: 'partial',
     primaryDeskPlay: {
-      direction: candidate.direction === 'LONG' ? 'SHORT' : 'LONG',
+      direction: 'WAIT',
       lineInSand: candidate.entry,
       longBias,
       shortBias,
@@ -173,14 +173,37 @@ function hostileDeskState(candidate: SetupCandidate): any {
   };
 }
 
+function opposedDeskState(candidate: SetupCandidate): any {
+  const base = neutralReviewDeskState(candidate);
+  return {
+    ...base,
+    primaryDeskPlay: {
+      ...base.primaryDeskPlay,
+      direction: candidate.direction === 'LONG' ? 'SHORT' : 'LONG',
+    },
+  };
+}
+
 function publishDecision(candidate: SetupCandidate, staleReason: string | null = null): ScannerAlertDecision {
   return evaluateScannerPrimaryAlertPublishingGate({
     alertDecision: { shouldSend: true, reason: 'Phase 2 setup-class candidate qualified before DeskState publishing gate.' },
-    deskState: hostileDeskState(candidate),
+    deskState: neutralReviewDeskState(candidate),
     candidate,
     normalizedCanExecute: false,
     state: staleReason ? 'Missed' : 'TriggerPending',
     staleReason,
+    scannerReviewStatus: null,
+  });
+}
+
+function opposedPublishDecision(candidate: SetupCandidate): ScannerAlertDecision {
+  return evaluateScannerPrimaryAlertPublishingGate({
+    alertDecision: { shouldSend: true, reason: 'Phase 2 setup-class candidate qualified before DeskState publishing gate.' },
+    deskState: opposedDeskState(candidate),
+    candidate,
+    normalizedCanExecute: false,
+    state: 'TriggerPending',
+    staleReason: null,
     scannerReviewStatus: null,
   });
 }
@@ -190,8 +213,8 @@ for (const item of phase2Matrix) {
   const freshDecision = publishDecision(fresh);
   assert.equal(freshDecision.shouldSend, true, `${item.label} fresh full-level candidate shall publish`);
   assert.match(freshDecision.reason, /suppression bypassed for high-confidence conditional publication/, item.label);
-  assert.match(freshDecision.reason, /not execution approval/, item.label);
-  assert.match(freshDecision.reason, /canExecute still control execution/, item.label);
+  assert.match(freshDecision.reason, /NOT EXECUTION APPROVAL/i, item.label);
+  assert.match(freshDecision.reason, /app-owned canExecute gate turns true/, item.label);
 
   const incomplete = incompleteCandidate(item);
   const incompleteDecision = publishDecision(incomplete);
@@ -201,6 +224,11 @@ for (const item of phase2Matrix) {
   const staleDecision = publishDecision(fresh, 'no chase: target already reached before alert generation');
   assert.equal(staleDecision.shouldSend, false, `${item.label} stale/no-chase candidate must remain blocked`);
   assert.match(staleDecision.reason, /stale\/no-chase review state/, item.label);
+
+  const opposedDecision = opposedPublishDecision(fresh);
+  assert.equal(opposedDecision.shouldSend, false, `${item.label} opposite-side candidate must not bypass active DeskState direction`);
+  assert.match(opposedDecision.reason, /conflicts with DeskState/, item.label);
+  assert.doesNotMatch(opposedDecision.reason, /suppression bypassed for high-confidence conditional publication/, item.label);
 }
 
 console.log(`Phase 2 setup-class matrix passed: ${phase2Matrix.length} setup buckets enforce fresh promotion, incomplete restraint, and stale/no-chase blocking.`);

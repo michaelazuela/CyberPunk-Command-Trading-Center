@@ -6687,7 +6687,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
     validateDiscordPayload(payload, files);
   } catch (error) {
     const message = sanitizedError(error);
-    if (!/compact alert text|image-backed trade alerts|2000 character limit|preferred normal output/i.test(message)) {
+    if (!/compact alert text|image-backed trade alerts|2000 character limit|preferred normal output|embed title exceeds|embed description exceeds|embed has more than 25 fields|embed field name exceeds|embed field value exceeds|content is \d+ characters/i.test(message)) {
       throw error;
     }
     payload = scannerDeskPlayLiveCompactFallbackPayload({
@@ -8029,6 +8029,7 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
     !candidateStaleReason &&
     args.deskState.dataQualityStatus !== 'data_limited' &&
     args.deskState.htfContextStatus !== 'insufficient' &&
+    !reasons.some((reason) => /conflicts with DeskState/i.test(reason)) &&
     !reasons.some((reason) => /conflicts with active HTF FVG routing/i.test(reason)) &&
     !reasons.some((reason) => /current price .* active tactical zone/i.test(reason))
   ) {

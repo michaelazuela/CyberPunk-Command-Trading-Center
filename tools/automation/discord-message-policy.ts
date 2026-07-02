@@ -94,6 +94,15 @@ export function classifyDiscordMessageText(text: string): DiscordMessagePolicy {
     return discordMessagePolicy('current_desk_plan');
   }
   if (
+    normalized.includes('end-of-day market recap') ||
+    normalized.includes('end of day market recap') ||
+    normalized.includes('end-of-day learning recap') ||
+    normalized.includes('weekly') ||
+    normalized.includes('daily summary')
+  ) {
+    return discordMessagePolicy('daily_weekly_summary');
+  }
+  if (
     normalized.includes('morning htf desk map') ||
     normalized.includes('morning high timeframe desk map') ||
     normalized.includes('htf desk map') ||
@@ -107,7 +116,13 @@ export function classifyDiscordMessageText(text: string): DiscordMessagePolicy {
   if (normalized.includes('[am watch]') || normalized.includes('[pm watch]') || normalized.includes('[evening watch]')) {
     return discordMessagePolicy('watchlist');
   }
-  if (normalized.includes('scanner health') || normalized.includes('[supervisor]') || normalized.includes('bridge unreachable')) {
+  if (
+    normalized.includes('scanner health') ||
+    normalized.includes('scanner hold') ||
+    normalized.includes('scanner held') ||
+    normalized.includes('[supervisor]') ||
+    normalized.includes('bridge unreachable')
+  ) {
     return discordMessagePolicy('operational_health');
   }
   if (normalized.includes('data-quality') || normalized.includes('data quality')) {
@@ -115,9 +130,6 @@ export function classifyDiscordMessageText(text: string): DiscordMessagePolicy {
   }
   if (normalized.includes('rag') || normalized.includes('learning')) {
     return discordMessagePolicy('review_learning');
-  }
-  if (normalized.includes('end-of-day market recap') || normalized.includes('end of day market recap') || normalized.includes('weekly') || normalized.includes('daily summary')) {
-    return discordMessagePolicy('daily_weekly_summary');
   }
   if (normalized.includes('debug') || normalized.includes('diagnostic')) {
     return discordMessagePolicy('debug_diagnostic');

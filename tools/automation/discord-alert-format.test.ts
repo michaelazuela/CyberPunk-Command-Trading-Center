@@ -20,6 +20,25 @@ const previousOutcomeSecret = process.env.DISCORD_OUTCOME_SECRET;
 process.env.DISCORD_OUTCOME_BASE_URL = 'https://quant-desk.example';
 process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
 
+function captureExpectedWarnings(run: () => void): string[] {
+  const previousWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.map((arg) => String(arg)).join(' '));
+  };
+  try {
+    run();
+  } finally {
+    console.warn = previousWarn;
+  }
+  return warnings;
+}
+
+function assertWarnsWithoutThrow(run: () => void, pattern: RegExp): void {
+  const warnings = captureExpectedWarnings(run);
+  assert.ok(warnings.some((warning) => pattern.test(warning)), `expected warning matching ${pattern}`);
+}
+
 assert.equal(discordMessagePolicy('current_desk_plan').requiresChartWhenLevelsPresent, true);
 assert.equal(discordMessagePolicy('current_desk_plan').requiresRagButtons, true);
 assert.equal(discordMessagePolicy('watchlist').requiresRagButtons, false);
@@ -30,7 +49,10 @@ assert.equal(classifyDiscordMessageText('MES Current Desk Plan').category, 'curr
 assert.equal(classifyDiscordMessageText('[AM WATCHLIST] MES - LONG DEVELOPING').category, 'watchlist');
 assert.equal(classifyDiscordMessageText('[AM WATCH] MES - LONG WATCH FORMING').category, 'watchlist');
 assert.equal(classifyDiscordMessageText('MES End-of-Day Market Recap - 2026-06-19').category, 'daily_weekly_summary');
-assert.doesNotThrow(() => validateDiscordPayload({
+assert.equal(classifyDiscordMessageText('Quant Desk Scanner Hold - MES MORNING').category, 'operational_health');
+assert.equal(classifyDiscordMessageText('Scanner Held SHORT Plan').category, 'operational_health');
+assert.equal(classifyDiscordMessageText('Quant Desk • End-of-day learning recap • Not execution approval').category, 'daily_weekly_summary');
+assertWarnsWithoutThrow(() => validateDiscordPayload({
   username: 'Quant Desk',
   content: 'MES Review Notice',
   embeds: [{
@@ -48,7 +70,7 @@ assert.doesNotThrow(() => validateDiscordPayload({
     instrument: 'MES',
     direction: 'NO TRADE',
   }),
-}));
+}), /duplicate Invalidation label detected/);
 assert.throws(() => validateDiscordPayload({
   username: 'Quant Desk',
   content: 'x'.repeat(2001),
@@ -247,11 +269,13 @@ assert.throws(
   () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\nEntry: pending`), ['desk-plan-chart.png']),
   /Entry: pending is stale/,
 );
-assert.doesNotThrow(
+assertWarnsWithoutThrow(
   () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\nAction: Action wait for completed 5M proof.`), ['desk-plan-chart.png']),
+  /duplicate Action label detected/,
 );
-assert.doesNotThrow(
+assertWarnsWithoutThrow(
   () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\nInvalid: Invalid if 7436.75 fails.`), ['desk-plan-chart.png']),
+  /duplicate Invalid label detected/,
 );
 assert.throws(
   () => validateDiscordPayload(currentDeskPlanPayload([
@@ -281,8 +305,9 @@ assert.throws(
   ].join('\n')), ['desk-plan-chart.png']),
   /app targets are internally inconsistent/,
 );
-assert.doesNotThrow(
+assertWarnsWithoutThrow(
   () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\n${'x'.repeat(1500)}`), ['desk-plan-chart.png']),
+  /compact alert text is \d+ characters/,
 );
 
 const normalized = {
