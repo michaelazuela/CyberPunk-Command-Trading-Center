@@ -42,6 +42,7 @@ writeFile(root, 'tools/automation/discord-audit/discord-receipt-MORNING-20260620
 writeFile(root, 'tools/automation/discord-audit/scanner-morning-2026-06-20-MES-OLD.json', '{"planVersionId":"OLD"}\n', oldTime);
 writeFile(root, 'tools/automation/chart-markups/scanner-morning-2026-06-20-MES-OLD.png', Buffer.from([0x89, 0x50, 0x4e, 0x47]), oldTime);
 writeFile(root, 'tools/automation/.nt-scanner-state.json.bak', '{"backup":true}\n', currentTime);
+writeFile(root, 'tools/automation/.market-data-gap-events.json.bak', '{"backup":true}\n', currentTime);
 writeFile(root, 'tools/automation/discord-audit/scanner-morning-2026-06-29-MES-CURRENT.json', '{"planVersionId":"CURRENT"}\n', currentTime);
 
 const options: StaleArtifactCleanupOptions = {
@@ -67,6 +68,7 @@ assert.ok(dryRun.items.some((item) => item.path === 'tools/automation/discord-ra
 assert.ok(dryRun.items.some((item) => item.path === 'tools/automation/discord-audit/scanner-decision-tape-2026-06-20-MES-morning.json' && item.action === 'archive'));
 assert.ok(dryRun.items.some((item) => item.path === 'tools/automation/chart-markups/scanner-morning-2026-06-20-MES-OLD.png' && item.action === 'archive'));
 assert.ok(dryRun.items.some((item) => item.path === 'tools/automation/.nt-scanner-state.json.bak' && item.action === 'delete'));
+assert.ok(dryRun.items.some((item) => item.path === 'tools/automation/.market-data-gap-events.json.bak' && item.action === 'delete'));
 assert.ok(dryRun.items.some((item) => item.path === 'tools/automation/discord-audit/scanner-morning-2026-06-29-MES-CURRENT.json' && item.classification === 'review_required'));
 
 assert.equal(exists(root, 'tools/automation/discord-audit/scanner-decision-tape-2026-06-20-MES-morning.json'), true);
@@ -82,6 +84,7 @@ assert.ok(applied.archiveManifestPath);
 assert.equal(exists(root, 'tools/automation/discord-audit/scanner-decision-tape-2026-06-20-MES-morning.json'), false);
 assert.equal(exists(root, 'tools/automation/stale-artifact-archive/tools/automation/discord-audit/scanner-decision-tape-2026-06-20-MES-morning.json'), true);
 assert.equal(exists(root, 'tools/automation/.nt-scanner-state.json.bak'), false);
+assert.equal(exists(root, 'tools/automation/.market-data-gap-events.json.bak'), false);
 assert.equal(exists(root, 'AGENTS.md'), true);
 assert.equal(exists(root, 'docs/CODEX_RULES.md'), true);
 assert.equal(exists(root, 'tests/fixtures/discord-chart-drift-regression.json'), true);

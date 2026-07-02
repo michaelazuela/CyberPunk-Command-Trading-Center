@@ -112,6 +112,46 @@ try {
   assert.equal(fs.existsSync(oldTemp), false);
   assert.equal(fs.existsSync(youngTemp), true);
   assert.equal(fs.existsSync(ignored), true);
+
+  const retrySyncFile = path.join(tempDir, 'retry-sync-state.json');
+  const originalRenameSync = fs.renameSync;
+  let syncRenameFailures = 0;
+  fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike) => {
+    if (String(newPath) === retrySyncFile && syncRenameFailures < 2) {
+      syncRenameFailures += 1;
+      const error = new Error('simulated locked destination') as NodeJS.ErrnoException;
+      error.code = 'EPERM';
+      throw error;
+    }
+    return originalRenameSync(oldPath, newPath);
+  }) as typeof fs.renameSync;
+  try {
+    writeRuntimeJsonAtomicSync(retrySyncFile, { version: 1, status: 'retried' });
+  } finally {
+    fs.renameSync = originalRenameSync;
+  }
+  assert.equal(syncRenameFailures, 2);
+  assert.deepEqual(readRuntimeJsonSync(retrySyncFile).value, { version: 1, status: 'retried' });
+
+  const retryAsyncFile = path.join(tempDir, 'retry-async-state.json');
+  const originalRename = fs.promises.rename;
+  let asyncRenameFailures = 0;
+  fs.promises.rename = (async (oldPath: fs.PathLike, newPath: fs.PathLike) => {
+    if (String(newPath) === retryAsyncFile && asyncRenameFailures < 2) {
+      asyncRenameFailures += 1;
+      const error = new Error('simulated locked destination') as NodeJS.ErrnoException;
+      error.code = 'EBUSY';
+      throw error;
+    }
+    return originalRename.call(fs.promises, oldPath, newPath);
+  }) as typeof fs.promises.rename;
+  try {
+    await writeRuntimeJsonAtomic(retryAsyncFile, { version: 1, status: 'retried' });
+  } finally {
+    fs.promises.rename = originalRename;
+  }
+  assert.equal(asyncRenameFailures, 2);
+  assert.deepEqual((await readRuntimeJson(retryAsyncFile)).value, { version: 1, status: 'retried' });
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

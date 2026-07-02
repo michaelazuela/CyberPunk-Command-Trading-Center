@@ -54,6 +54,43 @@ function isIgnorableSyncError(error: unknown): boolean {
   return Boolean(error && typeof error === 'object' && 'code' in error && (error as { code?: unknown }).code === 'EPERM');
 }
 
+function isRetryableReplaceError(error: unknown): boolean {
+  if (!error || typeof error !== 'object' || !('code' in error)) return false;
+  return ['EPERM', 'EBUSY', 'ENOTEMPTY'].includes(String((error as { code?: unknown }).code));
+}
+
+function retryDelayMs(attempt: number): number {
+  return Math.min(250, 25 * (attempt + 1));
+}
+
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function replaceRuntimeJsonSync(tmp: string, filePath: string, attempts = 8): void {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      fs.renameSync(tmp, filePath);
+      return;
+    } catch (error) {
+      if (!isRetryableReplaceError(error) || attempt === attempts - 1) throw error;
+      sleepSync(retryDelayMs(attempt));
+    }
+  }
+}
+
+async function replaceRuntimeJson(tmp: string, filePath: string, attempts = 8): Promise<void> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      await fsp.rename(tmp, filePath);
+      return;
+    } catch (error) {
+      if (!isRetryableReplaceError(error) || attempt === attempts - 1) throw error;
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs(attempt)));
+    }
+  }
+}
+
 function checkedValue<T>(
   value: T,
   source: RuntimeJsonReadSource,
@@ -137,7 +174,16 @@ export function writeRuntimeJsonAtomicSync(filePath: string, value: unknown): vo
   if (fs.existsSync(filePath)) {
     fs.copyFileSync(filePath, backupPath(filePath));
   }
-  fs.renameSync(tmp, filePath);
+  try {
+    replaceRuntimeJsonSync(tmp, filePath);
+  } catch (error) {
+    try {
+      fs.rmSync(tmp, { force: true });
+    } catch {
+      // Best-effort cleanup only; preserve the original write error.
+    }
+    throw error;
+  }
 }
 
 export async function writeRuntimeJsonAtomic(filePath: string, value: unknown): Promise<void> {
@@ -160,7 +206,16 @@ export async function writeRuntimeJsonAtomic(filePath: string, value: unknown): 
   } catch (error) {
     if (!isMissingFileError(error)) throw error;
   }
-  await fsp.rename(tmp, filePath);
+  try {
+    await replaceRuntimeJson(tmp, filePath);
+  } catch (error) {
+    try {
+      await fsp.rm(tmp, { force: true });
+    } catch {
+      // Best-effort cleanup only; preserve the original write error.
+    }
+    throw error;
+  }
 }
 
 export function cleanupRuntimeJsonTempFilesSync(args: {

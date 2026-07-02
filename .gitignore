@@ -18,6 +18,10 @@ tools/automation/.discord-alert-state.json
 tools/automation/.nt-scanner-state.json
 tools/automation/.nt-scanner-state.json.bak
 tools/automation/.market-data-gap-events.json
+tools/automation/.market-data-gap-events.json.bak
+tools/automation/.market-data-gap-events.json.tmp-*
+tools/automation/.quant-desk-maintenance-lock.json
+tools/automation/.quant-desk-maintenance-lock.json.bak
 tools/automation/.macro-calendar-cache.json
 tools/automation/discord-report-state.json
 tools/automation/chart-markups/
