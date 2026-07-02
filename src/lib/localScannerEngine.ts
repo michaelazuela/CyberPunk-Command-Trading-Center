@@ -495,6 +495,39 @@ export interface DeskHtfFvgReactionRouting {
   };
 }
 
+export interface DeskHtfFvgMicroMssProof {
+  sourceOfTruth: 'scanner_htf_fvg_micro_mss_proof';
+  direction: DeskPlayDirection;
+  htfFvgProof: {
+    status: 'sufficient' | 'missing' | 'data_limited';
+    timeframe: '15M' | '60M' | '120M' | '240M' | null;
+    zoneLower: number | null;
+    zoneUpper: number | null;
+    lifecycleState: string | null;
+    evidence: string[];
+  };
+  fiveMinuteTriggerProof: {
+    status: 'completed' | 'pending' | 'missing';
+    lineInSand: number | null;
+    evidence: string[];
+  };
+  protectedSwingProof: {
+    status: 'confirmed' | 'pending' | 'fallback_required';
+    stop: number | null;
+    evidence: string[];
+  };
+  promotionReadiness: 'full_plan_allowed' | 'watch_only' | 'blocked_missing_htf_proof';
+  summary: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesBridgeBehavior: false;
+    createsNewModel: false;
+  };
+}
+
 export interface DeskHtfFvgParentReactionWatch {
   sourceOfTruth: 'scanner_htf_parent_fvg_reaction_watch';
   eligible: true;
@@ -956,6 +989,7 @@ export interface PrimaryDeskPlay {
   fvgDecisionZone?: DeskFvgDecisionZone | null;
   htfFvgReactionMemory?: HtfFvgReactionMemory | null;
   htfFvgReactionRouting?: DeskHtfFvgReactionRouting | null;
+  htfFvgMicroMssProof?: DeskHtfFvgMicroMssProof | null;
   htfFvgParentReactionWatch?: DeskHtfFvgParentReactionWatch | null;
   htfFvgCascade?: DeskHtfFvgCascade | null;
   freshReentryWatch?: DeskFreshReentryWatch | null;
@@ -4174,6 +4208,115 @@ function buildHtfFvgReactionRouting(args: {
   };
 }
 
+function buildHtfFvgMicroMssProof(args: {
+  primaryDirection: DeskPlayDirection;
+  primaryLifecycleItem: ScannerCandidateLifecycleTraceItem | null;
+  memory: HtfFvgReactionMemory | null;
+  routing: DeskHtfFvgReactionRouting;
+}): DeskHtfFvgMicroMssProof | null {
+  if (args.primaryDirection !== 'LONG' && args.primaryDirection !== 'SHORT') return null;
+  const item = args.primaryLifecycleItem;
+  if (!lifecycleItemIsHtfFvgMicroMssReaction(item) && args.routing.status === 'not_applicable') return null;
+  const active = args.memory?.activeReaction?.direction === args.primaryDirection
+    ? args.memory.activeReaction
+    : null;
+  const lifecycleState = active?.lifecycle.state || null;
+  const htfStatus = active
+    ? lifecycleState === 'data_limited'
+      ? 'data_limited'
+      : 'sufficient'
+    : 'missing';
+  const line = numericOrNull(args.routing.lineInSand) ?? lineForLifecycleItem(item);
+  const proofText = [
+    item?.scenarioLabel,
+    item?.candidateState,
+    item?.nextTrigger,
+    item?.requiredTrigger,
+    item?.lineInSandReason,
+    item?.targetReactionReason,
+    item?.blockReason,
+    item?.filteredOutReason,
+    ...(item?.missingEvidence || []),
+    ...(item?.missingLevels || []),
+  ].filter(Boolean).join(' ');
+  const hasCompletedFiveMinuteProof = Boolean(item && (
+    item.hasFullPlanLevels ||
+    /completed 5m|5m.*completed|completed.*close|close-through|close through|retest\/hold|retest\/failure|5m.*mss|mss.*5m/i.test(proofText)
+  ));
+  const hasProtectedSwing = Boolean(item?.hasFullPlanLevels && numericOrNull(item.stop) !== null);
+  const protectedSwingFallback = Boolean(item && !hasProtectedSwing && item.hasFullPlanLevels);
+  const htfEvidence = active
+    ? [
+        `${active.timeframe} ${active.direction} parent FVG ${active.lower.toFixed(2)}-${active.upper.toFixed(2)} lifecycle=${active.lifecycle.state}.`,
+        active.latestReaction?.evidence || 'Parent FVG is mapped from structured OHLC; latest reaction is pending.',
+      ]
+    : ['No same-direction active HTF parent FVG reaction memory is available from structured OHLC.'];
+  const triggerEvidence = hasCompletedFiveMinuteProof
+    ? [
+        `Completed 5M proof is present for ${args.primaryDirection}${line !== null ? ` at/around ${line.toFixed(2)}` : ''}.`,
+        item?.nextTrigger || item?.requiredTrigger || '5M trigger proof came from scanner-owned lifecycle metadata.',
+      ]
+    : [
+        'Completed 5M MSS/close-through/retest proof is not confirmed.',
+        item?.nextTrigger || item?.requiredTrigger || 'Wait for completed 5M proof before promotion.',
+      ];
+  const swingEvidence = hasProtectedSwing
+    ? [
+        `Protected 5M swing stop confirmed at ${numericOrNull(item?.stop)!.toFixed(2)}.`,
+        'Stop remains tied to protected 5M structure; no invented stop.',
+      ]
+    : protectedSwingFallback
+    ? [
+        'Full levels are present, but protected 5M swing proof is not explicit; prior proven stop source must remain in force.',
+        'No invented structure stop.',
+      ]
+    : [
+        'Protected 5M retest swing stop is pending.',
+        'Watch only until completed retest/hold or rejection confirms the protected swing.',
+      ];
+  const promotionReadiness = htfStatus === 'missing' || htfStatus === 'data_limited'
+    ? 'blocked_missing_htf_proof'
+    : hasCompletedFiveMinuteProof && hasProtectedSwing
+    ? 'full_plan_allowed'
+    : 'watch_only';
+  return {
+    sourceOfTruth: 'scanner_htf_fvg_micro_mss_proof',
+    direction: args.primaryDirection,
+    htfFvgProof: {
+      status: htfStatus,
+      timeframe: active?.timeframe || null,
+      zoneLower: active?.lower ?? null,
+      zoneUpper: active?.upper ?? null,
+      lifecycleState,
+      evidence: htfEvidence,
+    },
+    fiveMinuteTriggerProof: {
+      status: hasCompletedFiveMinuteProof ? 'completed' : item ? 'pending' : 'missing',
+      lineInSand: line,
+      evidence: triggerEvidence,
+    },
+    protectedSwingProof: {
+      status: hasProtectedSwing ? 'confirmed' : protectedSwingFallback ? 'fallback_required' : 'pending',
+      stop: numericOrNull(item?.stop),
+      evidence: swingEvidence,
+    },
+    promotionReadiness,
+    summary: promotionReadiness === 'full_plan_allowed'
+      ? 'HTF FVG proof, completed 5M trigger proof, and protected 5M swing proof are present for human-review plan display.'
+      : promotionReadiness === 'blocked_missing_htf_proof'
+      ? 'HTF FVG proof is missing or data-limited; do not promote as HTF FVG reaction setup.'
+      : 'HTF FVG reaction is visible, but completed 5M/protected swing proof is still watch-only.',
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
+      createsNewModel: false,
+    },
+  };
+}
+
 function buildHtfFvgParentReactionWatch(args: {
   routing: DeskHtfFvgReactionRouting;
   memory: HtfFvgReactionMemory | null;
@@ -4700,6 +4843,12 @@ function buildPrimaryDeskPlay(args: {
     candidateLifecycleTrace: args.candidateLifecycleTrace,
     memory: htfFvgReactionMemory,
   });
+  const htfFvgMicroMssProof = buildHtfFvgMicroMssProof({
+    primaryDirection,
+    primaryLifecycleItem,
+    memory: htfFvgReactionMemory,
+    routing: htfFvgReactionRouting,
+  });
   const htfFvgParentReactionWatch = buildHtfFvgParentReactionWatch({
     routing: htfFvgReactionRouting,
     memory: htfFvgReactionMemory,
@@ -4786,6 +4935,7 @@ function buildPrimaryDeskPlay(args: {
     fvgDecisionZone,
     htfFvgReactionMemory,
     htfFvgReactionRouting,
+    htfFvgMicroMssProof,
     htfFvgParentReactionWatch,
     htfFvgCascade,
     freshReentryWatch,

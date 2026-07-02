@@ -46,6 +46,7 @@ export function professionalizeReportText(value?: string | null): string {
     .replace(/imbalance Decision Zone/g, 'FVG Decision Zone')
     .replace(/HTF imbalance Cascade/g, 'HTF FVG Cascade')
     .replace(/HTF imbalance Reaction Memory/g, 'HTF FVG Reaction Memory')
+    .replace(/HTF imbalance proof/g, 'HTF FVG proof')
     .replace(/Parent imbalance:/g, 'Parent FVG:')
     .replace(/parent imbalance/g, 'parent FVG')
     .replace(/native 5M imbalance/g, 'native 5M FVG')

@@ -225,6 +225,30 @@ export interface CompactDeskStateForDiscord {
       standDown?: string | null;
       reason?: string | null;
     } | null;
+    htfFvgMicroMssProof?: {
+      sourceOfTruth?: string;
+      direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
+      htfFvgProof?: {
+        status?: string | null;
+        timeframe?: string | null;
+        zoneLower?: number | null;
+        zoneUpper?: number | null;
+        lifecycleState?: string | null;
+        evidence?: string[];
+      } | null;
+      fiveMinuteTriggerProof?: {
+        status?: string | null;
+        lineInSand?: number | null;
+        evidence?: string[];
+      } | null;
+      protectedSwingProof?: {
+        status?: string | null;
+        stop?: number | null;
+        evidence?: string[];
+      } | null;
+      promotionReadiness?: string | null;
+      summary?: string | null;
+    } | null;
     htfFvgParentReactionWatch?: {
       sourceOfTruth?: string;
       eligible?: boolean;
@@ -1054,6 +1078,29 @@ function htfFvgReactionCandidateLines(candidate: SetupCandidate): string[] {
   ];
 }
 
+function htfFvgMicroMssProofCandidateLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): string[] {
+  if (candidate.setupType !== SetupType.IntradayMssMicroContinuation) return [];
+  const proof = args.deskState?.primaryDeskPlay?.htfFvgMicroMssProof;
+  if (!proof || proof.direction !== candidate.direction) return [];
+  const htf = proof.htfFvgProof;
+  const trigger = proof.fiveMinuteTriggerProof;
+  const swing = proof.protectedSwingProof;
+  const zone = isFinitePrice(htf?.zoneLower) && isFinitePrice(htf?.zoneUpper)
+    ? `${compactLine(htf?.timeframe || 'HTF', 8)} ${zoneRangeLine(htf?.zoneLower, htf?.zoneUpper)}`
+    : compactLine(htf?.timeframe || 'HTF', 8);
+  const line = isFinitePrice(trigger?.lineInSand)
+    ? `${candidate.direction === 'SHORT' ? 'SHORT BELOW' : 'LONG ABOVE'} ${priceLine(trigger?.lineInSand)}`
+    : 'line pending';
+  const stop = isFinitePrice(swing?.stop) ? priceLine(swing?.stop) : 'pending';
+  return [
+    'Proof Check:',
+    `HTF FVG proof: ${compactLine(String(htf?.status || 'missing').replace(/_/g, ' '), 18)} (${zone}${htf?.lifecycleState ? `; ${compactLine(String(htf.lifecycleState).replace(/_/g, ' '), 24)}` : ''})`,
+    `5M trigger proof: ${compactLine(String(trigger?.status || 'missing').replace(/_/g, ' '), 18)}; ${line}`,
+    `Protected 5M swing proof: ${compactLine(String(swing?.status || 'pending').replace(/_/g, ' '), 20)}; stop ${stop}`,
+    `Promotion: ${compactLine(String(proof.promotionReadiness || 'watch_only').replace(/_/g, ' '), 34)}`,
+  ];
+}
+
 function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
   const levels = appTargetLevels(candidate, normalized);
   const modelConfidenceScore =
@@ -1850,6 +1897,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     `Bias: ${biasEmoji(direction === 'LONG' ? 'BULL' : 'BEAR')} ${candidateBiasSummary(candidate)}`,
     ...(candidateHtfContextLine(candidate) ? [candidateHtfContextLine(candidate)!] : []),
     ...htfFvgReactionCandidateLines(candidate),
+    ...htfFvgMicroMssProofCandidateLines(args, candidate),
     `Line in sand: ${priceLine(lineInSand)}`,
     `Overall play: ${direction} ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`,
     `Next trigger: ${compactInstruction(candidate.requiredTrigger || candidate.nextAction, `completed 5M acceptance ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`)}`,
@@ -2263,6 +2311,33 @@ function deskPlayHtfFvgReactionMemoryLines(
   ];
 }
 
+function deskPlayHtfFvgMicroMssProofLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string[] {
+  const proof = play.htfFvgMicroMssProof;
+  const displayDirection = direction === 'LONG' || direction === 'SHORT' ? direction : null;
+  if (!proof || !displayDirection || proof.direction !== displayDirection) return [];
+  const htf = proof.htfFvgProof;
+  const trigger = proof.fiveMinuteTriggerProof;
+  const swing = proof.protectedSwingProof;
+  const zone = isFinitePrice(htf?.zoneLower) && isFinitePrice(htf?.zoneUpper)
+    ? `${compactLine(htf?.timeframe || 'HTF', 8)} ${zoneRangeLine(htf?.zoneLower, htf?.zoneUpper)}`
+    : compactLine(htf?.timeframe || 'HTF', 8);
+  const line = isFinitePrice(trigger?.lineInSand)
+    ? `${displayDirection === 'SHORT' ? 'SHORT BELOW' : 'LONG ABOVE'} ${priceLine(trigger?.lineInSand)}`
+    : 'line pending';
+  const stop = isFinitePrice(swing?.stop) ? priceLine(swing?.stop) : 'pending';
+  return [
+    'Proof Check:',
+    `HTF FVG proof: ${compactLine(String(htf?.status || 'missing').replace(/_/g, ' '), 18)} (${zone}${htf?.lifecycleState ? `; ${compactLine(String(htf.lifecycleState).replace(/_/g, ' '), 24)}` : ''})`,
+    `5M trigger proof: ${compactLine(String(trigger?.status || 'missing').replace(/_/g, ' '), 18)}; ${line}`,
+    `Protected 5M swing proof: ${compactLine(String(swing?.status || 'pending').replace(/_/g, ' '), 20)}; stop ${stop}`,
+    `Promotion: ${compactLine(String(proof.promotionReadiness || 'watch_only').replace(/_/g, ' '), 34)}`,
+    ...(proof.summary ? [compactLine(proof.summary, 118)] : []),
+  ];
+}
+
 function deskPlayHtfFvgParentZoneStackLines(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT' | 'WAIT',
@@ -2667,6 +2742,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       ...deskPlayActiveTacticalZoneLines(play, waitMapSide),
       ...deskPlayHtfFvgParentReactionWatchLines(play, waitMapSide),
       ...deskPlayHtfFvgReactionMemoryLines(play, waitMapSide),
+      ...deskPlayHtfFvgMicroMssProofLines(play, waitMapSide),
       ...deskPlayHtfFvgParentZoneStackLines(play, waitMapSide),
       ...deskPlayHtfFvgCascadeLines(play, waitMapSide),
       ...deskPlayFreshReentryDisplayLines(play, waitMapSide),
@@ -2723,6 +2799,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ...deskPlayActiveTacticalZoneLines(play, direction),
     ...deskPlayHtfFvgParentReactionWatchLines(play, direction),
     ...deskPlayHtfFvgReactionMemoryLines(play, direction),
+    ...deskPlayHtfFvgMicroMssProofLines(play, direction),
     ...deskPlayHtfFvgParentZoneStackLines(play, direction),
     ...deskPlayHtfFvgCascadeLines(play, direction),
     ...deskPlayFreshReentryDisplayLines(play, direction),
@@ -2919,6 +2996,9 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayHtfFvgReactionMemoryLines(play, displayDirection)
+      : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayHtfFvgMicroMssProofLines(play, displayDirection)
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayHtfFvgParentZoneStackLines(play, displayDirection)

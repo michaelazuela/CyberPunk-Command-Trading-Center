@@ -3746,6 +3746,26 @@ const htfFvgMicroMssPayload = compactDiscordSummary({
         lifecycleState: 'rejected',
         standDown: 'Stand down on completed 5M acceptance below parent zone 7481.75.',
       },
+      htfFvgMicroMssProof: {
+        direction: 'LONG',
+        htfFvgProof: {
+          status: 'sufficient',
+          timeframe: '60M',
+          zoneLower: 7481.75,
+          zoneUpper: 7491.25,
+          lifecycleState: 'rejected',
+        },
+        fiveMinuteTriggerProof: {
+          status: 'completed',
+          lineInSand: 7500.75,
+        },
+        protectedSwingProof: {
+          status: 'confirmed',
+          stop: 7492.75,
+        },
+        promotionReadiness: 'full_plan_allowed',
+        summary: 'HTF FVG proof, completed 5M trigger proof, and protected 5M swing proof are present for human-review plan display.',
+      },
       htfFvgCascade: {
         direction: 'LONG',
         parentZone: {
@@ -3778,6 +3798,11 @@ assert.match(htfFvgMicroMssText, /Stop: 7492\.75/);
 assert.match(htfFvgMicroMssText, /T1: 7514\.00/);
 assert.match(htfFvgMicroMssText, /T2: 7518\.25/);
 assert.match(htfFvgMicroMssText, /completed 5M retest\/hold above 7500\.75/i);
+assert.match(htfFvgMicroMssText, /Proof Check:/);
+assert.match(htfFvgMicroMssText, /HTF FVG proof: sufficient/i);
+assert.match(htfFvgMicroMssText, /5M trigger proof: completed/i);
+assert.match(htfFvgMicroMssText, /Protected 5M swing proof: confirmed/i);
+assert.match(htfFvgMicroMssText, /Promotion: full plan allowed/i);
 assert.match(htfFvgMicroMssText, /Invalidation:/);
 assert.match(htfFvgMicroMssText, /Review only|Decision support only|canExecute/i);
 assert.doesNotMatch(htfFvgMicroMssText, /No active plan candidate available|Stand down\. Recheck at next scheduled scan/);

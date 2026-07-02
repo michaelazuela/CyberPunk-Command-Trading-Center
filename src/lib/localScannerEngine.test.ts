@@ -28,7 +28,7 @@ import { actualResultRFromExit, buildTradeJournalRecord } from './tradeJournal';
 import { normalizeIctModelLabel, normalizeCandidateIctModelLabel } from './ictModelLabels';
 import { buildAppTradePlan } from './planEngine';
 import { buildNinjaChartContext } from './ninjaTraderBridge';
-import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate, type TargetObjective } from '../types';
+import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate, type TargetObjective, type TimeframeFactSet } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
@@ -2814,6 +2814,105 @@ function htfFvgMicroMssCandidate(direction: 'LONG' | 'SHORT', overrides: Partial
   });
 }
 
+function htfFvgMicroMssChartContext(direction: 'LONG' | 'SHORT'): Partial<ChartContext> {
+  const parentLower = direction === 'LONG' ? 7494 : 7490.25;
+  const parentUpper = direction === 'LONG' ? 7500.75 : 7498;
+  const formedAt = '2026-07-02T13:00:00.0000000';
+  const reactionAt = '2026-07-02T14:00:00.0000000';
+  const parentCandles = [
+    {
+      index: 0,
+      timestamp: reactionAt,
+      open: direction === 'LONG' ? 7497 : 7492,
+      high: direction === 'LONG' ? 7504 : 7495,
+      low: direction === 'LONG' ? 7495 : 7488,
+      close: direction === 'LONG' ? 7503 : 7489,
+      direction: direction === 'LONG' ? 'bullish' as const : 'bearish' as const,
+      confidence: 'High' as const,
+    },
+  ];
+  const parentSet: TimeframeFactSet = {
+    timeframe: '1h',
+    role: 'macro_context',
+    barCount: parentCandles.length,
+    high: parentCandles[0].high,
+    low: parentCandles[0].low,
+    open: parentCandles[0].open,
+    close: parentCandles[0].close,
+    midpoint: (parentCandles[0].high + parentCandles[0].low) / 2,
+    rangePoints: parentCandles[0].high - parentCandles[0].low,
+    trend: direction === 'LONG' ? 'bullish' : 'bearish',
+    candles: parentCandles,
+    fullWindowCandles: parentCandles,
+    fvgZones: [{
+      direction,
+      lower: parentLower,
+      upper: parentUpper,
+      midpoint: (parentLower + parentUpper) / 2,
+      formedAt,
+      impulseQualified: true,
+      confidence: 'High',
+    }],
+    fullWindowFvgZones: [{
+      direction,
+      lower: parentLower,
+      upper: parentUpper,
+      midpoint: (parentLower + parentUpper) / 2,
+      formedAt,
+      impulseQualified: true,
+      confidence: 'High',
+    }],
+    liquiditySweeps: [],
+    reclaimEvents: [],
+    failedBreakEvents: [],
+    displacementCandles: [],
+    structuralLevels: [],
+    confidence: 'High',
+    notes: [],
+  };
+  const fiveMinuteSet: TimeframeFactSet = {
+    ...parentSet,
+    timeframe: '5m',
+    role: 'execution',
+    fvgZones: [{
+      direction,
+      lower: direction === 'LONG' ? 7500.75 : 7489.75,
+      upper: direction === 'LONG' ? 7501.5 : 7490.25,
+      midpoint: direction === 'LONG' ? 7501.125 : 7490,
+      formedAt: '2026-07-02T14:10:00.0000000',
+      impulseQualified: true,
+      confidence: 'High',
+    }],
+    fullWindowFvgZones: undefined,
+  };
+  return {
+    multiTimeframeContext: {
+      source: 'ninjatrader_bridge',
+      authority: 'ohlc_facts_only',
+      fourHour: { ...parentSet, timeframe: '4h', fvgZones: [], fullWindowFvgZones: [] },
+      oneHour: parentSet,
+      fifteenMinute: { ...parentSet, timeframe: '15m', role: 'session_structure', fvgZones: [], fullWindowFvgZones: [] },
+      fiveMinute: fiveMinuteSet,
+      alignment: {
+        macroBias: direction,
+        sessionBias: direction,
+        liquidityBias: direction,
+        executionBias: direction,
+        alignedDirection: direction,
+        conflicts: [],
+        notes: [],
+      },
+      targetMap: { levelsToWatch: [] },
+      rules: {
+        higherTimeframesApproveTrades: false,
+        fiveMinuteExecutionRequired: true,
+        aiMayOverwriteOhlcFacts: false,
+      },
+      notes: [],
+    },
+  };
+}
+
 const july2OldShort = htfFvgMicroMssCandidate('SHORT', {
   setupType: SetupType.SweepMssFvgRetrace,
   scenarioLabel: 'Old short campaign still visible',
@@ -2877,6 +2976,7 @@ const july2LongWatchDeskState = buildDeskState({
   candidateLifecycleTrace: july2LongWatchTrace,
   currentPrice: 7504.25,
   canExecute: false,
+  chartContext: htfFvgMicroMssChartContext('LONG'),
 });
 assert.equal(july2LongWatchDeskState.primaryDeskPlay.direction, 'LONG');
 assert.equal(july2LongWatchDeskState.primaryDeskPlay.longBias.state, 'primary');
@@ -2888,6 +2988,11 @@ assert.equal(july2LongWatchDeskState.primaryDeskPlay.longBias.tradeReadiness.sta
 assert.equal(july2LongWatchDeskState.primaryDeskPlay.discordEligible, true);
 assert.equal(july2LongWatchDeskState.canExecute, false);
 assert.equal(july2LongWatchDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.htfFvgMicroMssProof?.htfFvgProof.status, 'sufficient');
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.htfFvgMicroMssProof?.htfFvgProof.timeframe, '60M');
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.htfFvgMicroMssProof?.fiveMinuteTriggerProof.status, 'completed');
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.htfFvgMicroMssProof?.protectedSwingProof.status, 'pending');
+assert.equal(july2LongWatchDeskState.primaryDeskPlay.htfFvgMicroMssProof?.promotionReadiness, 'watch_only');
 
 const july2LongFullPlan = htfFvgMicroMssCandidate('LONG', {
   entry: 7501.25,
@@ -2920,6 +3025,7 @@ const july2LongFullDeskState = buildDeskState({
   candidateLifecycleTrace: july2LongFullTrace,
   currentPrice: 7501.25,
   canExecute: false,
+  chartContext: htfFvgMicroMssChartContext('LONG'),
 });
 assert.equal(july2LongFullDeskState.primaryDeskPlay.direction, 'LONG');
 assert.equal(july2LongFullDeskState.primaryDeskPlay.longBias.state, 'primary');
@@ -2931,6 +3037,10 @@ assert.equal(july2LongFullDeskState.bestLongPlan?.stop, 7492.75);
 assert.equal(july2LongFullDeskState.bestLongPlan?.target1, 7514);
 assert.equal(july2LongFullDeskState.bestLongPlan?.target2, 7518.25);
 assert.equal(july2LongFullDeskState.canExecute, false);
+assert.equal(july2LongFullDeskState.primaryDeskPlay.htfFvgMicroMssProof?.htfFvgProof.status, 'sufficient');
+assert.equal(july2LongFullDeskState.primaryDeskPlay.htfFvgMicroMssProof?.fiveMinuteTriggerProof.status, 'completed');
+assert.equal(july2LongFullDeskState.primaryDeskPlay.htfFvgMicroMssProof?.protectedSwingProof.status, 'confirmed');
+assert.equal(july2LongFullDeskState.primaryDeskPlay.htfFvgMicroMssProof?.promotionReadiness, 'full_plan_allowed');
 
 const mirroredShortWatch = htfFvgMicroMssCandidate('SHORT', {
   stop: null,
@@ -2960,6 +3070,7 @@ const mirroredShortDeskState = buildDeskState({
   candidateLifecycleTrace: mirroredShortTrace,
   currentPrice: 7488.5,
   canExecute: false,
+  chartContext: htfFvgMicroMssChartContext('SHORT'),
 });
 assert.equal(mirroredShortDeskState.primaryDeskPlay.direction, 'SHORT');
 assert.equal(mirroredShortDeskState.primaryDeskPlay.shortBias.state, 'primary');
@@ -2967,5 +3078,8 @@ assert.equal(mirroredShortDeskState.primaryDeskPlay.shortBias.modelFit.setupType
 assert.equal(mirroredShortDeskState.primaryDeskPlay.shortBias.lineInSand, 7490.25);
 assert.equal(mirroredShortDeskState.primaryDeskPlay.shortBias.tradeReadiness.status, 'wait_for_pullback_or_new_5m_structure');
 assert.equal(mirroredShortDeskState.canExecute, false);
+assert.equal(mirroredShortDeskState.primaryDeskPlay.htfFvgMicroMssProof?.htfFvgProof.status, 'sufficient');
+assert.equal(mirroredShortDeskState.primaryDeskPlay.htfFvgMicroMssProof?.fiveMinuteTriggerProof.status, 'completed');
+assert.equal(mirroredShortDeskState.primaryDeskPlay.htfFvgMicroMssProof?.protectedSwingProof.status, 'pending');
 
 console.log('localScannerEngine tests passed');
