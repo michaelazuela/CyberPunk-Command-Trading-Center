@@ -657,6 +657,22 @@ const sessionGapPreloadAssurance = parseHtfPreloadAssurance([
 assert.equal(sessionGapPreloadAssurance.ok, true);
 assert.deepEqual(sessionGapPreloadAssurance.noBarsTimeframes, []);
 assert.equal(sessionGapPreloadAssurance.stderrWarning, false);
+const sufficientCacheWithWeekendNoBarsAssurance = parseHtfPreloadAssurance([
+  '[backfill] 2026-07-02 5m: skipped; cache coverage already sufficient (272 bars).',
+  '[backfill] 2026-07-02 15m: skipped; cache coverage already sufficient (91 bars).',
+  '[backfill] 2026-07-02 60m: skipped; cache coverage already sufficient (23 bars).',
+  '[backfill] 2026-07-02 120m: skipped; cache coverage already sufficient (12 bars).',
+  '[backfill] 2026-07-02 240m: skipped; cache coverage already sufficient (6 bars).',
+].join('\n'), [
+  '[backfill] 2026-06-27 5m: no bars returned.',
+  '[backfill] 2026-06-27 15m: no bars returned.',
+  '[backfill] 2026-06-27 60m: no bars returned.',
+  '[backfill] 2026-06-27 120m: no bars returned.',
+  '[backfill] 2026-06-27 240m: no bars returned.',
+].join('\n'));
+assert.equal(sufficientCacheWithWeekendNoBarsAssurance.ok, true);
+assert.deepEqual(sufficientCacheWithWeekendNoBarsAssurance.noBarsTimeframes, []);
+assert.equal(sufficientCacheWithWeekendNoBarsAssurance.stderrWarning, false);
 const noBarsPreloadAssurance = parseHtfPreloadAssurance([
   '[backfill] 2026-06-05 5m: upserted 300.',
   '[backfill] 2026-06-05 15m: upserted 100.',

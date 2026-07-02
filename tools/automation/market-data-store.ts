@@ -126,6 +126,24 @@ export function isAlignedToTimeframeMinute(value: string | null | undefined, tim
   return minuteOfDay % minutes === 0;
 }
 
+function isAllowedCmeSessionBoundaryShortInterval({
+  previousTime,
+  currentTime,
+  timeframe,
+  observedMinutes,
+}: {
+  previousTime: string | null | undefined;
+  currentTime: string | null | undefined;
+  timeframe: MarketBarTimeframe;
+  observedMinutes: number;
+}): boolean {
+  const currentMinuteOfDay = marketBarMinuteOfDay(currentTime);
+  if (currentMinuteOfDay !== 17 * 60) return false;
+  if (timeframe === '120m' && observedMinutes === 60) return true;
+  if (timeframe === '240m' && observedMinutes === 180) return true;
+  return false;
+}
+
 export function countMarketBarTimeframeIntervalMismatches(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe): number {
   const expectedMs = marketBarExpectedIntervalMs(timeframe);
   const sorted = bars
@@ -135,7 +153,17 @@ export function countMarketBarTimeframeIntervalMismatches(bars: NinjaBridgeBar[]
   let mismatches = sorted.filter((item) => !isAlignedToTimeframeMinute(item.bar.time, timeframe)).length;
   for (let index = 1; index < sorted.length; index += 1) {
     const delta = sorted[index].ms - sorted[index - 1].ms;
-    if (delta > 0 && delta < expectedMs) mismatches += 1;
+    if (delta > 0 && delta < expectedMs) {
+      const observedMinutes = Math.round(delta / 60_000);
+      if (!isAllowedCmeSessionBoundaryShortInterval({
+        previousTime: sorted[index - 1].bar.time,
+        currentTime: sorted[index].bar.time,
+        timeframe,
+        observedMinutes,
+      })) {
+        mismatches += 1;
+      }
+    }
   }
   return mismatches;
 }
@@ -190,6 +218,14 @@ export function buildMarketBarTimeframeIntegrityReport(
     const observedMinutes = Math.round(delta / 60_000);
     observedIntervalMinutes[String(observedMinutes)] = (observedIntervalMinutes[String(observedMinutes)] || 0) + 1;
     if (delta < expectedMs) {
+      if (isAllowedCmeSessionBoundaryShortInterval({
+        previousTime: previous.normalizedTime,
+        currentTime: current.normalizedTime,
+        timeframe,
+        observedMinutes,
+      })) {
+        continue;
+      }
       invalidShortIntervalRows += 1;
       if (invalidRows.length < invalidSampleLimit) {
         invalidRows.push({
@@ -225,7 +261,14 @@ export function filterBarsToRequestedTimeframe(bars: NinjaBridgeBar[], timeframe
   const kept: Array<{ bar: NinjaBridgeBar; ms: number }> = [];
   for (const item of sorted) {
     const previous = kept[kept.length - 1];
-    if (!previous || item.ms - previous.ms >= expectedMs || item.ms - previous.ms <= 0) {
+    const delta = previous ? item.ms - previous.ms : 0;
+    const observedMinutes = Math.round(delta / 60_000);
+    if (!previous || delta >= expectedMs || delta <= 0 || isAllowedCmeSessionBoundaryShortInterval({
+      previousTime: previous.bar.time,
+      currentTime: item.bar.time,
+      timeframe,
+      observedMinutes,
+    })) {
       kept.push(item);
     }
   }

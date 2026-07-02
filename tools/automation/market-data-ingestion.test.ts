@@ -161,6 +161,37 @@ assert.equal(badFourHourIntegrity.observedIntervalMinutes['120'], 2);
 const goodFourHourIntegrity = buildMarketBarTimeframeIntegrityReport(filteredFourHourCache, '240m');
 assert.equal(goodFourHourIntegrity.valid, true);
 assert.equal(goodFourHourIntegrity.observedIntervalMinutes['240'], 2);
+const twoHourCmeSessionBoundaryBars = [
+  bar('2026-06-02T14:00:00-04:00'),
+  bar('2026-06-02T16:00:00-04:00'),
+  bar('2026-06-02T17:00:00-04:00'),
+  bar('2026-06-02T20:00:00-04:00'),
+  bar('2026-06-02T22:00:00-04:00'),
+];
+const twoHourCmeSessionBoundaryIntegrity = buildMarketBarTimeframeIntegrityReport(twoHourCmeSessionBoundaryBars, '120m');
+assert.equal(twoHourCmeSessionBoundaryIntegrity.valid, true);
+assert.equal(twoHourCmeSessionBoundaryIntegrity.invalidShortIntervalRows, 0);
+assert.equal(twoHourCmeSessionBoundaryIntegrity.observedIntervalMinutes['60'], 1);
+assert.equal(countMarketBarTimeframeIntervalMismatches(twoHourCmeSessionBoundaryBars, '120m'), 0);
+const fourHourCmeSessionBoundaryBars = [
+  bar('2026-06-02T10:00:00-04:00'),
+  bar('2026-06-02T14:00:00-04:00'),
+  bar('2026-06-02T17:00:00-04:00'),
+  bar('2026-06-02T22:00:00-04:00'),
+  bar('2026-06-03T02:00:00-04:00'),
+];
+const fourHourCmeSessionBoundaryIntegrity = buildMarketBarTimeframeIntegrityReport(fourHourCmeSessionBoundaryBars, '240m');
+assert.equal(fourHourCmeSessionBoundaryIntegrity.valid, true);
+assert.equal(fourHourCmeSessionBoundaryIntegrity.invalidShortIntervalRows, 0);
+assert.equal(fourHourCmeSessionBoundaryIntegrity.observedIntervalMinutes['180'], 1);
+assert.equal(countMarketBarTimeframeIntervalMismatches(fourHourCmeSessionBoundaryBars, '240m'), 0);
+assert.deepEqual(filterBarsToRequestedTimeframe(fourHourCmeSessionBoundaryBars, '240m').map((item) => item.time), [
+  '2026-06-02T10:00:00-04:00',
+  '2026-06-02T14:00:00-04:00',
+  '2026-06-02T17:00:00-04:00',
+  '2026-06-02T22:00:00-04:00',
+  '2026-06-03T02:00:00-04:00',
+]);
 
 const sufficient = verifyMarketDataWindow({
   bars: repaired,

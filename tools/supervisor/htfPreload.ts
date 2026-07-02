@@ -118,13 +118,20 @@ export function parseHtfPreloadAssurance(stdoutText: string, stderrText = ''): H
       (match) => match[1] as RequiredHtfPreloadTimeframe,
     ),
   );
+  const cacheCoveredTimeframes = uniqueTimeframes(
+    Array.from(
+      combinedText.matchAll(/\[backfill\]\s+\d{4}-\d{2}-\d{2}\s+(5m|15m|60m|120m|240m):\s+skipped;\s+cache coverage already sufficient\s+\(\d+\s+bars\)\./g),
+      (match) => match[1] as RequiredHtfPreloadTimeframe,
+    ),
+  );
+  const coveredTimeframes = uniqueTimeframes([...upsertedTimeframes, ...cacheCoveredTimeframes]);
   const rawNoBarsTimeframes = uniqueTimeframes(
     Array.from(
       combinedText.matchAll(/\[backfill\]\s+\d{4}-\d{2}-\d{2}\s+(5m|15m|60m|120m|240m):\s+no bars returned\./g),
       (match) => match[1] as RequiredHtfPreloadTimeframe,
     ),
   );
-  const noBarsTimeframes = rawNoBarsTimeframes.filter((timeframe) => !upsertedTimeframes.includes(timeframe));
+  const noBarsTimeframes = rawNoBarsTimeframes.filter((timeframe) => !coveredTimeframes.includes(timeframe));
   const missingTimeframes = REQUIRED_HTF_PRELOAD_TIMEFRAMES.filter((timeframe) => !reportedTimeframes.includes(timeframe));
   const stderrWarning = stderrText.trim().length > 0 && noBarsTimeframes.length > 0;
   const ok = missingTimeframes.length === 0 && noBarsTimeframes.length === 0 && !stderrWarning;
