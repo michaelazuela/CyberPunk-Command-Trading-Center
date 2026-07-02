@@ -22,6 +22,7 @@
     "supervisor:start": "tsx tools/supervisor/index.ts start",
     "supervisor:check": "tsx tools/supervisor/index.ts check",
     "supervisor:status": "tsx tools/supervisor/index.ts status",
+    "morning:delivery-preflight": "tsx tools/supervisor/morningDeliveryPreflight.ts",
     "supervisor:phase6-signoff": "tsx tools/supervisor/index.ts phase6-signoff",
     "supervisor:signoff-manifest": "tsx tools/supervisor/liveSignoffManifest.ts",
     "supervisor:eod-bundle": "tsx tools/supervisor/endOfDayEvidenceBundle.ts",
