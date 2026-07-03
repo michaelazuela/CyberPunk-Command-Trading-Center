@@ -546,7 +546,11 @@ try {
   assert.ok(failedShortReviewHtml.includes('Action: no execution'));
   assert.ok(failedShortReviewHtml.includes('DESK READINESS'));
   assert.ok(failedShortReviewHtml.includes('ALERT QUALITY'));
-  assert.ok(failedShortReviewHtml.includes('44/100'));
+  assert.ok(
+    failedShortReviewHtml.includes('class="alert-total">25/100</text>'),
+    'Alert Quality headline must equal the visible component rows, not the separate side/read score.',
+  );
+  assert.ok(failedShortReviewHtml.includes('Component score shown. Validation still controls status.'));
   assert.ok(failedShortReviewHtml.includes('Structure'));
   assert.ok(failedShortReviewHtml.includes('Model'));
   assert.ok(failedShortReviewHtml.includes('Trigger'));
@@ -562,6 +566,28 @@ try {
   assert.ok(failedShortReviewHtml.includes('Readiness: <tspan fill="#f8fafc">watch only - do not execute</tspan>'));
   assert.ok(failedShortReviewHtml.includes('HTF Context: <tspan fill="#f8fafc">LONG</tspan>'));
   assert.ok(failedShortReviewHtml.includes('do not execute this side'));
+  const mismatchedQualityHtml = buildChartMarkupHtmlForTest({
+    chartContext: chartContext,
+    candidate: {
+      ...candidate,
+      direction: 'SHORT',
+      decisionQualityScore: 85,
+      decisionQualityScorecard: [
+        { label: 'LONG Quality', score: 98, max: 100, status: 'strong', note: 'high' },
+        { label: 'SHORT Quality', score: 85, max: 100, status: 'strong', note: 'high' },
+      ],
+    },
+    instrument: 'MES',
+    tradeDate: '2026-06-17',
+    sessionLabel: 'Morning Desk Review',
+    renderMode: 'desk_play_context',
+    contextLine: 7591,
+    contextLabel: 'Line in the sand',
+  });
+  assert.ok(
+    mismatchedQualityHtml.includes('class="alert-total">25/100</text>'),
+    'Alert Quality must not show 85/100 when visible Structure/Risk/Targets/Conditions rows are zero.',
+  );
   const morningTradePlanHtml = buildChartMarkupHtmlForTest({
     chartContext: { ...chartContext, candles: fullDeskReviewCandles },
     candidate,

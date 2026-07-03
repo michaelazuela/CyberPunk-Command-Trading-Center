@@ -531,6 +531,10 @@ function alertQualityBreakdown(candidate: SetupCandidate): DecisionQualityScoreI
   ];
 }
 
+function alertQualityComponentTotal(items: DecisionQualityScoreItem[]): number {
+  return Math.max(0, Math.min(100, items.reduce((sum, item) => sum + Math.max(0, Math.round(item.score)), 0)));
+}
+
 function deskPlaySideQuality(candidate: SetupCandidate, direction: 'LONG' | 'SHORT'): DecisionQualityScoreItem | null {
   const scorecard = candidate.decisionQualityScorecard || [];
   const item = scorecard.find((scoreItem) => {
@@ -629,8 +633,8 @@ function deskPlayReadinessContext(model: PlanRenderModel): {
 }
 
 function renderAlertQuality(candidate: SetupCandidate, yOffset = 486): string {
-  const score = candidate.decisionQualityScore ?? candidate.rankScore ?? null;
   const items = alertQualityBreakdown(candidate);
+  const score = alertQualityComponentTotal(items);
   const row = (item: DecisionQualityScoreItem, x: number, y: number) => {
     const color = qualityColor(item.score, item.max);
     const width = Math.round(58 * Math.max(0, Math.min(1, item.max > 0 ? item.score / item.max : 0)));
@@ -644,9 +648,9 @@ function renderAlertQuality(candidate: SetupCandidate, yOffset = 486): string {
   return `
     <rect x="24" y="${yOffset}" width="392" height="132" rx="7" fill="#020807" stroke="#d5c018" stroke-width="1.5" opacity=".96" />
     <text x="38" y="${yOffset + 27}" class="alert-title">ALERT QUALITY</text>
-    <text x="402" y="${yOffset + 27}" text-anchor="end" class="alert-total">${score == null ? 'N/A' : `${Math.round(score)}/100`}</text>
+    <text x="402" y="${yOffset + 27}" text-anchor="end" class="alert-total">${Math.round(score)}/100</text>
     <line x1="38" y1="${yOffset + 39}" x2="402" y2="${yOffset + 39}" stroke="#d5c018" stroke-opacity=".28" />
-    <text x="38" y="${yOffset + 55}" class="alert-sub">Score supports the read. Validation still controls status.</text>
+    <text x="38" y="${yOffset + 55}" class="alert-sub">Component score shown. Validation still controls status.</text>
     ${row(items[0], 38, yOffset + 79)}
     ${row(items[1], 38, yOffset + 100)}
     ${row(items[2], 38, yOffset + 121)}
@@ -1186,7 +1190,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const visibleTimeLabels = renderTimeAxisLabels(candles, xStep, plot.left, plot.right);
   const isDeskPlayContext = plan.renderMode === 'desk_play_context';
   const displayPlanStatus = planDisplayStatus(plan);
-  const scoreLabel = displayPlanStatus === 'EXECUTABLE' ? 'Score' : 'Quality';
+  const scoreLabel = isDeskPlayContext ? 'Map Read' : displayPlanStatus === 'EXECUTABLE' ? 'Score' : 'Quality';
   const hasDeskPlayLevels = isDeskPlayContext && isPrice(plan.entry) && isPrice(stop) && isPrice(t1) && isPrice(t2);
   const entryZone = (!isDeskPlayContext || hasDeskPlayLevels) && isPrice(entryLow) && isPrice(entryHigh)
     ? `<rect x="758" y="${y(entryHigh)}" width="${plot.right - 758}" height="${Math.max(8, y(entryLow) - y(entryHigh))}" fill="${isLong ? '#22c55e' : '#f97316'}" opacity="0.27" stroke="${isLong ? '#4ade80' : '#fb923c'}" />
