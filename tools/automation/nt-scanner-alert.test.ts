@@ -83,6 +83,7 @@ import {
   shouldSendScannerEndOfDayMarketRecap,
   scannerLiveDiscordHoldNoticeEligible,
   summarizeScannerHistoryCoverage,
+  scannerHistoryNeedsFiveMinuteAggregationRepair,
   syncLocalMarketDataGapEventsToSupabase,
   twoHourCoverageDiagnostic,
   verifiedFiveMinuteAggregationRepair,
@@ -612,6 +613,29 @@ assert.deepEqual(rebuilt120mFrom5m[0], {
   close: 7450,
   volume: 60,
 });
+const validNative120m = Array.from({ length: 370 }, (_, index) => {
+  const time = new Date(Date.parse('2026-06-01T00:00:00-04:00') + index * 120 * 60_000).toISOString();
+  return { time, open: 7440, high: 7442, low: 7438, close: 7441, volume: 10 };
+});
+assert.equal(scannerHistoryNeedsFiveMinuteAggregationRepair({
+  timeframe: '120m',
+  bars: validNative120m,
+  requestedFrom: '2026-06-01T00:00:00-04:00',
+  requestedTo: '2026-07-01T12:00:00-04:00',
+  bridgeInstrument: 'MES 09-26',
+}), false);
+const native120mWithInternalGap = validNative120m.map((bar, index) => (
+  index === 20
+    ? { ...bar, time: '2026-06-02T17:00:00-04:00' }
+    : bar
+));
+assert.equal(scannerHistoryNeedsFiveMinuteAggregationRepair({
+  timeframe: '120m',
+  bars: native120mWithInternalGap,
+  requestedFrom: '2026-06-01T00:00:00-04:00',
+  requestedTo: '2026-07-01T12:00:00-04:00',
+  bridgeInstrument: 'MES 09-26',
+}), true);
 assert.equal(shouldLogBridgeInstrumentResolution({
   instrument: 'MES 09-26',
   requestedInstrument: 'MES',

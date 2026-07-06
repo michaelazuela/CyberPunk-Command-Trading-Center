@@ -138,7 +138,9 @@ function isAllowedCmeSessionBoundaryShortInterval({
   observedMinutes: number;
 }): boolean {
   const currentMinuteOfDay = marketBarMinuteOfDay(currentTime);
-  if (currentMinuteOfDay !== 17 * 60) return false;
+  const endsAtRegularSessionClose = currentMinuteOfDay === 17 * 60;
+  const endsAtEarlySessionClose = currentMinuteOfDay === 13 * 60;
+  if (!endsAtRegularSessionClose && !endsAtEarlySessionClose) return false;
   if (timeframe === '120m' && observedMinutes === 60) return true;
   if (timeframe === '240m' && observedMinutes === 180) return true;
   return false;

@@ -173,6 +173,27 @@ assert.equal(twoHourCmeSessionBoundaryIntegrity.valid, true);
 assert.equal(twoHourCmeSessionBoundaryIntegrity.invalidShortIntervalRows, 0);
 assert.equal(twoHourCmeSessionBoundaryIntegrity.observedIntervalMinutes['60'], 1);
 assert.equal(countMarketBarTimeframeIntervalMismatches(twoHourCmeSessionBoundaryBars, '120m'), 0);
+assert.equal(countTimeframeIntervalMismatches(twoHourCmeSessionBoundaryBars, '120m'), 0);
+const twoHourCmeEarlyCloseBoundaryBars = [
+  bar('2026-06-19T08:00:00-04:00'),
+  bar('2026-06-19T10:00:00-04:00'),
+  bar('2026-06-19T12:00:00-04:00'),
+  bar('2026-06-19T13:00:00-04:00'),
+];
+const twoHourCmeEarlyCloseBoundaryIntegrity = buildMarketBarTimeframeIntegrityReport(
+  twoHourCmeEarlyCloseBoundaryBars,
+  '120m',
+);
+assert.equal(twoHourCmeEarlyCloseBoundaryIntegrity.valid, true);
+assert.equal(twoHourCmeEarlyCloseBoundaryIntegrity.invalidShortIntervalRows, 0);
+assert.equal(countMarketBarTimeframeIntervalMismatches(twoHourCmeEarlyCloseBoundaryBars, '120m'), 0);
+assert.equal(countTimeframeIntervalMismatches(twoHourCmeEarlyCloseBoundaryBars, '120m'), 0);
+const twoHourBadShortIntervalBars = [
+  bar('2026-06-19T10:00:00-04:00'),
+  bar('2026-06-19T11:00:00-04:00'),
+];
+assert.equal(countMarketBarTimeframeIntervalMismatches(twoHourBadShortIntervalBars, '120m') > 0, true);
+assert.equal(countTimeframeIntervalMismatches(twoHourBadShortIntervalBars, '120m') > 0, true);
 const fourHourCmeSessionBoundaryBars = [
   bar('2026-06-02T10:00:00-04:00'),
   bar('2026-06-02T14:00:00-04:00'),
@@ -185,6 +206,27 @@ assert.equal(fourHourCmeSessionBoundaryIntegrity.valid, true);
 assert.equal(fourHourCmeSessionBoundaryIntegrity.invalidShortIntervalRows, 0);
 assert.equal(fourHourCmeSessionBoundaryIntegrity.observedIntervalMinutes['180'], 1);
 assert.equal(countMarketBarTimeframeIntervalMismatches(fourHourCmeSessionBoundaryBars, '240m'), 0);
+assert.equal(countTimeframeIntervalMismatches(fourHourCmeSessionBoundaryBars, '240m'), 0);
+const fourHourCmeEarlyCloseBoundaryBars = [
+  bar('2026-06-19T02:00:00-04:00'),
+  bar('2026-06-19T06:00:00-04:00'),
+  bar('2026-06-19T10:00:00-04:00'),
+  bar('2026-06-19T13:00:00-04:00'),
+];
+const fourHourCmeEarlyCloseBoundaryIntegrity = buildMarketBarTimeframeIntegrityReport(
+  fourHourCmeEarlyCloseBoundaryBars,
+  '240m',
+);
+assert.equal(fourHourCmeEarlyCloseBoundaryIntegrity.valid, true);
+assert.equal(fourHourCmeEarlyCloseBoundaryIntegrity.invalidShortIntervalRows, 0);
+assert.equal(countMarketBarTimeframeIntervalMismatches(fourHourCmeEarlyCloseBoundaryBars, '240m'), 0);
+assert.equal(countTimeframeIntervalMismatches(fourHourCmeEarlyCloseBoundaryBars, '240m'), 0);
+const fourHourBadShortIntervalBars = [
+  bar('2026-06-19T10:00:00-04:00'),
+  bar('2026-06-19T12:00:00-04:00'),
+];
+assert.equal(countMarketBarTimeframeIntervalMismatches(fourHourBadShortIntervalBars, '240m') > 0, true);
+assert.equal(countTimeframeIntervalMismatches(fourHourBadShortIntervalBars, '240m') > 0, true);
 assert.deepEqual(filterBarsToRequestedTimeframe(fourHourCmeSessionBoundaryBars, '240m').map((item) => item.time), [
   '2026-06-02T10:00:00-04:00',
   '2026-06-02T14:00:00-04:00',
@@ -280,6 +322,30 @@ const sundayEveningTwoHourFridayCloseWindow = verifyMarketDataWindow({
 });
 assert.equal(sundayEveningTwoHourFridayCloseWindow.sufficient, true);
 assert.equal(sundayEveningTwoHourFridayCloseWindow.dataLimitation.status, 'none');
+
+const twoHourCmeSessionBoundaryCoverageBars = [
+  ...intervalBars('2026-06-05T00:00:00-04:00', 120, 242),
+  bar('2026-07-02T16:00:00-04:00'),
+  bar('2026-07-02T17:00:00-04:00'),
+  bar('2026-07-03T12:00:00-04:00'),
+  bar('2026-07-03T13:00:00-04:00'),
+  bar('2026-07-05T18:00:00-04:00'),
+];
+const twoHourCmeSessionBoundaryWindow = verifyMarketDataWindow({
+  bars: twoHourCmeSessionBoundaryCoverageBars,
+  timeframe: '120m',
+  requestedFrom: '2026-06-05T00:00:00-04:00',
+  requestedTo: '2026-07-05T21:20:00-04:00',
+  requiredLookbackDays: 30,
+  minimumBars: 80,
+  source: 'market_bars',
+  cacheBars: twoHourCmeSessionBoundaryCoverageBars.length,
+  bridgeRepairBars: 0,
+  bridgeInstrument: 'MES 09-26',
+});
+assert.equal(twoHourCmeSessionBoundaryWindow.timeframeIntervalMismatches, 0);
+assert.equal(twoHourCmeSessionBoundaryWindow.sufficient, true);
+assert.equal(twoHourCmeSessionBoundaryWindow.dataLimitation.status, 'none');
 
 const afterFirstSundayTwoHourWindow = verifyMarketDataWindow({
   bars: intervalBarsEnding('2026-06-26T17:00:00-04:00', 120, 360),

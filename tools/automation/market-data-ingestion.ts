@@ -67,6 +67,24 @@ function isAlignedToTimeframeMinute(value: string | null | undefined, timeframe:
   return minute % minutes === 0;
 }
 
+function isAllowedCmeSessionBoundaryShortInterval({
+  currentTime,
+  timeframe,
+  observedMinutes,
+}: {
+  currentTime: string | null | undefined;
+  timeframe: MarketBarTimeframe;
+  observedMinutes: number;
+}): boolean {
+  const currentMinute = minuteOfDay(currentTime);
+  const endsAtRegularSessionClose = currentMinute === 17 * 60;
+  const endsAtEarlySessionClose = currentMinute === 13 * 60;
+  if (!endsAtRegularSessionClose && !endsAtEarlySessionClose) return false;
+  if (timeframe === '120m' && observedMinutes === 60) return true;
+  if (timeframe === '240m' && observedMinutes === 180) return true;
+  return false;
+}
+
 function etPartsFromCandleTime(value: string | null | undefined): { weekday: string; hour: number; minute: number } {
   const normalized = normalizeCandleTimeEt(value || '');
   const match = normalized.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
@@ -180,7 +198,16 @@ export function countTimeframeIntervalMismatches(bars: NinjaBridgeBar[], timefra
     const current = timestampMs(sorted[index]?.time);
     if (previous === null || current === null) continue;
     const delta = current - previous;
-    if (delta > 0 && delta < expectedMs) mismatches += 1;
+    if (delta > 0 && delta < expectedMs) {
+      const observedMinutes = Math.round(delta / 60_000);
+      if (!isAllowedCmeSessionBoundaryShortInterval({
+        currentTime: sorted[index]?.time,
+        timeframe,
+        observedMinutes,
+      })) {
+        mismatches += 1;
+      }
+    }
   }
   return mismatches;
 }

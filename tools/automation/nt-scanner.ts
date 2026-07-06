@@ -2917,6 +2917,29 @@ export function verifiedFiveMinuteAggregationRepair(args: {
   return { bars: mergeBars([], args.bars), verification };
 }
 
+export function scannerHistoryNeedsFiveMinuteAggregationRepair(args: {
+  timeframe: MarketBarTimeframe;
+  bars: NinjaBridgeBar[];
+  requestedFrom: string;
+  requestedTo: string;
+  bridgeInstrument: string;
+}): boolean {
+  if (args.timeframe === '5m') return false;
+  const verification = verifyMarketDataWindow({
+    bars: args.bars,
+    timeframe: args.timeframe,
+    requestedFrom: args.requestedFrom,
+    requestedTo: args.requestedTo,
+    requiredLookbackDays: SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
+    minimumBars: SCANNER_HISTORY_MIN_BARS[args.timeframe],
+    source: 'market_bars_bridge_repair',
+    cacheBars: 0,
+    bridgeRepairBars: args.bars.length,
+    bridgeInstrument: args.bridgeInstrument,
+  });
+  return !verification.sufficient;
+}
+
 function targetTimeframeBucketStartEt(value: string, timeframe: MarketBarTimeframe): string | null {
   const normalized = normalizeCandleTimeEt(value);
   const match = normalized.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
@@ -3139,7 +3162,13 @@ async function fetchScannerHistoryFrame(args: {
       }
     }
   }
-  if (args.timeframe !== '5m' && !barsCoverRequestedLookback(bars, args.from, args.to, args.timeframe)) {
+  if (scannerHistoryNeedsFiveMinuteAggregationRepair({
+    timeframe: args.timeframe,
+    bars,
+    requestedFrom: args.from,
+    requestedTo: args.to,
+    bridgeInstrument: args.config.bridgeInstrument,
+  })) {
     const sourceFiveMinuteBars = await fetchFiveMinuteBarsForHtfAggregation({
       config: args.config,
       from: args.from,
