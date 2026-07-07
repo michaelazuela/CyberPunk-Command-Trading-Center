@@ -571,6 +571,34 @@ function qualityDisplay(item: DecisionQualityScoreItem | null): string {
   return `${Math.round(item.score)}/${max} ${qualityLabel(item)}`;
 }
 
+function deskPlayOpposingPlanClarifier(model: PlanRenderModel): { fullText: string; lines: string[] } | null {
+  if (model.renderMode !== 'desk_play_context') return null;
+  if (model.direction === 'LONG') {
+    const entryLabel = money(model.entry);
+    const fullText = `No short plan. ${entryLabel} is the LONG pullback review entry zone. Short requires completed 5M bearish invalidation below the active long structure.`;
+    return {
+      fullText,
+      lines: [
+        `No short plan. ${entryLabel} is the LONG`,
+        'pullback review entry zone.',
+        'Short requires completed 5M bearish',
+        'invalidation below the active long structure.',
+      ],
+    };
+  }
+  const entryLabel = money(model.entry);
+  const fullText = `No long plan. ${entryLabel} is the SHORT pullback review entry zone. Long requires completed 5M bullish invalidation above the active short structure.`;
+  return {
+    fullText,
+    lines: [
+      `No long plan. ${entryLabel} is the SHORT`,
+      'pullback review entry zone.',
+      'Long requires completed 5M bullish',
+      'invalidation above the active short structure.',
+    ],
+  };
+}
+
 function deskPlayQualityRatio(item: DecisionQualityScoreItem | null): number | null {
   if (!item || item.max <= 0) return null;
   return item.score / item.max;
@@ -664,8 +692,9 @@ function renderWatchContextNotice(model: PlanRenderModel): string {
   const hasDeskPlayLevels = isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2);
   const unsafeReview = deskPlayUnsafeReview(model);
   const readiness = deskPlayReadinessContext(model);
+  const opposingClarifier = deskPlayOpposingPlanClarifier(model);
   return `
-    <rect x="24" y="486" width="392" height="234" rx="7" fill="#020807" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
+    <rect x="24" y="486" width="392" height="314" rx="7" fill="#020807" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
     <text x="38" y="515" class="alert-title" fill="#38bdf8">DESK READINESS</text>
     <line x1="38" y1="527" x2="402" y2="527" stroke="#38bdf8" stroke-opacity=".34" />
     <text x="38" y="546" class="small">Map Side: <tspan fill="#f8fafc">${readiness.primarySide} ${readiness.primaryStrength}</tspan></text>
@@ -677,6 +706,13 @@ function renderWatchContextNotice(model: PlanRenderModel): string {
     <text x="38" y="666" class="small">Readiness: <tspan fill="#f8fafc">${escapeHtml(readiness.status)}</tspan></text>
     <text x="38" y="686" class="small">HTF Context: <tspan fill="#f8fafc">${escapeHtml(readiness.htf)}</tspan></text>
     <text x="38" y="706" class="small">Next: <tspan fill="#f8fafc">${unsafeReview ? 'do not execute this side' : hasDeskPlayLevels ? 'completed 5M proof' : 'protected 5M stop required'}</tspan></text>
+    ${opposingClarifier ? `
+      <title>${escapeHtml(opposingClarifier.fullText)}</title>
+      <text x="38" y="726" class="small" fill="#facc15">${escapeHtml(opposingClarifier.lines[0])}</text>
+      <text x="38" y="746" class="small" fill="#f8fafc">${escapeHtml(opposingClarifier.lines[1])}</text>
+      <text x="38" y="766" class="small" fill="#f8fafc">${escapeHtml(opposingClarifier.lines[2])}</text>
+      <text x="38" y="786" class="small" fill="#f8fafc">${escapeHtml(opposingClarifier.lines[3])}</text>
+    ` : ''}
   `;
 }
 
@@ -1305,7 +1341,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   <text x="236" y="196" class="context-mini">Bias: <tspan class="context-value">${escapeHtml(String(trendBias))}</tspan></text>
   <text x="32" y="222" class="context-mini">Narrative: <tspan class="context-value">${escapeHtml(narrative)}</tspan></text>
   ${renderRiskSummary(plan)}
-  ${isDeskPlayContext ? `${renderWatchContextNotice(plan)}${renderAlertQuality(candidate, 734)}` : renderAlertQuality(candidate)}
+  ${isDeskPlayContext ? `${renderWatchContextNotice(plan)}${renderAlertQuality(candidate, 816)}` : renderAlertQuality(candidate)}
   ${renderDirectionLogo(isLong)}
   ${renderValidationNotice(plan)}
   ${renderNarrativeMarkers(isLong, markerAnchors)}

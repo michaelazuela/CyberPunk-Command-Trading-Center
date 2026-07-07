@@ -566,6 +566,8 @@ try {
   assert.ok(failedShortReviewHtml.includes('Readiness: <tspan fill="#f8fafc">watch only - do not execute</tspan>'));
   assert.ok(failedShortReviewHtml.includes('HTF Context: <tspan fill="#f8fafc">LONG</tspan>'));
   assert.ok(failedShortReviewHtml.includes('do not execute this side'));
+  assert.ok(failedShortReviewHtml.includes('No long plan. 7581.25 is the SHORT pullback review entry zone.'));
+  assert.ok(failedShortReviewHtml.includes('Long requires completed 5M bullish invalidation above the active short structure.'));
   const mismatchedQualityHtml = buildChartMarkupHtmlForTest({
     chartContext: chartContext,
     candidate: {

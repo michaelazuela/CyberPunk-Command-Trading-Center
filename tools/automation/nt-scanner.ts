@@ -4450,6 +4450,72 @@ export function buildScannerReversalWatchLines(args: {
 
   const exhausted = scannerLifecycleForDirection(args.deskState, exhaustedSide);
   const watch = scannerLifecycleForDirection(args.deskState, watchDirection);
+  const activeZone = play.activeTacticalZone;
+  const completedClose = roundNullableTradePrice(args.completed5m?.close);
+  const activeZoneFailed = Boolean(
+    activeZone?.direction === exhaustedSide &&
+    completedClose !== null &&
+    (
+      exhaustedSide === 'LONG'
+        ? roundNullableTradePrice(activeZone.lower) !== null && completedClose < (roundNullableTradePrice(activeZone.lower) as number)
+        : roundNullableTradePrice(activeZone.upper) !== null && completedClose > (roundNullableTradePrice(activeZone.upper) as number)
+    )
+  );
+  if (activeZoneFailed && activeZone) {
+    const failedZoneLow = roundNullableTradePrice(activeZone.lower);
+    const failedZoneHigh = roundNullableTradePrice(activeZone.upper);
+    const triggerLine = roundNullableTradePrice(activeZone.anchorLine) ??
+      (watchDirection === 'SHORT' ? failedZoneLow : failedZoneHigh);
+    const invalidLine = watchDirection === 'SHORT' ? failedZoneHigh : failedZoneLow;
+    const noChaseLine = triggerLine === null
+      ? null
+      : watchDirection === 'SHORT'
+        ? roundNullableTradePrice(watch?.target1) ?? roundNullableTradePrice(play.targetReactionLevel) ?? roundNullableTradePrice(triggerLine - 8)
+        : roundNullableTradePrice(watch?.target1) ?? roundNullableTradePrice(play.targetReactionLevel) ?? roundNullableTradePrice(triggerLine + 8);
+    const referenceEntry = roundNullableTradePrice(watch?.entry);
+    const referenceStop = roundNullableTradePrice(watch?.stop);
+    const referenceTarget1 = roundNullableTradePrice(watch?.target1);
+    const referenceTarget2 = roundNullableTradePrice(watch?.target2);
+    const missing = [
+      triggerLine === null ? 'trigger line' : null,
+      invalidLine === null ? 'invalidation line' : null,
+      noChaseLine === null ? 'no-chase line' : null,
+    ].filter((value): value is string => Boolean(value));
+    return {
+      sourceOfTruth: 'scanner_campaign_exhaustion_reversal_watch_lines',
+      eligible: missing.length === 0,
+      exhaustedSide,
+      watchDirection,
+      reactionZoneLow: failedZoneLow,
+      reactionZoneHigh: failedZoneHigh,
+      reactionLabel: `${exhaustedSide} active tactical zone failed`,
+      triggerLine,
+      strongerTriggerLine: roundNullableTradePrice(watch?.lineInSand),
+      invalidLine,
+      noChaseLine,
+      reclaimRule: triggerLine === null ? null : reversalWatchRuleText(watchDirection, 'reclaim', triggerLine),
+      retestRule: triggerLine === null ? null : reversalWatchRuleText(watchDirection, 'retest', triggerLine),
+      invalidationRule: invalidLine === null ? null : reversalWatchRuleText(watchDirection, 'invalid', invalidLine),
+      noChaseRule: noChaseLine === null ? null : reversalWatchRuleText(watchDirection, 'no_chase', noChaseLine),
+      referenceEntry,
+      referenceStop,
+      referenceTarget1,
+      referenceTarget2,
+      referenceReason: [referenceEntry, referenceStop, referenceTarget1, referenceTarget2].some((value) => value !== null)
+        ? 'tactical levels only from the existing opposite-side lifecycle. Reversal Watch does not approve execution; canExecute and normal app-owned gates still control.'
+        : 'transition watch only. No opposite-side entry/stop/T1/T2 package is created until the scanner sees fresh completed 5M proof.',
+      reason: missing.length
+        ? `${exhaustedSide} active tactical zone failed by completed 5M close ${completedClose?.toFixed(2) || 'unknown'}, but ${missing.join(', ')} is missing.`
+        : `${exhaustedSide} active tactical zone failed by completed 5M close ${completedClose?.toFixed(2) || 'unknown'}; ${watchDirection} transition watch is active below/above ${triggerLine?.toFixed(2) || 'the mapped line'}. Human review only; wait for completed 5M retest/hold before a full plan.`,
+      sourceFields: Array.from(new Set([
+        'primaryDeskPlay.activeTacticalZone',
+        'completed5m.close',
+        triggerLine !== null ? 'activeTacticalZone.anchorLine' : null,
+        referenceEntry !== null || referenceStop !== null ? 'opposite-side lifecycle tactical levels' : null,
+      ].filter((value): value is string => Boolean(value)))),
+      approvalBoundary,
+    };
+  }
   const reactionCandidates = [
     roundNullableTradePrice(exhausted?.targetReactionLevel),
     roundNullableTradePrice(args.deskState.primaryDeskPlay.targetReactionLevel),
@@ -6320,6 +6386,10 @@ function scannerReversalWatchMaterialCadenceFingerprint(args: {
   ].join('|');
 }
 
+function scannerReversalWatchIsActiveZoneFailureTransition(lines: ScannerReversalWatchLines): boolean {
+  return /active tactical zone failed/i.test(`${lines.reactionLabel || ''} ${lines.reason || ''}`);
+}
+
 export function scannerReversalWatchRecord(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -6406,10 +6476,12 @@ export function evaluateScannerReversalWatchDiscordSuppression(args: {
     session: args.session,
     watchDirection: args.lines.watchDirection,
   });
+  const activeZoneFailureTransition = scannerReversalWatchIsActiveZoneFailureTransition(args.lines);
   if (
     (args.state.state === 'invalidated' || args.state.state === 'no_chase' || args.state.state === 'stalled') &&
     previous?.state !== 'watch_active' &&
-    previous?.state !== 'direction_validated'
+    previous?.state !== 'direction_validated' &&
+    !(activeZoneFailureTransition && args.state.state === 'no_chase')
   ) {
     return scannerReversalWatchSuppressionBlocked(
       'not_ready',
@@ -6435,7 +6507,11 @@ export function evaluateScannerReversalWatchDiscordSuppression(args: {
       previousMaterial || previous.fingerprint,
     );
   }
-  return scannerReversalWatchSuppressionPost(args.state.reason);
+  return scannerReversalWatchSuppressionPost(
+    activeZoneFailureTransition
+      ? `${args.state.reason} Campaign transition alert: ${args.lines.reason}`
+      : args.state.reason,
+  );
 }
 
 function bridgeBarEtDate(bar: NinjaBridgeBar, mode: BridgeTimeZoneMode): string | null {
@@ -7028,11 +7104,16 @@ function buildScannerReversalWatchDiscordPayload(args: {
   const status = scannerReversalWatchStatusLabel(args.state.state);
   const directionEmoji = scannerReversalWatchDirectionEmoji(direction);
   const exhaustedEmoji = scannerReversalWatchDirectionEmoji(exhausted);
+  const activeZoneFailureTransition = scannerReversalWatchIsActiveZoneFailureTransition(args.lines);
   const invalidLabel = direction === 'LONG' ? 'Invalid Below' : direction === 'SHORT' ? 'Invalid Above' : 'Invalid At';
   const noChaseLabel = direction === 'LONG' ? 'No Chase Above' : direction === 'SHORT' ? 'No Chase Below' : 'No Chase At';
-  const title = `🎯 ${args.instrument} Tactical Reversal Watch`;
+  const title = activeZoneFailureTransition
+    ? `🔁 ${args.instrument} Campaign Transition Watch`
+    : `🎯 ${args.instrument} Tactical Reversal Watch`;
   const sessionLabel = args.session === 'morning' ? 'Morning' : args.session === 'evening' ? 'Evening' : 'Lunch';
-  const content = `# 🎯 ${args.instrument} Tactical Reversal Watch - ${sessionLabel}`;
+  const content = activeZoneFailureTransition
+    ? `# 🔁 ${args.instrument} Campaign Transition Watch - ${sessionLabel}`
+    : `# 🎯 ${args.instrument} Tactical Reversal Watch - ${sessionLabel}`;
   return {
     username: 'Quant Desk',
     content,
@@ -7040,7 +7121,9 @@ function buildScannerReversalWatchDiscordPayload(args: {
       title,
       color: args.state.state === 'direction_validated' ? 0x22c55e : args.state.state === 'watch_active' ? 0x38bdf8 : args.state.state === 'invalidated' ? 0xef4444 : 0xf97316,
       description: [
-        `${exhaustedEmoji} Primary: ${exhausted} campaign exhaustion / ${directionEmoji} ${direction} reversal watch`,
+        activeZoneFailureTransition
+          ? `${exhaustedEmoji} ${exhausted} structure failed / ${directionEmoji} ${direction} transition watch`
+          : `${exhaustedEmoji} Primary: ${exhausted} campaign exhaustion / ${directionEmoji} ${direction} reversal watch`,
         '⚠️ Execution: NOT APPROVED - completed 5M watch map only.',
         `📌 Status: ${status}`,
         `📍 Reaction Zone: ${reaction}`,

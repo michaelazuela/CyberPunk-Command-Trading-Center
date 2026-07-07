@@ -1061,6 +1061,115 @@ assert.match(longZoneFailureDelivery.reason, /zone_failed_completed_5m/);
 assert.match(longZoneFailureDelivery.reason, /direction=LONG/);
 assert.match(longZoneFailureDelivery.reason, /completedClose=7421\.75/);
 
+const longFailureShortTransitionLines = buildScannerReversalWatchLines({
+  deskState: {
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'LONG',
+      activeTacticalZone: {
+        direction: 'LONG',
+        lower: 7597.75,
+        upper: 7598,
+        anchorLine: 7593.5,
+      },
+      lineInSand: 7593.5,
+      longBias: {},
+      shortBias: {},
+      levelTransition: {
+        shortBelow: 7593.5,
+      },
+    },
+    bestLongPlan: {
+      target1: 7613.75,
+      target2: 7619,
+    },
+    bestShortPlan: null,
+  } as unknown as DeskState,
+  completed5m: { time: '2026-07-06T19:20:00.0000000', open: 7595.75, high: 7595.75, low: 7592, close: 7592.25, volume: 1083 },
+  currentPrice: 7593.75,
+});
+assert.equal(longFailureShortTransitionLines.eligible, true);
+assert.equal(longFailureShortTransitionLines.exhaustedSide, 'LONG');
+assert.equal(longFailureShortTransitionLines.watchDirection, 'SHORT');
+assert.equal(longFailureShortTransitionLines.triggerLine, 7593.5);
+assert.match(longFailureShortTransitionLines.reason, /LONG active tactical zone failed/);
+assert.equal(longFailureShortTransitionLines.approvalBoundary.changesCanExecute, false);
+const longFailureShortTransitionState = classifyScannerReversalWatchState({
+  lines: longFailureShortTransitionLines,
+  completed5m: { time: '2026-07-06T19:20:00.0000000', open: 7595.75, high: 7595.75, low: 7592, close: 7592.25, volume: 1083 },
+  completed5mHistory: [
+    { time: '2026-07-06T19:10:00.0000000', open: 7596.75, high: 7597.5, low: 7595, close: 7596, volume: 545 },
+    { time: '2026-07-06T19:15:00.0000000', open: 7596, high: 7597.25, low: 7595.5, close: 7595.75, volume: 437 },
+  ],
+  currentPrice: 7593.75,
+});
+assert.equal(longFailureShortTransitionState.state, 'watch_active');
+assert.equal(longFailureShortTransitionState.reclaimConfirmed, true);
+const longFailureShortTransitionSuppression = evaluateScannerReversalWatchDiscordSuppression({
+  tradeDate: '2026-07-06',
+  instrument: 'MES',
+  session: 'evening',
+  latestCompleted5m: '2026-07-06T19:20:00.0000000',
+  lines: longFailureShortTransitionLines,
+  state: longFailureShortTransitionState,
+  reversalWatchSent: {},
+});
+assert.equal(longFailureShortTransitionSuppression.shouldPost, true);
+assert.match(longFailureShortTransitionSuppression.reason, /SHORT reversal watch active/);
+const longFailureShortNoChaseState = classifyScannerReversalWatchState({
+  lines: longFailureShortTransitionLines,
+  completed5m: { time: '2026-07-06T19:40:00.0000000', open: 7591.75, high: 7592.25, low: 7584.75, close: 7585.25, volume: 1800 },
+  completed5mHistory: [
+    { time: '2026-07-06T19:20:00.0000000', open: 7595.75, high: 7595.75, low: 7592, close: 7592.25, volume: 1083 },
+    { time: '2026-07-06T19:25:00.0000000', open: 7592.25, high: 7593.75, low: 7591.5, close: 7593.25, volume: 1166 },
+    { time: '2026-07-06T19:30:00.0000000', open: 7593.5, high: 7594.25, low: 7592, close: 7593, volume: 779 },
+  ],
+  currentPrice: 7585.25,
+});
+assert.equal(longFailureShortNoChaseState.state, 'no_chase');
+const longFailureShortNoChaseSuppression = evaluateScannerReversalWatchDiscordSuppression({
+  tradeDate: '2026-07-06',
+  instrument: 'MES',
+  session: 'evening',
+  latestCompleted5m: '2026-07-06T19:40:00.0000000',
+  lines: longFailureShortTransitionLines,
+  state: longFailureShortNoChaseState,
+  reversalWatchSent: {},
+});
+assert.equal(longFailureShortNoChaseSuppression.shouldPost, true);
+assert.match(longFailureShortNoChaseSuppression.reason, /Campaign transition alert/);
+assert.match(longFailureShortNoChaseSuppression.reason, /LONG active tactical zone failed/);
+
+const shortFailureLongTransitionLines = buildScannerReversalWatchLines({
+  deskState: {
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      activeTacticalZone: {
+        direction: 'SHORT',
+        lower: 7588,
+        upper: 7592,
+        anchorLine: 7595.5,
+      },
+      lineInSand: 7595.5,
+      longBias: {},
+      shortBias: {},
+    },
+    bestLongPlan: null,
+    bestShortPlan: {
+      target1: 7588.5,
+      target2: 7586,
+    },
+  } as unknown as DeskState,
+  completed5m: { time: '2026-07-06T19:20:00.0000000', open: 7592, high: 7597, low: 7591.75, close: 7596, volume: 1083 },
+  currentPrice: 7596,
+});
+assert.equal(shortFailureLongTransitionLines.eligible, true);
+assert.equal(shortFailureLongTransitionLines.exhaustedSide, 'SHORT');
+assert.equal(shortFailureLongTransitionLines.watchDirection, 'LONG');
+assert.equal(shortFailureLongTransitionLines.triggerLine, 7595.5);
+assert.match(shortFailureLongTransitionLines.reason, /SHORT active tactical zone failed/);
+
 const june29FailureReplayBars = [
   ['2026-06-29T10:35:00.0000000', 7463],
   ['2026-06-29T10:40:00.0000000', 7460.75],
@@ -6241,6 +6350,29 @@ try {
   assert.ok(deskPlayChartHtml.includes('HTF Context: <tspan fill="#f8fafc">'));
   assert.ok(!deskPlayChartHtml.includes('Confidence: <tspan fill="#f8fafc">'));
   assert.ok(deskPlayChartHtml.includes('Next: <tspan fill="#f8fafc">completed 5M proof</tspan>'));
+  const longPullbackClarifierHtml = buildChartMarkupHtmlForTest({
+    chartContext: chartContext as ChartContext,
+    candidate: {
+      ...contextChartCandidate,
+      direction: 'LONG',
+      entry: 7557.5,
+      stop: 7551.75,
+      target1: 7566.125,
+      target2: 7569,
+    },
+    instrument: 'MES',
+    tradeDate: '2026-07-06',
+    sessionLabel: 'lunch',
+    renderMode: 'desk_play_context',
+    contextLine: 7563.5,
+    contextLabel: 'Line in the sand',
+  });
+  assert.ok(longPullbackClarifierHtml.includes('No short plan. 7557.50 is the LONG pullback review entry zone.'));
+  assert.ok(longPullbackClarifierHtml.includes('Short requires completed 5M bearish invalidation below the active long structure.'));
+  assert.ok(longPullbackClarifierHtml.includes('No short plan. 7557.50 is the LONG'));
+  assert.ok(longPullbackClarifierHtml.includes('pullback review entry zone.'));
+  assert.ok(longPullbackClarifierHtml.includes('Short requires completed 5M bearish'));
+  assert.ok(longPullbackClarifierHtml.includes('invalidation below the active long structure.'));
   assert.equal(typeof deskPlayState.primaryDeskPlay.lineInSand, 'number');
   assert.ok(deskPlayChartHtml.includes('risk-chip-label">Line</text>'));
   assert.ok(deskPlayChartHtml.includes('risk-chip-label">Risk</text>'));
