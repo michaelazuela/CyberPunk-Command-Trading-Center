@@ -2,6 +2,21 @@
 
 ## Latest Change
 
+Date: 2026-07-06
+Task: Make Desk Play Discord reports globally actionable and compact.
+Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-artifact-lint.ts, scripts/architecture-guard.js, docs/PROJECT_STATUS.md.
+Reason: Full Desk Play reports were too long for fast action. Discord needed to lead with the decision contract: primary read, line in the sand, long/short condition, entry/stop/T1/T2 when app-owned levels exist, no-trade/no-chase status, HTF context, and chart status.
+Tests run: `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/discord-cleanup-verification.test.ts`; `npx tsc --noEmit`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Desk Play output now uses the shared compact actionable conditional-plan format for morning, lunch, and evening DeskState posts, while preserving required HTF/FVG/fresh-reentry context and chart/RAG safety checks. The architecture guard now protects the new compact formatter helper instead of the removed verbose pending-level helper.
+Trading logic changed: No. This is Discord presentation and lint-threshold cleanup only; it does not change canExecute, execution approval, setup definitions, ranking, risk gates, stop/target math, model definitions, bridge behavior, or 5M bar-close handling.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: No schema migration.
+Known risks: None known.
+Next recommended action: Restart scanner services after commit so live Discord posts use the compact format.
+
+## Previous Change
+
 Date: 2026-06-30
 Task: Install Phase 3/4 MTF primary-side arbitration and HTF target-to-line Discord review-map promotion.
 Files changed: src/lib/localScannerEngine.ts, tools/automation/nt-scanner.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.

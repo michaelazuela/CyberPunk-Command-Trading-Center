@@ -199,7 +199,7 @@ export function lintDiscordArtifacts(input: DiscordArtifactLintInput): DiscordAr
     });
   }
   const preferredTextLimit = policy.category === 'current_desk_plan' && hasCompleteAppLevels(text) && validFiles.length > 0
-    ? 1250
+    ? 1400
     : 1200;
   if (text.length > preferredTextLimit) {
     issues.push({

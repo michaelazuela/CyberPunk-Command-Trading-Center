@@ -2608,273 +2608,156 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     if (safety.reviewOnly) return 'Decision class: REVIEW ONLY - wait for completed 5M proof + canExecute.';
     return 'Decision class: WAIT - no executable approval.';
   };
-  const sideLinesFor = (side: 'LONG' | 'SHORT', options: { suppressPendingLevels?: boolean } = {}): { lines: string[]; hasLevels: boolean } => {
-    const line = deskPlayLineForDirection(play, side);
-    const levels = deskPlayDecisionMapLevels(args.normalized, side, line, play, args.currentPrice);
-    const triggerWord = side === 'LONG' ? 'ABOVE' : 'BELOW';
-    const safety = sidePresentationSafety(side);
-    const activeZone = play.activeTacticalZone?.direction === side ? play.activeTacticalZone : null;
-    const activeZoneLower = isFinitePrice(activeZone?.lower) ? activeZone.lower : null;
-    const activeZoneUpper = isFinitePrice(activeZone?.upper) ? activeZone.upper : null;
-    const currentPrice = isFinitePrice(args.currentPrice) ? args.currentPrice : null;
-    const currentVsZone = activeZoneLower !== null && activeZoneUpper !== null && currentPrice !== null
-      ? currentPrice < activeZoneLower
-        ? { state: 'below' as const, distance: activeZoneLower - currentPrice }
-        : currentPrice > activeZoneUpper
-          ? { state: 'above' as const, distance: currentPrice - activeZoneUpper }
-          : { state: 'inside' as const, distance: 0 }
-      : null;
-    const counterStructureLines = counterStructureConditionalLines({
-      play,
-      direction: side,
-      activeZoneLower,
-      activeZoneUpper,
-      lineInSand: line,
-    });
-    const entryLabel = counterStructureLines.length ? 'Conditional entry reference' : 'Entry';
-    const conditionalLevelLines = (): string[] => {
-      if (!levels) return [];
-      if (currentVsZone && currentVsZone.state !== 'inside') {
-        const noEntryInstruction = side === 'SHORT'
-          ? currentVsZone.state === 'above'
-            ? 'Entry status: NOT ACTIVE - current price is above the active short zone; wait for a fresh completed 5M setup or migrated line.'
-            : 'Entry status: NO CHASE - price is already below the active short zone; wait for a fresh completed 5M retest.'
-          : currentVsZone.state === 'below'
-            ? 'Entry status: NOT ACTIVE - current price is below the active long zone; wait for a fresh completed 5M setup or migrated line.'
-            : 'Entry status: NO CHASE - price is already above the active long zone; wait for a fresh completed 5M retest.';
-        return [
-          `Entry zone: ${zoneRangeLine(activeZoneLower, activeZoneUpper)}`,
-          `Current: ${priceLine(currentPrice)} (${numberLine(currentVsZone.distance)} pts ${currentVsZone.state} zone)`,
-          noEntryInstruction,
-          `Entry if fresh proof returns: ${priceLine(levels.entry)}`,
-          `Stop: ${priceLine(levels.stop)}`,
-          `T1: ${priceLine(levels.target1)}`,
-          `T2: ${priceLine(levels.target2)}`,
-        ];
-      }
-      return [
-        ...(currentVsZone?.state === 'inside' ? [
-          `Entry zone: ${zoneRangeLine(activeZoneLower, activeZoneUpper)}`,
-          `Current: ${priceLine(currentPrice)} (inside zone)`,
-        ] : []),
-        `${entryLabel}: ${priceLine(levels.entry)}`,
-        `Stop: ${priceLine(levels.stop)}`,
-        `T1: ${priceLine(levels.target1)}`,
-        `T2: ${priceLine(levels.target2)}`,
-      ];
-    };
-    if (!levels) {
-      return {
-        hasLevels: false,
-        lines: options.suppressPendingLevels
-          ? [
-              sideBreakoutLabel(side, triggerWord, line),
-              'No complete app-owned plan on this side.',
-            ]
-          : [
-              sideBreakoutLabel(side, triggerWord, line),
-              'Entry: pending',
-              'Stop: pending',
-              'T1: pending',
-              'T2: pending',
-            ],
-      };
-    }
-    if (safety.highConfidenceConditional) {
-      return {
-        hasLevels: true,
-        lines: [
-          sideBreakoutLabel(side, triggerWord, line),
-          ...counterStructureLines,
-          'High-confidence conditional trade plan - wait on the named completed 5M condition.',
-          'Execution gate: armed only after that condition closes; not early-entry approval.',
-          ...conditionalLevelLines(),
-          ...(safety.reason ? [`Caution: ${safety.reason}.`] : []),
-        ],
-      };
-    }
-    if (safety.reviewOnly) {
-      const reviewLabel = safety.highConfidenceConditional
-        ? 'High-confidence conditional trade plan - wait on the named completed 5M condition.'
-        : 'Review levels only - not an executable trade plan.';
-      const proofLabel = safety.highConfidenceConditional
-        ? 'Execution gate: armed only after that condition closes; not early-entry approval.'
-        : 'Sniper watch: 1M timing only; 5M close/hold required.';
-      return {
-        hasLevels: true,
-        lines: [
-          sideBreakoutLabel(side, triggerWord, line),
-          ...counterStructureLines,
-          reviewLabel,
-          proofLabel,
-          ...conditionalLevelLines(),
-          ...(safety.reason ? [`Reason: ${safety.reason}.`] : []),
-        ],
-      };
-    }
-    return {
-      hasLevels: true,
-      lines: [
-        sideBreakoutLabel(side, triggerWord, line),
-        `Entry: ${priceLine(levels.entry)}`,
-        `Stop: ${priceLine(levels.stop)}`,
-        `T1: ${priceLine(levels.target1)}`,
-        `T2: ${priceLine(levels.target2)}`,
-      ],
-    };
-  };
-  const readinessLinesFor = (
-    mapSide: 'LONG' | 'SHORT' | 'WAIT',
-    safety: { reviewOnly: boolean; reason: string | null; highConfidenceConditional: boolean },
-    hasLevels: boolean,
-  ): string[] => {
-    return [
-      `Map Side: ${mapSide === 'WAIT' ? 'WAIT N/A' : deskPlaySideStrength(play, mapSide)}`,
-      `Conflict: ${deskPlayConflictSummary(play, mapSide, safety.reason)}`,
-      `Readiness: ${deskPlayReadinessDisplayLine(play, mapSide, safety.reviewOnly, hasLevels, safety.highConfidenceConditional)}`,
-    ];
-  };
   const decisionBand = deskPlayCrossedDecisionBand(play);
-  if (direction !== 'LONG' && direction !== 'SHORT') {
-    const longWait = sideLinesFor('LONG');
-    const shortWait = sideLinesFor('SHORT');
-    const waitHasOneCompleteSide = longWait.hasLevels !== shortWait.hasLevels;
-    const longWaitDisplay = waitHasOneCompleteSide && !longWait.hasLevels ? sideLinesFor('LONG', { suppressPendingLevels: true }) : longWait;
-    const shortWaitDisplay = waitHasOneCompleteSide && !shortWait.hasLevels ? sideLinesFor('SHORT', { suppressPendingLevels: true }) : shortWait;
-    const waitMapSide = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : 'WAIT';
-    const waitPrimarySafety = play.direction === 'LONG' || play.direction === 'SHORT'
-      ? sidePresentationSafety(play.direction)
-      : { reviewOnly: false, reason: null, highConfidenceConditional: false };
-    const waitStatusLine = waitPrimarySafety.reviewOnly
-      ? waitPrimarySafety.highConfidenceConditional
-        ? `Status: High-confidence conditional trade plan; ${waitPrimarySafety.reason || 'completed 5M proof missing'}. Armed only after the named completed 5M condition.`
-        : `Status: Review levels only - not executable; ${waitPrimarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
-      : waitPrimarySafety.highConfidenceConditional
-        ? 'Status: High-confidence conditional trade plan; armed only after the named completed 5M condition.'
-      : 'Status: Review only until 5M trigger + canExecute.';
-    const waitHasReferenceLevels = waitPrimarySafety.reviewOnly && (longWait.hasLevels || shortWait.hasLevels);
-    const waitHtfRows = deskPlayHtfLineRows(play, args.currentPrice);
-    const waitUsefulHtfRows = waitHtfRows.some((row) => !/UNKNOWN;\s*changes at N\/A/i.test(row)) ? waitHtfRows : [];
+  const compactSidePlanLines = (side: 'LONG' | 'SHORT', lineOverride?: number | null): string[] => {
+    const line = isFinitePrice(lineOverride) ? lineOverride : deskPlayLineForDirection(play, side);
+    const levels = deskPlayDecisionMapLevels(args.normalized, side, line, play, args.currentPrice);
+    const triggerWord = side === 'LONG' ? 'above' : 'below';
+    const stopFallback = side === 'LONG'
+      ? 'below the protected 5M swing low after proof.'
+      : 'above the protected 5M swing high after proof.';
     return [
-      `${args.instrument} Current Desk Plan`,
-      '',
-      `Primary: ${primaryPlanLabel(deskPlayPrimaryLabel(play, direction))}`,
-      deskPlayDecisionClassLine(waitPrimarySafety),
+      `${side} Plan:`,
+      sideBreakoutLabel(side, side === 'LONG' ? 'ABOVE' : 'BELOW', line),
+      `${side} if completed 5M closes ${triggerWord} ${priceLine(line)} and holds/retests.`,
+      levels
+        ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}`
+        : 'Entry: pending',
+      levels
+        ? null
+        : `Stop: pending - ${stopFallback}`,
+      levels
+        ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}`
+        : 'T1: pending | T2: pending - recalculated from actual entry and structure stop.',
+      levels
+        ? `Invalid ${side === 'LONG' ? 'below' : 'above'}: ${priceLine(levels.stop)}`
+        : null,
+    ].filter((line): line is string => Boolean(line));
+  };
+  const compactActionableDeskPlanLines = (): string[] => {
+    const primaryLabel = deskPlayPrimaryLabel(play, direction);
+    const displayDirection = direction === 'LONG' || direction === 'SHORT'
+      ? direction
+      : play.direction === 'LONG' || play.direction === 'SHORT'
+      ? play.direction
+      : 'WAIT';
+    const primarySafety = displayDirection === 'LONG' || displayDirection === 'SHORT'
+      ? sidePresentationSafety(displayDirection)
+      : { reviewOnly: false, reason: null, highConfidenceConditional: false };
+    const line = displayDirection === 'LONG' || displayDirection === 'SHORT'
+      ? deskPlayLineForDirection(play, displayDirection)
+      : play.lineInSand ?? deskPlayLineForDirection(play, 'LONG');
+    const longTriggerLine = decisionBand?.high ?? deskPlayLineForDirection(play, 'LONG');
+    const shortTriggerLine = decisionBand?.low ?? deskPlayLineForDirection(play, 'SHORT');
+    const htfRows = deskPlayHtfLineRows(play, args.currentPrice);
+    const usefulHtfRows = htfRows.filter((row) => !/UNKNOWN;\s*changes at N\/A/i.test(row));
+    const activeLevels = displayDirection === 'LONG' || displayDirection === 'SHORT'
+      ? deskPlayDecisionMapLevels(args.normalized, displayDirection, line, play, args.currentPrice)
+      : null;
+    const hasAnyLevels = Boolean(
+      activeLevels ||
+      deskPlayDecisionMapLevels(args.normalized, 'LONG', longTriggerLine, play, args.currentPrice) ||
+      deskPlayDecisionMapLevels(args.normalized, 'SHORT', shortTriggerLine, play, args.currentPrice),
+    );
+    const htfContext = `HTF Context: ${args.deskState?.htfContextStatus || 'unknown'} / ${play.htfProtectedStructureMap?.reliability || 'unknown'}; 5M executes.`;
+    const failedText = /FAILED/i.test(primaryLabel)
+      ? `${play.direction === 'LONG' || play.direction === 'SHORT' ? `${play.direction} failed.` : 'Primary side failed.'} Price is inside a decision zone, not a clean entry.`
+      : direction === 'WAIT'
+      ? 'WAIT. Price needs a completed 5M close/hold before any fresh plan.'
+      : `${direction} conditional; wait for 5M.`;
+    const lineText = priceLine(line);
+    const noTradeText = decisionBand
+      ? `Inside ${decisionBand.label} = no fresh entry. No chase.`
+      : 'Wait for 5M proof + protected stop/targets/canExecute.';
+    const lineDisplayLines = deskPlayLineDisplayLines(play, displayDirection, line);
+    const htfTargetLine = deskPlayHtfTargetLine(play);
+    const runnerLine = deskPlayRunnerLine(play);
+    const statusLine = primarySafety.highConfidenceConditional
+      ? 'Status: High-confidence conditional trade plan; armed only after the named completed 5M condition.'
+      : primarySafety.reviewOnly
+      ? `Status: Review levels only - not executable; ${primarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
+      : args.deskState?.canExecute === true
+      ? 'Status: App-owned canExecute=true; execution gates still control.'
+      : 'Status: Review only until 5M trigger + canExecute.';
+    const directionalLines = displayDirection === 'LONG' || displayDirection === 'SHORT'
+      ? compactSidePlanLines(displayDirection, line)
+      : [
+          ...compactSidePlanLines('LONG', longTriggerLine),
+          '',
+          ...compactSidePlanLines('SHORT', shortTriggerLine),
+        ];
+    return [
+      `Primary: ${primaryPlanLabel(primaryLabel)}`,
+      deskPlayDecisionClassLine(primarySafety),
+      ...(direction === 'WAIT' ? [`Read:${failedText}`] : []),
       `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
-      ...deskPlayHtfRegimeLines(play, waitMapSide),
-      ...deskPlayLineDisplayLines(
-        play,
-        waitMapSide,
-        play.lineInSand ?? deskPlayLineForDirection(play, waitMapSide === 'WAIT' ? 'LONG' : waitMapSide),
-      ),
-      ...deskPlayTargetToLinePromotionLines(play, waitMapSide),
-      ...deskPlaySameSideCampaignStackLines(play, waitMapSide),
-      ...deskPlayActiveTacticalZoneLines(play, waitMapSide),
-      ...deskPlayHtfFvgParentReactionWatchLines(play, waitMapSide),
-      ...deskPlayHtfFvgReactionMemoryLines(play, waitMapSide),
-      ...deskPlayHtfFvgMicroMssProofLines(play, waitMapSide),
-      ...deskPlayHtfFvgParentZoneStackLines(play, waitMapSide),
-      ...deskPlayHtfFvgCascadeLines(play, waitMapSide),
-      ...deskPlayFreshReentryDisplayLines(play, waitMapSide),
+      ...deskPlayHtfRegimeLines(play, displayDirection),
+      ...lineDisplayLines,
+      ...deskPlayActiveTacticalZoneLines(play, displayDirection),
+      ...deskPlaySameSideCampaignStackLines(play, displayDirection),
+      ...deskPlayFreshReentryDisplayLines(play, displayDirection),
+      ...(displayDirection === 'LONG' || displayDirection === 'SHORT'
+        ? [
+            `Map Side: ${deskPlaySideStrength(play, displayDirection)}`,
+            `Conflict: ${deskPlayConflictSummary(play, displayDirection, primarySafety.reason)}`,
+            `Readiness: ${deskPlayReadinessDisplayLine(play, displayDirection, primarySafety.reviewOnly, Boolean(deskPlayDecisionMapLevels(args.normalized, displayDirection, line, play, args.currentPrice)), primarySafety.highConfidenceConditional)}`,
+            ...(primarySafety.highConfidenceConditional
+              ? ['High-confidence conditional trade plan - wait on the named completed 5M condition.']
+              : primarySafety.reviewOnly
+              ? [
+                  'Review levels only - not an executable trade plan.',
+                  ...(primarySafety.reason ? [`Reason: ${primarySafety.reason}.`] : []),
+                ]
+              : []),
+          ]
+        : [
+            'Map Side: WAIT N/A',
+            `Conflict: ${deskPlayConflictSummary(play, 'WAIT')}`,
+            'Readiness: review map - wait',
+          ]),
       ...deskPlayMainInstructionLines({
         play,
         deskState: args.deskState,
-        direction: waitMapSide,
-        lineInSand: play.lineInSand ?? deskPlayLineForDirection(play, waitMapSide === 'WAIT' ? 'LONG' : waitMapSide),
+        direction: displayDirection,
+        lineInSand: line,
       }),
-      ...readinessLinesFor(waitMapSide, waitPrimarySafety, longWait.hasLevels || shortWait.hasLevels),
+      ...deskPlayTargetToLinePromotionLines(play, displayDirection),
       '',
-      ...(waitUsefulHtfRows.length ? ['HTF Lines:', ...waitUsefulHtfRows] : []),
-      ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
+      ...directionalLines,
       '',
-      ...(decisionBand
-        ? [
-            'Overall play: CONFLICT / BATTLE ZONE / WAIT for completed 5M close outside the band.',
-            ...decisionBand.lines,
-            'Entry/stop/T1/T2: pending until one side confirms outside the band.',
+      ...(displayDirection === 'LONG' || displayDirection === 'SHORT'
+          ? [
+            `${displayDirection === 'LONG' ? 'Short' : 'Long'} Scenario:`,
+            displayDirection === 'LONG'
+              ? sideBreakoutLabel('SHORT', 'BELOW', shortTriggerLine)
+              : sideBreakoutLabel('LONG', 'ABOVE', longTriggerLine),
+            displayDirection === 'LONG'
+              ? `Short only if completed 5M candle closes below ${priceLine(shortTriggerLine)}.`
+              : `Long only if completed 5M candle closes above ${priceLine(longTriggerLine)}.`,
             '',
           ]
-        : [
-            ...longWaitDisplay.lines,
-            '',
-            ...shortWaitDisplay.lines,
-            '',
-          ]),
-      'No active LONG/SHORT plan with complete app-owned levels.',
-      deskPlayHtfTargetLine(play),
-      deskPlayRunnerLine(play),
+        : []),
+      ...(direction === 'WAIT' ? [`No Trade: ${noTradeText}`] : []),
+      ...(decisionBand ? decisionBand.lines : []),
+      ...deskPlayFvgDecisionZoneLines(play),
+      ...deskPlayHtfFvgParentReactionWatchLines(play, displayDirection),
+      ...deskPlayHtfFvgReactionMemoryLines(play, displayDirection),
+      ...deskPlayHtfFvgParentZoneStackLines(play, displayDirection),
+      ...deskPlayHtfFvgCascadeLines(play, displayDirection),
+      ...(hasAnyLevels && direction !== 'WAIT' ? [] : ['No active LONG/SHORT plan with complete app-owned levels.']),
+      ...(usefulHtfRows.length ? ['HTF Lines:', ...usefulHtfRows] : []),
+      ...(/N\/A \/ runner N\/A/i.test(htfTargetLine) ? [] : [htfTargetLine]),
+      ...(/Runner: N\/A/i.test(runnerLine) ? [] : [runnerLine]),
+      ...(direction === 'WAIT' ? [htfContext] : []),
       deskPlayBottomLineLine(direction),
-      '',
-      'Decision support only. No automated orders.',
-      waitStatusLine,
-      deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: waitHasReferenceLevels }),
+      statusLine,
+      deskPlayChartStatusLine({
+        hasChart: args.attachments.chartPlan,
+        hasLevels: direction === 'WAIT' ? false : hasAnyLevels,
+      }),
     ];
-  }
-  const lineInSand = deskPlayLineForDirection(play, direction);
-  const invalidWord = direction === 'LONG' ? 'below' : 'above';
-  const primary = sideLinesFor(direction);
-  const opposite = sideLinesFor(direction === 'LONG' ? 'SHORT' : 'LONG', { suppressPendingLevels: primary.hasLevels });
-  const primaryLevels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand, play, args.currentPrice);
-  const primarySafety = sidePresentationSafety(direction);
-  const htfRows = deskPlayHtfLineRows(play, args.currentPrice);
-  const usefulHtfRows = htfRows.some((row) => !/UNKNOWN;\s*changes at N\/A/i.test(row)) ? htfRows : [];
-  const statusLine = primarySafety.reviewOnly
-    ? primarySafety.highConfidenceConditional
-      ? `Status: High-confidence conditional trade plan; ${primarySafety.reason || 'completed 5M proof missing'}. Armed only after the named completed 5M condition.`
-      : `Status: Review levels only - not executable; ${primarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
-    : primarySafety.highConfidenceConditional
-      ? 'Status: High-confidence conditional trade plan; armed only after the named completed 5M condition.'
-    : 'Status: Review only until 5M trigger + canExecute.';
-  return [
-    `${args.instrument} Current Desk Plan`,
-    '',
-    `Primary: ${primaryPlanLabel(direction)}`,
-    deskPlayDecisionClassLine(primarySafety),
-    `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
-    ...deskPlayHtfRegimeLines(play, direction),
-    ...deskPlayLineDisplayLines(play, direction, lineInSand),
-    ...deskPlayTargetToLinePromotionLines(play, direction),
-    ...deskPlaySameSideCampaignStackLines(play, direction),
-    ...deskPlayActiveTacticalZoneLines(play, direction),
-    ...deskPlayHtfFvgParentReactionWatchLines(play, direction),
-    ...deskPlayHtfFvgReactionMemoryLines(play, direction),
-    ...deskPlayHtfFvgMicroMssProofLines(play, direction),
-    ...deskPlayHtfFvgParentZoneStackLines(play, direction),
-    ...deskPlayHtfFvgCascadeLines(play, direction),
-    ...deskPlayFreshReentryDisplayLines(play, direction),
-    ...deskPlayMainInstructionLines({
-      play,
-      deskState: args.deskState,
-      direction,
-      lineInSand,
-    }),
-    ...(primarySafety.highConfidenceConditional ? [] : readinessLinesFor(direction, primarySafety, primary.hasLevels || opposite.hasLevels)),
-    '',
-    ...(usefulHtfRows.length ? ['HTF Lines:', ...usefulHtfRows] : []),
-    ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
-    '',
-    ...(decisionBand
-      ? [
-          'Overall play: CONFLICT / BATTLE ZONE / WAIT for completed 5M close outside the band.',
-          ...decisionBand.lines,
-          'Entry/stop/T1/T2: pending until one side confirms outside the band.',
-          '',
-        ]
-      : [
-          ...primary.lines,
-          '',
-          ...opposite.lines,
-          '',
-        ]),
-    `Invalid ${invalidWord}: ${primaryLevels ? priceLine(primaryLevels.stop) : 'pending'}`,
-    deskPlayHtfTargetLine(play),
-    deskPlayRunnerLine(play),
-    deskPlayBottomLineLine(direction),
-    '',
-    'Decision support only. No automated orders.',
-    statusLine,
-    deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: primary.hasLevels || opposite.hasLevels }),
-  ];
+  };
+  return compactActionableDeskPlanLines();
 }
 
 function deskPlayHasCompletePlanningLevels(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): boolean {
@@ -2948,21 +2831,12 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     embeds: [
       {
         ...payload.embeds[0],
-        description: professionalizeReportText(scannerDeskPlayFallbackLines(args, direction).join('\n')),
+        description: professionalizeReportText(lines.join('\n')),
       },
     ],
   };
   if (flattenDiscordPayloadText(fallbackPayload).length <= maxMainText) return fallbackPayload;
-  if (!isHighConfidenceConditionalCandidate(args.candidates[0] || null, args.normalized)) return fallbackPayload;
-  return {
-    ...payload,
-    embeds: [
-      {
-        ...payload.embeds[0],
-        description: professionalizeReportText(scannerDeskPlayUltraFallbackLines(args, direction).join('\n')),
-      },
-    ],
-  };
+  return fallbackPayload;
 }
 
 function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {

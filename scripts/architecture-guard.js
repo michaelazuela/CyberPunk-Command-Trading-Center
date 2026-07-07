@@ -554,7 +554,7 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('Bias:') ||
     !formatterContent.includes('Line in sand:') ||
     !formatterContent.includes('Map Side:') ||
-    !formatterContent.includes('suppressPendingLevels') ||
+    !formatterContent.includes('compactSidePlanLines') ||
     !formatterContent.includes("discordAction === 'post_conditional'") ||
     !formatterContent.includes('Conflict:') ||
     !formatterContent.includes('Readiness:') ||
