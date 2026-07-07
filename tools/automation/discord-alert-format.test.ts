@@ -970,10 +970,11 @@ const farAwayConditionalPayload = compactDiscordSummary({
   },
 });
 const farAwayConditionalText = flattenDiscordPayloadText(farAwayConditionalPayload);
-assert.ok(farAwayConditionalText.includes('Entry zone: 7429.25-7431.50'));
+assert.ok(farAwayConditionalText.includes('Prior retest zone: 7429.25-7431.50'));
 assert.ok(farAwayConditionalText.includes('Current: 7470.50 (39.00 pts above zone)'));
-assert.ok(farAwayConditionalText.includes('Entry status: NOT ACTIVE - current price is above the active short zone; wait for a fresh completed 5M setup or migrated line.'));
-assert.ok(farAwayConditionalText.includes('Entry if fresh proof returns: 7430.50'));
+assert.ok(farAwayConditionalText.includes('Entry status: NO FRESH ENTRY - current price is above the active short zone; wait for a new completed 5M setup or migrated line.'));
+assert.ok(farAwayConditionalText.includes('Fresh levels: pending new 5M structure; do not use prior entry/stop/T1/T2 for a new trade.'));
+assert.ok(!farAwayConditionalText.includes('Entry if fresh proof returns: 7430.50'));
 assert.ok(!/^Entry: 7430\.50$/m.test(farAwayConditionalText));
 
 const targetToLineReviewCandidate = {
@@ -3870,6 +3871,64 @@ assert.match(unarmedShortDeskPlayText, /completed 5M close below 7540\.00/);
 assert.match(unarmedShortDeskPlayText, /Battle Plan:/);
 assert.match(unarmedShortDeskPlayText, /Entry: 7539\.50 \| Stop: 7561\.00 \| Risk: 21\.50 pts/);
 assert.match(unarmedShortDeskPlayText, /T1: 7507\.25 \| T2: 7496\.50/);
+
+const staleZoneShortCandidate = sampleCandidate('SHORT');
+staleZoneShortCandidate.setupType = SetupType.HtfDisplacementMssContinuation;
+staleZoneShortCandidate.entry = 7536;
+staleZoneShortCandidate.stop = 7571;
+staleZoneShortCandidate.target1 = 7483.5;
+staleZoneShortCandidate.target2 = 7466;
+staleZoneShortCandidate.riskPoints = 35;
+staleZoneShortCandidate.requiredTrigger = 'Completed 5M or 15M close below 7543.00 required before short continuation is active.';
+staleZoneShortCandidate.nextAction = 'MSS_CONTINUATION_RETEST_PENDING. Wait for completed 5M retest/rejection below the decision level.';
+(staleZoneShortCandidate as any).activeRuleset = {
+  htfLineInSand: {
+    lineInSand: 7543,
+  },
+};
+const staleZoneShortPayload = compactDiscordSummary({
+  session: 'lunch',
+  tradeDate: '2026-07-07',
+  instrument: 'MES',
+  planVersionId: 'LUNCH-STALE-ZONE-SHORT',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [staleZoneShortCandidate],
+  },
+  candidates: [staleZoneShortCandidate],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  currentPrice: 7545.5,
+  deskState: {
+    lineInSand: 7543,
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      lineInSand: 7566,
+      shortBelow: 7536,
+      longAbove: 7550,
+      discordEligible: false,
+      activeTacticalZone: {
+        direction: 'SHORT',
+        lower: 7560,
+        upper: 7561.5,
+        state: 'moved_away',
+        noChase: 'No chase away from 7560.00-7561.50.',
+      },
+      shortBias: { state: 'primary', lineInSand: 7543 },
+      longBias: { state: 'countertrend_review', lineInSand: 7550 },
+    },
+  },
+});
+const staleZoneShortText = flattenDiscordPayloadText(staleZoneShortPayload);
+assert.match(staleZoneShortText, /SHORT BELOW 7543\.00: NO FRESH ENTRY/);
+assert.match(staleZoneShortText, /Prior retest zone: 7560\.00-7561\.50/);
+assert.match(staleZoneShortText, /Fresh levels: pending new 5M structure/);
+assert.doesNotMatch(staleZoneShortText, /Entry if fresh proof returns/);
+assert.doesNotMatch(staleZoneShortText, /Entry: 7536\.00/);
+assert.doesNotMatch(staleZoneShortText, /T1: 7483\.50/);
+assert.equal(staleZoneShortPayload.components, undefined);
 
 console.log('Discord compact alert formatter verified.');
 

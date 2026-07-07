@@ -1894,6 +1894,20 @@ function candidateHtfContextLine(candidate: SetupCandidate): string | null {
   return `HTF context: ${sufficiency}; reliability ${state.classificationReliability}.`;
 }
 
+function candidateLeftActiveTacticalZone(args: CompactDiscordSummaryArgs, candidate: SetupCandidate | null | undefined): boolean {
+  if (!candidate || candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return false;
+  const direction = candidate.direction;
+  const candidateZone = candidate.tacticalZone?.direction === direction ? candidate.tacticalZone : null;
+  const deskZone = args.deskState?.primaryDeskPlay?.activeTacticalZone?.direction === direction
+    ? args.deskState.primaryDeskPlay.activeTacticalZone
+    : null;
+  const activeZone = candidateZone || deskZone;
+  const lower = isFinitePrice(activeZone?.lower) ? activeZone.lower : null;
+  const upper = isFinitePrice(activeZone?.upper) ? activeZone.upper : null;
+  const current = isFinitePrice(args.currentPrice) ? args.currentPrice : null;
+  return lower !== null && upper !== null && current !== null && (current < lower || current > upper);
+}
+
 function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate, normalized: CompactNormalizedPlan, status: DiscordDecisionStatus): string[] {
   const levels = appTargetLevels(candidate, normalized);
   const direction = candidate.direction === 'SHORT' ? 'SHORT' : 'LONG';
@@ -1934,6 +1948,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     lineInSand,
   });
   const entryLabel = counterStructureLines.length ? 'Conditional entry reference' : 'Entry';
+  const activeZoneLeftBehind = status !== 'EXECUTABLE' && Boolean(currentVsZone && currentVsZone.state !== 'inside');
   const conditionalLevelLines = (): string[] => {
     if (status === 'EXECUTABLE' || !currentVsZone || currentVsZone.state === 'inside') {
       return [
@@ -1949,19 +1964,17 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     }
     const noEntryInstruction = direction === 'SHORT'
       ? currentVsZone.state === 'above'
-        ? 'Entry status: NOT ACTIVE - current price is above the active short zone; wait for a fresh completed 5M setup or migrated line.'
-        : 'Entry status: NO CHASE - price is already below the active short zone; wait for a fresh completed 5M retest.'
+        ? 'Entry status: NO FRESH ENTRY - current price is above the active short zone; wait for a new completed 5M setup or migrated line.'
+        : 'Entry status: NO FRESH ENTRY / NO CHASE - price is already below the active short zone; wait for a new completed 5M retest/rejection.'
       : currentVsZone.state === 'below'
-        ? 'Entry status: NOT ACTIVE - current price is below the active long zone; wait for a fresh completed 5M setup or migrated line.'
-        : 'Entry status: NO CHASE - price is already above the active long zone; wait for a fresh completed 5M retest.';
+        ? 'Entry status: NO FRESH ENTRY - current price is below the active long zone; wait for a new completed 5M setup or migrated line.'
+        : 'Entry status: NO FRESH ENTRY / NO CHASE - price is already above the active long zone; wait for a new completed 5M retest/hold.';
     return [
-      `Entry zone: ${zoneRangeLine(activeZoneLower, activeZoneUpper)}`,
+      `Prior retest zone: ${zoneRangeLine(activeZoneLower, activeZoneUpper)}`,
       `Current: ${priceLine(currentPrice)} (${numberLine(currentVsZone.distance)} pts ${currentVsZone.state} zone)`,
       noEntryInstruction,
-      `Entry if fresh proof returns: ${priceLine(candidate.entry)}`,
-      `Stop: ${priceLine(levels.stop)}`,
-      `T1: ${priceLine(levels.target1)}`,
-      `T2: ${priceLine(levels.target2)}`,
+      `Fresh trigger required: new completed 5M retest/rejection or migrated line ${direction === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`,
+      'Fresh levels: pending new 5M structure; do not use prior entry/stop/T1/T2 for a new trade.',
     ];
   };
   const statusText = htfPublishIssue === 'opposed'
@@ -1996,7 +2009,9 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     '',
     ...counterStructureLines,
     ...(counterStructureLines.length ? [''] : []),
-    sideBreakoutLabel(direction, triggerWord, lineInSand),
+    activeZoneLeftBehind
+      ? `${direction} ${triggerWord} ${priceLine(lineInSand)}: NO FRESH ENTRY - prior tactical zone already left.`
+      : sideBreakoutLabel(direction, triggerWord, lineInSand),
     ...(referenceOnly ? [
       'Tactical levels - not execution approval.',
       'Sniper watch: 1M timing only; 5M close/hold required.',
@@ -2006,15 +2021,19 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
       ...conditionalLevelLines(),
     ]),
     '',
-    `Invalid ${invalidWord}: ${priceLine(levels.stop)}`,
-    candidateHtfTargetLine(candidate, levels),
+    ...(activeZoneLeftBehind
+      ? ['Fresh invalidation/targets: pending after new completed 5M proof.']
+      : [
+          `Invalid ${invalidWord}: ${priceLine(levels.stop)}`,
+          candidateHtfTargetLine(candidate, levels),
+        ]),
     '',
     'Decision support only. No automated orders.',
     '',
     `Status: ${statusText}`,
     deskPlayChartStatusLine({
       hasChart: args.attachments.chartPlan,
-      hasLevels: Boolean(candidate.entry != null && levels.stop != null && levels.target1 != null && levels.target2 != null),
+      hasLevels: !activeZoneLeftBehind && Boolean(candidate.entry != null && levels.stop != null && levels.target1 != null && levels.target2 != null),
     }),
   ];
 }
@@ -3539,8 +3558,11 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         'Decision support only.',
       ];
 
-  const defaultComponents = defaultOutcomeComponentsForSummary(args, designerStatus === 'NO TRADE' ? null : direction === 'LONG' || direction === 'SHORT' ? direction : null);
-  const components = args.components || defaultComponents;
+  const activeZoneLeftBehind = designerStatus !== 'EXECUTABLE' && candidateLeftActiveTacticalZone(args, bestCandidate);
+  const defaultComponents = activeZoneLeftBehind
+    ? undefined
+    : defaultOutcomeComponentsForSummary(args, designerStatus === 'NO TRADE' ? null : direction === 'LONG' || direction === 'SHORT' ? direction : null);
+  const components = activeZoneLeftBehind ? undefined : args.components || defaultComponents;
   const includeComponents = Boolean(components?.length);
   const payload: DiscordWebhookPayload = {
     username: 'Quant Desk',
