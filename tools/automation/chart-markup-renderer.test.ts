@@ -540,11 +540,12 @@ try {
     contextLine: 7591,
     contextLabel: 'Line in the sand',
   });
-  assert.ok(failedShortReviewHtml.includes('SHORT DESK MAP'));
+  assert.ok(failedShortReviewHtml.includes('WAIT / CONFLICT'));
   assert.ok(failedShortReviewHtml.includes('WATCH ONLY'));
-  assert.ok(failedShortReviewHtml.includes('SHORT Watch - HTF Caution'));
+  assert.ok(failedShortReviewHtml.includes('SHORT side blocked - HTF caution'));
+  assert.ok(!failedShortReviewHtml.includes('SHORT DESK MAP'));
   assert.ok(!failedShortReviewHtml.includes('LONG Watch - Not A Trade Plan'));
-  assert.ok(failedShortReviewHtml.includes('Action: no execution'));
+  assert.ok(failedShortReviewHtml.includes('Action: wait for clean 5M invalidation'));
   assert.ok(failedShortReviewHtml.includes('DESK READINESS'));
   assert.ok(failedShortReviewHtml.includes('ALERT QUALITY'));
   assert.ok(
@@ -567,6 +568,7 @@ try {
   assert.ok(failedShortReviewHtml.includes('Readiness: <tspan fill="#f8fafc">watch only - do not execute</tspan>'));
   assert.ok(failedShortReviewHtml.includes('HTF Context: <tspan fill="#f8fafc">LONG</tspan>'));
   assert.ok(failedShortReviewHtml.includes('do not execute this side'));
+  assert.ok(failedShortReviewHtml.includes('Alert Quality: <tspan fill="#facc15">25/100</tspan>'));
   assert.ok(failedShortReviewHtml.includes('No long plan. 7581.25 is the SHORT pullback review entry zone.'));
   assert.ok(failedShortReviewHtml.includes('Long requires completed 5M bullish invalidation above the active short structure.'));
   const mismatchedQualityHtml = buildChartMarkupHtmlForTest({

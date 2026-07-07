@@ -788,7 +788,9 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
   const prefix = sessionPlanPrefix(input.sessionLabel);
   const unsafeDeskReview = deskPlayUnsafeReview(model);
   const title = isDeskPlayContext
-    ? `[${prefix} PREP] ${input.instrument} - ${model.direction} DESK MAP`
+    ? unsafeDeskReview
+      ? `[${prefix} PREP] ${input.instrument} - WAIT / CONFLICT`
+      : `[${prefix} PREP] ${input.instrument} - ${model.direction} DESK MAP`
     : `[${prefix} ${planHeadlineMode(status)}] ${input.instrument} - ${model.direction}`;
   const badge = isDeskPlayContext ? unsafeDeskReview ? 'WATCH ONLY' : 'REVIEW ONLY' : status === 'EXECUTABLE' ? status : 'REVIEW ONLY';
   const deskContextAction = model.direction === 'SHORT'
@@ -796,7 +798,7 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
     : 'Action: wait for 5M close above line';
   const action = isDeskPlayContext
     ? unsafeDeskReview
-      ? 'Action: no execution'
+      ? 'Action: wait for clean 5M invalidation'
       : hasDeskPlayLevels
         ? 'Action: wait for completed 5M proof'
         : deskContextAction
@@ -806,7 +808,7 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
     <text x="558" y="61" class="banner-title" fill="#f8fafc">${escapeHtml(compact(title, 34))}</text>
     <rect x="1290" y="35" width="192" height="38" rx="19" fill="${isDeskPlayContext ? '#38bdf8' : statusColor(status)}" opacity=".94" />
     <text x="1386" y="61" text-anchor="middle" class="banner-status">${escapeHtml(badge)}</text>
-    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? unsafeDeskReview ? `${model.direction} Watch - HTF Caution` : hasDeskPlayLevels ? 'Desk Map - Review Levels' : 'Desk Map - Context Only' : cardModelLabel(model.model), 42))}</text>
+    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? unsafeDeskReview ? `${model.direction} side blocked - HTF caution` : hasDeskPlayLevels ? 'Desk Map - Review Levels' : 'Desk Map - Context Only' : cardModelLabel(model.model), 42))}</text>
     <text x="1076" y="94" class="banner-action">${escapeHtml(action)}</text>
   `;
 }
@@ -828,6 +830,7 @@ function renderDeskPlayMetricChip(args: {
 
 function renderRiskStrip(model: PlanRenderModel): string {
   if (model.renderMode === 'desk_play_context') {
+    const unsafeReview = deskPlayUnsafeReview(model);
     if (isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2)) {
       return `
         ${renderDeskPlayMetricChip({ x: 466, label: 'Risk', value: model.risk ? `${model.risk.toFixed(2)} pts` : 'N/A', width: 174 })}
@@ -838,8 +841,8 @@ function renderRiskStrip(model: PlanRenderModel): string {
     }
     return `
       <rect x="466" y="126" width="912" height="48" rx="8" fill="#050908" stroke="#38bdf8" stroke-width="1.6" opacity=".96" />
-      <text x="488" y="157" class="risk-strip">Context: <tspan fill="#f8fafc">Watch only</tspan></text>
-      <text x="742" y="157" class="risk-strip">Line: <tspan fill="#f8fafc">${money(model.contextLine)}</tspan></text>
+      <text x="488" y="157" class="risk-strip">${unsafeReview ? 'Status' : 'Context'}: <tspan fill="#f8fafc">${unsafeReview ? 'WAIT' : 'Watch only'}</tspan></text>
+      <text x="742" y="157" class="risk-strip">${unsafeReview ? 'Invalidation' : 'Line'}: <tspan fill="#f8fafc">${money(model.contextLine)}</tspan></text>
       <text x="1038" y="157" class="risk-strip">No entry / stop / T1 / T2</text>
     `;
   }
@@ -865,6 +868,7 @@ function latestClose(plan: PlanRenderModel): number | null {
 
 function renderRiskSummary(model: PlanRenderModel): string {
   if (model.renderMode === 'desk_play_context') {
+    const unsafeReview = deskPlayUnsafeReview(model);
     const runnerText = isPrice(model.runner)
       ? `${model.htfRunnerLabel || model.htfNextDrawLabel || 'HTF runner'} ${money(model.runner)}`
       : 'N/A';
@@ -884,11 +888,11 @@ function renderRiskSummary(model: PlanRenderModel): string {
       <rect x="24" y="252" width="392" height="214" rx="9" fill="#070b0f" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
       <text x="220" y="283" text-anchor="middle" class="panel-text">DESK PLAY CONTEXT</text>
       <text x="46" y="318" class="small">Line: <tspan fill="#38bdf8">${money(model.contextLine)}</tspan></text>
-      <text x="46" y="350" class="small">Status: <tspan fill="#facc15">Watch only</tspan></text>
+      <text x="46" y="350" class="small">Status: <tspan fill="#facc15">${unsafeReview ? 'Conflict / wait' : 'Watch only'}</tspan></text>
       <text x="46" y="382" class="small">Entry: <tspan fill="#f8fafc">not approved</tspan></text>
       <text x="46" y="414" class="small">Stop: <tspan fill="#f8fafc">not approved</tspan></text>
       <text x="46" y="442" class="small">Targets: <tspan fill="#f8fafc">not approved</tspan></text>
-      <text x="46" y="462" class="small">Rule: <tspan fill="#f8fafc">5M trigger still required</tspan></text>
+      <text x="46" y="462" class="small">Rule: <tspan fill="#f8fafc">${unsafeReview ? 'Clean 5M invalidation required' : '5M trigger still required'}</tspan></text>
     `;
   }
   const border = model.validationSeverity === 'error' ? '#ef4444' : model.validationSeverity === 'review' ? '#f97316' : '#64748b';
@@ -1242,7 +1246,11 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const visibleTimeLabels = renderTimeAxisLabels(candles, xStep, plot.left, plot.right);
   const isDeskPlayContext = plan.renderMode === 'desk_play_context';
   const displayPlanStatus = planDisplayStatus(plan);
-  const scoreLabel = isDeskPlayContext ? 'Map Read' : displayPlanStatus === 'EXECUTABLE' ? 'Score' : 'Quality';
+  const unsafeDeskReview = isDeskPlayContext && deskPlayUnsafeReview(plan);
+  const displayScore = unsafeDeskReview
+    ? alertQualityComponentTotal(alertQualityBreakdown(candidate))
+    : score;
+  const scoreLabel = isDeskPlayContext ? unsafeDeskReview ? 'Alert Quality' : 'Map Read' : displayPlanStatus === 'EXECUTABLE' ? 'Score' : 'Quality';
   const hasDeskPlayLevels = isDeskPlayContext && isPrice(plan.entry) && isPrice(stop) && isPrice(t1) && isPrice(t2);
   const entryZone = (!isDeskPlayContext || hasDeskPlayLevels) && isPrice(entryLow) && isPrice(entryHigh)
     ? `<rect x="758" y="${y(entryHigh)}" width="${plot.right - 758}" height="${Math.max(8, y(entryLow) - y(entryHigh))}" fill="${isLong ? '#22c55e' : '#f97316'}" opacity="0.27" stroke="${isLong ? '#4ade80' : '#fb923c'}" />
@@ -1350,7 +1358,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   <line x1="14" y1="78" x2="442" y2="78" stroke="#334155" />
   <rect x="32" y="94" width="160" height="30" rx="15" fill="${statusColor(plan.displayStatus)}" opacity=".92" />
   <text x="112" y="115" text-anchor="middle" class="status-badge">${escapeHtml(plan.displayStatus)}</text>
-  <text x="210" y="115" class="panel-text">${scoreLabel}: <tspan fill="#facc15">${score == null ? 'N/A' : `${Math.round(score)}/100`}</tspan></text>
+  <text x="210" y="115" class="panel-text">${scoreLabel}: <tspan fill="#facc15">${displayScore == null ? 'N/A' : `${Math.round(displayScore)}/100`}</tspan></text>
     <text x="32" y="150" class="panel-text">Model: <tspan fill="#4ade80">${escapeHtml(compact(sidePanelModelLabel(model), 31))}</tspan></text>
   <line x1="32" y1="170" x2="424" y2="170" stroke="#334155" />
   <text x="32" y="196" class="context-mini">Higher TF: <tspan class="context-value">${escapeHtml(String(contextBias))}</tspan></text>

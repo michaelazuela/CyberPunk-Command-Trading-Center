@@ -6268,9 +6268,9 @@ try {
     contextLine: 7540,
     contextLabel: 'Line in the sand',
   });
-  assert.ok(/\[AM PREP\] MES - SHORT (?:DESK MAP|FAILED)/.test(unarmedShortChartHtml));
+  assert.ok(unarmedShortChartHtml.includes('[AM PREP] MES - WAIT / CONFLICT'));
   assert.ok(unarmedShortChartHtml.includes('WATCH ONLY'));
-  assert.ok(unarmedShortChartHtml.includes('Action: no execution'));
+  assert.ok(unarmedShortChartHtml.includes('Action: wait for clean 5M invalidation'));
   assert.ok(unarmedShortChartHtml.includes('WATCH / CONTEXT CHART ONLY'));
   assert.ok(unarmedShortChartHtml.includes('Line in the sand'));
   assert.ok(!unarmedShortChartHtml.includes('REVIEW ENTRY ZONE'));
