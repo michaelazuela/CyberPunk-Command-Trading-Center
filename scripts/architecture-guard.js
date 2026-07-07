@@ -643,11 +643,13 @@ function checkScannerVisibilityMetadataBoundary() {
   if (
     !scannerAutomationContent.includes('Desk Play - Review Planning Levels') ||
     !scannerAutomationContent.includes('Desk Play chart shows review-only app-owned planning levels.') ||
+    !scannerAutomationContent.includes('No short plan yet.') ||
+    !scannerAutomationContent.includes('No long plan yet.') ||
     !scannerAutomationContent.includes('deskPlaySideQualityScorecard(play.longBias, play.shortBias)') ||
     !scannerAutomationContent.includes('planVersionId: deskPlayPlanVersionId') ||
-    !scannerAutomationContent.includes('candidateForDeskPlayContextChart(deskState, normalized) || candidate')
+    !scannerAutomationContent.includes('candidateForDeskPlayContextChart(deskState, normalized, currentPrice) || candidate')
   ) {
-    fail('nt-scanner.ts must create Desk Play chart candidates with review-only wording, two-sided quality metadata, and matching pending RAG records.');
+    fail('nt-scanner.ts must create Desk Play chart candidates with review-only/watch-only wording, two-sided quality metadata, line-arming proof, and matching pending RAG records.');
   }
   if (
     scannerAutomationContent.includes('Desk Play - Conditional Planning Levels') ||

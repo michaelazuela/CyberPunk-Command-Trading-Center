@@ -6215,6 +6215,68 @@ try {
   assert.equal(projectedContextChartCandidate?.executionStatus, ExecutionStatus.Conditional);
   assert.ok(projectedContextChartCandidate?.decisionQualityRecommendation?.includes('Review planning levels only'));
   assert.ok(projectedContextChartCandidate?.missingEvidence?.includes('Desk Play chart shows review-only app-owned planning levels.'));
+  const unarmedShortChartState: typeof deskPlayState = {
+    ...deskPlayState,
+    primaryDeskPlay: {
+      ...deskPlayState.primaryDeskPlay,
+      direction: 'SHORT' as const,
+      lineInSand: 7540,
+      shortBelow: 7540,
+      longAbove: 7580.25,
+      nextTrigger: 'Completed 5M close below 7540.00 required before short continuation is active.',
+      noChase: 'No chase: wait for a completed 5M close below 7540.00.',
+      shortBias: {
+        ...deskPlayState.primaryDeskPlay.shortBias,
+        state: 'primary' as const,
+        lineInSand: 7540,
+        decisionQualityScore: 90,
+      },
+      longBias: {
+        ...deskPlayState.primaryDeskPlay.longBias,
+        state: 'secondary' as const,
+        lineInSand: 7580.25,
+      },
+    },
+  };
+  const unarmedShortContextChartCandidate = candidateForDeskPlayContextChart(unarmedShortChartState, {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'SHORT',
+    entry: 7539.5,
+    stop: 7561,
+    t1: 7507.25,
+    t2: 7496.5,
+    riskPoints: 21.5,
+    noTradeReason: 'EntryTriggerPending',
+    setupCandidates: [],
+  } as any, 7542.25);
+  assert.equal(unarmedShortContextChartCandidate?.direction, 'SHORT');
+  assert.equal(unarmedShortContextChartCandidate?.entry, null);
+  assert.equal(unarmedShortContextChartCandidate?.stop, null);
+  assert.equal(unarmedShortContextChartCandidate?.target1, null);
+  assert.equal(unarmedShortContextChartCandidate?.target2, null);
+  assert.ok(unarmedShortContextChartCandidate?.scenarioLabel?.includes('Watch Only'));
+  assert.ok(unarmedShortContextChartCandidate?.decisionQualityRecommendation?.includes('No short plan yet. Current 7542.25 is above the line 7540.00'));
+  assert.ok(unarmedShortContextChartCandidate?.missingEvidence?.some((item) => item.includes('No short plan yet. Current 7542.25 is above the line 7540.00')));
+  const unarmedShortChartHtml = buildChartMarkupHtmlForTest({
+    chartContext: chartContext as ChartContext,
+    candidate: unarmedShortContextChartCandidate as SetupCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-07-07',
+    sessionLabel: 'morning',
+    renderMode: 'desk_play_context',
+    contextLine: 7540,
+    contextLabel: 'Line in the sand',
+  });
+  assert.ok(/\[AM PREP\] MES - SHORT (?:DESK MAP|FAILED)/.test(unarmedShortChartHtml));
+  assert.ok(unarmedShortChartHtml.includes('WATCH ONLY'));
+  assert.ok(unarmedShortChartHtml.includes('Action: no execution'));
+  assert.ok(unarmedShortChartHtml.includes('WATCH / CONTEXT CHART ONLY'));
+  assert.ok(unarmedShortChartHtml.includes('Line in the sand'));
+  assert.ok(!unarmedShortChartHtml.includes('REVIEW ENTRY ZONE'));
+  assert.ok(!unarmedShortChartHtml.includes('Entry Zone:'));
+  assert.ok(!unarmedShortChartHtml.includes('T1: <tspan'));
+  assert.ok(!unarmedShortChartHtml.includes('T2: <tspan'));
   const deskPlayResult = await prepareLiveScannerDeskPlayAlertArtifacts({
     session: 'lunch',
     tradeDate: '2026-05-26',

@@ -342,7 +342,11 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
   const contextLabel = compact(input.contextLabel || candidate.activeRuleset?.htfLineInSand?.lineReason || 'Line in the sand', 22);
   const contextBias = String(input.chartContext?.multiTimeframeContext?.alignment?.alignedDirection || input.chartContext?.marketStructure?.trend || 'unknown');
   const trendBias = String(input.chartContext?.multiTimeframeContext?.alignment?.executionBias || input.chartContext?.marketStructure?.trend || 'unknown');
-  const narrative = compact(input.chartContext?.sessionStory?.summary || candidate.levelContextSummary || candidate.nextAction || 'Wait for completed 5M confirmation.', 34);
+  const narrative = isDeskPlayContext && !appTargetsValid
+    ? direction === 'SHORT'
+      ? 'Wait for 5M close below line'
+      : 'Wait for 5M close above line'
+    : compact(input.chartContext?.sessionStory?.summary || candidate.levelContextSummary || candidate.nextAction || 'Wait for completed 5M confirmation.', 34);
   const staleT1 = targetLooksStale(t1, candles, risk);
   const staleT2 = targetLooksStale(t2, candles, risk);
   const staleRunner = targetLooksStale(runner, candles, risk);
@@ -573,6 +577,7 @@ function qualityDisplay(item: DecisionQualityScoreItem | null): string {
 
 function deskPlayOpposingPlanClarifier(model: PlanRenderModel): { fullText: string; lines: string[] } | null {
   if (model.renderMode !== 'desk_play_context') return null;
+  if (!isPrice(model.entry)) return null;
   if (model.direction === 'LONG') {
     const entryLabel = money(model.entry);
     const fullText = `No short plan. ${entryLabel} is the LONG pullback review entry zone. Short requires completed 5M bearish invalidation below the active long structure.`;
@@ -693,6 +698,13 @@ function renderWatchContextNotice(model: PlanRenderModel): string {
   const unsafeReview = deskPlayUnsafeReview(model);
   const readiness = deskPlayReadinessContext(model);
   const opposingClarifier = deskPlayOpposingPlanClarifier(model);
+  const nextStep = unsafeReview
+    ? 'do not execute this side'
+    : hasDeskPlayLevels
+      ? 'completed 5M proof'
+      : model.direction === 'SHORT'
+        ? '5M close below line'
+        : '5M close above line';
   return `
     <rect x="24" y="486" width="392" height="314" rx="7" fill="#020807" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
     <text x="38" y="515" class="alert-title" fill="#38bdf8">DESK READINESS</text>
@@ -705,7 +717,7 @@ function renderWatchContextNotice(model: PlanRenderModel): string {
     <text x="38" y="646" class="small">Execution: <tspan fill="#facc15">Review only / canExecute=false</tspan></text>
     <text x="38" y="666" class="small">Readiness: <tspan fill="#f8fafc">${escapeHtml(readiness.status)}</tspan></text>
     <text x="38" y="686" class="small">HTF Context: <tspan fill="#f8fafc">${escapeHtml(readiness.htf)}</tspan></text>
-    <text x="38" y="706" class="small">Next: <tspan fill="#f8fafc">${unsafeReview ? 'do not execute this side' : hasDeskPlayLevels ? 'completed 5M proof' : 'protected 5M stop required'}</tspan></text>
+    <text x="38" y="706" class="small">Next: <tspan fill="#f8fafc">${nextStep}</tspan></text>
     ${opposingClarifier ? `
       <title>${escapeHtml(opposingClarifier.fullText)}</title>
       <text x="38" y="726" class="small" fill="#facc15">${escapeHtml(opposingClarifier.lines[0])}</text>
@@ -782,15 +794,22 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
       : `[${prefix} PREP] ${input.instrument} - ${model.direction} DESK MAP`
     : `[${prefix} ${planHeadlineMode(status)}] ${input.instrument} - ${model.direction}`;
   const badge = isDeskPlayContext ? unsafeDeskReview ? 'WATCH ONLY' : 'REVIEW ONLY' : status === 'EXECUTABLE' ? status : 'REVIEW ONLY';
+  const deskContextAction = model.direction === 'SHORT'
+    ? 'Action: wait for 5M close below line'
+    : 'Action: wait for 5M close above line';
   const action = isDeskPlayContext
-    ? unsafeDeskReview ? 'Action: no execution' : hasDeskPlayLevels ? 'Action: wait for completed 5M proof' : 'Action: wait for protected 5M stop'
+    ? unsafeDeskReview
+      ? 'Action: no execution'
+      : hasDeskPlayLevels
+        ? 'Action: wait for completed 5M proof'
+        : deskContextAction
     : actionStateLine(status);
   return `
     <rect x="462" y="20" width="1054" height="100" rx="10" fill="${headerFill}" stroke="${accent}" stroke-width="2.4" opacity=".97" />
     <text x="558" y="61" class="banner-title" fill="#f8fafc">${escapeHtml(compact(title, 34))}</text>
     <rect x="1290" y="35" width="192" height="38" rx="19" fill="${isDeskPlayContext ? '#38bdf8' : statusColor(status)}" opacity=".94" />
     <text x="1386" y="61" text-anchor="middle" class="banner-status">${escapeHtml(badge)}</text>
-    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? unsafeDeskReview ? `${oppositeDirection} Watch - Not A Trade Plan` : 'Desk Map - Review Levels' : cardModelLabel(model.model), 42))}</text>
+    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? unsafeDeskReview ? `${oppositeDirection} Watch - Not A Trade Plan` : hasDeskPlayLevels ? 'Desk Map - Review Levels' : 'Desk Map - Context Only' : cardModelLabel(model.model), 42))}</text>
     <text x="1076" y="94" class="banner-action">${escapeHtml(action)}</text>
   `;
 }

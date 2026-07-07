@@ -3826,12 +3826,21 @@ function deskPlaySideQualityScorecard(
 export function candidateForDeskPlayContextChart(
   deskState: DeskState,
   normalized?: ReturnType<typeof buildAppTradePlan> | null,
+  currentPrice?: number | null,
 ): SetupCandidate | null {
   const play = deskState.primaryDeskPlay;
   if (!play.discordEligible || (play.direction !== 'LONG' && play.direction !== 'SHORT')) return null;
   const primaryBias = play.direction === 'LONG' ? play.longBias : play.shortBias;
   const planningLevels = deskPlayPlanningLevels({ deskState, normalized });
-  const hasPlanningLevels = isFiniteTradePrice(planningLevels.entry) &&
+  const lineInSand = deskPlayLineForDirection(deskState, play.direction) ?? play.lineInSand;
+  const arming = scannerDeskPlayFallbackArmingState({
+    direction: play.direction,
+    line: lineInSand,
+    currentPrice: currentPrice ?? null,
+    canExecute: deskState.canExecute,
+  });
+  const hasPlanningLevels = arming.armed &&
+    isFiniteTradePrice(planningLevels.entry) &&
     isFiniteTradePrice(planningLevels.stop) &&
     isFiniteTradePrice(planningLevels.target1) &&
     isFiniteTradePrice(planningLevels.target2);
@@ -3840,7 +3849,7 @@ export function candidateForDeskPlayContextChart(
     'canExecute=false',
     hasPlanningLevels
       ? 'Desk Play chart shows review-only app-owned planning levels.'
-      : 'Protected 5M structure stop not confirmed; planning levels unavailable.',
+      : arming.reason || 'Protected 5M structure stop not confirmed; planning levels unavailable.',
     ...(play.counterStructureConditional?.counterStructureConditional
       ? ['Review Only - counter-structure conditional; not execution approval.']
       : []),
@@ -3855,17 +3864,17 @@ export function candidateForDeskPlayContextChart(
     detectedStatus: SetupCandidateStatus.Conditional,
     confidence: 'Low',
     priority: 0,
-    entry: planningLevels.entry,
-    stop: planningLevels.stop,
-    target1: planningLevels.target1,
-    target2: planningLevels.target2,
-    riskPoints: planningLevels.riskPoints,
+    entry: hasPlanningLevels ? planningLevels.entry : null,
+    stop: hasPlanningLevels ? planningLevels.stop : null,
+    target1: hasPlanningLevels ? planningLevels.target1 : null,
+    target2: hasPlanningLevels ? planningLevels.target2 : null,
+    riskPoints: hasPlanningLevels ? planningLevels.riskPoints : null,
     invalidation: play.invalidation || deskState.invalidation || null,
     decisionQualityScore: primaryBias.decisionQualityScore ?? primaryBias.rankScore ?? null,
     decisionQualityScorecard: deskPlaySideQualityScorecard(play.longBias, play.shortBias),
     decisionQualityRecommendation: hasPlanningLevels
       ? 'Review planning levels only: targets are app-computed from entry to protected structure stop; canExecute remains false.'
-      : 'Desk Play context only: wait for completed 5M proof and protected structure stop.',
+      : arming.reason || 'Desk Play context only: wait for completed 5M proof and protected structure stop.',
     rankScore: primaryBias.rankScore ?? null,
     evidence: [
       play.summary,
@@ -3881,7 +3890,7 @@ export function candidateForDeskPlayContextChart(
     executionStatus: ExecutionStatus.Conditional,
     blockReason: NoTradeReason.EntryTriggerPending,
     requiredTrigger: play.nextTrigger || deskState.nextTrigger || primaryBias.nextTrigger || null,
-    nextAction: play.noChase || 'No chase. Wait for completed 5M proof and app-owned gates.',
+    nextAction: arming.reason || play.noChase || 'No chase. Wait for completed 5M proof and app-owned gates.',
     reducedRiskPlan: null,
     activeRuleset: {
       htfLineInSand: {
@@ -3891,7 +3900,7 @@ export function candidateForDeskPlayContextChart(
         appliesToAllModels: true,
         affectsExecution: false,
         direction: play.direction,
-        lineInSand: play.lineInSand,
+        lineInSand,
         lineReason: 'Desk Play line in the sand',
         requiredClose: play.nextTrigger || primaryBias.nextTrigger || null,
         obstacleType: null,
@@ -6767,10 +6776,10 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
 }> {
   const deskState = withScannerReviewMapPresentation({
     deskState: args.deskState,
-    candidate: candidateForDeskPlayContextChart(args.deskState, args.normalized),
+    candidate: candidateForDeskPlayContextChart(args.deskState, args.normalized, args.currentPrice),
     normalized: args.normalized,
   });
-  const contextCandidate = candidateForDeskPlayContextChart(deskState, args.normalized);
+  const contextCandidate = candidateForDeskPlayContextChart(deskState, args.normalized, args.currentPrice);
   const play = deskState.primaryDeskPlay;
   const chartContextLine = play.activeTacticalLine?.activeLine ?? play.lineInSand;
   const chartMarkup = contextCandidate
@@ -6803,11 +6812,11 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
     ? {
         ...args.normalized,
         decision: contextCandidate.direction,
-        entry: contextCandidate.entry ?? args.normalized.entry ?? null,
-        stop: contextCandidate.stop ?? args.normalized.stop ?? null,
-        t1: contextCandidate.target1 ?? args.normalized.t1 ?? null,
-        t2: contextCandidate.target2 ?? args.normalized.t2 ?? null,
-        riskPoints: contextCandidate.riskPoints ?? args.normalized.riskPoints ?? null,
+        entry: contextCandidate.entry ?? null,
+        stop: contextCandidate.stop ?? null,
+        t1: contextCandidate.target1 ?? null,
+        t2: contextCandidate.target2 ?? null,
+        riskPoints: contextCandidate.riskPoints ?? null,
       }
     : args.normalized;
   let payload = buildDiscordPayload({
@@ -7061,14 +7070,14 @@ export async function prepareScannerMorningHtfDeskMapArtifacts(args: {
   });
   const deskState = withScannerReviewMapPresentation({
     deskState: args.deskState,
-    candidate: candidateForDeskPlayContextChart(args.deskState, args.normalized),
+    candidate: candidateForDeskPlayContextChart(args.deskState, args.normalized, args.currentPrice),
     normalized: args.normalized,
   });
   const play = deskState.primaryDeskPlay;
   const displayDirection = scannerHtfDeskMapDisplayDirection(play);
   const contextCandidate = displayDirection === 'WAIT'
     ? null
-    : candidateForDeskPlayContextChart(deskState, args.normalized);
+    : candidateForDeskPlayContextChart(deskState, args.normalized, args.currentPrice);
   const contextLine = play.activeTacticalLine?.activeLine ?? play.lineInSand;
   const chartMarkup = contextCandidate
     ? await renderChartMarkup({
@@ -10028,7 +10037,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
               instrument: config.instrument,
               analysis,
               normalized,
-              candidate: candidateForDeskPlayContextChart(deskState, normalized) || candidate,
+              candidate: candidateForDeskPlayContextChart(deskState, normalized, currentPrice) || candidate,
               visibilityMetadata,
               candidateLifecycleTrace,
               deskState,
