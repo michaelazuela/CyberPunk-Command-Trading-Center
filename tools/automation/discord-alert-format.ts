@@ -77,6 +77,9 @@ export interface CompactDeskStateForDiscord {
   canExecute?: boolean;
   dataQualityStatus?: string;
   htfContextStatus?: string;
+  bestLongPlan?: CompactDeskLifecyclePlan | null;
+  bestShortPlan?: CompactDeskLifecyclePlan | null;
+  selectedCandidate?: CompactDeskLifecyclePlan | null;
   primaryDeskPlay?: {
     direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
     trendConfirmation?: {
@@ -544,6 +547,22 @@ export interface CompactDeskStateForDiscord {
       blockers?: string[];
     };
   } | null;
+}
+
+interface CompactDeskLifecyclePlan {
+  direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
+  scenarioLabel?: string | null;
+  entry?: number | null;
+  stop?: number | null;
+  target1?: number | null;
+  target2?: number | null;
+  riskPoints?: number | null;
+  lineInSand?: number | null;
+  nextTrigger?: string | null;
+  requiredTrigger?: string | null;
+  invalidation?: string | null;
+  missingEvidence?: string[];
+  hasFullPlanLevels?: boolean;
 }
 
 interface CompactHtfObjective {
@@ -2600,6 +2619,136 @@ function deskPlayMainInstructionLines(args: {
   ];
 }
 
+function deskPlayLifecyclePlanForSide(
+  deskState: CompactDeskStateForDiscord | undefined,
+  side: 'LONG' | 'SHORT',
+): CompactDeskLifecyclePlan | null {
+  const direct = side === 'LONG' ? deskState?.bestLongPlan : deskState?.bestShortPlan;
+  if (direct?.direction === side) return direct;
+  const selected = deskState?.selectedCandidate;
+  return selected?.direction === side ? selected : null;
+}
+
+function deskPlayLifecycleLevels(plan: CompactDeskLifecyclePlan | null): DeskPlayPlanningLevels | null {
+  if (!plan || plan.direction !== 'LONG' && plan.direction !== 'SHORT') return null;
+  const entry = isFinitePrice(plan.entry) ? plan.entry : null;
+  const stop = isFinitePrice(plan.stop) ? plan.stop : null;
+  const target1 = isFinitePrice(plan.target1) ? plan.target1 : null;
+  const target2 = isFinitePrice(plan.target2) ? plan.target2 : null;
+  const computed = targetsFromEntryStop(plan.direction, entry, stop);
+  const t1 = target1 ?? computed.target1;
+  const t2 = target2 ?? computed.target2;
+  const riskPoints = isFinitePrice(plan.riskPoints) ? plan.riskPoints : computed.riskPoints;
+  const sideValid = plan.direction === 'LONG'
+    ? isFinitePrice(entry) && isFinitePrice(stop) && stop < entry
+    : isFinitePrice(entry) && isFinitePrice(stop) && stop > entry;
+  const targetsValid = plan.direction === 'LONG'
+    ? isFinitePrice(t1) && isFinitePrice(t2) && t1 > entry! && t2 > t1
+    : isFinitePrice(t1) && isFinitePrice(t2) && t1 < entry! && t2 < t1;
+  if (!sideValid || !targetsValid || !isFinitePrice(riskPoints)) return null;
+  const zone = deskPlayEntryZone(plan.direction, entry!, riskPoints!);
+  return {
+    entry: entry!,
+    stop: stop!,
+    target1: t1!,
+    target2: t2!,
+    riskPoints: riskPoints!,
+    entryZoneLow: zone.low,
+    entryZoneHigh: zone.high,
+    source: 'normalized_candidate',
+    noChase: false,
+  };
+}
+
+function deskPlayBattleSideLines(args: {
+  side: 'LONG' | 'SHORT';
+  line: number | null;
+  deskState?: CompactDeskStateForDiscord;
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>;
+  normalized: CompactNormalizedPlan;
+  currentPrice?: number | null;
+  compactPending?: boolean;
+}): string[] {
+  const sideWord = args.side === 'LONG' ? 'above' : 'below';
+  const sideLabel = `${args.side} ${args.side === 'LONG' ? 'ABOVE' : 'BELOW'} ${priceLine(args.line)}`;
+  const plan = deskPlayLifecyclePlanForSide(args.deskState, args.side);
+  const levels =
+    deskPlayLifecycleLevels(plan) ||
+    deskPlayDecisionMapLevels(args.normalized, args.side, args.line, args.play, args.currentPrice);
+  const trigger = compactInstruction(
+    plan?.requiredTrigger || plan?.nextTrigger,
+    `completed 5M close + hold/retest ${sideWord} ${priceLine(args.line)}.`,
+  );
+  const invalidationFallback = args.side === 'LONG'
+    ? 'completed 5M failure back below the line or protected swing.'
+    : 'completed 5M failure back above the line or protected swing.';
+  const invalidation = compactInstruction(plan?.invalidation, invalidationFallback);
+  return [
+    `${sideLabel}:`,
+    `Trigger: ${trigger}`,
+    ...(levels
+      ? [
+          `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)} | Risk: ${numberLine(levels.riskPoints)} pts`,
+          `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}`,
+          `Invalid ${args.side === 'LONG' ? 'below' : 'above'}: ${priceLine(levels.stop)}`,
+        ]
+      : args.compactPending
+        ? ['Plan levels pending until this side confirms.']
+        : [
+            `Entry: pending | Stop: pending - protected 5M ${args.side === 'LONG' ? 'swing low' : 'swing high'} required.`,
+            'T1: pending | T2: pending - app targets recalc from actual entry/stop.',
+            `Invalidation: ${invalidation}`,
+          ]),
+  ];
+}
+
+function deskPlayBattlePlanLines(args: {
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>;
+  deskState?: CompactDeskStateForDiscord;
+  normalized: CompactNormalizedPlan;
+  currentPrice?: number | null;
+}): string[] {
+  const transition = args.play.levelTransition;
+  const longLine = isFinitePrice(transition?.longAbove)
+    ? transition!.longAbove!
+    : deskPlayLineForDirection(args.play, 'LONG');
+  const shortLine = isFinitePrice(transition?.shortBelow)
+    ? transition!.shortBelow!
+    : deskPlayLineForDirection(args.play, 'SHORT');
+  if (!isFinitePrice(longLine) && !isFinitePrice(shortLine)) return [];
+  const longLevels = deskPlayLifecycleLevels(deskPlayLifecyclePlanForSide(args.deskState, 'LONG')) ||
+    deskPlayDecisionMapLevels(args.normalized, 'LONG', longLine, args.play, args.currentPrice);
+  const shortLevels = deskPlayLifecycleLevels(deskPlayLifecyclePlanForSide(args.deskState, 'SHORT')) ||
+    deskPlayDecisionMapLevels(args.normalized, 'SHORT', shortLine, args.play, args.currentPrice);
+  const exactlyOneSideHasLevels = Boolean(longLevels) !== Boolean(shortLevels);
+  return [
+    'Battle Plan:',
+    `Current: ${priceLine(args.currentPrice)} | No chase inside the battle zone.`,
+    ...(isFinitePrice(longLine)
+      ? deskPlayBattleSideLines({
+          side: 'LONG',
+          line: longLine,
+          deskState: args.deskState,
+          play: args.play,
+          normalized: args.normalized,
+          currentPrice: args.currentPrice,
+          compactPending: exactlyOneSideHasLevels && !longLevels,
+        })
+      : []),
+    ...(isFinitePrice(shortLine)
+      ? deskPlayBattleSideLines({
+          side: 'SHORT',
+          line: shortLine,
+          deskState: args.deskState,
+          play: args.play,
+          normalized: args.normalized,
+          currentPrice: args.currentPrice,
+          compactPending: exactlyOneSideHasLevels && !shortLevels,
+        })
+      : []),
+  ];
+}
+
 function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
   const play = args.deskState?.primaryDeskPlay;
   if (!play) {
@@ -2713,8 +2862,13 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     const activeLevels = (displayDirection === 'LONG' || displayDirection === 'SHORT') && primaryArming.armed
       ? deskPlayDecisionMapLevels(args.normalized, displayDirection, line, play, args.currentPrice)
       : null;
+    const battleHasLevels = Boolean(
+      deskPlayLifecycleLevels(deskPlayLifecyclePlanForSide(args.deskState, 'LONG')) ||
+      deskPlayLifecycleLevels(deskPlayLifecyclePlanForSide(args.deskState, 'SHORT')),
+    );
     const hasAnyLevels = Boolean(
       activeLevels ||
+      battleHasLevels ||
       deskPlayDecisionMapLevels(args.normalized, 'LONG', longTriggerLine, play, args.currentPrice) ||
       deskPlayDecisionMapLevels(args.normalized, 'SHORT', shortTriggerLine, play, args.currentPrice),
     );
@@ -2731,6 +2885,12 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     const lineDisplayLines = deskPlayLineDisplayLines(play, displayDirection, line);
     const htfTargetLine = deskPlayHtfTargetLine(play);
     const runnerLine = deskPlayRunnerLine(play);
+    const battlePlanLines = deskPlayBattlePlanLines({
+      play,
+      deskState: args.deskState,
+      normalized: args.normalized,
+      currentPrice: args.currentPrice,
+    });
     const statusLine = primarySafety.highConfidenceConditional
       ? 'Status: High-confidence conditional trade plan; armed only after the named completed 5M condition.'
       : primarySafety.reviewOnly
@@ -2750,6 +2910,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       deskPlayDecisionClassLine(primarySafety),
       ...(direction === 'WAIT' ? [`Read:${failedText}`] : []),
       `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
+      ...battlePlanLines,
       ...deskPlayHtfRegimeLines(play, displayDirection),
       ...lineDisplayLines,
       ...deskPlayActiveTacticalZoneLines(play, displayDirection),
@@ -2775,17 +2936,17 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
             `Conflict: ${deskPlayConflictSummary(play, 'WAIT')}`,
             'Readiness: review map - wait',
           ]),
-      ...deskPlayMainInstructionLines({
+      ...(battlePlanLines.length ? [] : deskPlayMainInstructionLines({
         play,
         deskState: args.deskState,
         direction: displayDirection,
         lineInSand: line,
-      }),
+      })),
       ...deskPlayTargetToLinePromotionLines(play, displayDirection),
       '',
-      ...directionalLines,
+      ...(battlePlanLines.length ? [] : directionalLines),
       '',
-      ...(displayDirection === 'LONG' || displayDirection === 'SHORT'
+      ...(!battlePlanLines.length && (displayDirection === 'LONG' || displayDirection === 'SHORT')
           ? [
             `${displayDirection === 'LONG' ? 'Short' : 'Long'} Scenario:`,
             displayDirection === 'LONG'
@@ -2797,14 +2958,14 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
             '',
           ]
         : []),
-      ...(direction === 'WAIT' ? [`No Trade: ${noTradeText}`] : []),
+      ...(direction === 'WAIT' && !battlePlanLines.length ? [`No Trade: ${noTradeText}`] : []),
       ...(decisionBand ? decisionBand.lines : []),
       ...deskPlayFvgDecisionZoneLines(play),
       ...deskPlayHtfFvgParentReactionWatchLines(play, displayDirection),
       ...deskPlayHtfFvgReactionMemoryLines(play, displayDirection),
       ...deskPlayHtfFvgParentZoneStackLines(play, displayDirection),
       ...deskPlayHtfFvgCascadeLines(play, displayDirection),
-      ...(hasAnyLevels && direction !== 'WAIT' ? [] : ['No active LONG/SHORT plan with complete app-owned levels.']),
+      ...(hasAnyLevels ? [] : ['No active LONG/SHORT plan with complete app-owned levels.']),
       ...(usefulHtfRows.length ? ['HTF Lines:', ...usefulHtfRows] : []),
       ...(/N\/A \/ runner N\/A/i.test(htfTargetLine) ? [] : [htfTargetLine]),
       ...(/Runner: N\/A/i.test(runnerLine) ? [] : [runnerLine]),
@@ -2813,7 +2974,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       statusLine,
       deskPlayChartStatusLine({
         hasChart: args.attachments.chartPlan,
-        hasLevels: direction === 'WAIT' ? false : hasAnyLevels,
+        hasLevels: hasAnyLevels,
       }),
     ];
   };

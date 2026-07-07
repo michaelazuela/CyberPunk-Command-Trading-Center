@@ -6855,6 +6855,93 @@ function scannerDiscordLine(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
 }
 
+function scannerDeskPlayBattleLine(args: {
+  deskState: DeskState;
+  side: 'LONG' | 'SHORT';
+}): number | null {
+  const play = args.deskState.primaryDeskPlay;
+  const transition = play.levelTransition;
+  const transitionLine = args.side === 'LONG' ? transition?.longAbove : transition?.shortBelow;
+  if (isFiniteTradePrice(transitionLine)) return transitionLine;
+  const directionalLine = args.side === 'LONG' ? play.longAbove : play.shortBelow;
+  if (isFiniteTradePrice(directionalLine)) return directionalLine;
+  const oppositeActiveLine = play.activeTacticalLine?.direction !== args.side &&
+    isFiniteTradePrice(play.activeTacticalLine?.activeLine)
+    ? play.activeTacticalLine!.activeLine!
+    : null;
+  if (oppositeActiveLine !== null) return oppositeActiveLine;
+  const sameActiveLine = play.activeTacticalLine?.direction === args.side &&
+    isFiniteTradePrice(play.activeTacticalLine?.activeLine)
+    ? play.activeTacticalLine!.activeLine!
+    : null;
+  if (sameActiveLine !== null) return sameActiveLine;
+  const biasLine = args.side === 'LONG' ? play.longBias.lineInSand : play.shortBias.lineInSand;
+  return isFiniteTradePrice(biasLine) ? biasLine : null;
+}
+
+function scannerDeskPlanFromLifecycle(args: {
+  deskState: DeskState;
+  side: 'LONG' | 'SHORT';
+}): {
+  entry: number | null;
+  stop: number | null;
+  t1: number | null;
+  t2: number | null;
+  risk: number | null;
+  trigger: string | null;
+  invalidation: string | null;
+} {
+  const plan = args.side === 'LONG' ? args.deskState.bestLongPlan : args.deskState.bestShortPlan;
+  const selected = args.deskState.selectedCandidate?.direction === args.side ? args.deskState.selectedCandidate : null;
+  const source = plan?.direction === args.side ? plan : selected;
+  if (!source) return { entry: null, stop: null, t1: null, t2: null, risk: null, trigger: null, invalidation: null };
+  const entry = isFiniteTradePrice(source.entry) ? source.entry : null;
+  const stop = isFiniteTradePrice(source.stop) ? source.stop : null;
+  const appTargets = targetsFromEntryStop(args.side, entry, stop);
+  const t1 = isFiniteTradePrice(source.target1) ? source.target1 : appTargets.target1;
+  const t2 = isFiniteTradePrice(source.target2) ? source.target2 : appTargets.target2;
+  const risk = isFiniteTradePrice(source.riskPoints) ? source.riskPoints : appTargets.riskPoints;
+  const sideValid = args.side === 'LONG'
+    ? entry !== null && stop !== null && stop < entry
+    : entry !== null && stop !== null && stop > entry;
+  const targetsValid = args.side === 'LONG'
+    ? t1 !== null && t2 !== null && entry !== null && t1 > entry && t2 > t1
+    : t1 !== null && t2 !== null && entry !== null && t1 < entry && t2 < t1;
+  return {
+    entry: sideValid ? entry : null,
+    stop: sideValid ? stop : null,
+    t1: sideValid && targetsValid ? t1 : null,
+    t2: sideValid && targetsValid ? t2 : null,
+    risk: sideValid && risk !== null ? risk : null,
+    trigger: source.requiredTrigger || source.nextTrigger || null,
+    invalidation: source.invalidation || null,
+  };
+}
+
+function scannerDeskPlayBattleBranchLine(args: {
+  deskState: DeskState;
+  side: 'LONG' | 'SHORT';
+  line: number | null;
+}): string[] {
+  if (!isFiniteTradePrice(args.line)) return [];
+  const plan = scannerDeskPlanFromLifecycle(args);
+  const sideWord = args.side === 'LONG' ? 'above' : 'below';
+  const trigger = plan.trigger ||
+    `Completed 5M close + hold/retest ${sideWord} ${scannerDiscordLine(args.line)}.`;
+  const stopFallback = args.side === 'LONG'
+    ? 'pending protected 5M swing low'
+    : 'pending protected 5M swing high';
+  return [
+    `${args.side} ${args.side === 'LONG' ? 'ABOVE' : 'BELOW'} ${scannerDiscordLine(args.line)}: ${clip(trigger, 110)}`,
+    plan.entry !== null && plan.stop !== null
+      ? `Entry ${scannerDiscordLine(plan.entry)} | Stop ${scannerDiscordLine(plan.stop)} | Risk ${scannerDiscordLine(plan.risk)} pts`
+      : `Entry/Stop pending - ${stopFallback}.`,
+    plan.t1 !== null && plan.t2 !== null
+      ? `T1 ${scannerDiscordLine(plan.t1)} | T2 ${scannerDiscordLine(plan.t2)}`
+      : 'T1/T2 pending - recalc from actual entry and protected stop.',
+  ];
+}
+
 function scannerDeskPlayFallbackArmingState(args: {
   direction: 'LONG' | 'SHORT' | 'WAIT';
   line: number | null;
@@ -6943,6 +7030,14 @@ function scannerDeskPlayLiveCompactFallbackPayload(args: {
   const statusLine = t1Reached
     ? `No fresh entry: current already reached/passed T1 ${scannerDiscordLine(t1)}.`
     : `Status: review only; ${clip(noChase, 70)}`;
+  const longBattleLine = scannerDeskPlayBattleLine({ deskState: args.deskState, side: 'LONG' });
+  const shortBattleLine = scannerDeskPlayBattleLine({ deskState: args.deskState, side: 'SHORT' });
+  const battlePlanLines = [
+    'Battle Plan:',
+    `Current ${scannerDiscordLine(args.currentPrice)} | no chase between active lines.`,
+    ...scannerDeskPlayBattleBranchLine({ deskState: args.deskState, side: 'LONG', line: longBattleLine }),
+    ...scannerDeskPlayBattleBranchLine({ deskState: args.deskState, side: 'SHORT', line: shortBattleLine }),
+  ];
   const cleanInvalidation = String(invalidation || '')
     .replace(/^invalid(?:ation)?\s*:\s*/i, '')
     .replace(/^invalid\s+if\s+/i, '')
@@ -6951,6 +7046,7 @@ function scannerDeskPlayLiveCompactFallbackPayload(args: {
     `Primary: ${directionRule} | Current ${scannerDiscordLine(args.currentPrice)}`,
     `HTF: ${args.deskState.htfContextStatus || 'unknown'} / ${play.htfProtectedStructureMap?.reliability || 'unknown'}`,
     `Line: ${scannerDiscordLine(line)} | Trigger: ${triggerRule}`,
+    ...battlePlanLines,
     planLine,
     `Invalid: ${clip(cleanInvalidation, 82)}`,
     statusLine,
