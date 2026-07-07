@@ -6837,25 +6837,17 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
     },
     deskState,
   });
-  try {
-    validateDiscordPayload(payload, files);
-  } catch (error) {
-    const message = sanitizedError(error);
-    if (!/compact alert text|image-backed trade alerts|2000 character limit|preferred normal output|embed title exceeds|embed description exceeds|embed has more than 25 fields|embed field name exceeds|embed field value exceeds|content is \d+ characters/i.test(message)) {
-      throw error;
-    }
-    payload = scannerDeskPlayLiveCompactFallbackPayload({
-      session: args.session,
-      tradeDate: args.tradeDate,
-      instrument: args.config.instrument,
-      deskState,
-      candidate: contextCandidate,
-      normalized: normalizedForPayload,
-      currentPrice: args.currentPrice,
-      originalPayload: payload,
-    });
-    validateDiscordPayload(payload, files);
-  }
+  payload = scannerDeskPlayLiveCompactFallbackPayload({
+    session: args.session,
+    tradeDate: args.tradeDate,
+    instrument: args.config.instrument,
+    deskState,
+    candidate: contextCandidate,
+    normalized: normalizedForPayload,
+    currentPrice: args.currentPrice,
+    originalPayload: payload,
+  });
+  validateDiscordPayload(payload, files);
   return { payload, files, chartMarkup, levelMap };
 }
 
@@ -6923,33 +6915,46 @@ function scannerDeskPlayLiveCompactFallbackPayload(args: {
   const stop = arming.armed ? args.candidate?.stop ?? args.normalized.stop ?? null : null;
   const t1 = arming.armed ? args.candidate?.target1 ?? args.normalized.t1 ?? null : null;
   const t2 = arming.armed ? args.candidate?.target2 ?? args.normalized.t2 ?? null : null;
-  const trigger = play.activeTacticalZone?.nextTrigger ||
-    play.activeTacticalLine?.nextTrigger ||
-    args.candidate?.requiredTrigger ||
-    args.candidate?.nextAction ||
-    play.nextTrigger ||
-    args.deskState.nextTrigger ||
-    'Wait for completed 5M proof.';
   const invalidation = args.candidate?.invalidation || play.invalidation || args.deskState.invalidation || 'Invalidation pending protected 5M structure.';
   const noChase = play.activeTacticalZone?.noChase || play.noChase || 'No chase; wait for a fresh completed 5M trigger/retest.';
-  const content = `🟠 [${args.session.toUpperCase()} DESK PLAY] ${args.instrument} - ${arming.headline} | ${args.tradeDate}`;
+  const sessionTitle = args.session === 'lunch' ? 'PM' : args.session.toUpperCase();
+  const content = `🟠 [${sessionTitle} DESK PLAY] ${args.instrument} - ${arming.headline} | ${args.tradeDate}`;
+  const hasPlanLevels = entry !== null && stop !== null && t1 !== null && t2 !== null;
+  const t1Reached = hasPlanLevels && args.currentPrice !== null
+    ? direction === 'LONG'
+      ? args.currentPrice >= t1
+      : direction === 'SHORT'
+        ? args.currentPrice <= t1
+        : false
+    : false;
+  const directionRule = direction === 'SHORT'
+    ? `SHORT below ${scannerDiscordLine(line)}`
+    : direction === 'LONG'
+      ? `LONG above ${scannerDiscordLine(line)}`
+      : `WAIT around ${scannerDiscordLine(line)}`;
+  const triggerRule = direction === 'SHORT'
+    ? `5M close below ${scannerDiscordLine(line)}`
+    : direction === 'LONG'
+      ? `5M close above ${scannerDiscordLine(line)}`
+      : 'wait for one completed 5M side to confirm';
+  const planLine = hasPlanLevels
+    ? `Plan: Entry ${scannerDiscordLine(entry)} | Stop ${scannerDiscordLine(stop)} | T1 ${scannerDiscordLine(t1)} | T2 ${scannerDiscordLine(t2)}`
+    : 'Plan: no entry/stop/T1/T2 until trigger and protected 5M stop are proven.';
+  const statusLine = t1Reached
+    ? `No fresh entry: current already reached/passed T1 ${scannerDiscordLine(t1)}.`
+    : `Status: review only; ${clip(noChase, 70)}`;
+  const cleanInvalidation = String(invalidation || '')
+    .replace(/^invalid(?:ation)?\s*:\s*/i, '')
+    .replace(/^invalid\s+if\s+/i, '')
+    .trim() || 'protected 5M invalidation pending.';
   const description = [
-    `Primary: ${arming.headline}`,
-    `Current: ${scannerDiscordLine(args.currentPrice)}`,
+    `Primary: ${directionRule} | Current ${scannerDiscordLine(args.currentPrice)}`,
     `HTF: ${args.deskState.htfContextStatus || 'unknown'} / ${play.htfProtectedStructureMap?.reliability || 'unknown'}`,
-    `Line in sand: ${scannerDiscordLine(line)}`,
-    arming.reason,
-    direction === 'SHORT'
-      ? `Condition: completed 5M proof below ${scannerDiscordLine(line)}.`
-      : direction === 'LONG'
-        ? `Condition: completed 5M proof above ${scannerDiscordLine(line)}.`
-        : 'Condition: wait until one side confirms with completed 5M proof.',
-    `Entry: ${scannerDiscordLine(entry)} | Stop: ${scannerDiscordLine(stop)}`,
-    `T1: ${scannerDiscordLine(t1)} | T2: ${scannerDiscordLine(t2)}`,
-    `Trigger: ${clip(trigger, 220)}`,
-    `Invalidation: ${clip(invalidation, 180)}`,
-    `No chase: ${clip(noChase, 180)}`,
-    'Review only. No automated orders. canExecute unchanged.',
+    `Line: ${scannerDiscordLine(line)} | Trigger: ${triggerRule}`,
+    planLine,
+    `Invalid: ${clip(cleanInvalidation, 82)}`,
+    statusLine,
+    'Boundary: canExecute unchanged; no automated orders.',
   ].join('\n');
   return {
     username: args.originalPayload.username || 'Quant Desk',

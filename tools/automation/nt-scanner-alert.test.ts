@@ -6306,24 +6306,19 @@ try {
     (deskPlayResult.payload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)),
     ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed'],
   );
-  assert.ok(deskPlayText.includes('[PM DESK PLAY] MES - LONG'));
+  assert.ok(deskPlayText.includes('[PM DESK PLAY] MES - LONG REVIEW'));
   assert.ok(deskPlayText.includes('MES Current Desk Plan'));
-  assert.ok(deskPlayText.includes('Primary: 🐂 LONG'));
-  assert.ok(deskPlayText.includes('Bias:'));
-  assert.ok(deskPlayText.includes('Line in sand: 5324.25'));
-  assert.ok(deskPlayText.includes('Overall play: LONG above 5324.25.'));
-  assert.ok(deskPlayText.includes('Next trigger:'));
-  assert.ok(deskPlayText.includes('Invalidation:'));
-  assert.ok(deskPlayText.includes('Stand down:'));
-  assert.ok(deskPlayText.includes('LONG ABOVE 5324.25'));
-  assert.ok(deskPlayText.includes('Entry: 5324.25'));
-  assert.ok(deskPlayText.includes('Stop: 5319.25'));
-  assert.ok(deskPlayText.includes('T1: 5331.75'));
-  assert.ok(deskPlayText.includes('T2: 5334.25'));
-  assert.ok(deskPlayText.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; execution arms only after the named completed 5M condition.'));
-  assert.ok(deskPlayText.includes('Status: High-confidence conditional trade plan; armed only after the named completed 5M condition.'));
-  assert.ok(deskPlayText.includes('Chart: attached.'));
-  assert.ok(deskPlayText.length < 1550, `expected Desk Play payload under Discord chart-card limit, got ${deskPlayText.length}`);
+  assert.ok(deskPlayText.includes('Primary: LONG above 5324.25 | Current 5325.00'));
+  assert.ok(deskPlayText.includes('HTF:'));
+  assert.ok(deskPlayText.includes('Line: 5324.25 | Trigger: 5M close above 5324.25'));
+  assert.ok(deskPlayText.includes('Plan: Entry 5324.25 | Stop 5319.25 | T1 5331.75 | T2 5334.25'));
+  assert.ok(deskPlayText.includes('Invalid:'));
+  assert.ok(deskPlayText.includes('Status: review only;'));
+  assert.ok(deskPlayText.includes('Boundary: canExecute unchanged; no automated orders.'));
+  assert.ok(!deskPlayText.includes('Overall play:'));
+  assert.ok(!deskPlayText.includes('Decision class:'));
+  assert.ok(!deskPlayText.includes('Next trigger:'));
+  assert.ok(deskPlayText.length < 950, `expected Desk Play payload under actionable compact target, got ${deskPlayText.length}`);
   const deskPlayRagCalls: Array<{ url: string; method: string; body: any }> = [];
   process.env.SUPABASE_URL = 'https://supabase.example/rest/v1';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test';
