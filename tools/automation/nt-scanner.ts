@@ -6854,6 +6854,36 @@ function scannerDiscordLine(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
 }
 
+function scannerDeskPlayFallbackArmingState(args: {
+  direction: 'LONG' | 'SHORT' | 'WAIT';
+  line: number | null;
+  currentPrice: number | null;
+  canExecute: boolean;
+}): { armed: boolean; headline: string; reason: string | null } {
+  if (args.direction !== 'LONG' && args.direction !== 'SHORT') {
+    return { armed: false, headline: 'WAIT', reason: null };
+  }
+  if (args.canExecute || !isFiniteTradePrice(args.line) || !isFiniteTradePrice(args.currentPrice)) {
+    return { armed: true, headline: `${args.direction} REVIEW`, reason: null };
+  }
+  const buffer = TRADE_RULES.targetModel.tickSize;
+  if (args.direction === 'SHORT' && args.currentPrice > args.line + buffer) {
+    return {
+      armed: false,
+      headline: `WAIT / SHORT BELOW ${scannerDiscordLine(args.line)}`,
+      reason: `No short plan yet. Current ${scannerDiscordLine(args.currentPrice)} is above the line ${scannerDiscordLine(args.line)}; short requires a completed 5M close below ${scannerDiscordLine(args.line)}.`,
+    };
+  }
+  if (args.direction === 'LONG' && args.currentPrice < args.line - buffer) {
+    return {
+      armed: false,
+      headline: `WAIT / LONG ABOVE ${scannerDiscordLine(args.line)}`,
+      reason: `No long plan yet. Current ${scannerDiscordLine(args.currentPrice)} is below the line ${scannerDiscordLine(args.line)}; long requires a completed 5M close above ${scannerDiscordLine(args.line)}.`,
+    };
+  }
+  return { armed: true, headline: `${args.direction} REVIEW`, reason: null };
+}
+
 function scannerDeskPlayLiveCompactFallbackPayload(args: {
   session: LiveSession;
   tradeDate: string;
@@ -6874,10 +6904,16 @@ function scannerDeskPlayLiveCompactFallbackPayload(args: {
   const line = play.activeTacticalZone?.direction === direction && typeof play.activeTacticalZone.lower === 'number'
     ? play.activeTacticalZone.lower
     : play.activeTacticalLine?.activeLine ?? play.lineInSand ?? args.deskState.lineInSand ?? args.candidate?.entry ?? null;
-  const entry = args.candidate?.entry ?? args.normalized.entry ?? null;
-  const stop = args.candidate?.stop ?? args.normalized.stop ?? null;
-  const t1 = args.candidate?.target1 ?? args.normalized.t1 ?? null;
-  const t2 = args.candidate?.target2 ?? args.normalized.t2 ?? null;
+  const arming = scannerDeskPlayFallbackArmingState({
+    direction,
+    line,
+    currentPrice: args.currentPrice,
+    canExecute: args.deskState.canExecute,
+  });
+  const entry = arming.armed ? args.candidate?.entry ?? args.normalized.entry ?? null : null;
+  const stop = arming.armed ? args.candidate?.stop ?? args.normalized.stop ?? null : null;
+  const t1 = arming.armed ? args.candidate?.target1 ?? args.normalized.t1 ?? null : null;
+  const t2 = arming.armed ? args.candidate?.target2 ?? args.normalized.t2 ?? null : null;
   const trigger = play.activeTacticalZone?.nextTrigger ||
     play.activeTacticalLine?.nextTrigger ||
     args.candidate?.requiredTrigger ||
@@ -6887,12 +6923,13 @@ function scannerDeskPlayLiveCompactFallbackPayload(args: {
     'Wait for completed 5M proof.';
   const invalidation = args.candidate?.invalidation || play.invalidation || args.deskState.invalidation || 'Invalidation pending protected 5M structure.';
   const noChase = play.activeTacticalZone?.noChase || play.noChase || 'No chase; wait for a fresh completed 5M trigger/retest.';
-  const content = `🟠 [${args.session.toUpperCase()} DESK PLAY] ${args.instrument} - ${direction} REVIEW | ${args.tradeDate}`;
+  const content = `🟠 [${args.session.toUpperCase()} DESK PLAY] ${args.instrument} - ${arming.headline} | ${args.tradeDate}`;
   const description = [
-    `Primary: ${direction}`,
+    `Primary: ${arming.headline}`,
     `Current: ${scannerDiscordLine(args.currentPrice)}`,
     `HTF: ${args.deskState.htfContextStatus || 'unknown'} / ${play.htfProtectedStructureMap?.reliability || 'unknown'}`,
     `Line in sand: ${scannerDiscordLine(line)}`,
+    arming.reason,
     direction === 'SHORT'
       ? `Condition: completed 5M proof below ${scannerDiscordLine(line)}.`
       : direction === 'LONG'

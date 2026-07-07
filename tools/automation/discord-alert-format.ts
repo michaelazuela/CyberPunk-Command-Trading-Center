@@ -1551,6 +1551,48 @@ function sideBreakoutLabel(side: 'LONG' | 'SHORT', triggerWord: 'ABOVE' | 'BELOW
   return `${sideEmoji(side)} ${side} ${triggerWord} ${priceLine(line)}`;
 }
 
+function deskPlaySideArmingState(args: {
+  side: 'LONG' | 'SHORT';
+  line: number | null;
+  currentPrice?: number | null;
+  canExecute?: boolean | null;
+}): { armed: boolean; reason: string | null } {
+  if (args.canExecute === true) return { armed: true, reason: null };
+  if (!isFinitePrice(args.line) || !isFinitePrice(args.currentPrice)) return { armed: true, reason: null };
+  const buffer = TRADE_RULES.targetModel.tickSize;
+  if (args.side === 'SHORT' && args.currentPrice > args.line + buffer) {
+    return {
+      armed: false,
+      reason: `No short plan yet. Current ${priceLine(args.currentPrice)} is above the line ${priceLine(args.line)}; short requires a completed 5M close below ${priceLine(args.line)}.`,
+    };
+  }
+  if (args.side === 'LONG' && args.currentPrice < args.line - buffer) {
+    return {
+      armed: false,
+      reason: `No long plan yet. Current ${priceLine(args.currentPrice)} is below the line ${priceLine(args.line)}; long requires a completed 5M close above ${priceLine(args.line)}.`,
+    };
+  }
+  return { armed: true, reason: null };
+}
+
+function deskPlayHeadlineLabel(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string {
+  const play = args.deskState?.primaryDeskPlay;
+  if ((direction === 'LONG' || direction === 'SHORT') || !play || (play.direction !== 'LONG' && play.direction !== 'SHORT')) {
+    return deskPlayPrimaryLabel(play, direction);
+  }
+  const line = deskPlayLineForDirection(play, play.direction);
+  const arming = deskPlaySideArmingState({
+    side: play.direction,
+    line,
+    currentPrice: args.currentPrice,
+    canExecute: args.deskState?.canExecute,
+  });
+  if (!arming.armed) {
+    return `WAIT / ${play.direction} ${play.direction === 'SHORT' ? 'BELOW' : 'ABOVE'} ${priceLine(line)}`;
+  }
+  return deskPlayPrimaryLabel(play, direction);
+}
+
 function deskPlayCrossedDecisionBand(
   play: Pick<NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>, 'longAbove' | 'shortBelow'> | null | undefined,
 ): { low: number; high: number; label: string; lines: string[] } | null {
@@ -2611,14 +2653,23 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
   const decisionBand = deskPlayCrossedDecisionBand(play);
   const compactSidePlanLines = (side: 'LONG' | 'SHORT', lineOverride?: number | null): string[] => {
     const line = isFinitePrice(lineOverride) ? lineOverride : deskPlayLineForDirection(play, side);
-    const levels = deskPlayDecisionMapLevels(args.normalized, side, line, play, args.currentPrice);
+    const arming = deskPlaySideArmingState({
+      side,
+      line,
+      currentPrice: args.currentPrice,
+      canExecute: args.deskState?.canExecute,
+    });
+    const levels = arming.armed
+      ? deskPlayDecisionMapLevels(args.normalized, side, line, play, args.currentPrice)
+      : null;
     const triggerWord = side === 'LONG' ? 'above' : 'below';
     const stopFallback = side === 'LONG'
       ? 'below the protected 5M swing low after proof.'
       : 'above the protected 5M swing high after proof.';
     return [
-      `${side} Plan:`,
+      arming.armed ? `${side} Plan:` : `WAIT / ${side} ${side === 'SHORT' ? 'BELOW' : 'ABOVE'} ${priceLine(line)}:`,
       sideBreakoutLabel(side, side === 'LONG' ? 'ABOVE' : 'BELOW', line),
+      arming.reason,
       `${side} if completed 5M closes ${triggerWord} ${priceLine(line)} and holds/retests.`,
       levels
         ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}`
@@ -2635,7 +2686,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ].filter((line): line is string => Boolean(line));
   };
   const compactActionableDeskPlanLines = (): string[] => {
-    const primaryLabel = deskPlayPrimaryLabel(play, direction);
+    const primaryLabel = deskPlayHeadlineLabel(args, direction);
     const displayDirection = direction === 'LONG' || direction === 'SHORT'
       ? direction
       : play.direction === 'LONG' || play.direction === 'SHORT'
@@ -2651,7 +2702,15 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     const shortTriggerLine = decisionBand?.low ?? deskPlayLineForDirection(play, 'SHORT');
     const htfRows = deskPlayHtfLineRows(play, args.currentPrice);
     const usefulHtfRows = htfRows.filter((row) => !/UNKNOWN;\s*changes at N\/A/i.test(row));
-    const activeLevels = displayDirection === 'LONG' || displayDirection === 'SHORT'
+    const primaryArming = displayDirection === 'LONG' || displayDirection === 'SHORT'
+      ? deskPlaySideArmingState({
+          side: displayDirection,
+          line,
+          currentPrice: args.currentPrice,
+          canExecute: args.deskState?.canExecute,
+        })
+      : { armed: true, reason: null };
+    const activeLevels = (displayDirection === 'LONG' || displayDirection === 'SHORT') && primaryArming.armed
       ? deskPlayDecisionMapLevels(args.normalized, displayDirection, line, play, args.currentPrice)
       : null;
     const hasAnyLevels = Boolean(
@@ -2700,7 +2759,8 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         ? [
             `Map Side: ${deskPlaySideStrength(play, displayDirection)}`,
             `Conflict: ${deskPlayConflictSummary(play, displayDirection, primarySafety.reason)}`,
-            `Readiness: ${deskPlayReadinessDisplayLine(play, displayDirection, primarySafety.reviewOnly, Boolean(deskPlayDecisionMapLevels(args.normalized, displayDirection, line, play, args.currentPrice)), primarySafety.highConfidenceConditional)}`,
+            `Readiness: ${deskPlayReadinessDisplayLine(play, displayDirection, primarySafety.reviewOnly, Boolean(activeLevels), primarySafety.highConfidenceConditional)}`,
+            ...(primaryArming.armed || !primaryArming.reason ? [] : [primaryArming.reason]),
             ...(primarySafety.highConfidenceConditional
               ? ['High-confidence conditional trade plan - wait on the named completed 5M condition.']
               : primarySafety.reviewOnly
@@ -2764,6 +2824,13 @@ function deskPlayHasCompletePlanningLevels(args: CompactDiscordSummaryArgs, dire
   const play = args.deskState?.primaryDeskPlay;
   if (!play) return false;
   const line = deskPlayLineForDirection(play, direction);
+  const arming = deskPlaySideArmingState({
+    side: direction,
+    line,
+    currentPrice: args.currentPrice,
+    canExecute: args.deskState?.canExecute,
+  });
+  if (!arming.armed) return false;
   return Boolean(deskPlayDecisionMapLevels(args.normalized, direction, line, play, args.currentPrice));
 }
 
@@ -2808,7 +2875,7 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
   const direction = deskPlayHeadlineDirection(args);
   const lines = deskPlayCurrentPlanLines(args, direction);
   const components = args.components || defaultOutcomeComponentsForSummary(args, direction === 'WAIT' ? null : direction);
-  const headline = deskPlayPrimaryLabel(play, direction);
+  const headline = deskPlayHeadlineLabel(args, direction);
   const payload: DiscordWebhookPayload = {
     username: 'Quant Desk',
     content: `🟠 [${sessionLabel} DESK PLAY] ${args.instrument} - ${headline} | ${args.tradeDate}`,

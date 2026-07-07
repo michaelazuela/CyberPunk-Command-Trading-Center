@@ -1192,7 +1192,7 @@ assert.ok(deskPlayDecisionMapText.includes('Map Side: SHORT N/A unavailable'));
 assert.ok(!deskPlayDecisionMapText.includes('Map Role:'));
 assert.ok(!deskPlayDecisionMapText.includes('Opposing Side:'));
 assert.ok(!deskPlayDecisionMapText.includes('Opposing Role:'));
-assert.ok(deskPlayDecisionMapText.includes('Readiness: review map - wait'));
+assert.ok(deskPlayDecisionMapText.includes('Readiness: review map - levels pending'));
 assert.ok(deskPlayDecisionMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(deskPlayDecisionMapText.includes('Bottom line: HTF map only; 5M proof + canExecute. No chase'));
 assert.ok(deskPlayDecisionMapText.includes('Status: Review only until 5M trigger + canExecute.'));
@@ -2401,15 +2401,16 @@ assert.ok(deskPlayWideReviewText.includes('Conflict: side quality is low'));
 assert.ok(deskPlayWideReviewText.includes('Readiness: watch only - do not execute'));
 assert.ok(deskPlayWideReviewText.includes('SHORT BELOW 7591.00'), deskPlayWideReviewText);
 assert.ok(deskPlayWideReviewText.includes('Review levels only - not an executable trade plan.'), deskPlayWideReviewText);
-assert.ok(deskPlayWideReviewText.includes('Entry: 7581.25'), deskPlayWideReviewText);
-assert.ok(deskPlayWideReviewText.includes('Stop: 7600.50'));
-assert.ok(deskPlayWideReviewText.includes('T1: 7552.50'));
-assert.ok(deskPlayWideReviewText.includes('T2: 7542.75'));
+assert.ok(deskPlayWideReviewText.includes('No short plan yet. Current 7597.75 is above the line 7591.00'), deskPlayWideReviewText);
+assert.ok(deskPlayWideReviewText.includes('Entry: pending'), deskPlayWideReviewText);
+assert.ok(deskPlayWideReviewText.includes('Stop: pending - above the protected 5M swing high after proof.'));
+assert.ok(deskPlayWideReviewText.includes('T1: pending | T2: pending - recalculated from actual entry and structure stop.'));
+assert.ok(!deskPlayWideReviewText.includes('Entry: 7581.25'), deskPlayWideReviewText);
 assert.ok(deskPlayWideReviewText.includes('Reason: side quality is low.'));
-assert.ok(deskPlayWideReviewText.includes('Bottom line: HTF frames SHORT; needs 5M proof, stop, risk, canExecute. No chase'));
+assert.ok(deskPlayWideReviewText.includes('Bottom line: HTF map only; 5M proof + canExecute. No chase'));
 assert.ok(deskPlayWideReviewText.includes('Status: Review levels only - not executable; side quality is low. Wait for completed 5M trigger + canExecute.'));
-assert.ok(deskPlayWideReviewPayload.content?.includes('[AM DESK PLAY] MES - SHORT'));
-assert.ok(deskPlayWideReviewText.includes('Chart: attached.'));
+assert.ok(deskPlayWideReviewPayload.content?.includes('[AM DESK PLAY] MES - WAIT / SHORT BELOW 7591.00'));
+assert.ok(deskPlayWideReviewText.includes('Chart: attached; levels pending.'));
 
 const lunch = compactDiscordSummary({
   session: 'lunch',
@@ -3810,6 +3811,66 @@ assert.match(htfFvgMicroMssText, /Promotion: full plan allowed/i);
 assert.match(htfFvgMicroMssText, /Invalidation:/);
 assert.match(htfFvgMicroMssText, /Review only|Decision support only|canExecute/i);
 assert.doesNotMatch(htfFvgMicroMssText, /No active plan candidate available|Stand down\. Recheck at next scheduled scan/);
+
+const unarmedShortDeskPlayPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-07-07',
+  instrument: 'MES',
+  planVersionId: 'MORNING-UNARMED-SHORT-LINE-TEST',
+  normalized: {
+    decision: 'SHORT',
+    decisionStatus: TradeDecisionStatus.Wait,
+    canExecute: false,
+    entry: 7539.5,
+    stop: 7561,
+    t1: 7507.25,
+    t2: 7496.5,
+  },
+  candidates: [],
+  currentPrice: 7542.25,
+  attachments: { chartPlan: false, priceLevelMap: false },
+  deskState: {
+    discordAction: 'post_review',
+    canExecute: false,
+    htfContextStatus: 'sufficient',
+    primaryDeskPlay: {
+      discordEligible: true,
+      direction: 'SHORT',
+      lineInSand: 7540,
+      shortBelow: 7540,
+      longAbove: 7580.25,
+      nextTrigger: 'Completed 5M or 15M close below 7540.00 required before short continuation is active.',
+      noChase: 'No chase: wait for a completed 5M or 15M close below 7540.00.',
+      shortBias: {
+        state: 'primary',
+        decisionQualityScore: 90,
+        tradeReadiness: {
+          status: 'review_only_missing_proof',
+          displayLabel: 'WAITING FOR COMPLETED CLOSE',
+          displayAction: 'Wait for completed 5M close below the line.',
+          displayReason: 'Current price is above the short line.',
+        },
+      },
+      longBias: { state: 'secondary', lineInSand: 7580.25 },
+      htfProtectedStructureMap: {
+        reliability: 'sufficient',
+        rows: [
+          { timeframe: '1H', currentBias: 'BEAR', biasChangeLine: 7580.25, protectedStructure: 7552.5 },
+          { timeframe: '15M', currentBias: 'BEAR', biasChangeLine: 7578.25, protectedStructure: 7572.5 },
+          { timeframe: '5M', currentBias: 'BEAR', biasChangeLine: 7578.25, protectedStructure: 7572.5 },
+        ],
+      },
+    },
+  },
+});
+const unarmedShortDeskPlayText = flattenDiscordPayloadText(unarmedShortDeskPlayPayload);
+assert.match(unarmedShortDeskPlayPayload.content || '', /WAIT \/ SHORT BELOW 7540\.00/);
+assert.doesNotMatch(unarmedShortDeskPlayPayload.content || '', /MES - SHORT REVIEW/);
+assert.match(unarmedShortDeskPlayText, /No short plan yet\. Current 7542\.25 is above the line 7540\.00/);
+assert.match(unarmedShortDeskPlayText, /completed 5M close below 7540\.00/);
+assert.match(unarmedShortDeskPlayText, /Entry: pending/);
+assert.doesNotMatch(unarmedShortDeskPlayText, /Entry: 7539\.50/);
+assert.doesNotMatch(unarmedShortDeskPlayText, /T1: 7507\.25/);
 
 console.log('Discord compact alert formatter verified.');
 
