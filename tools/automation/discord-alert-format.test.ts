@@ -1557,8 +1557,8 @@ const projectedDeskPlayPayload = compactDiscordSummary({
       title: 'Evening Desk Play',
       summary: 'Review-only two-sided map.',
       lineInSand: 7570,
-      longAbove: 7570,
-      shortBelow: 7570,
+      longAbove: 7590,
+      shortBelow: 7590.25,
       nextTrigger: 'LONG above 7570.00 / SHORT below 7570.00; completed 5M close/retest only.',
       invalidation: 'Protected structure must hold.',
       htfConflict: false,
@@ -1611,8 +1611,12 @@ assert.ok(!projectedDeskPlayText.includes('Opposing Side:'));
 assert.ok(!projectedDeskPlayText.includes('Opposing Role:'));
 assert.ok(projectedDeskPlayText.includes('Conflict: no confirmed active side'));
 assert.ok(projectedDeskPlayText.includes('HTF Lines:'));
-assert.ok(projectedDeskPlayText.includes('LONG ABOVE 7570.00'));
-assert.ok(projectedDeskPlayText.includes('SHORT BELOW 7570.00'));
+assert.ok(projectedDeskPlayText.includes('Decision Band: 7590.00-7590.25 - CONFLICT / BATTLE ZONE / WAIT.'));
+assert.ok(projectedDeskPlayText.includes('Long trigger: completed 5M close above 7590.25.'));
+assert.ok(projectedDeskPlayText.includes('Short trigger: completed 5M close below 7590.00.'));
+assert.ok(projectedDeskPlayText.includes('Inside the band: no fresh entry; wait for one side to confirm.'));
+assert.ok(!projectedDeskPlayText.includes('🐂 LONG ABOVE 7590.00'));
+assert.ok(!projectedDeskPlayText.includes('🐻 SHORT BELOW 7590.25'));
 assert.ok(projectedDeskPlayText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(!projectedDeskPlayText.includes('Entry 7570.00-7571.00 | Stop 7567.50 | T1 7573.75 | T2 7575.00'));
 assert.ok(!projectedDeskPlayText.includes('NO CHASE: retest/new 5M'));

@@ -844,10 +844,15 @@ function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate:
   const shortBelow = typeof transition?.shortBelow === 'number' && Number.isFinite(transition.shortBelow)
     ? transition.shortBelow
     : typeof play?.shortBelow === 'number' && Number.isFinite(play.shortBelow) ? play.shortBelow : null;
-  const nextLine = [
-    longAbove !== null ? `LONG above ${priceLine(longAbove)}` : null,
-    shortBelow !== null ? `SHORT below ${priceLine(shortBelow)}` : null,
-  ].filter(Boolean).join(' / ');
+  const decisionBand = deskPlayCrossedDecisionBand(longAbove !== null || shortBelow !== null
+    ? { ...(play || {}), longAbove, shortBelow }
+    : play);
+  const nextLine = decisionBand
+    ? `Decision band ${decisionBand.label}: long only above ${priceLine(decisionBand.high)} / short only below ${priceLine(decisionBand.low)}`
+    : [
+        longAbove !== null ? `LONG above ${priceLine(longAbove)}` : null,
+        shortBelow !== null ? `SHORT below ${priceLine(shortBelow)}` : null,
+      ].filter(Boolean).join(' / ');
   if (!reaction && !nextLine) return [];
   return [
     ...(reaction ? [
@@ -1544,6 +1549,30 @@ function primaryPlanLabel(label: string): string {
 
 function sideBreakoutLabel(side: 'LONG' | 'SHORT', triggerWord: 'ABOVE' | 'BELOW', line: number | null): string {
   return `${sideEmoji(side)} ${side} ${triggerWord} ${priceLine(line)}`;
+}
+
+function deskPlayCrossedDecisionBand(
+  play: Pick<NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>, 'longAbove' | 'shortBelow'> | null | undefined,
+): { low: number; high: number; label: string; lines: string[] } | null {
+  const longAbove = isFinitePrice(play?.longAbove) ? play!.longAbove! : null;
+  const shortBelow = isFinitePrice(play?.shortBelow) ? play!.shortBelow! : null;
+  if (longAbove === null || shortBelow === null || longAbove > shortBelow) return null;
+  const low = Math.min(longAbove, shortBelow);
+  const high = Math.max(longAbove, shortBelow);
+  const label = Math.abs(high - low) < 0.0001
+    ? priceLine(low)
+    : `${priceLine(low)}-${priceLine(high)}`;
+  return {
+    low,
+    high,
+    label,
+    lines: [
+      `Decision Band: ${label} - CONFLICT / BATTLE ZONE / WAIT.`,
+      `Long trigger: completed 5M close above ${priceLine(high)}.`,
+      `Short trigger: completed 5M close below ${priceLine(low)}.`,
+      'Inside the band: no fresh entry; wait for one side to confirm.',
+    ],
+  };
 }
 
 function deskPlayBiasSummary(
@@ -2705,6 +2734,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       `Readiness: ${deskPlayReadinessDisplayLine(play, mapSide, safety.reviewOnly, hasLevels, safety.highConfidenceConditional)}`,
     ];
   };
+  const decisionBand = deskPlayCrossedDecisionBand(play);
   if (direction !== 'LONG' && direction !== 'SHORT') {
     const longWait = sideLinesFor('LONG');
     const shortWait = sideLinesFor('SHORT');
@@ -2757,10 +2787,19 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       ...(waitUsefulHtfRows.length ? ['HTF Lines:', ...waitUsefulHtfRows] : []),
       ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
       '',
-      ...longWaitDisplay.lines,
-      '',
-      ...shortWaitDisplay.lines,
-      '',
+      ...(decisionBand
+        ? [
+            'Overall play: CONFLICT / BATTLE ZONE / WAIT for completed 5M close outside the band.',
+            ...decisionBand.lines,
+            'Entry/stop/T1/T2: pending until one side confirms outside the band.',
+            '',
+          ]
+        : [
+            ...longWaitDisplay.lines,
+            '',
+            ...shortWaitDisplay.lines,
+            '',
+          ]),
       'No active LONG/SHORT plan with complete app-owned levels.',
       deskPlayHtfTargetLine(play),
       deskPlayRunnerLine(play),
@@ -2814,10 +2853,19 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ...(usefulHtfRows.length ? ['HTF Lines:', ...usefulHtfRows] : []),
     ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
     '',
-    ...primary.lines,
-    '',
-    ...opposite.lines,
-    '',
+    ...(decisionBand
+      ? [
+          'Overall play: CONFLICT / BATTLE ZONE / WAIT for completed 5M close outside the band.',
+          ...decisionBand.lines,
+          'Entry/stop/T1/T2: pending until one side confirms outside the band.',
+          '',
+        ]
+      : [
+          ...primary.lines,
+          '',
+          ...opposite.lines,
+          '',
+        ]),
     `Invalid ${invalidWord}: ${primaryLevels ? priceLine(primaryLevels.stop) : 'pending'}`,
     deskPlayHtfTargetLine(play),
     deskPlayRunnerLine(play),
@@ -2965,6 +3013,7 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
   const invalidWord = displayDirection === 'SHORT' ? 'above' : 'below';
   const parentZone = play?.htfFvgCascade?.parentZone;
   const reaction = play?.targetReactionLevel;
+  const decisionBand = deskPlayCrossedDecisionBand(play);
   const statusText = isHighConfidenceConditionalCandidate(candidate, args.normalized)
     ? 'High-confidence conditional; arms only after named completed 5M proof + app-owned canExecute.'
     : status === 'EXECUTABLE'
@@ -3023,14 +3072,21 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
     ...(play ? ['HTF Lines:', ...deskPlayHtfLineRows(play, args.currentPrice)] : []),
     ...(play && deskPlayFvgDecisionZoneLines(play).length ? deskPlayFvgDecisionZoneLines(play) : []),
     `Line in sand: ${priceLine(lineInSand)}`,
-    displayDirection === 'LONG' || displayDirection === 'SHORT'
-      ? `Overall play: ${displayDirection} ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`
-      : 'Overall play: WAIT for one side to confirm.',
-    displayDirection === 'LONG' || displayDirection === 'SHORT'
-      ? sideBreakoutLabel(displayDirection, displayDirection === 'SHORT' ? 'BELOW' : 'ABOVE', lineInSand)
-      : 'WAIT - no active breakout line.',
-    ...(play?.longAbove != null && displayDirection !== 'LONG' ? [sideBreakoutLabel('LONG', 'ABOVE', play.longAbove)] : []),
-    ...(play?.shortBelow != null && displayDirection !== 'SHORT' ? [sideBreakoutLabel('SHORT', 'BELOW', play.shortBelow)] : []),
+    ...(decisionBand
+      ? [
+          'Overall play: CONFLICT / BATTLE ZONE / WAIT for completed 5M close outside the band.',
+          ...decisionBand.lines,
+        ]
+      : [
+          displayDirection === 'LONG' || displayDirection === 'SHORT'
+            ? `Overall play: ${displayDirection} ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`
+            : 'Overall play: WAIT for one side to confirm.',
+          displayDirection === 'LONG' || displayDirection === 'SHORT'
+            ? sideBreakoutLabel(displayDirection, displayDirection === 'SHORT' ? 'BELOW' : 'ABOVE', lineInSand)
+            : 'WAIT - no active breakout line.',
+          ...(play?.longAbove != null && displayDirection !== 'LONG' ? [sideBreakoutLabel('LONG', 'ABOVE', play.longAbove)] : []),
+          ...(play?.shortBelow != null && displayDirection !== 'SHORT' ? [sideBreakoutLabel('SHORT', 'BELOW', play.shortBelow)] : []),
+        ]),
     levels ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}` : 'Entry: pending',
     levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'Stop: pending | T1: pending | T2: pending',
     ...(levels ? [] : ['No active LONG/SHORT plan with complete app-owned levels.']),
@@ -3117,6 +3173,7 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
     ? zoneRangeLine(activeZone.lower, activeZone.upper)
     : null;
   const status = reportStatus(candidate, args.normalized, args.statusOverride || args.decisionOverride);
+  const decisionBand = deskPlayCrossedDecisionBand(play);
   const sideLine = displayDirection === 'SHORT'
     ? sideBreakoutLabel('SHORT', 'BELOW', lineInSand)
     : displayDirection === 'LONG'
@@ -3170,12 +3227,19 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
       ? deskPlaySameSideCampaignStackLines(play, displayDirection).slice(0, 9)
       : []),
     `Line in sand: ${priceLine(lineInSand)}`,
-    displayDirection === 'LONG' || displayDirection === 'SHORT'
-      ? `Overall play: ${displayDirection} ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`
-      : 'Overall play: WAIT for one side to confirm.',
-    sideLine,
-    ...(play?.shortBelow != null && displayDirection !== 'SHORT' ? [sideBreakoutLabel('SHORT', 'BELOW', play.shortBelow)] : []),
-    ...(play?.longAbove != null && displayDirection !== 'LONG' ? [sideBreakoutLabel('LONG', 'ABOVE', play.longAbove)] : []),
+    ...(decisionBand
+      ? [
+          'Overall play: CONFLICT / BATTLE ZONE / WAIT for completed 5M close outside the band.',
+          ...decisionBand.lines,
+        ]
+      : [
+          displayDirection === 'LONG' || displayDirection === 'SHORT'
+            ? `Overall play: ${displayDirection} ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`
+            : 'Overall play: WAIT for one side to confirm.',
+          sideLine,
+          ...(play?.shortBelow != null && displayDirection !== 'SHORT' ? [sideBreakoutLabel('SHORT', 'BELOW', play.shortBelow)] : []),
+          ...(play?.longAbove != null && displayDirection !== 'LONG' ? [sideBreakoutLabel('LONG', 'ABOVE', play.longAbove)] : []),
+        ]),
     levels ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}` : 'Entry: pending',
     levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'Stop: pending | T1: pending | T2: pending',
     `Next trigger: ${compactInstruction(activeZone?.nextTrigger || freshBest?.requiredTrigger || freshBest?.nextAction || candidate?.requiredTrigger || candidate?.nextAction || play?.nextTrigger, 'wait for completed 5M proof.' ).slice(0, 170)}`,
