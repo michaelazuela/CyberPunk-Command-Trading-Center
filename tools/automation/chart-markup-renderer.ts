@@ -787,11 +787,8 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
       : '#261406';
   const prefix = sessionPlanPrefix(input.sessionLabel);
   const unsafeDeskReview = deskPlayUnsafeReview(model);
-  const oppositeDirection = model.direction === 'SHORT' ? 'LONG' : 'SHORT';
   const title = isDeskPlayContext
-    ? unsafeDeskReview
-      ? `[${prefix} PREP] ${input.instrument} - ${model.direction} FAILED`
-      : `[${prefix} PREP] ${input.instrument} - ${model.direction} DESK MAP`
+    ? `[${prefix} PREP] ${input.instrument} - ${model.direction} DESK MAP`
     : `[${prefix} ${planHeadlineMode(status)}] ${input.instrument} - ${model.direction}`;
   const badge = isDeskPlayContext ? unsafeDeskReview ? 'WATCH ONLY' : 'REVIEW ONLY' : status === 'EXECUTABLE' ? status : 'REVIEW ONLY';
   const deskContextAction = model.direction === 'SHORT'
@@ -809,7 +806,7 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
     <text x="558" y="61" class="banner-title" fill="#f8fafc">${escapeHtml(compact(title, 34))}</text>
     <rect x="1290" y="35" width="192" height="38" rx="19" fill="${isDeskPlayContext ? '#38bdf8' : statusColor(status)}" opacity=".94" />
     <text x="1386" y="61" text-anchor="middle" class="banner-status">${escapeHtml(badge)}</text>
-    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? unsafeDeskReview ? `${oppositeDirection} Watch - Not A Trade Plan` : hasDeskPlayLevels ? 'Desk Map - Review Levels' : 'Desk Map - Context Only' : cardModelLabel(model.model), 42))}</text>
+    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? unsafeDeskReview ? `${model.direction} Watch - HTF Caution` : hasDeskPlayLevels ? 'Desk Map - Review Levels' : 'Desk Map - Context Only' : cardModelLabel(model.model), 42))}</text>
     <text x="1076" y="94" class="banner-action">${escapeHtml(action)}</text>
   `;
 }

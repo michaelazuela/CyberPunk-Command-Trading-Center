@@ -540,9 +540,10 @@ try {
     contextLine: 7591,
     contextLabel: 'Line in the sand',
   });
-  assert.ok(failedShortReviewHtml.includes('SHORT FAILED'));
+  assert.ok(failedShortReviewHtml.includes('SHORT DESK MAP'));
   assert.ok(failedShortReviewHtml.includes('WATCH ONLY'));
-  assert.ok(failedShortReviewHtml.includes('LONG Watch - Not A Trade Plan'));
+  assert.ok(failedShortReviewHtml.includes('SHORT Watch - HTF Caution'));
+  assert.ok(!failedShortReviewHtml.includes('LONG Watch - Not A Trade Plan'));
   assert.ok(failedShortReviewHtml.includes('Action: no execution'));
   assert.ok(failedShortReviewHtml.includes('DESK READINESS'));
   assert.ok(failedShortReviewHtml.includes('ALERT QUALITY'));

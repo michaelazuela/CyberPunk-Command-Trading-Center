@@ -6424,6 +6424,9 @@ try {
     contextLine: 7563.5,
     contextLabel: 'Line in the sand',
   });
+  assert.ok(longPullbackClarifierHtml.includes('[PM PREP] MES - LONG DESK MAP'));
+  assert.ok(!longPullbackClarifierHtml.includes('[PM PREP] MES - LONG FAILED'));
+  assert.ok(!longPullbackClarifierHtml.includes('SHORT Watch - Not A Trade Plan'));
   assert.ok(longPullbackClarifierHtml.includes('No short plan. 7557.50 is the LONG pullback review entry zone.'));
   assert.ok(longPullbackClarifierHtml.includes('Short requires completed 5M bearish invalidation below the active long structure.'));
   assert.ok(longPullbackClarifierHtml.includes('No short plan. 7557.50 is the LONG'));
