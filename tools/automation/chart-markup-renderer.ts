@@ -46,6 +46,11 @@ export interface ReversalWatchChartRenderInput {
     retestRule?: string | null;
     invalidationRule?: string | null;
     noChaseRule?: string | null;
+    referenceEntry?: number | null;
+    referenceStop?: number | null;
+    referenceTarget1?: number | null;
+    referenceTarget2?: number | null;
+    referenceReason?: string | null;
     reason: string;
   };
   state: {
@@ -1606,6 +1611,10 @@ function buildReversalWatchChartHtml(input: ReversalWatchChartRenderInput): stri
     input.lines.strongerTriggerLine,
     input.lines.invalidLine,
     input.lines.noChaseLine,
+    input.lines.referenceEntry,
+    input.lines.referenceStop,
+    input.lines.referenceTarget1,
+    input.lines.referenceTarget2,
   ].filter(isPrice);
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
@@ -1626,20 +1635,30 @@ function buildReversalWatchChartHtml(input: ReversalWatchChartRenderInput): stri
     ? `<rect x="${map.left}" y="${y(Math.max(reactionLow, reactionHigh))}" width="${chartWidth}" height="${Math.max(12, Math.abs(y(reactionLow) - y(reactionHigh)))}" fill="${accent}" opacity=".16" />
        <text x="${map.left + 24}" y="${y(Math.max(reactionLow, reactionHigh)) - 12}" class="zone-label" fill="${accent}">${escapeHtml(compact(input.lines.reactionLabel || 'Reaction zone', 30))}</text>`
     : '';
+  const hasReferencePlan = [input.lines.referenceEntry, input.lines.referenceStop, input.lines.referenceTarget1, input.lines.referenceTarget2].every(isPrice);
   const lines = renderManagedLines([
+    { label: 'ENTRY REF', price: input.lines.referenceEntry, color: '#4ade80', width: 3 },
+    { label: 'STOP REF', price: input.lines.referenceStop, color: '#ef4444', width: 3 },
+    { label: 'T1 REF', price: input.lines.referenceTarget1, color: '#facc15', dash: '8 6' },
+    { label: 'T2 REF', price: input.lines.referenceTarget2, color: '#facc15', dash: '4 6' },
     { label: `${direction} TRIGGER`, price: input.lines.triggerLine, color: '#38bdf8', width: 3 },
     { label: 'STRONGER', price: input.lines.strongerTriggerLine, color: '#8b5cf6', dash: '8 8' },
     { label: 'INVALID', price: input.lines.invalidLine, color: '#ef4444', width: 3 },
     { label: 'NO CHASE', price: input.lines.noChaseLine, color: '#facc15', dash: '10 7', width: 2.5 },
     { label: 'CURRENT', price: input.currentPrice, color: '#f8fafc', dash: '4 6' },
   ], y, { lineStart: map.left, lineEnd: map.right - 8, text: 1312, pill: 1406 });
-  const timeLabels = candles
-    .filter((_, index) => index === 0 || index === candles.length - 1 || index % Math.max(1, Math.round(candles.length / 5)) === 0)
-    .map((candle, index) => {
-      const candleIndex = candles.indexOf(candle);
+  const timeLabelStep = Math.max(1, Math.round(candles.length / 5));
+  const lastCandleIndex = candles.length - 1;
+  const timeLabelIndexes = candles
+    .map((_, index) => index)
+    .filter((index) => index === 0 || index === lastCandleIndex || (index % timeLabelStep === 0 && Math.abs(index - lastCandleIndex) > 2));
+  const timeLabels = timeLabelIndexes
+    .map((candleIndex) => {
+      const candle = candles[candleIndex];
       const minutes = minutesFromTimestamp(candle.timestamp);
       const label = minutes === null ? String(candleIndex + 1) : `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-      return `<text x="${map.left + candleIndex * xStep}" y="946" text-anchor="${index === 0 ? 'start' : 'middle'}" class="axis">${escapeHtml(label)}</text>`;
+      const anchor = candleIndex === 0 ? 'start' : candleIndex === lastCandleIndex ? 'end' : 'middle';
+      return `<text x="${map.left + candleIndex * xStep}" y="946" text-anchor="${anchor}" class="axis">${escapeHtml(label)}</text>`;
     }).join('');
   const chartRuleText = (kind: 'reclaim' | 'retest' | 'invalid' | 'no_chase'): string => {
     if (kind === 'reclaim') return isPrice(input.lines.triggerLine)
@@ -1658,6 +1677,22 @@ function buildReversalWatchChartHtml(input: ReversalWatchChartRenderInput): stri
   const rule = (label: string, value: string, yPos = 0) => value
     ? `<text x="42" y="${yPos}" class="side-copy"><tspan fill="#94a3b8">${escapeHtml(label)}:</tspan> ${escapeHtml(value)}</text>`
     : '';
+  const referencePlanPanel = hasReferencePlan
+    ? [
+        `<text x="42" y="724" class="side-title">REFERENCE PLAN</text>`,
+        `<line x1="42" y1="738" x2="398" y2="738" stroke="#4ade80" stroke-opacity=".34" />`,
+        `<text x="42" y="768" class="side-copy"><tspan fill="#94a3b8">Entry:</tspan> ${money(input.lines.referenceEntry)}</text>`,
+        `<text x="42" y="798" class="side-copy"><tspan fill="#94a3b8">Stop:</tspan> ${money(input.lines.referenceStop)}</text>`,
+        `<text x="42" y="828" class="side-copy"><tspan fill="#94a3b8">T1:</tspan> ${money(input.lines.referenceTarget1)}</text>`,
+        `<text x="42" y="858" class="side-copy"><tspan fill="#94a3b8">T2:</tspan> ${money(input.lines.referenceTarget2)}</text>`,
+        `<text x="42" y="892" class="side-copy" fill="#facc15">Review only - canExecute unchanged.</text>`,
+      ].join('')
+    : [
+        `<text x="42" y="724" class="side-title">REFERENCE PLAN</text>`,
+        `<line x1="42" y1="738" x2="398" y2="738" stroke="#facc15" stroke-opacity=".34" />`,
+        `<text x="42" y="774" class="side-copy" fill="#facc15">Entry / stop / T1 / T2 pending.</text>`,
+        `<text x="42" y="806" class="side-copy">Wait for fresh app-owned 5M proof.</text>`,
+      ].join('');
   return `<!doctype html>
 <html>
 <head>
@@ -1705,6 +1740,8 @@ function buildReversalWatchChartHtml(input: ReversalWatchChartRenderInput): stri
   ${rule('Retest', chartRuleText('retest'), 586)}
   ${rule('Invalidation', chartRuleText('invalid'), 636)}
   ${rule('No chase', chartRuleText('no_chase'), 670)}
+  <rect x="24" y="704" width="392" height="220" rx="8" fill="#020807" stroke="${hasReferencePlan ? '#4ade80' : '#facc15'}" stroke-width="1.6" opacity=".96" />
+  ${referencePlanPanel}
   <rect x="${map.left}" y="${map.top}" width="${chartWidth}" height="${map.bottom - map.top}" rx="12" fill="#020706" stroke="#164e63" stroke-width="2" opacity=".95" />
   ${reactionZone}
   ${candleRows}

@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, type ChartContext, type SetupCandidate } from '../../src/types';
-import { buildChartMarkupHtmlForTest, buildPriceLevelMapHtmlForTest, renderChartMarkup, renderPriceLevelMap, resolveChartMarkerAnchorFacts, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
+import { buildChartMarkupHtmlForTest, buildPriceLevelMapHtmlForTest, buildReversalWatchChartHtmlForTest, renderChartMarkup, renderPriceLevelMap, resolveChartMarkerAnchorFacts, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
 const outputDir = path.join(os.tmpdir(), `chart-markup-renderer-${Date.now()}`);
 
@@ -591,6 +591,47 @@ try {
     'Unsafe Desk Play context cards must show proof/wait state instead of misleading Alert Quality component math.',
   );
   assert.ok(!mismatchedQualityHtml.includes('ALERT QUALITY'));
+  const reversalWatchHtml = buildReversalWatchChartHtmlForTest({
+    chartContext,
+    instrument: 'MES',
+    tradeDate: '2026-07-08',
+    sessionLabel: 'lunch',
+    currentPrice: 7508.75,
+    lines: {
+      eligible: true,
+      exhaustedSide: 'LONG',
+      watchDirection: 'SHORT',
+      reactionZoneLow: 7490,
+      reactionZoneHigh: 7515.75,
+      reactionLabel: 'RTH morning bearish displacement',
+      triggerLine: 7506.25,
+      strongerTriggerLine: 7506.25,
+      invalidLine: 7525,
+      noChaseLine: 7491.25,
+      referenceEntry: 7506.25,
+      referenceStop: 7525,
+      referenceTarget1: 7478.25,
+      referenceTarget2: 7468.75,
+      referenceReason: 'tactical levels only from the existing opposite-side lifecycle.',
+      reason: 'LONG campaign reached mapped reaction zone; SHORT reversal watch lines are available.',
+    },
+    state: {
+      state: 'direction_validated',
+      reason: 'Completed 5M reclaim and later retest/hold close confirmed.',
+      reclaimConfirmed: true,
+      retestHoldConfirmed: true,
+      barsSinceReclaim: 2,
+    },
+  });
+  assert.ok(reversalWatchHtml.includes('REFERENCE PLAN'));
+  assert.ok(reversalWatchHtml.includes('Entry:</tspan> 7506.25'));
+  assert.ok(reversalWatchHtml.includes('Stop:</tspan> 7525.00'));
+  assert.ok(reversalWatchHtml.includes('T1:</tspan> 7478.25'));
+  assert.ok(reversalWatchHtml.includes('T2:</tspan> 7468.75'));
+  assert.ok(reversalWatchHtml.includes('ENTRY REF'));
+  assert.ok(reversalWatchHtml.includes('STOP REF'));
+  assert.ok(reversalWatchHtml.includes('T1 REF'));
+  assert.ok(reversalWatchHtml.includes('T2 REF'));
   const morningTradePlanHtml = buildChartMarkupHtmlForTest({
     chartContext: { ...chartContext, candles: fullDeskReviewCandles },
     candidate,
