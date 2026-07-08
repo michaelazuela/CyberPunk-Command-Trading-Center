@@ -6319,6 +6319,112 @@ try {
   assert.ok(!deskPlayText.includes('Decision class:'));
   assert.ok(!deskPlayText.includes('Next trigger:'));
   assert.ok(deskPlayText.length < 950, `expected Desk Play payload under actionable compact target, got ${deskPlayText.length}`);
+  const staleMigratedShortDeskPlayState: typeof deskPlayState = {
+    ...deskPlayState,
+    htfContextStatus: 'sufficient',
+    dataQualityStatus: 'ready',
+    canExecute: false,
+    primaryDeskPlay: {
+      ...deskPlayState.primaryDeskPlay,
+      direction: 'SHORT' as const,
+      lineInSand: 7549.5,
+      longAbove: 7553.25,
+      shortBelow: 7549.5,
+      levelTransition: {
+        sourceOfTruth: 'scanner_level_transition_map',
+        targetReactionLevel: 7551.25,
+        targetReactionLabel: 'Battle zone',
+        longAbove: 7553.25,
+        shortBelow: 7549.5,
+        targetManagementInstruction: 'Wait for completed 5M close outside 7549.50-7553.25.',
+      },
+      activeTacticalLine: {
+        direction: 'SHORT' as const,
+        activeLine: 7580.25,
+        originalLine: 7549.5,
+        migrated: true,
+        nextTrigger: 'Active line 7580.25: completed 5M hold/retest below required before fresh execution consideration.',
+        standDown: 'Fresh SHORT stand down on completed 5M acceptance above 7580.25.',
+      },
+      longBias: {
+        ...deskPlayState.primaryDeskPlay.longBias,
+        lineInSand: 7553.25,
+      },
+      shortBias: {
+        ...deskPlayState.primaryDeskPlay.shortBias,
+        lineInSand: 7549.5,
+      },
+      htfProtectedStructureMap: {
+        ...deskPlayState.primaryDeskPlay.htfProtectedStructureMap,
+        reliability: 'structural',
+        rows: [
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map' as const,
+            timeframe: '5M' as const,
+            bias: 'BEAR' as const,
+            currentBias: 'BEAR' as const,
+            biasChangeLine: 7553.25,
+            biasChangeConfirmation: 'close+hold',
+            protectedStructure: 7553.25,
+            confirmationLine: 7549.5,
+            target: 7541.25,
+            targetLabel: 'App T2 7541.25',
+            confidence: 73,
+            status: 'confirmed_mss',
+            note: 'battle zone 7549.50-7553.25; prior migrated short line 7580.25 is left behind',
+          },
+        ],
+      },
+    },
+  } as any;
+  const staleMigratedShortCandidate = {
+    ...deskPlayCandidate,
+    direction: 'SHORT' as const,
+    entry: 7548.75,
+    stop: 7552.5,
+    target1: 7543.25,
+    target2: 7541.25,
+    riskPoints: 3.75,
+    requiredTrigger: 'Completed 5M close below 7549.50.',
+  };
+  const staleMigratedShortResult = await prepareLiveScannerDeskPlayAlertArtifacts({
+    session: 'evening',
+    tradeDate: '2026-07-07',
+    config: { instrument: 'MES' },
+    state: 'Conditional',
+    confidence: {
+      score: 78,
+      qualifiedReasons: ['Desk Play stale migrated line regression fixture.'],
+      missingReasons: ['Fresh retest proof required.'],
+      recommendation: 'Wait.',
+      hardBlocker: null,
+    },
+    normalized: {
+      canExecute: false,
+      decisionStatus: TradeDecisionStatus.Wait,
+      decision: 'NO TRADE',
+      noTradeReason: NoTradeReason.EntryTriggerPending,
+      invalidation: staleMigratedShortCandidate.invalidation,
+      setupCandidates: [staleMigratedShortCandidate],
+    } as any,
+    chartContext: chartContext as ChartContext,
+    currentPrice: 7551.25,
+    windowLabel: 'Evening Setup Scanner',
+    planVersionId: 'SCANNER-DESK-PLAY-STALE-MIGRATED-SHORT',
+    deskState: staleMigratedShortDeskPlayState,
+    decisionTapePath: path.join(auditDir, 'desk-play-stale-migrated-decision-tape.json'),
+    outputDir,
+  });
+  const staleMigratedShortText = flattenDiscordPayloadText(staleMigratedShortResult.payload);
+  assert.ok(staleMigratedShortText.includes('[EVENING DESK PLAY] MES - WAIT / SHORT NO CHASE'));
+  assert.ok(staleMigratedShortText.includes('Primary: WAIT / battle zone 7549.50-7553.25 | Current 7551.25'));
+  assert.ok(staleMigratedShortText.includes('Line: 7549.50-7553.25 | Trigger: completed 5M close outside 7549.50-7553.25'));
+  assert.ok(staleMigratedShortText.includes('Prior SHORT line: 7580.25 already left; no chase.'));
+  assert.ok(staleMigratedShortText.includes('LONG ABOVE 7553.25'));
+  assert.ok(staleMigratedShortText.includes('SHORT BELOW 7549.50'));
+  assert.ok(staleMigratedShortText.includes('Plan: no entry/stop/T1/T2 until trigger and protected 5M stop are proven.'));
+  assert.ok(!staleMigratedShortText.includes('Primary: SHORT below 7580.25'));
+  assert.ok(!staleMigratedShortText.includes('Line: 7580.25 | Trigger: 5M close below 7580.25'));
   const deskPlayRagCalls: Array<{ url: string; method: string; body: any }> = [];
   process.env.SUPABASE_URL = 'https://supabase.example/rest/v1';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test';

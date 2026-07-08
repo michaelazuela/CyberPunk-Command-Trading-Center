@@ -6972,6 +6972,14 @@ function scannerDeskPlayFallbackArmingState(args: {
   return { armed: true, headline: `${args.direction} REVIEW`, reason: null };
 }
 
+function scannerDeskPlayBattleZoneText(longLine: number | null, shortLine: number | null): string | null {
+  if (!isFiniteTradePrice(longLine) || !isFiniteTradePrice(shortLine)) return null;
+  const lower = Math.min(longLine, shortLine);
+  const upper = Math.max(longLine, shortLine);
+  if (priceMateriallyEqual(lower, upper)) return scannerDiscordLine(lower);
+  return `${scannerDiscordLine(lower)}-${scannerDiscordLine(upper)}`;
+}
+
 function scannerDeskPlayLiveCompactFallbackPayload(args: {
   session: LiveSession;
   tradeDate: string;
@@ -6992,12 +7000,36 @@ function scannerDeskPlayLiveCompactFallbackPayload(args: {
   const line = play.activeTacticalZone?.direction === direction && typeof play.activeTacticalZone.lower === 'number'
     ? play.activeTacticalZone.lower
     : play.activeTacticalLine?.activeLine ?? play.lineInSand ?? args.deskState.lineInSand ?? args.candidate?.entry ?? null;
-  const arming = scannerDeskPlayFallbackArmingState({
+  const longBattleLine = scannerDeskPlayBattleLine({ deskState: args.deskState, side: 'LONG' });
+  const shortBattleLine = scannerDeskPlayBattleLine({ deskState: args.deskState, side: 'SHORT' });
+  const battleZoneText = scannerDeskPlayBattleZoneText(longBattleLine, shortBattleLine);
+  const activeLine = play.activeTacticalLine?.direction === direction && isFiniteTradePrice(play.activeTacticalLine.activeLine)
+    ? play.activeTacticalLine.activeLine
+    : null;
+  const migratedLineLeftBehind = (
+    (direction === 'LONG' || direction === 'SHORT') &&
+    Boolean(play.activeTacticalLine?.migrated) &&
+    isFiniteTradePrice(activeLine) &&
+    isFiniteTradePrice(args.currentPrice) &&
+    (
+      direction === 'SHORT'
+        ? args.currentPrice < activeLine - TRADE_RULES.targetModel.tickSize * 4
+        : args.currentPrice > activeLine + TRADE_RULES.targetModel.tickSize * 4
+    )
+  );
+  const baseArming = scannerDeskPlayFallbackArmingState({
     direction,
     line,
     currentPrice: args.currentPrice,
     canExecute: args.deskState.canExecute,
   });
+  const arming = migratedLineLeftBehind
+    ? {
+      armed: false,
+      headline: `WAIT / ${direction} NO CHASE`,
+      reason: `Prior ${direction} line ${scannerDiscordLine(activeLine)} is already left behind; no fresh entry unless price retests/holds ${direction === 'SHORT' ? 'below' : 'above'} it or confirms through the nearby battle line.`,
+    }
+    : baseArming;
   const entry = arming.armed ? args.candidate?.entry ?? args.normalized.entry ?? null : null;
   const stop = arming.armed ? args.candidate?.stop ?? args.normalized.stop ?? null : null;
   const t1 = arming.armed ? args.candidate?.target1 ?? args.normalized.t1 ?? null : null;
@@ -7014,24 +7046,29 @@ function scannerDeskPlayLiveCompactFallbackPayload(args: {
         ? args.currentPrice <= t1
         : false
     : false;
-  const directionRule = direction === 'SHORT'
+  const directionRule = migratedLineLeftBehind && battleZoneText
+    ? `WAIT / battle zone ${battleZoneText}`
+    : direction === 'SHORT'
     ? `SHORT below ${scannerDiscordLine(line)}`
     : direction === 'LONG'
       ? `LONG above ${scannerDiscordLine(line)}`
       : `WAIT around ${scannerDiscordLine(line)}`;
-  const triggerRule = direction === 'SHORT'
+  const triggerRule = migratedLineLeftBehind && battleZoneText
+    ? `completed 5M close outside ${battleZoneText}`
+    : direction === 'SHORT'
     ? `5M close below ${scannerDiscordLine(line)}`
     : direction === 'LONG'
       ? `5M close above ${scannerDiscordLine(line)}`
       : 'wait for one completed 5M side to confirm';
+  const displayLine = migratedLineLeftBehind && battleZoneText
+    ? battleZoneText
+    : scannerDiscordLine(line);
   const planLine = hasPlanLevels
     ? `Plan: Entry ${scannerDiscordLine(entry)} | Stop ${scannerDiscordLine(stop)} | T1 ${scannerDiscordLine(t1)} | T2 ${scannerDiscordLine(t2)}`
     : 'Plan: no entry/stop/T1/T2 until trigger and protected 5M stop are proven.';
   const statusLine = t1Reached
     ? `No fresh entry: current already reached/passed T1 ${scannerDiscordLine(t1)}.`
     : `Status: review only; ${clip(noChase, 70)}`;
-  const longBattleLine = scannerDeskPlayBattleLine({ deskState: args.deskState, side: 'LONG' });
-  const shortBattleLine = scannerDeskPlayBattleLine({ deskState: args.deskState, side: 'SHORT' });
   const battlePlanLines = [
     'Battle Plan:',
     `Current ${scannerDiscordLine(args.currentPrice)} | no chase between active lines.`,
@@ -7042,10 +7079,14 @@ function scannerDeskPlayLiveCompactFallbackPayload(args: {
     .replace(/^invalid(?:ation)?\s*:\s*/i, '')
     .replace(/^invalid\s+if\s+/i, '')
     .trim() || 'protected 5M invalidation pending.';
+  const priorLineNote = migratedLineLeftBehind
+    ? `Prior ${direction} line: ${scannerDiscordLine(activeLine)} already left; no chase. Fresh ${direction.toLowerCase()} needs retest/hold ${direction === 'SHORT' ? 'below' : 'above'} it or nearby battle-line confirmation.`
+    : null;
   const description = [
     `Primary: ${directionRule} | Current ${scannerDiscordLine(args.currentPrice)}`,
     `HTF: ${args.deskState.htfContextStatus || 'unknown'} / ${play.htfProtectedStructureMap?.reliability || 'unknown'}`,
-    `Line: ${scannerDiscordLine(line)} | Trigger: ${triggerRule}`,
+    `Line: ${displayLine} | Trigger: ${triggerRule}`,
+    ...(priorLineNote ? [priorLineNote] : []),
     ...battlePlanLines,
     planLine,
     `Invalid: ${clip(cleanInvalidation, 82)}`,
