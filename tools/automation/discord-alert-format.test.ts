@@ -2011,6 +2011,102 @@ assert.ok(pendingShortMapText.includes('T1: pending | T2: pending'));
 assert.ok(pendingShortMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(!/Entry: 7615\.75|Stop: 7598\.50|T1: 7641\.75|T2: 7650\.25/.test(pendingShortMapText));
 
+const deskPlayNoChaseShortPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-07-08',
+  instrument: 'MES',
+  planVersionId: 'MORNING-DESK-PLAY-2026-07-08T10:10:00.0000000-SHORT-NO-CHASE',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.NoTrade,
+    decision: 'NO TRADE',
+    noTradeReason: 'Short review is mapped, but there is no fresh entry.',
+    invalidation: null,
+    setupCandidates: [],
+  },
+  candidates: [],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Morning Setup Scan',
+  currentPrice: 7512,
+  deskState: {
+    marketMode: 'conditional',
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    lineInSand: 7507.25,
+    nextTrigger: 'Fresh completed 5M retest/rejection below 7507.25 required before a new short plan.',
+    invalidation: null,
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      title: 'SHORT no-chase review below line in the sand',
+      summary: 'SHORT review exists, but no fresh entry is available.',
+      lineInSand: 7507.25,
+      longAbove: 7520,
+      shortBelow: 7507.25,
+      nextTrigger: 'Fresh completed 5M retest/rejection below 7507.25 required before a new short plan.',
+      noChase: 'No chase. Wait for fresh completed 5M retest/rejection below the active short line.',
+      discordEligible: true,
+      htfProtectedStructureMap: {
+        sourceOfTruth: 'scanner_htf_protected_structure_map',
+        reliability: 'sufficient',
+        summary: 'HTF map sufficient.',
+        rows: [
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '15M',
+            bias: 'BEAR',
+            currentBias: 'BEAR',
+            biasChangeLine: 7520,
+            protectedStructure: 7520,
+            confirmationLine: 7507.25,
+          },
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '5M',
+            bias: 'BEAR',
+            currentBias: 'BEAR',
+            biasChangeLine: 7520,
+            protectedStructure: 7520,
+            confirmationLine: 7507.25,
+          },
+        ],
+      },
+      shortBias: {
+        state: 'primary',
+        scenarioLabel: 'Short below 7507.25 review',
+        lineInSand: 7507.25,
+        nextTrigger: 'Fresh completed 5M retest/rejection below 7507.25 required before a new short plan.',
+        reason: 'Short side is mapped, but the fresh entry is not available.',
+        blockers: ['No fresh entry.'],
+        tradeReadiness: {
+          status: 'missed_no_chase',
+          displayStatus: 'missed_no_chase',
+          displayLabel: 'MISSED / NO CHASE',
+          displayReason: 'Price moved without a fresh retest/rejection package.',
+          displayAction: 'Wait for a fresh completed 5M retest/rejection below 7507.25.',
+        },
+      },
+      longBias: {
+        state: 'countertrend_review',
+        scenarioLabel: 'Long above 7520 review',
+        lineInSand: 7520,
+        nextTrigger: 'Only review after completed 5M reclaim.',
+        reason: 'Opposite side remains context only.',
+        blockers: ['Countertrend review only.'],
+      },
+    },
+  },
+});
+const deskPlayNoChaseShortText = flattenDiscordPayloadText(deskPlayNoChaseShortPayload);
+assert.ok(deskPlayNoChaseShortPayload.content?.includes('[AM DESK PLAY] MES - SHORT REVIEW / NO CHASE'));
+assert.ok(deskPlayNoChaseShortText.includes('Desk Snapshot:'));
+assert.ok(deskPlayNoChaseShortText.includes('Completed 5M: 10:10 ET.'));
+assert.ok(deskPlayNoChaseShortText.includes('SHORT line in the sand: 7507.25.'));
+assert.ok(deskPlayNoChaseShortText.includes('Fresh-entry status: NO FRESH SHORT ENTRY / NO CHASE.'));
+assert.ok(deskPlayNoChaseShortText.includes('Next proof: fresh completed 5M retest/rejection below 7507.25 before a new short plan.'));
+assert.ok(!/TRUE EXECUTION APPROVED|Trade now/i.test(deskPlayNoChaseShortText));
+
 const waitWithActiveParentFvgPayload = compactDiscordSummary({
   session: 'lunch',
   tradeDate: '2026-06-23',

@@ -1594,6 +1594,17 @@ function deskPlaySideArmingState(args: {
   return { armed: true, reason: null };
 }
 
+function deskPlayIsNoChaseReview(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT',
+): boolean {
+  const bias = direction === 'LONG' ? play.longBias : play.shortBias;
+  const readiness = String(bias?.tradeReadiness?.status || bias?.tradeReadiness?.displayStatus || bias?.executableConsideration?.status || '').replace(/_/g, ' ');
+  const stackStatus = String(play.sameSideCampaignStack?.freshEntryStatus || play.sameSideCampaignStack?.stackStatus || '').replace(/_/g, ' ');
+  const activeZoneStatus = String(play.activeTacticalZone?.state || '').replace(/_/g, ' ');
+  return /no chase|missed|management/i.test(`${readiness} ${stackStatus} ${activeZoneStatus}`);
+}
+
 function deskPlayHeadlineLabel(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string {
   const play = args.deskState?.primaryDeskPlay;
   if ((direction === 'LONG' || direction === 'SHORT') || !play || (play.direction !== 'LONG' && play.direction !== 'SHORT')) {
@@ -1607,9 +1618,55 @@ function deskPlayHeadlineLabel(args: CompactDiscordSummaryArgs, direction: 'LONG
     canExecute: args.deskState?.canExecute,
   });
   if (!arming.armed) {
-    return `WAIT / ${play.direction} ${play.direction === 'SHORT' ? 'BELOW' : 'ABOVE'} ${priceLine(line)}`;
+    return deskPlayIsNoChaseReview(play, play.direction)
+      ? `${play.direction} REVIEW / NO CHASE`
+      : `WAIT / ${play.direction} ${play.direction === 'SHORT' ? 'BELOW' : 'ABOVE'} ${priceLine(line)}`;
   }
   return deskPlayPrimaryLabel(play, direction);
+}
+
+function deskPlayCompletedFiveMinuteLabel(args: CompactDiscordSummaryArgs): string | null {
+  const candidates = [
+    args.planVersionId,
+    args.deskState?.primaryDeskPlay?.freshReentryCandidates?.bestCandidate?.requiredTrigger,
+    args.deskState?.primaryDeskPlay?.freshReentryCandidates?.bestCandidate?.nextAction,
+    args.deskState?.primaryDeskPlay?.freshReentryWatch?.requiredProof,
+    args.deskState?.primaryDeskPlay?.freshReentryWatch?.nextStep,
+    args.deskState?.primaryDeskPlay?.nextTrigger,
+    args.deskState?.nextTrigger,
+  ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+  for (const value of candidates) {
+    const isoMatch = value.match(/20\d{2}-\d{2}-\d{2}T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?/);
+    if (isoMatch) return `${isoMatch[1]}:${isoMatch[2]} ET`;
+    const textMatch = value.match(/\b([01]?\d|2[0-3]):([0-5]\d)\s*ET\b/i);
+    if (textMatch) return `${textMatch[1].padStart(2, '0')}:${textMatch[2]} ET`;
+  }
+  return null;
+}
+
+function deskPlaySnapshotLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT', line: number | null): string[] {
+  const play = args.deskState?.primaryDeskPlay;
+  if (!play) return [];
+  const displayDirection = direction === 'LONG' || direction === 'SHORT'
+    ? direction
+    : play.direction === 'LONG' || play.direction === 'SHORT'
+    ? play.direction
+    : 'WAIT';
+  if (displayDirection !== 'LONG' && displayDirection !== 'SHORT') return [];
+  const completed5m = deskPlayCompletedFiveMinuteLabel(args);
+  const noChase = deskPlayIsNoChaseReview(play, displayDirection);
+  const sideWord = displayDirection === 'SHORT' ? 'below' : 'above';
+  const retestWord = displayDirection === 'SHORT' ? 'retest/rejection' : 'retest/hold';
+  const freshStatus = noChase
+    ? `Fresh-entry status: NO FRESH ${displayDirection} ENTRY / NO CHASE.`
+    : `Fresh-entry status: waiting for completed 5M proof ${sideWord} ${priceLine(line)}.`;
+  return [
+    'Desk Snapshot:',
+    `Completed 5M: ${completed5m || 'latest closed candle from scanner'}.`,
+    `${displayDirection} line in the sand: ${priceLine(line)}.`,
+    freshStatus,
+    `Next proof: fresh completed 5M ${retestWord} ${sideWord} ${priceLine(line)} before a new ${displayDirection.toLowerCase()} plan.`,
+  ];
 }
 
 function deskPlayCrossedDecisionBand(
@@ -2902,6 +2959,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       ? `Inside ${decisionBand.label} = no fresh entry. No chase.`
       : 'Wait for 5M proof + protected stop/targets/canExecute.';
     const lineDisplayLines = deskPlayLineDisplayLines(play, displayDirection, line);
+    const snapshotLines = deskPlaySnapshotLines(args, direction, line);
     const htfTargetLine = deskPlayHtfTargetLine(play);
     const runnerLine = deskPlayRunnerLine(play);
     const battlePlanLines = deskPlayBattlePlanLines({
@@ -2927,6 +2985,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     return [
       `Primary: ${primaryPlanLabel(primaryLabel)}`,
       deskPlayDecisionClassLine(primarySafety),
+      ...snapshotLines,
       ...(direction === 'WAIT' ? [`Read:${failedText}`] : []),
       `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
       ...battlePlanLines,
