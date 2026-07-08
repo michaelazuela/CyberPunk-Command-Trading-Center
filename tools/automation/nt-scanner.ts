@@ -3745,10 +3745,18 @@ function validDeskPlayPlanningLevels(
 
 function deskPlayPlanningCandidate(args: {
   deskState: DeskState;
+  candidate?: SetupCandidate | null;
   normalized?: ReturnType<typeof buildAppTradePlan> | null;
 }): SetupCandidate | null {
   const direction = args.deskState.primaryDeskPlay.direction;
   if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  if (
+    args.candidate?.direction === direction &&
+    isFiniteTradePrice(args.candidate.entry) &&
+    isFiniteTradePrice(args.candidate.stop)
+  ) {
+    return args.candidate;
+  }
   const candidates = args.normalized?.setupCandidates || [];
   const selected = candidates.find((candidate) =>
     candidate.direction === direction &&
@@ -3760,6 +3768,7 @@ function deskPlayPlanningCandidate(args: {
 
 function deskPlayPlanningLevels(args: {
   deskState: DeskState;
+  candidate?: SetupCandidate | null;
   normalized?: ReturnType<typeof buildAppTradePlan> | null;
 }): Pick<SetupCandidate, 'entry' | 'stop' | 'target1' | 'target2' | 'riskPoints'> {
   const direction = args.deskState.primaryDeskPlay.direction;
@@ -3827,11 +3836,12 @@ export function candidateForDeskPlayContextChart(
   deskState: DeskState,
   normalized?: ReturnType<typeof buildAppTradePlan> | null,
   currentPrice?: number | null,
+  selectedCandidate?: SetupCandidate | null,
 ): SetupCandidate | null {
   const play = deskState.primaryDeskPlay;
   if (!play.discordEligible || (play.direction !== 'LONG' && play.direction !== 'SHORT')) return null;
   const primaryBias = play.direction === 'LONG' ? play.longBias : play.shortBias;
-  const planningLevels = deskPlayPlanningLevels({ deskState, normalized });
+  const planningLevels = deskPlayPlanningLevels({ deskState, normalized, candidate: selectedCandidate });
   const lineInSand = deskPlayLineForDirection(deskState, play.direction) ?? play.lineInSand;
   const arming = scannerDeskPlayFallbackArmingState({
     direction: play.direction,
@@ -6761,6 +6771,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
   state: ScannerState;
   confidence: ScannerConfidenceBreakdown;
   normalized: ReturnType<typeof buildAppTradePlan>;
+  candidate?: SetupCandidate | null;
   chartContext: AnalysisResult['structuredChartContext'] | null | undefined;
   currentPrice: number | null;
   windowLabel: string;
@@ -6776,10 +6787,10 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
 }> {
   const deskState = withScannerReviewMapPresentation({
     deskState: args.deskState,
-    candidate: candidateForDeskPlayContextChart(args.deskState, args.normalized, args.currentPrice),
+    candidate: candidateForDeskPlayContextChart(args.deskState, args.normalized, args.currentPrice, args.candidate),
     normalized: args.normalized,
   });
-  const contextCandidate = candidateForDeskPlayContextChart(deskState, args.normalized, args.currentPrice);
+  const contextCandidate = candidateForDeskPlayContextChart(deskState, args.normalized, args.currentPrice, args.candidate);
   const play = deskState.primaryDeskPlay;
   const chartContextLine = play.activeTacticalLine?.activeLine ?? play.lineInSand;
   const chartMarkup = contextCandidate
@@ -10161,6 +10172,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           state: stateForAlert,
           confidence,
           normalized,
+          candidate,
           chartContext: analysis.structuredChartContext || null,
           currentPrice,
           windowLabel: window.label,
@@ -10179,7 +10191,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
               instrument: config.instrument,
               analysis,
               normalized,
-              candidate: candidateForDeskPlayContextChart(deskState, normalized, currentPrice) || candidate,
+              candidate: candidateForDeskPlayContextChart(deskState, normalized, currentPrice, candidate) || candidate,
               visibilityMetadata,
               candidateLifecycleTrace,
               deskState,

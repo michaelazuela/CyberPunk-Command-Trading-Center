@@ -647,9 +647,9 @@ function checkScannerVisibilityMetadataBoundary() {
     !scannerAutomationContent.includes('No long plan yet.') ||
     !scannerAutomationContent.includes('deskPlaySideQualityScorecard(play.longBias, play.shortBias)') ||
     !scannerAutomationContent.includes('planVersionId: deskPlayPlanVersionId') ||
-    !scannerAutomationContent.includes('candidateForDeskPlayContextChart(deskState, normalized, currentPrice) || candidate')
+    !scannerAutomationContent.includes('candidateForDeskPlayContextChart(deskState, normalized, currentPrice, candidate) || candidate')
   ) {
-    fail('nt-scanner.ts must create Desk Play chart candidates with review-only/watch-only wording, two-sided quality metadata, line-arming proof, and matching pending RAG records.');
+    fail('nt-scanner.ts must create Desk Play chart candidates with review-only/watch-only wording, selected-candidate level parity, two-sided quality metadata, line-arming proof, and matching pending RAG records.');
   }
   if (
     scannerAutomationContent.includes('Desk Play - Conditional Planning Levels') ||

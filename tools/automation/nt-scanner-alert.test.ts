@@ -6277,6 +6277,34 @@ try {
   assert.ok(!unarmedShortChartHtml.includes('Entry Zone:'));
   assert.ok(!unarmedShortChartHtml.includes('T1: <tspan'));
   assert.ok(!unarmedShortChartHtml.includes('T2: <tspan'));
+  const selectedCandidateDeskPlayChartCandidate = candidateForDeskPlayContextChart(deskPlayState, {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: NoTradeReason.EntryTriggerPending,
+    setupCandidates: [],
+  } as any, 5325, deskPlayCandidate);
+  assert.equal(selectedCandidateDeskPlayChartCandidate?.direction, 'LONG');
+  assert.equal(selectedCandidateDeskPlayChartCandidate?.entry, 5324.25);
+  assert.equal(selectedCandidateDeskPlayChartCandidate?.stop, 5319.25);
+  assert.equal(selectedCandidateDeskPlayChartCandidate?.target1, 5331.75);
+  assert.equal(selectedCandidateDeskPlayChartCandidate?.target2, 5334.25);
+  const selectedCandidateDeskPlayChartHtml = buildChartMarkupHtmlForTest({
+    chartContext: chartContext as ChartContext,
+    candidate: selectedCandidateDeskPlayChartCandidate as SetupCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-07-08',
+    sessionLabel: 'morning',
+    renderMode: 'desk_play_context',
+    contextLine: 5324.25,
+    contextLabel: 'Line in the sand',
+  });
+  assert.ok(selectedCandidateDeskPlayChartHtml.includes('REVIEW ONLY'));
+  assert.ok(selectedCandidateDeskPlayChartHtml.includes('Entry Zone: <tspan fill="#4ade80">'));
+  assert.ok(selectedCandidateDeskPlayChartHtml.includes('Stop: <tspan fill="#ef4444">5319.25</tspan>'));
+  assert.ok(selectedCandidateDeskPlayChartHtml.includes('T1: <tspan fill="#facc15">5331.75'));
+  assert.ok(selectedCandidateDeskPlayChartHtml.includes('T2: <tspan fill="#facc15">5334.25'));
+  assert.ok(!selectedCandidateDeskPlayChartHtml.includes('No entry / stop / T1 / T2'));
   const deskPlayResult = await prepareLiveScannerDeskPlayAlertArtifacts({
     session: 'lunch',
     tradeDate: '2026-05-26',
@@ -6290,6 +6318,7 @@ try {
       hardBlocker: null,
     },
     normalized: deskPlayNormalized,
+    candidate: deskPlayCandidate,
     chartContext: chartContext as ChartContext,
     currentPrice: 5325,
     windowLabel: 'Lunch/PM Setup Scanner',
