@@ -622,6 +622,15 @@ function deskPlayUnsafeReview(model: PlanRenderModel): boolean {
   return deskPlayStructureOpposes(model) || (ratio !== null && ratio < 0.55);
 }
 
+function deskPlayHasCompleteLevels(model: PlanRenderModel): boolean {
+  return isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2);
+}
+
+function deskPlayLevelsAreDisplayable(model: PlanRenderModel): boolean {
+  if (model.renderMode !== 'desk_play_context') return true;
+  return deskPlayHasCompleteLevels(model) && !deskPlayUnsafeReview(model);
+}
+
 function deskPlayReadinessContext(model: PlanRenderModel): {
   primarySide: 'LONG' | 'SHORT';
   opposingSide: 'LONG' | 'SHORT';
@@ -694,7 +703,7 @@ function renderAlertQuality(candidate: SetupCandidate, yOffset = 486): string {
 }
 
 function renderWatchContextNotice(model: PlanRenderModel): string {
-  const hasDeskPlayLevels = isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2);
+  const hasDeskPlayLevels = deskPlayLevelsAreDisplayable(model);
   const unsafeReview = deskPlayUnsafeReview(model);
   const readiness = deskPlayReadinessContext(model);
   const opposingClarifier = deskPlayOpposingPlanClarifier(model);
@@ -777,7 +786,7 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
   const status = planDisplayStatus(model);
   const accent = model.isLong ? '#4ade80' : '#fb923c';
   const isDeskPlayContext = model.renderMode === 'desk_play_context';
-  const hasDeskPlayLevels = isDeskPlayContext && isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2);
+  const hasDeskPlayLevels = isDeskPlayContext && deskPlayLevelsAreDisplayable(model);
   const headerFill = isDeskPlayContext
     ? '#061821'
     : status === 'BLOCKED' || status === 'NO TRADE'
@@ -831,7 +840,7 @@ function renderDeskPlayMetricChip(args: {
 function renderRiskStrip(model: PlanRenderModel): string {
   if (model.renderMode === 'desk_play_context') {
     const unsafeReview = deskPlayUnsafeReview(model);
-    if (isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2)) {
+    if (deskPlayLevelsAreDisplayable(model)) {
       return `
         ${renderDeskPlayMetricChip({ x: 466, label: 'Risk', value: model.risk ? `${model.risk.toFixed(2)} pts` : 'N/A', width: 174 })}
         ${renderDeskPlayMetricChip({ x: 652, label: 'Line', value: money(model.contextLine), width: 170 })}
@@ -872,7 +881,7 @@ function renderRiskSummary(model: PlanRenderModel): string {
     const runnerText = isPrice(model.runner)
       ? `${model.htfRunnerLabel || model.htfNextDrawLabel || 'HTF runner'} ${money(model.runner)}`
       : 'N/A';
-    if (isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2)) {
+    if (deskPlayLevelsAreDisplayable(model)) {
       return `
         <rect x="24" y="252" width="392" height="214" rx="9" fill="#070b0f" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
         <text x="220" y="283" text-anchor="middle" class="panel-text">REVIEW LEVELS</text>
@@ -886,13 +895,13 @@ function renderRiskSummary(model: PlanRenderModel): string {
     }
     return `
       <rect x="24" y="252" width="392" height="214" rx="9" fill="#070b0f" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
-      <text x="220" y="283" text-anchor="middle" class="panel-text">DESK PLAY CONTEXT</text>
+      <text x="220" y="283" text-anchor="middle" class="panel-text">EXECUTION PROOF</text>
       <text x="46" y="318" class="small">Line: <tspan fill="#38bdf8">${money(model.contextLine)}</tspan></text>
       <text x="46" y="350" class="small">Status: <tspan fill="#facc15">${unsafeReview ? 'Conflict / wait' : 'Watch only'}</tspan></text>
       <text x="46" y="382" class="small">Entry: <tspan fill="#f8fafc">not approved</tspan></text>
       <text x="46" y="414" class="small">Stop: <tspan fill="#f8fafc">not approved</tspan></text>
-      <text x="46" y="442" class="small">Targets: <tspan fill="#f8fafc">not approved</tspan></text>
-      <text x="46" y="462" class="small">Rule: <tspan fill="#f8fafc">${unsafeReview ? 'Clean 5M invalidation required' : '5M trigger still required'}</tspan></text>
+      <text x="46" y="432" class="small">Targets: <tspan fill="#f8fafc">not approved</tspan></text>
+      <text x="46" y="456" class="small">Rule: <tspan fill="#f8fafc">${unsafeReview ? 'Clean 5M invalidation required' : '5M trigger still required'}</tspan></text>
     `;
   }
   const border = model.validationSeverity === 'error' ? '#ef4444' : model.validationSeverity === 'review' ? '#f97316' : '#64748b';
@@ -1247,18 +1256,16 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const isDeskPlayContext = plan.renderMode === 'desk_play_context';
   const displayPlanStatus = planDisplayStatus(plan);
   const unsafeDeskReview = isDeskPlayContext && deskPlayUnsafeReview(plan);
-  const displayScore = unsafeDeskReview
-    ? alertQualityComponentTotal(alertQualityBreakdown(candidate))
-    : score;
-  const scoreLabel = isDeskPlayContext ? unsafeDeskReview ? 'Alert Quality' : 'Map Read' : displayPlanStatus === 'EXECUTABLE' ? 'Score' : 'Quality';
-  const hasDeskPlayLevels = isDeskPlayContext && isPrice(plan.entry) && isPrice(stop) && isPrice(t1) && isPrice(t2);
-  const entryZone = (!isDeskPlayContext || hasDeskPlayLevels) && isPrice(entryLow) && isPrice(entryHigh)
+  const displayScore = unsafeDeskReview ? null : score;
+  const scoreLabel = isDeskPlayContext ? unsafeDeskReview ? 'Proof' : 'Map Read' : displayPlanStatus === 'EXECUTABLE' ? 'Score' : 'Quality';
+  const displayableDeskLevels = !isDeskPlayContext || deskPlayLevelsAreDisplayable(plan);
+  const entryZone = displayableDeskLevels && isPrice(entryLow) && isPrice(entryHigh)
     ? `<rect x="758" y="${y(entryHigh)}" width="${plot.right - 758}" height="${Math.max(8, y(entryLow) - y(entryHigh))}" fill="${isLong ? '#22c55e' : '#f97316'}" opacity="0.27" stroke="${isLong ? '#4ade80' : '#fb923c'}" />
        <text x="772" y="${Math.max(188, y(entryHigh) - 10)}" class="zone-title">${isDeskPlayContext ? 'REVIEW ENTRY ZONE' : isLong ? 'LONG ENTRY ZONE' : 'SHORT ENTRY ZONE'}</text>`
     : '';
   const priceTicks = Array.from({ length: 9 }, (_, index) => low + ((high - low) / 8) * index);
   const pathColor = isLong ? '#4ade80' : '#fb923c';
-  const targetsValidForChart = (!isDeskPlayContext || hasDeskPlayLevels) && !plan.validationMessages.some((message) => message.includes('Target Data Error'));
+  const targetsValidForChart = displayableDeskLevels && !plan.validationMessages.some((message) => message.includes('Target Data Error'));
   const runnerValidForChart = targetsValidForChart && !targetLooksStale(runner, candles, risk);
   const stretchValidForChart = targetsValidForChart && !targetLooksStale(stretch, candles, risk);
   const projectedPath = targetsValidForChart && isLong && isPrice(entryHigh) && isPrice(t2)
@@ -1267,7 +1274,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
       ? `<polyline points="1160,${y(entryLow)} 1236,${y(t1 || entryLow)} 1284,${y(entryLow)} 1326,${y(t2)}" fill="none" stroke="${pathColor}" stroke-width="3" stroke-dasharray="10 9" marker-end="url(#arrow)" />`
       : '';
   const sameT1T2 = isPrice(t1) && isPrice(t2) && Math.abs(t1 - t2) < 0.01;
-  const managedLevels = isDeskPlayContext && !hasDeskPlayLevels
+  const managedLevels = isDeskPlayContext && !displayableDeskLevels
     ? [{ label: plan.contextLabel, price: plan.contextLine, color: '#38bdf8', dash: '12 8', width: 3 }]
     : [
     ...(stretchValidForChart && isPrice(stretch) ? [{ label: 'HTF Ext', price: stretch, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
@@ -1280,6 +1287,11 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     sameT1T2 ? { label: '', price: null, color: '#facc15' } : { label: targetsValidForChart ? 'T2 2.0R' : '', price: targetsValidForChart ? t2 : null, color: '#facc15', dash: '8 7', width: 2.5 },
   ];
   const managedLines = renderManagedLines(managedLevels, y, { lineStart: plot.left, lineEnd: plot.right - 8, text: plot.right - 20, pill: 1406 });
+  const sidePanelScoreText = unsafeDeskReview ? 'WAIT' : displayScore == null ? 'N/A' : `${Math.round(displayScore)}/100`;
+  const sidePanelHtfLabel = isDeskPlayContext ? 'HTF' : 'Higher TF';
+  const sidePanelTrendLabel = isDeskPlayContext ? 'Desk' : 'Bias';
+  const sidePanelHtfValue = unsafeDeskReview ? 'review/mixed' : String(contextBias);
+  const sidePanelTrendValue = unsafeDeskReview ? 'wait' : String(trendBias);
 
   return `<!doctype html>
 <html>
@@ -1358,19 +1370,19 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   <line x1="14" y1="78" x2="442" y2="78" stroke="#334155" />
   <rect x="32" y="94" width="160" height="30" rx="15" fill="${statusColor(plan.displayStatus)}" opacity=".92" />
   <text x="112" y="115" text-anchor="middle" class="status-badge">${escapeHtml(plan.displayStatus)}</text>
-  <text x="210" y="115" class="panel-text">${scoreLabel}: <tspan fill="#facc15">${displayScore == null ? 'N/A' : `${Math.round(displayScore)}/100`}</tspan></text>
+  <text x="210" y="115" class="panel-text">${scoreLabel}: <tspan fill="#facc15">${escapeHtml(sidePanelScoreText)}</tspan></text>
     <text x="32" y="150" class="panel-text">Model: <tspan fill="#4ade80">${escapeHtml(compact(sidePanelModelLabel(model), 31))}</tspan></text>
   <line x1="32" y1="170" x2="424" y2="170" stroke="#334155" />
-  <text x="32" y="196" class="context-mini">Higher TF: <tspan class="context-value">${escapeHtml(String(contextBias))}</tspan></text>
-  <text x="236" y="196" class="context-mini">Bias: <tspan class="context-value">${escapeHtml(String(trendBias))}</tspan></text>
+  <text x="32" y="196" class="context-mini">${sidePanelHtfLabel}: <tspan class="context-value">${escapeHtml(sidePanelHtfValue)}</tspan></text>
+  <text x="236" y="196" class="context-mini">${sidePanelTrendLabel}: <tspan class="context-value">${escapeHtml(sidePanelTrendValue)}</tspan></text>
   <text x="32" y="222" class="context-mini">Narrative: <tspan class="context-value">${escapeHtml(narrative)}</tspan></text>
   ${renderRiskSummary(plan)}
-  ${isDeskPlayContext ? `${renderWatchContextNotice(plan)}${renderAlertQuality(candidate, 816)}` : renderAlertQuality(candidate)}
+  ${isDeskPlayContext ? renderWatchContextNotice(plan) : renderAlertQuality(candidate)}
   ${renderDirectionLogo(isLong)}
   ${renderValidationNotice(plan)}
   ${renderNarrativeMarkers(isLong, markerAnchors)}
   <rect x="16" y="956" width="1504" height="56" rx="9" fill="#070b0f" stroke="#64748b" />
-  <text x="44" y="991" class="small">${isDeskPlayContext ? hasDeskPlayLevels ? 'PREP / REVIEW ONLY - NOT EXECUTION APPROVAL. Levels use app math from entry to protected structure stop. canExecute=false. No automated orders.' : 'WATCH / CONTEXT CHART ONLY. No executable entry, stop, target, risk approval, or automated orders. Decision support only.' : '⚠ THIS IS A DECISION SUPPORT PLAN ONLY. Not financial advice. Not predictive. No automated orders. You are responsible for all final trading decisions.'}</text>
+  <text x="44" y="991" class="small">${isDeskPlayContext ? displayableDeskLevels ? 'PREP / REVIEW ONLY - NOT EXECUTION APPROVAL. Levels use app math from entry to protected structure stop. canExecute=false. No automated orders.' : 'WATCH / CONTEXT CHART ONLY. No executable entry, stop, target, risk approval, or automated orders. Decision support only.' : '⚠ THIS IS A DECISION SUPPORT PLAN ONLY. Not financial advice. Not predictive. No automated orders. You are responsible for all final trading decisions.'}</text>
 </svg>
 </div>
 </body>

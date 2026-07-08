@@ -547,18 +547,13 @@ try {
   assert.ok(!failedShortReviewHtml.includes('LONG Watch - Not A Trade Plan'));
   assert.ok(failedShortReviewHtml.includes('Action: wait for clean 5M invalidation'));
   assert.ok(failedShortReviewHtml.includes('DESK READINESS'));
-  assert.ok(failedShortReviewHtml.includes('ALERT QUALITY'));
-  assert.ok(
-    failedShortReviewHtml.includes('class="alert-total">25/100</text>'),
-    'Alert Quality headline must equal the visible component rows, not the separate side/read score.',
-  );
-  assert.ok(failedShortReviewHtml.includes('Component score shown. Validation still controls status.'));
-  assert.ok(failedShortReviewHtml.includes('Structure'));
-  assert.ok(failedShortReviewHtml.includes('Model'));
-  assert.ok(failedShortReviewHtml.includes('Trigger'));
-  assert.ok(failedShortReviewHtml.includes('Risk'));
-  assert.ok(failedShortReviewHtml.includes('Targets'));
-  assert.ok(failedShortReviewHtml.includes('Conditions'));
+  assert.ok(failedShortReviewHtml.includes('EXECUTION PROOF'));
+  assert.ok(failedShortReviewHtml.includes('Proof: <tspan fill="#facc15">WAIT</tspan>'));
+  assert.ok(!failedShortReviewHtml.includes('ALERT QUALITY'));
+  assert.ok(!failedShortReviewHtml.includes('class="alert-total">25/100</text>'));
+  assert.ok(!failedShortReviewHtml.includes('Component score shown. Validation still controls status.'));
+  assert.ok(!failedShortReviewHtml.includes('REVIEW LEVELS'));
+  assert.ok(!failedShortReviewHtml.includes('REVIEW ENTRY ZONE'));
   assert.ok(failedShortReviewHtml.includes('Map Side: <tspan fill="#f8fafc">SHORT 44/100 low</tspan>'));
   assert.ok(failedShortReviewHtml.includes('Map Role: <tspan fill="#f8fafc">chart map under review</tspan>'));
   assert.ok(failedShortReviewHtml.includes('Opposing Side: <tspan fill="#f8fafc">LONG 98/100 high</tspan>'));
@@ -568,7 +563,9 @@ try {
   assert.ok(failedShortReviewHtml.includes('Readiness: <tspan fill="#f8fafc">watch only - do not execute</tspan>'));
   assert.ok(failedShortReviewHtml.includes('HTF Context: <tspan fill="#f8fafc">LONG</tspan>'));
   assert.ok(failedShortReviewHtml.includes('do not execute this side'));
-  assert.ok(failedShortReviewHtml.includes('Alert Quality: <tspan fill="#facc15">25/100</tspan>'));
+  assert.ok(failedShortReviewHtml.includes('HTF: <tspan class="context-value">review/mixed</tspan>'));
+  assert.ok(failedShortReviewHtml.includes('Desk: <tspan class="context-value">wait</tspan>'));
+  assert.ok(failedShortReviewHtml.includes('No entry / stop / T1 / T2'));
   assert.ok(failedShortReviewHtml.includes('No long plan. 7581.25 is the SHORT pullback review entry zone.'));
   assert.ok(failedShortReviewHtml.includes('Long requires completed 5M bullish invalidation above the active short structure.'));
   const mismatchedQualityHtml = buildChartMarkupHtmlForTest({
@@ -590,9 +587,10 @@ try {
     contextLabel: 'Line in the sand',
   });
   assert.ok(
-    mismatchedQualityHtml.includes('class="alert-total">25/100</text>'),
-    'Alert Quality must not show 85/100 when visible Structure/Risk/Targets/Conditions rows are zero.',
+    mismatchedQualityHtml.includes('Proof: <tspan fill="#facc15">WAIT</tspan>'),
+    'Unsafe Desk Play context cards must show proof/wait state instead of misleading Alert Quality component math.',
   );
+  assert.ok(!mismatchedQualityHtml.includes('ALERT QUALITY'));
   const morningTradePlanHtml = buildChartMarkupHtmlForTest({
     chartContext: { ...chartContext, candles: fullDeskReviewCandles },
     candidate,
