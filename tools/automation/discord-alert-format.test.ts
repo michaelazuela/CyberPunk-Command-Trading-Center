@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   BANNED_ACTIVE_DISCORD_ALERT_TEXT,
+  buildCanonicalTraderTicket,
   compactAttachmentLine,
   compactDiscordSummary,
   flattenDiscordPayloadText,
@@ -4065,6 +4066,40 @@ assert.doesNotMatch(staleZoneShortText, /Entry if fresh proof returns/);
 assert.doesNotMatch(staleZoneShortText, /Entry: 7536\.00/);
 assert.doesNotMatch(staleZoneShortText, /T1: 7483\.50/);
 assert.equal(staleZoneShortPayload.components, undefined);
+
+const staleTicket = buildCanonicalTraderTicket({
+  candidate: staleZoneShortCandidate,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+  },
+  deskState: staleZoneShortPayload as any,
+  currentPrice: 7545.5,
+  suppressLevels: true,
+  suppressReason: 'missed/no-chase regression fixture',
+});
+assert.equal(staleTicket.direction, 'SHORT');
+assert.equal(staleTicket.levels, null);
+assert.equal(staleTicket.levelsStatus, 'suppressed_stale_or_no_chase');
+assert.match(staleTicket.reason, /missed\/no-chase/);
+
+const invalidLongTicket = buildCanonicalTraderTicket({
+  candidate: {
+    ...sampleCandidate('LONG'),
+    entry: 7550,
+    stop: 7555,
+    target1: 7560,
+    target2: 7565,
+  },
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'LONG',
+  },
+});
+assert.equal(invalidLongTicket.levels, null);
+assert.equal(invalidLongTicket.levelsStatus, 'invalid_orientation');
 
 console.log('Discord compact alert formatter verified.');
 

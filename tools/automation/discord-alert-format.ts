@@ -748,6 +748,137 @@ function appTargetLevels(candidate: SetupCandidate, _normalized: CompactNormaliz
   };
 }
 
+export interface CanonicalTraderTicketLevels {
+  entry: number;
+  stop: number;
+  target1: number;
+  target2: number;
+  riskPoints: number;
+  source: 'candidate' | 'desk_play';
+}
+
+export interface CanonicalTraderTicket {
+  direction: 'LONG' | 'SHORT' | 'WAIT';
+  setupLabel: string;
+  lineInSand: number | null;
+  levels: CanonicalTraderTicketLevels | null;
+  levelsStatus: 'complete' | 'watch_only' | 'suppressed_stale_or_no_chase' | 'invalid_orientation';
+  reason: string;
+}
+
+function directionallyValidLevels(
+  direction: 'LONG' | 'SHORT',
+  levels: { entry?: number | null; stop?: number | null; target1?: number | null; target2?: number | null },
+): CanonicalTraderTicketLevels | null {
+  const entry = isFinitePrice(levels.entry) ? roundToTradeTick(levels.entry) : null;
+  const stop = isFinitePrice(levels.stop) ? roundToTradeTick(levels.stop) : null;
+  const target1 = isFinitePrice(levels.target1) ? roundToTradeTick(levels.target1) : null;
+  const target2 = isFinitePrice(levels.target2) ? roundToTradeTick(levels.target2) : null;
+  if (entry === null || stop === null || target1 === null || target2 === null) return null;
+  const valid = direction === 'LONG'
+    ? stop < entry && target1 > entry && target2 > target1
+    : stop > entry && target1 < entry && target2 < target1;
+  if (!valid) return null;
+  return {
+    entry,
+    stop,
+    target1,
+    target2,
+    riskPoints: roundToTradeTick(Math.abs(entry - stop)),
+    source: 'candidate',
+  };
+}
+
+function directionFromDeskState(
+  candidate: SetupCandidate | null | undefined,
+  deskState?: CompactDeskStateForDiscord | null,
+): 'LONG' | 'SHORT' | 'WAIT' {
+  if (candidate?.direction === 'LONG' || candidate?.direction === 'SHORT') return candidate.direction;
+  const playDirection = deskState?.primaryDeskPlay?.direction;
+  return playDirection === 'LONG' || playDirection === 'SHORT' ? playDirection : 'WAIT';
+}
+
+function canonicalLineInSand(args: {
+  direction: 'LONG' | 'SHORT' | 'WAIT';
+  candidate?: SetupCandidate | null;
+  deskState?: CompactDeskStateForDiscord | null;
+}): number | null {
+  if (args.direction === 'LONG' || args.direction === 'SHORT') {
+    const play = args.deskState?.primaryDeskPlay;
+    if (play) {
+      const playLine = deskPlayLineForDirection(play, args.direction);
+      if (isFinitePrice(playLine)) return playLine;
+    }
+  }
+  if (args.candidate && args.candidate.direction !== 'NO TRADE') {
+    const candidateLine = candidateLineInSand(args.candidate);
+    if (isFinitePrice(candidateLine)) return candidateLine;
+    if (isFinitePrice(args.candidate.entry)) return args.candidate.entry;
+  }
+  return isFinitePrice(args.deskState?.lineInSand) ? args.deskState!.lineInSand! : null;
+}
+
+function canonicalCandidateLevels(
+  candidate: SetupCandidate | null | undefined,
+  normalized: CompactNormalizedPlan,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): CanonicalTraderTicketLevels | null {
+  if (!candidate || (direction !== 'LONG' && direction !== 'SHORT') || candidate.direction !== direction) return null;
+  const appLevels = appTargetLevels(candidate, normalized);
+  return directionallyValidLevels(direction, {
+    entry: candidate.entry,
+    stop: appLevels.stop,
+    target1: appLevels.target1,
+    target2: appLevels.target2,
+  });
+}
+
+export function buildCanonicalTraderTicket(args: {
+  candidate?: SetupCandidate | null;
+  normalized?: CompactNormalizedPlan | null;
+  deskState?: CompactDeskStateForDiscord | null;
+  currentPrice?: number | null;
+  suppressLevels?: boolean;
+  suppressReason?: string | null;
+}): CanonicalTraderTicket {
+  const candidate = args.candidate || null;
+  const normalized = args.normalized || {};
+  const direction = directionFromDeskState(candidate, args.deskState || null);
+  const lineInSand = canonicalLineInSand({ direction, candidate, deskState: args.deskState || null });
+  const setupLabel = candidate?.setupType || args.deskState?.primaryDeskPlay?.title || 'DeskState';
+  if (args.suppressLevels) {
+    return {
+      direction,
+      setupLabel,
+      lineInSand,
+      levels: null,
+      levelsStatus: 'suppressed_stale_or_no_chase',
+      reason: args.suppressReason || 'Prior levels are stale/no-chase; wait for fresh completed 5M proof.',
+    };
+  }
+  const candidateLevels = canonicalCandidateLevels(candidate, normalized, direction);
+  if (candidate && direction !== 'WAIT' && candidate.direction === direction && !candidateLevels) {
+    return {
+      direction,
+      setupLabel,
+      lineInSand,
+      levels: null,
+      levelsStatus: 'invalid_orientation',
+      reason: 'Candidate levels are incomplete or directionally invalid for the active side.',
+    };
+  }
+  return {
+    direction,
+    setupLabel,
+    lineInSand,
+    levels: candidateLevels,
+    levelsStatus: candidateLevels ? 'complete' : 'watch_only',
+    reason: candidateLevels
+      ? 'Canonical trader ticket uses one coherent candidate level package.'
+      : 'No complete app-owned entry/stop/T1/T2 package is available for this side.',
+  };
+}
+
 function isMeaningfulExtension(direction: SetupCandidate['direction'], price: number | null | undefined, base: number | null | undefined): price is number {
   if (typeof price !== 'number' || !Number.isFinite(price) || typeof base !== 'number' || !Number.isFinite(base)) return false;
   return direction === 'SHORT' ? price < base - 0.01 : price > base + 0.01;
@@ -2008,7 +2139,6 @@ function candidateLeftActiveTacticalZone(args: CompactDiscordSummaryArgs, candid
 }
 
 function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate, normalized: CompactNormalizedPlan, status: DiscordDecisionStatus): string[] {
-  const levels = appTargetLevels(candidate, normalized);
   const direction = candidate.direction === 'SHORT' ? 'SHORT' : 'LONG';
   const triggerWord = direction === 'SHORT' ? 'BELOW' : 'ABOVE';
   const invalidWord = direction === 'SHORT' ? 'above' : 'below';
@@ -2048,17 +2178,36 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
   });
   const entryLabel = counterStructureLines.length ? 'Conditional entry reference' : 'Entry';
   const activeZoneLeftBehind = status !== 'EXECUTABLE' && Boolean(currentVsZone && currentVsZone.state !== 'inside');
+  const canonicalTicket = buildCanonicalTraderTicket({
+    candidate,
+    normalized,
+    deskState: args.deskState,
+    currentPrice: args.currentPrice,
+    suppressLevels: activeZoneLeftBehind,
+    suppressReason: 'Prior tactical zone already left; wait for fresh completed 5M proof.',
+  });
+  const levels = canonicalTicket.levels;
   const conditionalLevelLines = (): string[] => {
-    if (status === 'EXECUTABLE' || !currentVsZone || currentVsZone.state === 'inside') {
+    if ((status === 'EXECUTABLE' || !currentVsZone || currentVsZone.state === 'inside') && levels) {
       return [
         ...(currentVsZone?.state === 'inside' ? [
           `Entry zone: ${zoneRangeLine(activeZoneLower, activeZoneUpper)}`,
           `Current: ${priceLine(currentPrice)} (inside zone)`,
         ] : []),
-        `${entryLabel}: ${priceLine(candidate.entry)}`,
+        `${entryLabel}: ${priceLine(levels.entry)}`,
         `Stop: ${priceLine(levels.stop)}`,
         `T1: ${priceLine(levels.target1)}`,
         `T2: ${priceLine(levels.target2)}`,
+      ];
+    }
+    if (!levels && (!currentVsZone || currentVsZone.state === 'inside')) {
+      return [
+        'WATCH ONLY:',
+        `Entry: completed 5M close ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}`,
+        direction === 'LONG'
+          ? 'Stop: no priced stop yet; protected 5M swing low is not confirmed.'
+          : 'Stop: no priced stop yet; protected 5M swing high is not confirmed.',
+        'T1/T2: use nearest mapped decision zones until a priced stop confirms.',
       ];
     }
     const noEntryInstruction = direction === 'SHORT'
@@ -2103,8 +2252,8 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     `Line in the Sand: ${priceLine(lineInSand)}`,
     `Trigger: completed 5M close ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}`,
     `Why: ${direction} ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}; ${compactInstruction(candidate.requiredTrigger || candidate.nextAction, `completed 5M acceptance ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`)}`,
-    `Invalid: ${invalidInstruction(candidate.invalidation, `${invalidWord} ${priceLine(levels.stop)}.`)}`,
-    `Opposite Scenario: stand down on ${standDownInstruction(candidate.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels.stop)}.`)}`,
+    `Invalid: ${invalidInstruction(candidate.invalidation, levels ? `${invalidWord} ${priceLine(levels.stop)}.` : 'wait for priced protected 5M structure stop.')}`,
+    `Opposite Scenario: stand down on ${standDownInstruction(candidate.invalidation, levels ? `completed acceptance ${invalidWord} ${priceLine(levels.stop)}.` : 'completed opposite-side acceptance through the active line.')}`,
     '',
     ...counterStructureLines,
     ...(counterStructureLines.length ? [''] : []),
@@ -2122,17 +2271,17 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     '',
     ...(activeZoneLeftBehind
       ? ['Fresh invalidation/targets: pending after new completed 5M proof.']
-      : [
+      : levels ? [
           `Invalid ${invalidWord}: ${priceLine(levels.stop)}`,
           candidateHtfTargetLine(candidate, levels),
-        ]),
+        ] : ['Fresh invalidation/targets: pending until protected 5M stop confirms.']),
     '',
     'Decision support only. No automated orders.',
     '',
     `Status: ${statusText}`,
     deskPlayChartStatusLine({
       hasChart: args.attachments.chartPlan,
-      hasLevels: !activeZoneLeftBehind && Boolean(candidate.entry != null && levels.stop != null && levels.target1 != null && levels.target2 != null),
+      hasLevels: Boolean(levels),
     }),
   ];
 }

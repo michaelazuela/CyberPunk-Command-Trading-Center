@@ -115,6 +115,7 @@ import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar
 import { renderChartMarkup, renderPriceLevelMap, renderReversalWatchChart } from './chart-markup-renderer';
 import { buildDiscordTradePlanVisualProvenance } from './discord-visual-contract';
 import {
+  buildCanonicalTraderTicket,
   compactDiscordSummary,
   morningWatchlistDiscordSummary,
   scannerHealthDiscordSummary,
@@ -1700,24 +1701,6 @@ function scannerAuditFileLabel(filePath: string | null | undefined): string {
   return filePath ? path.basename(filePath) : 'N/A';
 }
 
-function scannerPlanLevel(args: {
-  candidate: SetupCandidate | null;
-  deskState: DeskState;
-  key: 'lineInSand' | 'entry' | 'stop' | 'target1' | 'target2';
-}): number | null {
-  const candidateValue = (args.candidate as unknown as Record<string, unknown> | null)?.[args.key];
-  if (typeof candidateValue === 'number' && Number.isFinite(candidateValue)) return candidateValue;
-  const selectedValue = (args.deskState.selectedCandidate as unknown as Record<string, unknown> | null)?.[args.key];
-  if (typeof selectedValue === 'number' && Number.isFinite(selectedValue)) return selectedValue;
-  const shortValue = (args.deskState.bestShortPlan as unknown as Record<string, unknown> | null)?.[args.key];
-  const longValue = (args.deskState.bestLongPlan as unknown as Record<string, unknown> | null)?.[args.key];
-  const primaryDirection = args.deskState.primaryDeskPlay?.direction || args.candidate?.direction || 'WAIT';
-  const directionalValue = primaryDirection === 'SHORT' ? shortValue : primaryDirection === 'LONG' ? longValue : null;
-  if (typeof directionalValue === 'number' && Number.isFinite(directionalValue)) return directionalValue;
-  const deskValue = (args.deskState as unknown as Record<string, unknown>)[args.key];
-  return typeof deskValue === 'number' && Number.isFinite(deskValue) ? deskValue : null;
-}
-
 function scannerCandidateLabel(candidate: SetupCandidate | null, deskState: DeskState): string {
   const side = candidate?.direction || deskState.primaryDeskPlay?.direction || 'WAIT';
   const setup = candidate?.setupType || deskState.selectedCandidate?.setupType || 'DeskState';
@@ -1736,22 +1719,25 @@ function scannerCycleSummaryLine(args: {
   alertDecision: ScannerAlertDecision;
   decisionTapePath: string;
 }): string {
-  const line = scannerPlanLevel({ candidate: args.candidate, deskState: args.deskState, key: 'lineInSand' });
-  const entry = scannerPlanLevel({ candidate: args.candidate, deskState: args.deskState, key: 'entry' });
-  const stop = scannerPlanLevel({ candidate: args.candidate, deskState: args.deskState, key: 'stop' });
-  const target1 = scannerPlanLevel({ candidate: args.candidate, deskState: args.deskState, key: 'target1' });
-  const target2 = scannerPlanLevel({ candidate: args.candidate, deskState: args.deskState, key: 'target2' });
+  const ticket = buildCanonicalTraderTicket({
+    candidate: args.candidate,
+    deskState: args.deskState,
+    currentPrice: args.currentPrice,
+    suppressLevels: args.stateForAlert === 'Missed',
+    suppressReason: 'Scanner state is missed/no-chase; prior levels are management/history only.',
+  });
   const delivery = args.alertDecision.shouldSend ? 'send' : 'local';
   const refresh = args.sameCompletedCandle ? 'refresh | ' : '';
   return [
     `[scanner] ${args.session} ${args.completed5m.time}: ${args.stateForAlert} ${args.confidence.score}/100`,
     scannerCandidateLabel(args.candidate, args.deskState),
     `current ${money(args.currentPrice)}`,
-    `line ${money(line)}`,
-    `entry ${money(entry)}`,
-    `stop ${money(stop)}`,
-    `T1 ${money(target1)}`,
-    `T2 ${money(target2)}`,
+    `line ${money(ticket.lineInSand)}`,
+    `entry ${money(ticket.levels?.entry)}`,
+    `stop ${money(ticket.levels?.stop)}`,
+    `T1 ${money(ticket.levels?.target1)}`,
+    `T2 ${money(ticket.levels?.target2)}`,
+    `levels ${ticket.levelsStatus}`,
     `${refresh}${delivery}: ${compactScannerLogText(args.alertDecision.reason)}`,
     `audit=${scannerAuditFileLabel(args.decisionTapePath)}`,
   ].join(' | ');
