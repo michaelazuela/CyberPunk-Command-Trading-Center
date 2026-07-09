@@ -1689,6 +1689,83 @@ function money(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? String(value) : 'N/A';
 }
 
+function compactScannerLogText(value: string | null | undefined, maxLength = 160): string {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text) return 'none';
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1).trimEnd()}…` : text;
+}
+
+function scannerAuditFileLabel(filePath: string | null | undefined): string {
+  return filePath ? path.basename(filePath) : 'N/A';
+}
+
+function scannerPlanLevel(args: {
+  candidate: SetupCandidate | null;
+  deskState: DeskState;
+  key: 'lineInSand' | 'entry' | 'stop' | 'target1' | 'target2';
+}): number | null {
+  const candidateValue = (args.candidate as unknown as Record<string, unknown> | null)?.[args.key];
+  if (typeof candidateValue === 'number' && Number.isFinite(candidateValue)) return candidateValue;
+  const selectedValue = (args.deskState.selectedCandidate as unknown as Record<string, unknown> | null)?.[args.key];
+  if (typeof selectedValue === 'number' && Number.isFinite(selectedValue)) return selectedValue;
+  const shortValue = (args.deskState.bestShortPlan as unknown as Record<string, unknown> | null)?.[args.key];
+  const longValue = (args.deskState.bestLongPlan as unknown as Record<string, unknown> | null)?.[args.key];
+  const primaryDirection = args.deskState.primaryDeskPlay?.direction || args.candidate?.direction || 'WAIT';
+  const directionalValue = primaryDirection === 'SHORT' ? shortValue : primaryDirection === 'LONG' ? longValue : null;
+  if (typeof directionalValue === 'number' && Number.isFinite(directionalValue)) return directionalValue;
+  const deskValue = (args.deskState as unknown as Record<string, unknown>)[args.key];
+  return typeof deskValue === 'number' && Number.isFinite(deskValue) ? deskValue : null;
+}
+
+function scannerCandidateLabel(candidate: SetupCandidate | null, deskState: DeskState): string {
+  const side = candidate?.direction || deskState.primaryDeskPlay?.direction || 'WAIT';
+  const setup = candidate?.setupType || deskState.selectedCandidate?.setupType || 'DeskState';
+  return `${side} ${setup}`;
+}
+
+function scannerCycleSummaryLine(args: {
+  session: LiveSession;
+  completed5m: NinjaBridgeBar;
+  currentPrice: number;
+  candidate: SetupCandidate | null;
+  deskState: DeskState;
+  stateForAlert: ScannerState;
+  confidence: ScannerConfidenceBreakdown;
+  sameCompletedCandle: boolean;
+  alertDecision: ScannerAlertDecision;
+  decisionTapePath: string;
+}): string {
+  const line = scannerPlanLevel({ candidate: args.candidate, deskState: args.deskState, key: 'lineInSand' });
+  const entry = scannerPlanLevel({ candidate: args.candidate, deskState: args.deskState, key: 'entry' });
+  const stop = scannerPlanLevel({ candidate: args.candidate, deskState: args.deskState, key: 'stop' });
+  const target1 = scannerPlanLevel({ candidate: args.candidate, deskState: args.deskState, key: 'target1' });
+  const target2 = scannerPlanLevel({ candidate: args.candidate, deskState: args.deskState, key: 'target2' });
+  const delivery = args.alertDecision.shouldSend ? 'send' : 'local';
+  const refresh = args.sameCompletedCandle ? 'refresh | ' : '';
+  return [
+    `[scanner] ${args.session} ${args.completed5m.time}: ${args.stateForAlert} ${args.confidence.score}/100`,
+    scannerCandidateLabel(args.candidate, args.deskState),
+    `current ${money(args.currentPrice)}`,
+    `line ${money(line)}`,
+    `entry ${money(entry)}`,
+    `stop ${money(stop)}`,
+    `T1 ${money(target1)}`,
+    `T2 ${money(target2)}`,
+    `${refresh}${delivery}: ${compactScannerLogText(args.alertDecision.reason)}`,
+    `audit=${scannerAuditFileLabel(args.decisionTapePath)}`,
+  ].join(' | ');
+}
+
+function scannerSuppressionSummaryLine(args: {
+  label: string;
+  category: string;
+  reason: string;
+  previousFingerprint?: string | null;
+}): string {
+  const previous = args.previousFingerprint ? ` | previous=${compactScannerLogText(args.previousFingerprint, 90)}` : '';
+  return `[scanner] ${args.label} suppressed (${args.category}): ${compactScannerLogText(args.reason, 180)}${previous}`;
+}
+
 function timeframeMinutes(timeframe: MarketBarTimeframe): number {
   if (timeframe === '60m') return 60;
   if (timeframe === '120m') return 120;
@@ -9950,7 +10027,18 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     historyCoverage,
   });
 
-  console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${sameCompletedCandle ? 'same completed 5M, refreshed live plan | ' : ''}${alertDecision.reason} | decision tape=${decisionTapePath}`);
+  console.log(scannerCycleSummaryLine({
+    session,
+    completed5m,
+    currentPrice,
+    candidate,
+    deskState,
+    stateForAlert,
+    confidence,
+    sameCompletedCandle,
+    alertDecision,
+    decisionTapePath,
+  }));
   state.lastCompleted5mBySession[sessionKey] = completed5m.time;
   const liveDiscordSendBoundary = (auditPath: string | null, postKind: ScannerDiscordCleanupKind = 'trade_alert'): LiveDiscordEligibilityReport => buildScannerLiveDiscordSendBoundaryReport({
     postKind,
@@ -10057,7 +10145,12 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       staleReason: stale.reason,
     });
     if (!reversalWatchSuppression.shouldPost) {
-      console.log(`[scanner] Reversal watch suppressed (${reversalWatchSuppression.category}): ${reversalWatchSuppression.reason}${reversalWatchSuppression.previousFingerprint ? ` | previous=${reversalWatchSuppression.previousFingerprint}` : ''}`);
+      console.log(scannerSuppressionSummaryLine({
+        label: 'Reversal Watch',
+        category: reversalWatchSuppression.category,
+        reason: reversalWatchSuppression.reason,
+        previousFingerprint: reversalWatchSuppression.previousFingerprint,
+      }));
     } else if (!state.reversalWatchSent[reversalWatchKey]) {
       try {
         const reversalWatchPlanVersionId = `${planVersionId}-REVERSAL-WATCH`;
@@ -10172,7 +10265,12 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       staleReason: stale.reason,
     });
     if (!deskPlaySuppression.shouldPost) {
-      console.log(`[scanner] Desk Play refresh suppressed (${deskPlaySuppression.category}): ${deskPlaySuppression.reason}${deskPlaySuppression.previousFingerprint ? ` | previous=${deskPlaySuppression.previousFingerprint}` : ''}`);
+      console.log(scannerSuppressionSummaryLine({
+        label: 'Desk Play refresh',
+        category: deskPlaySuppression.category,
+        reason: deskPlaySuppression.reason,
+        previousFingerprint: deskPlaySuppression.previousFingerprint,
+      }));
     } else if (!state.deskPlanRefreshSent[deskPlayKey]) {
       const deskPlayPlanVersionId = `${planVersionId}-DESK-PLAY`;
       try {
