@@ -71,6 +71,29 @@ export interface CompactDeskStateForDiscord {
   marketMode?: string;
   visibilityMode?: string;
   discordAction?: string;
+  deskTicket?: {
+    sourceOfTruth?: string;
+    state?: 'WAIT' | 'WATCH' | 'TRIGGER_PENDING' | 'ACTIVE_REVIEW' | 'NO_CHASE' | 'INVALIDATED' | string;
+    primaryDirection?: 'LONG' | 'SHORT' | 'WAIT' | string;
+    lineInSand?: number | null;
+    triggerCondition?: string | null;
+    entry?: number | null;
+    stop?: number | null;
+    t1?: number | null;
+    t2?: number | null;
+    invalidation?: number | null;
+    invalidationText?: string | null;
+    htfStatus?: string | null;
+    htfStory?: string | null;
+    oppositeScenario?: {
+      direction?: 'LONG' | 'SHORT' | string;
+      lineInSand?: number | null;
+      triggerCondition?: string | null;
+    } | null;
+    sourceCandidateKey?: string | null;
+    humanReviewOnly?: boolean;
+    noAutomatedOrders?: boolean;
+  };
   lineInSand?: number | null;
   nextTrigger?: string | null;
   invalidation?: string | null;
@@ -1446,6 +1469,9 @@ function scannerWatchDiscordSummary(args: CompactDiscordSummaryArgs, candidate: 
 }
 
 function shouldRenderDeskPlay(args: CompactDiscordSummaryArgs): boolean {
+  if (args.deskState?.deskTicket?.sourceOfTruth === 'scanner_single_active_desk_ticket' && !getEffectiveCanExecute(args.normalized)) {
+    return true;
+  }
   const play = args.deskState?.primaryDeskPlay;
   if (!play?.discordEligible || getEffectiveCanExecute(args.normalized)) return false;
   if (/-DESK-PLAY(?:-|$)/.test(args.planVersionId)) return true;
@@ -3037,6 +3063,8 @@ function deskPlayBattlePlanLines(args: {
 }
 
 function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
+  const ticketLines = deskTicketCurrentPlanLines(args);
+  if (ticketLines.length) return ticketLines;
   const play = args.deskState?.primaryDeskPlay;
   if (!play) {
     return [
@@ -3265,6 +3293,89 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
   return compactActionableDeskPlanLines();
 }
 
+function deskTicketCurrentPlanLines(args: CompactDiscordSummaryArgs): string[] {
+  const ticket = args.deskState?.deskTicket;
+  if (!ticket || ticket.sourceOfTruth !== 'scanner_single_active_desk_ticket') return [];
+  const direction = ticket.primaryDirection === 'LONG' || ticket.primaryDirection === 'SHORT' ? ticket.primaryDirection : 'WAIT';
+  const directionWord = direction === 'LONG' ? 'LONG' : direction === 'SHORT' ? 'SHORT' : 'WAIT';
+  const actionWord = direction === 'LONG' ? 'above' : direction === 'SHORT' ? 'below' : 'outside';
+  const stateLabel = String(ticket.state || 'WAIT').replace(/_/g, ' ');
+  const line = isFinitePrice(ticket.lineInSand) ? ticket.lineInSand! : null;
+  const trigger = ticket.triggerCondition || (line !== null && direction !== 'WAIT'
+    ? `Completed 5M close ${actionWord} ${priceLine(line)}.`
+    : 'Wait for completed 5M proof before planning a fresh entry.');
+  const canonical = buildCanonicalTraderTicket({
+    candidate: args.candidates[0] || null,
+    normalized: args.normalized,
+    deskState: args.deskState,
+    currentPrice: args.currentPrice,
+  });
+  const candidateLevels = canonical.direction === direction ? canonical.levels : null;
+  const ticketLevels = direction === 'LONG' || direction === 'SHORT'
+    ? directionallyValidLevels(direction, {
+        entry: ticket.entry,
+        stop: ticket.stop,
+        target1: ticket.t1,
+        target2: ticket.t2,
+      })
+    : null;
+  const computedTicketTargets = direction === 'LONG' || direction === 'SHORT'
+    ? targetsFromEntryStop(direction, ticket.entry, ticket.stop)
+    : { target1: null, target2: null };
+  const computedTicketLevels = direction === 'LONG' || direction === 'SHORT'
+    ? directionallyValidLevels(direction, {
+        entry: ticket.entry,
+        stop: ticket.stop,
+        target1: computedTicketTargets.target1,
+        target2: computedTicketTargets.target2,
+      })
+    : null;
+  const levels = candidateLevels || ticketLevels || computedTicketLevels;
+  const hasLevels = Boolean(levels);
+  const invalid = ticket.invalidationText || (isFinitePrice(ticket.invalidation)
+    ? `${direction === 'SHORT' ? 'above' : 'below'} ${priceLine(ticket.invalidation)}.`
+    : 'Invalidation requires protected 5M structure proof.');
+  const opposite = ticket.oppositeScenario;
+  return [
+    `${args.instrument} Current Desk Ticket`,
+    '',
+    `State: ${stateLabel}`,
+    `Status: ${stateLabel} - human review only.`,
+    `Primary: ${primaryPlanLabel(directionWord)}`,
+    `Line in the Sand: ${priceLine(line)}`,
+    `Trigger: ${compactInstruction(trigger, 'Wait for completed 5M proof.')}`,
+    '',
+    direction === 'WAIT'
+      ? 'Plan: WAIT - no fresh LONG/SHORT entry until one side confirms.'
+      : `${direction} ${actionWord.toUpperCase()} ${priceLine(line)}`,
+    hasLevels
+      ? `Entry: ${priceLine(levels?.entry)}`
+      : direction === 'WAIT'
+        ? 'Entry: N/A'
+        : `Entry: completed 5M close ${actionWord} ${priceLine(line)}`,
+    hasLevels ? `Stop: ${priceLine(levels?.stop)}` : 'Stop: pending protected 5M structure proof',
+    hasLevels ? `T1: ${priceLine(levels?.target1)}` : 'T1: pending priced stop',
+    hasLevels ? `T2: ${priceLine(levels?.target2)}` : 'T2: pending priced stop',
+    `Invalid: ${invalidInstruction(invalid, invalid)}`,
+    '',
+    `HTF: ${compactLine(ticket.htfStory || `${ticket.htfStatus || 'unknown'}; 5M remains execution authority.`, 180)}`,
+    ...(opposite
+      ? [
+          '',
+          `Opposite: ${opposite.direction === 'LONG' ? 'LONG' : 'SHORT'} ${opposite.direction === 'LONG' ? 'above' : 'below'} ${priceLine(opposite.lineInSand)}`,
+          compactInstruction(opposite.triggerCondition || 'Opposite side requires completed 5M failure proof.', 'Opposite side requires completed 5M failure proof.'),
+        ]
+      : []),
+    '',
+    'Human review only.',
+    'No automated orders.',
+    deskPlayChartStatusLine({
+      hasChart: args.attachments.chartPlan,
+      hasLevels,
+    }),
+  ];
+}
+
 function deskPlayHasCompletePlanningLevels(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): boolean {
   const play = args.deskState?.primaryDeskPlay;
   if (!play) return false;
@@ -3317,7 +3428,10 @@ function deskPlayPrimaryLabel(
 function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
   const play = args.deskState?.primaryDeskPlay;
   const sessionLabel = sessionShortLabel(args.session);
-  const direction = deskPlayHeadlineDirection(args);
+  const ticketDirection = args.deskState?.deskTicket?.primaryDirection;
+  const direction = ticketDirection === 'LONG' || ticketDirection === 'SHORT' || ticketDirection === 'WAIT'
+    ? ticketDirection
+    : deskPlayHeadlineDirection(args);
   const lines = deskPlayCurrentPlanLines(args, direction);
   const components = args.components || defaultOutcomeComponentsForSummary(args, direction === 'WAIT' ? null : direction);
   const headline = deskPlayHeadlineLabel(args, direction);
@@ -3764,11 +3878,11 @@ export function compactAttachmentLine(attachments: CompactDiscordAttachmentState
 
 export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
   const bestCandidate = args.candidates[0] || null;
-  if (shouldRenderDeskPlay(args)) {
-    return scannerDeskPlayDiscordSummary(args);
-  }
   if (isDeskStateWatch(args, bestCandidate)) {
     return scannerWatchDiscordSummary(args, bestCandidate as SetupCandidate);
+  }
+  if (shouldRenderDeskPlay(args)) {
+    return scannerDeskPlayDiscordSummary(args);
   }
   const effectiveCanExecute = getEffectiveCanExecute(args.normalized);
   const requestedStatus = args.statusOverride || args.normalized.decisionStatus || (effectiveCanExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);

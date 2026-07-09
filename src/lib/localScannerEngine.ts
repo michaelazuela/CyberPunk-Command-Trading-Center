@@ -275,6 +275,14 @@ export interface DeskStatePromotionPath {
   notes: string[];
 }
 
+export type DeskTicketState =
+  | 'WAIT'
+  | 'WATCH'
+  | 'TRIGGER_PENDING'
+  | 'ACTIVE_REVIEW'
+  | 'NO_CHASE'
+  | 'INVALIDATED';
+
 export type DeskPlayDirection = 'LONG' | 'SHORT' | 'WAIT';
 export type DeskPlayBiasState = 'primary' | 'secondary' | 'countertrend_review' | 'blocked' | 'not_present';
 
@@ -1020,6 +1028,7 @@ export interface PrimaryDeskPlay {
 export interface DeskState {
   sourceOfTruth: 'scanner_desk_state';
   marketMode: DeskStateMarketMode;
+  deskTicket: DeskTicket;
   activeCampaign: SetupCandidate['activeCampaign'] | null;
   bestLongPlan: ScannerCandidateLifecycleTraceItem | null;
   bestShortPlan: ScannerCandidateLifecycleTraceItem | null;
@@ -1037,6 +1046,41 @@ export interface DeskState {
   promotion: DeskStatePromotionPath;
   visibilityMetadata: ScannerVisibilityMetadata;
   candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
+  notes: string[];
+}
+
+export interface DeskTicketOppositeScenario {
+  direction: Exclude<DeskPlayDirection, 'WAIT'>;
+  lineInSand: number | null;
+  triggerCondition: string;
+}
+
+export interface DeskTicket {
+  sourceOfTruth: 'scanner_single_active_desk_ticket';
+  state: DeskTicketState;
+  primaryDirection: DeskPlayDirection;
+  lineInSand: number | null;
+  triggerCondition: string;
+  entry: number | null;
+  stop: number | null;
+  t1: number | null;
+  t2: number | null;
+  invalidation: number | null;
+  invalidationText: string;
+  htfStatus: DeskStateHtfContextStatus;
+  htfStory: string;
+  oppositeScenario: DeskTicketOppositeScenario | null;
+  sourceCandidateKey: string | null;
+  humanReviewOnly: true;
+  noAutomatedOrders: true;
+  displayBoundary: 'trader_facing_ticket_only_can_execute_internal';
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesBridgeBehavior: false;
+  };
   notes: string[];
 }
 
@@ -2840,6 +2884,132 @@ function buildDeskStatePromotionPath(args: {
     notes: [
       'Promotion path is descriptive only; the existing scanner, trade decision pipeline, and canExecute gates remain the only approval path.',
       'Watch-to-plan continuity requires completed 5M proof, protected structure stop, target room, invalidation, and normal app-owned gates.',
+    ],
+  };
+}
+
+function finiteDeskTicketPrice(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function deskTicketStateFrom(args: {
+  marketMode: DeskStateMarketMode;
+  visibilityMetadata: ScannerVisibilityMetadata;
+  candidate: ScannerCandidateLifecycleTraceItem | null;
+}): DeskTicketState {
+  const text = [
+    args.visibilityMetadata.suppressionReason,
+    args.visibilityMetadata.nextTrigger,
+    args.candidate?.filteredOutReason,
+    ...(args.candidate?.missingEvidence || []),
+    args.candidate?.blockReason,
+  ].filter(Boolean).join(' ');
+  if (/invalidated|stand down|zone_failed|traded through the structure stop/i.test(text)) return 'INVALIDATED';
+  if (/missed|no chase|already reached|already past|wait_for_pullback/i.test(text)) return 'NO_CHASE';
+  if (args.marketMode === 'human_review_ready') return 'ACTIVE_REVIEW';
+  if (args.marketMode === 'conditional') return 'TRIGGER_PENDING';
+  if (args.marketMode === 'watching') return 'WATCH';
+  return 'WAIT';
+}
+
+function deskTicketTrigger(direction: DeskPlayDirection, line: number | null, fallback: string | null): string {
+  if ((direction === 'LONG' || direction === 'SHORT') && line !== null) {
+    return `Completed 5M close ${direction === 'LONG' ? 'above' : 'below'} ${line.toFixed(2)}.`;
+  }
+  return fallback || 'Wait for completed 5M proof before planning a fresh entry.';
+}
+
+function deskTicketOppositeScenario(args: {
+  primaryDirection: DeskPlayDirection;
+  primaryDeskPlay: PrimaryDeskPlay;
+}): DeskTicketOppositeScenario | null {
+  if (args.primaryDirection === 'LONG') {
+    const line = finiteDeskTicketPrice(args.primaryDeskPlay.shortBelow);
+    return {
+      direction: 'SHORT',
+      lineInSand: line,
+      triggerCondition: line === null
+        ? 'Short only after completed 5M bearish failure proof creates a valid short line.'
+        : `Short only if completed 5M closes below ${line.toFixed(2)}.`,
+    };
+  }
+  if (args.primaryDirection === 'SHORT') {
+    const line = finiteDeskTicketPrice(args.primaryDeskPlay.longAbove);
+    return {
+      direction: 'LONG',
+      lineInSand: line,
+      triggerCondition: line === null
+        ? 'Long only after completed 5M bullish failure proof creates a valid long line.'
+        : `Long only if completed 5M closes above ${line.toFixed(2)}.`,
+    };
+  }
+  return null;
+}
+
+function buildDeskTicket(args: {
+  marketMode: DeskStateMarketMode;
+  primaryDeskPlay: PrimaryDeskPlay;
+  candidate: SetupCandidate | null;
+  selectedCandidate: ScannerCandidateLifecycleTraceItem | null;
+  visibilityMetadata: ScannerVisibilityMetadata;
+  htfContextStatus: DeskStateHtfContextStatus;
+}): DeskTicket {
+  const play = args.primaryDeskPlay;
+  const selected = args.selectedCandidate;
+  const primaryDirection = play.direction === 'LONG' || play.direction === 'SHORT'
+    ? play.direction
+    : selected?.direction === 'LONG' || selected?.direction === 'SHORT'
+      ? selected.direction
+      : args.candidate?.direction === 'LONG' || args.candidate?.direction === 'SHORT'
+        ? args.candidate.direction
+        : 'WAIT';
+  const lineInSand = finiteDeskTicketPrice(selected?.lineInSand) ??
+    finiteDeskTicketPrice(args.candidate?.activeRuleset?.htfLineInSand?.lineInSand) ??
+    finiteDeskTicketPrice(primaryDirection === 'LONG' ? play.longAbove : primaryDirection === 'SHORT' ? play.shortBelow : play.lineInSand);
+  const entry = finiteDeskTicketPrice(selected?.entry) ?? finiteDeskTicketPrice(args.candidate?.entry);
+  const stop = finiteDeskTicketPrice(selected?.stop) ?? finiteDeskTicketPrice(args.candidate?.stop);
+  const t1 = finiteDeskTicketPrice(selected?.target1) ?? finiteDeskTicketPrice(args.candidate?.target1);
+  const t2 = finiteDeskTicketPrice(selected?.target2) ?? finiteDeskTicketPrice(args.candidate?.target2);
+  const htfReliability = play.htfProtectedStructureMap?.reliability || args.htfContextStatus;
+  const htfStory = args.htfContextStatus === 'insufficient'
+    ? 'HTF context insufficient; do not use HTF as structural confirmation.'
+    : args.htfContextStatus === 'partial'
+      ? `HTF context partial/${htfReliability}; treat as caution and management context only.`
+      : `HTF context sufficient/${htfReliability}; 5M remains execution authority.`;
+  const state = deskTicketStateFrom({
+    marketMode: args.marketMode,
+    visibilityMetadata: args.visibilityMetadata,
+    candidate: selected,
+  });
+  return {
+    sourceOfTruth: 'scanner_single_active_desk_ticket',
+    state,
+    primaryDirection,
+    lineInSand,
+    triggerCondition: deskTicketTrigger(primaryDirection, lineInSand, args.visibilityMetadata.nextTrigger || selected?.requiredTrigger || selected?.nextTrigger || play.nextTrigger),
+    entry,
+    stop,
+    t1,
+    t2,
+    invalidation: stop,
+    invalidationText: selected?.invalidation || args.candidate?.invalidation || play.invalidation || (stop === null ? 'Invalidation requires protected 5M structure proof.' : `Invalid at protected structure stop ${stop.toFixed(2)}.`),
+    htfStatus: args.htfContextStatus,
+    htfStory,
+    oppositeScenario: deskTicketOppositeScenario({ primaryDirection, primaryDeskPlay: play }),
+    sourceCandidateKey: selected?.candidateKey || null,
+    humanReviewOnly: true,
+    noAutomatedOrders: true,
+    displayBoundary: 'trader_facing_ticket_only_can_execute_internal',
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
+    },
+    notes: [
+      'DeskTicket is the single trader-facing ticket for Discord/RAG/UI.',
+      'It collapses scanner-owned candidates into one visible plan without changing approvals, gates, or targets.',
     ],
   };
 }
@@ -4997,9 +5167,23 @@ export function buildDeskState(args: {
     canExecute: Boolean(args.canExecute),
     chartContext: args.chartContext,
   });
+  const htfContextStatus = htfContextStatusForDeskState(candidate, args.htfLiquidityDrawState);
+  const dataQualityStatus = dataQualityStatusForDeskState({
+    visibilityMetadata: args.visibilityMetadata,
+    candidateLifecycleTrace: args.candidateLifecycleTrace,
+  });
+  const deskTicket = buildDeskTicket({
+    marketMode,
+    primaryDeskPlay,
+    candidate,
+    selectedCandidate: args.candidateLifecycleTrace.selectedCandidate,
+    visibilityMetadata: args.visibilityMetadata,
+    htfContextStatus,
+  });
   return {
     sourceOfTruth: 'scanner_desk_state',
     marketMode,
+    deskTicket,
     activeCampaign: candidate?.activeCampaign || null,
     bestLongPlan: args.candidateLifecycleTrace.bestLongPlan,
     bestShortPlan: args.candidateLifecycleTrace.bestShortPlan,
@@ -5011,11 +5195,8 @@ export function buildDeskState(args: {
     visibilityMode: args.visibilityMetadata.visibilityMode,
     discordAction: args.visibilityMetadata.discordAction,
     suppressionReason: args.visibilityMetadata.suppressionReason,
-    htfContextStatus: htfContextStatusForDeskState(candidate, args.htfLiquidityDrawState),
-    dataQualityStatus: dataQualityStatusForDeskState({
-      visibilityMetadata: args.visibilityMetadata,
-      candidateLifecycleTrace: args.candidateLifecycleTrace,
-    }),
+    htfContextStatus,
+    dataQualityStatus,
     canExecute: Boolean(args.canExecute),
     promotion,
     visibilityMetadata: args.visibilityMetadata,

@@ -1162,6 +1162,18 @@ const deskState = buildDeskState({
 });
 assert.equal(deskState.sourceOfTruth, 'scanner_desk_state');
 assert.equal(deskState.marketMode, 'human_review_ready');
+assert.equal(deskState.deskTicket.sourceOfTruth, 'scanner_single_active_desk_ticket');
+assert.equal(deskState.deskTicket.state, 'ACTIVE_REVIEW');
+assert.equal(deskState.deskTicket.primaryDirection, 'LONG');
+assert.equal(deskState.deskTicket.lineInSand, 100);
+assert.equal(deskState.deskTicket.entry, 100);
+assert.equal(deskState.deskTicket.stop, 96);
+assert.equal(deskState.deskTicket.t1, 108);
+assert.equal(deskState.deskTicket.t2, 108);
+assert.equal(deskState.deskTicket.humanReviewOnly, true);
+assert.equal(deskState.deskTicket.noAutomatedOrders, true);
+assert.equal(deskState.deskTicket.approvalBoundary.changesCanExecute, false);
+assert.equal(deskState.deskTicket.approvalBoundary.changesEntryStopTargets, false);
 assert.equal(deskState.visibilityMode, deskVisibility.visibilityMode);
 assert.equal(deskState.discordAction, deskVisibility.discordAction);
 assert.equal(deskState.canExecute, false);

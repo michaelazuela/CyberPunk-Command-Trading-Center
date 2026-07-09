@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-09
+Task: Add single active DeskTicket and hide canExecute from trader-facing Discord tickets.
+Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, src/lib/liveDiscordPostEligibility.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
+Reason: The scanner was producing useful candidates, but Discord could still read like multiple competing reports and expose internal canExecute churn. The new DeskTicket is a scanner-owned, single trader-facing ticket derived from existing DeskState/candidate evidence. Discord uses it as the compact ticket when present, while canExecute remains internal/audit-only.
+Tests run: `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsx src/lib/liveDiscordPostEligibility.test.ts`; `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsc --noEmit`; full verification pending below.
+Result: Focused tests and typecheck passed. DeskState now carries `deskTicket` with one state, one primary direction, one line in the sand, one trigger, entry/stop/T1/T2 when proven, HTF status/story, and one opposite scenario. Discord Desk Play output prefers that ticket and displays `Human review only` / `No automated orders` instead of visible canExecute language.
+Trading logic changed: No. This is a presentation/orchestration wrapper derived from existing scanner evidence. It does not change setup definitions, ranking, canExecute, entry/stop/target math, risk gates, bridge behavior, bar-close handling, Discord send eligibility, or Supabase schema.
+Bridge impact: None.
+Journal/RAG impact: Existing DeskState/RAG records get an additional derived ticket field when written by current scanner code.
+Supabase impact: No schema migration.
+Known risks: Existing Discord messages and older audit artifacts are not rewritten. Non-DeskTicket legacy formatter paths may still use internal authority language for audit/research outputs, but live Desk Play tickets now use the simplified ticket when DeskState is present.
+Next recommended action: Restart scanner services after full checks so live DeskState/Discord output uses the single-ticket formatter.
+
+## Previous Change
+
+Date: 2026-07-09
 Task: Cleanup chunks 3/4 - compact scanner operator logging and preserve canonical Discord formatter paths.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The scanner already had a canonical compact cycle summary, but dry-run/disabled Discord posts could still dump full Discord JSON into operator logs. That made live troubleshooting noisy and encouraged reading logs instead of audit JSON. The cleanup keeps full evidence in audit artifacts and makes the default operator path compact.

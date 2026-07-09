@@ -335,6 +335,29 @@ const morning = compactDiscordSummary({
     marketMode: 'human_review_ready',
     visibilityMode: 'POST_REVIEW',
     discordAction: 'post_review',
+    deskTicket: {
+      sourceOfTruth: 'scanner_single_active_desk_ticket',
+      state: 'ACTIVE_REVIEW',
+      primaryDirection: 'LONG',
+      lineInSand: 5329,
+      triggerCondition: 'Completed 5M close above 5329.00.',
+      entry: 5320,
+      stop: 5316,
+      t1: 5326,
+      t2: 5328,
+      invalidation: 5316,
+      invalidationText: 'Invalid below protected 5M structure stop 5316.00.',
+      htfStatus: 'sufficient',
+      htfStory: 'HTF context sufficient/mixed; 5M remains execution authority.',
+      oppositeScenario: {
+        direction: 'SHORT',
+        lineInSand: 5316,
+        triggerCondition: 'Short only if completed 5M closes below 5316.00.',
+      },
+      sourceCandidateKey: 'test-long',
+      humanReviewOnly: true,
+      noAutomatedOrders: true,
+    },
     lineInSand: 5320,
     nextTrigger: 'Completed 5M shift through the reaction level, then retest/hold.',
     invalidation: 'Invalid if protected structure fails.',
@@ -368,26 +391,24 @@ const morning = compactDiscordSummary({
 assertCompactPayload(morning, ['chart-plan.png', 'price-level-map.png']);
 assert.equal(JSON.stringify(morningCandidate), morningCandidateBefore, 'formatter must not mutate the original candidate');
 assertNoExecutablePayloadKeys(morning);
-assert.ok(morning.content?.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
+assert.ok(morning.content?.includes('[AM DESK PLAY] MES - LONG'));
 const morningText = flattenDiscordPayloadText(morning);
-assert.ok(morningText.includes('MES Current Desk Plan'));
+assert.ok(morningText.includes('MES Current Desk Ticket'));
 assert.ok(morningText.includes('Primary: 🐂 LONG'));
 assert.ok(morningText.includes('Line in the Sand: 5329.00'));
-assert.ok(morningText.includes('Trigger:'));
-assert.ok(morningText.includes('Invalid:'));
-assert.ok(morningText.includes('Opposite Scenario:'));
-assert.ok(!morningText.includes('Opposite Scenario: stand down on Invalid if'));
+assert.ok(morningText.includes('Trigger: Completed 5M close above 5329.00.'));
+assert.ok(morningText.includes('Invalid: below protected 5M structure stop 5316.00.'));
+assert.ok(morningText.includes('Opposite: SHORT below 5316.00'));
 assert.ok(morningText.includes('LONG ABOVE 5329.00'));
 assert.ok(morningText.includes('Entry: 5320.00'));
 assert.ok(morningText.includes('Stop: 5316.00'));
 assert.ok(morningText.includes('T1: 5326.00'));
 assert.ok(morningText.includes('T2: 5328.00'));
-assert.ok(morningText.includes('Invalid below: 5316.00'));
-assert.ok(morningText.includes('HTF target: 5329.00 / runner N/A'));
-assert.ok(morningText.includes('Status: Review only until 5M trigger + canExecute.'));
+assert.ok(morningText.includes('Human review only.'));
+assert.ok(morningText.includes('No automated orders.'));
+assert.ok(!morningText.includes('canExecute'));
 assert.ok(morningText.includes('Chart: attached to Discord post.'));
 assert.ok(!morningText.includes('Targets:'));
-assert.ok(morningText.includes('Trigger:'));
 assert.ok(!morningText.includes('HTF Runner Map:'));
 assert.ok(!morningText.includes('HTF reaction:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);

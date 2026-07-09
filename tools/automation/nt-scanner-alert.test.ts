@@ -5944,19 +5944,20 @@ try {
   assert.ok(text.length < 1200, `expected live scanner compact text under 1200 chars, got ${text.length}`);
   assert.ok((result.payload.content?.length || 0) < 2000);
   assert.ok(text.includes('MES Current Desk Plan'));
-  assert.ok(text.includes('[AM REVIEW] MES - LONG HIGH-CONFIDENCE CONDITIONAL'));
+  assert.ok(text.includes('[AM DESK PLAY] MES - LONG'));
+  assert.ok(text.includes('MES Current Desk Ticket'));
   assert.ok(text.includes('Primary: 🐂 LONG'));
-  assert.ok(text.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; execution arms only after the named completed 5M condition.'));
   assert.ok(text.includes('Line in the Sand:'));
   assert.ok(text.includes('LONG ABOVE'));
   assert.ok(text.includes('Entry:'));
   assert.ok(text.includes('Stop:'));
   assert.ok(text.includes('T1:'));
   assert.ok(text.includes('T2:'));
-  assert.ok(text.includes('Invalid below:'));
-  assert.ok(text.includes('HTF target:'));
-  assert.ok(text.includes('Status: High-confidence conditional trade plan; armed after the named completed 5M condition.'));
+  assert.ok(text.includes('Invalid:'));
+  assert.ok(text.includes('Human review only.'));
+  assert.ok(text.includes('No automated orders.'));
   assert.ok(text.includes('Chart: attached to Discord post.'));
+  assert.ok(!text.includes('canExecute'));
   assert.ok(!text.includes('Compact Trade Plan Summary'));
   assert.ok(!text.includes('Plan:'));
   assert.ok(!text.includes('Targets:'));
@@ -6765,7 +6766,9 @@ try {
   const riskText = flattenDiscordPayloadText(riskResult.payload);
   const riskAudit = JSON.parse(await fs.readFile(riskResult.auditLogPath, 'utf8'));
   assert.ok(riskText.includes('MES Current Desk Plan'));
-  assert.ok(riskText.includes('Status: Risk review only; standard risk gate not clean.'));
+  assert.ok(riskText.includes('MES Current Desk Ticket'));
+  assert.ok(riskText.includes('Status:'));
+  assert.ok(riskText.includes('human review only.'));
   assert.equal(/Risk Score: \d+\/100/i.test(riskText), false, 'Discord body must keep risk score out of compact desk plan text');
   assert.equal(riskAudit.conditionalRiskScore.canExecute, false);
   assert.equal(riskAudit.conditionalRiskScore.blockReason, 'RiskTooWide');
@@ -6786,7 +6789,9 @@ try {
     ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']
   );
   assert.equal(riskText.includes('Decision: WAIT | App plan review: NO | canExecute: false'), false);
-  assert.ok(riskText.includes('Status: Risk review only; standard risk gate not clean.'));
+  assert.ok(riskText.includes('Human review only.'));
+  assert.ok(riskText.includes('No automated orders.'));
+  assert.ok(!riskText.includes('canExecute'));
   assert.equal(riskText.includes('Risk exceeds standard limit. Human final decision required.'), false);
   assert.equal(riskText.includes('Do not chase'), false);
 
