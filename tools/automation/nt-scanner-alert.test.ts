@@ -810,6 +810,26 @@ const staleHighQualityPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGa
 });
 assert.equal(staleHighQualityPrimaryAlertGate.shouldSend, false);
 assert.match(staleHighQualityPrimaryAlertGate.reason, /stale\/no-chase review state/);
+const blockedTargetRoomPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...reviewOnlyPrimaryAlertGateFixture,
+  candidate: {
+    ...reviewOnlyPrimaryAlertGateFixture.candidate!,
+    decisionQualityScore: 98,
+    decisionQualityHardBlocker: 'Clean 1.5R path unavailable: imbalance sits before T1.',
+    targetRoom: {
+      targetRoomStatus: 'blocked_before_t1',
+      t1Available: false,
+      t2Available: false,
+      cleanPathToT1: false,
+      obstacleBeforeT1: true,
+      t2ExtensionAvailable: false,
+      t2ExtensionObstructed: true,
+      targetRoomReason: 'Clean 1.5R path unavailable: imbalance sits before T1.',
+    },
+  },
+});
+assert.equal(blockedTargetRoomPrimaryAlertGate.shouldSend, false);
+assert.doesNotMatch(blockedTargetRoomPrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
 const priceAwayFromZonePrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
   ...reviewOnlyPrimaryAlertGateFixture,
   deskState: {
@@ -4617,19 +4637,21 @@ const morningHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'morning
 assert.deepEqual(Object.keys(morningHistoryPlan).sort(), ['120m', '15m', '240m', '5m', '60m']);
 for (const timeframe of ['5m', '15m', '60m', '120m', '240m'] as const) {
   assert.equal(morningHistoryPlan[timeframe].requiredLookbackDays, 30);
-  assert.equal(morningHistoryPlan[timeframe].from, '2026-05-03T00:00:00-04:00');
+  assert.equal(morningHistoryPlan[timeframe].from, '2026-05-04T00:00:00-04:00');
   assert.equal(morningHistoryPlan[timeframe].to, '2026-06-02T12:00:00-04:00');
 }
 const lunchHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'lunch');
-assert.equal(lunchHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');
+assert.equal(lunchHistoryPlan['5m'].from, '2026-05-04T00:00:00-04:00');
 assert.equal(lunchHistoryPlan['5m'].to, '2026-06-02T16:00:00-04:00');
 const eveningHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'evening');
-assert.equal(eveningHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');
+assert.equal(eveningHistoryPlan['5m'].from, '2026-05-04T00:00:00-04:00');
 assert.equal(eveningHistoryPlan['5m'].to, '2026-06-02T22:15:00-04:00');
 
 const liveMorningHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'morning', '2026-06-02T10:05:00.0000000');
-assert.equal(liveMorningHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');
+assert.equal(liveMorningHistoryPlan['5m'].from, '2026-05-04T00:00:00-04:00');
 assert.equal(liveMorningHistoryPlan['5m'].to, '2026-06-02T10:05:00-04:00');
+const julyFirstRollingHistoryPlan = buildScannerHistoryPreloadPlan('2026-07-01', 'morning');
+assert.equal(julyFirstRollingHistoryPlan['5m'].from, '2026-06-02T00:00:00-04:00');
 
 const afterMorningCloseHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'morning', '2026-06-02T12:30:00.0000000');
 assert.equal(afterMorningCloseHistoryPlan['5m'].to, '2026-06-02T12:00:00-04:00');

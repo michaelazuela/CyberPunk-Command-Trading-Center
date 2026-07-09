@@ -990,6 +990,12 @@ function candidateQualityScore(candidate: SetupCandidate | null): number | null 
 
 function isHighConfidenceConditionalCandidate(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): boolean {
   if (!candidate || getEffectiveCanExecute(normalized)) return false;
+  if (
+    normalized.decisionStatus === TradeDecisionStatus.NoTrade ||
+    normalized.decisionStatus === TradeDecisionStatus.OutsideRules
+  ) return false;
+  if (candidate.decisionQualityHardBlocker) return false;
+  if (candidate.targetRoom?.targetRoomStatus === 'blocked_before_t1') return false;
   const levels = appTargetLevels(candidate, normalized);
   const hasFullPlan = isFinitePrice(candidate.entry) &&
     isFinitePrice(levels.stop) &&

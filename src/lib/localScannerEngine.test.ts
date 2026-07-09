@@ -1005,7 +1005,7 @@ const tenOhFiveSelection = selectScannerPlan({
   currentPrice: morningMoveBars[7].close,
 });
 assert.notEqual(tenOhFiveSelection.stateForAlert, 'Approved');
-assert.equal(tenOhFiveSelection.stateForAlert, 'Executable');
+assert.equal(tenOhFiveSelection.stateForAlert, 'Conditional');
 assert.equal(tenOhFiveSelection.candidate?.direction, 'SHORT');
 assert.ok(tenOhFiveSelection.auditWarnings.some((warning) => warning.includes('Opposite-direction early-move review ignored')));
 

@@ -736,6 +736,26 @@ assert.equal(selectedExecutable.candidate, freshExecutableCandidate);
 assert.equal(selectedExecutable.stateForAlert, 'Approved');
 assert.equal(selectedExecutable.reviewStatus, null);
 
+const rawApprovedButNoTradeCandidate = candidate({
+  executionStatus: ExecutionStatus.Executable,
+  entry: 100,
+  stop: 96,
+  target1: 106,
+  target2: 108,
+});
+const rawApprovedButNoTradeSelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ApprovedTrade,
+    decision: 'NO TRADE',
+    setupCandidates: [rawApprovedButNoTradeCandidate],
+  } as any,
+  currentPrice: 101,
+});
+assert.equal(rawApprovedButNoTradeSelection.stateForAlert, 'Conditional');
+assert.notEqual(rawApprovedButNoTradeSelection.stateForAlert, 'Approved');
+assert.notEqual(rawApprovedButNoTradeSelection.stateForAlert, 'Executable');
+
 const fallbackStaleCandidate = candidate({
   executionStatus: ExecutionStatus.Executable,
   entry: 100,
@@ -867,7 +887,7 @@ assert.equal(julyOneSelection.candidate?.entry, 7548.25);
 assert.equal(julyOneSelection.candidate?.stop, 7539.75);
 assert.equal(julyOneSelection.candidate?.target1, 7561);
 assert.equal(julyOneSelection.candidate?.activeRuleset?.htfLineInSand?.lineInSand, 7548.25);
-assert.equal(julyOneSelection.stateForAlert, 'Executable');
+assert.equal(julyOneSelection.stateForAlert, 'Conditional');
 assert.equal(julyOneSelection.visibilityMetadata?.authority.canExecute, false);
 
 const julyOneLateSelection = selectScannerPlan({
@@ -969,7 +989,7 @@ const tenOhFiveSelection = selectScannerPlan({
   currentPrice: morningMoveBars[7].close,
 });
 assert.notEqual(tenOhFiveSelection.stateForAlert, 'Approved');
-assert.equal(tenOhFiveSelection.stateForAlert, 'Executable');
+assert.equal(tenOhFiveSelection.stateForAlert, 'Conditional');
 assert.equal(tenOhFiveSelection.candidate?.direction, 'SHORT');
 assert.ok(tenOhFiveSelection.auditWarnings.some((warning) => warning.includes('Opposite-direction early-move review ignored')));
 

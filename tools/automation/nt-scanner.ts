@@ -79,6 +79,7 @@ import {
   NoTradeReason,
   SetupCandidateStatus,
   SetupType,
+  TradeDecisionStatus,
   type AnalysisResult,
   type ChartContext,
   type DecisionQualityScoreItem,
@@ -1830,7 +1831,7 @@ export function buildScannerHistoryPreloadPlan(
   session: LiveSession,
   asOf?: string | Date | null,
 ): Record<MarketBarTimeframe, { from: string; to: string; requiredLookbackDays: number; limit: number }> {
-  const fromDate = calendarDateBefore(tradeDate, SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS);
+  const fromDate = calendarDateBefore(tradeDate, SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS - 1);
   const to = scannerHistoryPreloadTo(tradeDate, session, asOf);
   return Object.fromEntries(TIMEFRAMES.map((timeframe) => [
     timeframe,
@@ -6085,10 +6086,16 @@ function highQualityConditionalReviewCandidate(args: {
   normalized?: ReturnType<typeof buildAppTradePlan> | null;
   direction?: 'LONG' | 'SHORT' | 'WAIT' | string | null;
 }): SetupCandidate | null {
+  if (
+    args.normalized?.decisionStatus === TradeDecisionStatus.NoTrade ||
+    args.normalized?.decisionStatus === TradeDecisionStatus.OutsideRules
+  ) return null;
   const preferredDirection = args.direction === 'LONG' || args.direction === 'SHORT' ? args.direction : null;
   return (args.normalized?.setupCandidates || [])
     .filter((candidate) => candidate.direction === 'LONG' || candidate.direction === 'SHORT')
     .filter((candidate) => !preferredDirection || candidate.direction === preferredDirection)
+    .filter((candidate) => !candidate.decisionQualityHardBlocker)
+    .filter((candidate) => candidate.targetRoom?.targetRoomStatus !== 'blocked_before_t1')
     .filter((candidate) =>
       candidate.executionStatus === ExecutionStatus.Conditional &&
       candidate.blockReason === NoTradeReason.EntryTriggerPending &&
@@ -8373,6 +8380,8 @@ function candidateReadinessStatus(deskState: DeskState, candidate?: SetupCandida
 }
 
 function isHighQualityConditionalPrimaryAlertCandidate(candidate?: SetupCandidate | null): boolean {
+  if (candidate?.decisionQualityHardBlocker) return false;
+  if (candidate?.targetRoom?.targetRoomStatus === 'blocked_before_t1') return false;
   const score = candidate?.decisionQualityScore ?? candidate?.modelConfidenceScore ?? null;
   const executionStatusEligible =
     candidate?.executionStatus === ExecutionStatus.Conditional ||

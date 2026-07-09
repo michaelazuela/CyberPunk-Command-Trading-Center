@@ -553,10 +553,13 @@ function candidateTextIncludes(candidate: SetupCandidate, ...patterns: string[])
 }
 
 function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartContext): SetupCandidate {
+  const targetRoomHardBlocker = candidate.targetRoom?.targetRoomStatus === 'blocked_before_t1'
+    ? candidate.targetRoom.targetRoomReason || 'Clean 1.5R path unavailable'
+    : null;
   const hardBlocker =
     candidate.executionStatus === ExecutionStatus.Blocked ? candidate.blockReason || NoTradeReason.NoApprovedSetup :
     candidate.blockReason === NoTradeReason.OutsideTimeWindow ? candidate.blockReason :
-    null;
+    targetRoomHardBlocker;
   const hasSweep = candidateTextIncludes(candidate, 'sweep', 'liquidity raid');
   const hasReclaim = candidateTextIncludes(candidate, 'reclaim');
   const hasDisplacement = candidateTextIncludes(candidate, 'displacement');

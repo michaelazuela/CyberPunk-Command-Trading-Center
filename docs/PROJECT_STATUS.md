@@ -2,6 +2,21 @@
 
 ## Latest Change
 
+Date: 2026-07-09
+Task: Prevent blocked/stale high-confidence conditional drift and make HTF history rolling.
+Files changed: src/lib/tradeDecisionPipeline.ts, src/agents/scannerPlanSelectionAgent.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner.ts, tools/automation/discord-scheduler.ts, related regression tests, docs/PROJECT_STATUS.md.
+Reason: A July 9 AM long review posted as `LONG HIGH-CONFIDENCE CONDITIONAL` even though the app audit showed confidence 0, no executable trade, blocked target room before T1, and canExecute=false. The scanner/scheduler HTF context also needed to use an inclusive rolling 30-calendar-date history window instead of previous-month starts.
+Tests run: `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx src/agents/scannerPlanSelectionAgent.test.ts`; `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsx src/lib/tradeDecisionPipeline.test.ts`; `npx tsx src/lib/setupScanner.test.ts`; `npx tsc --noEmit`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run test`; `npm run lint`; `npm run build`.
+Result: Passed. Target-room blocked-before-T1 now becomes a decision-quality hard blocker; Discord and scanner high-confidence conditional promotion refuse candidates with target-room blockers, decision-quality hard blockers, or explicit NoTrade/OutsideRules status. Scanner selection can still surface conditional review/watch plans, but canExecute=false can no longer display as `Executable`. Scanner and scheduler HTF context now use a rolling 30-calendar-date inclusive window, e.g. July 1 starts at June 2.
+Trading logic changed: No. This changes Discord/scanner publication labels, selection display state, target-room quality scoring metadata, and history preload date range. It does not change canExecute, execution approval, setup definitions, entry rules, stop rules, target math, risk gates, bridge behavior, or 5M bar-close handling.
+Bridge impact: None.
+Journal/RAG impact: Clearer audit/Discord metadata only.
+Supabase impact: No schema migration.
+Known risks: Existing Discord messages and older audit artifacts are not rewritten.
+Next recommended action: Restart scanner services so live Discord output uses the tightened promotion guards.
+
+## Previous Change
+
 Date: 2026-07-08
 Task: Lock the global Discord Desk Play ticket format.
 Files changed: tools/automation/discord-alert-format.ts, tools/automation/nt-scanner.ts, tools/automation/discord-artifact-lint.ts, related formatter/scanner tests, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.

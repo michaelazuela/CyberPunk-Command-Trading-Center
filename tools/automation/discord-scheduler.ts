@@ -170,12 +170,6 @@ function getEtClock(date = new Date()): string {
   return `${parts.hour}:${parts.minute}`;
 }
 
-function previousMonthStartDate(tradeDate: string): string {
-  const [year, month] = tradeDate.split('-').map(Number);
-  const date = new Date(Date.UTC(year, month - 2, 1));
-  return date.toISOString().slice(0, 10);
-}
-
 function getDayOfWeek(tradeDate: string): string {
   return new Date(`${tradeDate}T12:00:00`).toLocaleDateString('en-US', {
     timeZone: 'America/New_York',
@@ -187,6 +181,10 @@ function addDaysToTradeDate(tradeDate: string, days: number): string {
   const [year, month, day] = tradeDate.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1, day + days, 12));
   return date.toISOString().slice(0, 10);
+}
+
+function rollingHistoryStartDate(tradeDate: string, lookbackDays = 30): string {
+  return addDaysToTradeDate(tradeDate, -(Math.max(1, lookbackDays) - 1));
 }
 
 function weeklyPlanRange(tradeDate: string): { start: string; end: string; label: string } {
@@ -299,7 +297,7 @@ function attachSchedulerHistoryCoverage(
 }
 
 async function buildPremarketContext(config: SchedulerConfig, tradeDate: string) {
-  const contextStartDate = previousMonthStartDate(tradeDate);
+  const contextStartDate = rollingHistoryStartDate(tradeDate);
   const [bars240m, bars120m, bars60m, bars15m] = await Promise.all([
     fetchBars(config, '240m', etDateTime(contextStartDate, '18:00'), etDateTime(tradeDate, '09:15')),
     fetchBars(config, '120m', etDateTime(contextStartDate, '18:00'), etDateTime(tradeDate, '09:15')),
@@ -320,7 +318,7 @@ async function buildPremarketContext(config: SchedulerConfig, tradeDate: string)
 }
 
 async function buildWeeklyContext(config: SchedulerConfig, tradeDate: string) {
-  const contextStartDate = previousMonthStartDate(tradeDate);
+  const contextStartDate = rollingHistoryStartDate(tradeDate);
   const contextEnd = etDateTime(tradeDate, '08:00');
   const [bars240m, bars120m, bars60m, bars15m] = await Promise.all([
     fetchBars(config, '240m', etDateTime(contextStartDate, '18:00'), contextEnd),
@@ -342,7 +340,7 @@ async function buildWeeklyContext(config: SchedulerConfig, tradeDate: string) {
 }
 
 async function buildSessionAnalysis(config: SchedulerConfig, job: SessionAlertJob, tradeDate: string, asOfEt?: string): Promise<AnalysisResult> {
-  const contextStartDate = previousMonthStartDate(tradeDate);
+  const contextStartDate = rollingHistoryStartDate(tradeDate);
   const executionStart = job === 'morning' ? MORNING_EXECUTION_START_ET : LUNCH_EXECUTION_START_ET;
   const executionEnd = normalizeEtClock(asOfEt || (job === 'morning' ? MORNING_EXECUTION_END_ET : LUNCH_EXECUTION_END_ET));
   const contextTo = etDateTime(tradeDate, executionEnd);

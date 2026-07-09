@@ -39,6 +39,16 @@ function normalizedPlanDirection(normalized: Pick<NormalizedTradePlan, 'decision
   return normalized.decision === 'LONG' || normalized.decision === 'SHORT' ? normalized.decision : 'NO TRADE';
 }
 
+function scannerDecisionStatusForSelection(normalized: NormalizedTradePlan): TradeDecisionStatus {
+  if (!normalized.canExecute) {
+    return normalized.decisionStatus === TradeDecisionStatus.NoTrade ||
+      normalized.decisionStatus === TradeDecisionStatus.OutsideRules
+      ? normalized.decisionStatus
+      : TradeDecisionStatus.Wait;
+  }
+  return normalized.decisionStatus || TradeDecisionStatus.ApprovedTrade;
+}
+
 function samePrice(a: number | null | undefined, b: number | null | undefined): boolean {
   if (!isValidPrice(a) || !isValidPrice(b)) return false;
   return Math.abs(a - b) < 0.01;
@@ -609,12 +619,12 @@ function selectScannerPlanCore(args: {
     }
 
     const state = scannerStateFromDecision({
-      decisionStatus: args.normalized.decisionStatus || TradeDecisionStatus.ApprovedTrade,
+      decisionStatus: scannerDecisionStatusForSelection(args.normalized),
       candidate: appPlanCandidate,
       stale,
       targetCascade: args.targetCascade || null,
     });
-    const stateForAlert = state === 'Conditional' ? 'Executable' : state;
+    const stateForAlert = args.normalized.canExecute && state === 'Conditional' ? 'Executable' : state;
     return {
       candidate: appPlanCandidate,
       stale,
@@ -636,7 +646,7 @@ function selectScannerPlanCore(args: {
         guards: args.guards,
       });
       const state = scannerStateFromDecision({
-        decisionStatus: args.normalized.decisionStatus || (args.normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait),
+        decisionStatus: scannerDecisionStatusForSelection(args.normalized),
         candidate: oppositeProofCandidate,
         stale,
         targetCascade: args.targetCascade || null,
@@ -645,7 +655,7 @@ function selectScannerPlanCore(args: {
         candidate: oppositeProofCandidate,
         stale,
         state,
-        stateForAlert: oppositeProofCandidate.executionStatus === ExecutionStatus.Executable && state === 'Conditional' ? 'Executable' : state,
+        stateForAlert: args.normalized.canExecute && oppositeProofCandidate.executionStatus === ExecutionStatus.Executable && state === 'Conditional' ? 'Executable' : state,
         reviewStatus: null,
         auditWarnings: ['Opposite-direction early-move review ignored because a valid app-owned opposite campaign candidate is present.'],
       };
@@ -672,7 +682,7 @@ function selectScannerPlanCore(args: {
         guards: args.guards,
       });
       const state = scannerStateFromDecision({
-        decisionStatus: args.normalized.decisionStatus || (args.normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait),
+        decisionStatus: scannerDecisionStatusForSelection(args.normalized),
         candidate: proofCandidate,
         stale,
         targetCascade: args.targetCascade || null,
@@ -681,7 +691,7 @@ function selectScannerPlanCore(args: {
         candidate: proofCandidate,
         stale,
         state,
-        stateForAlert: proofCandidate.executionStatus === ExecutionStatus.Executable && state === 'Conditional' ? 'Executable' : state,
+        stateForAlert: args.normalized.canExecute && proofCandidate.executionStatus === ExecutionStatus.Executable && state === 'Conditional' ? 'Executable' : state,
         reviewStatus: null,
         auditWarnings: ['Opposite-direction early-move review ignored for selected scanner candidate.'],
       };
@@ -731,13 +741,13 @@ function selectScannerPlanCore(args: {
   }
 
   const state = scannerStateFromDecision({
-    decisionStatus: args.normalized.decisionStatus || (args.normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait),
+    decisionStatus: scannerDecisionStatusForSelection(args.normalized),
     candidate: fallback,
     stale,
     targetCascade: args.targetCascade || null,
   });
   const stateForAlert =
-    fallback?.executionStatus === ExecutionStatus.Executable && state === 'Conditional'
+    args.normalized.canExecute && fallback?.executionStatus === ExecutionStatus.Executable && state === 'Conditional'
       ? 'Executable'
       : state;
 

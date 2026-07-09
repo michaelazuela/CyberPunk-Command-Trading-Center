@@ -2839,6 +2839,39 @@ assert.ok(scannerReadyPayload.content?.startsWith('🟡'), 'canExecute=false mus
 assert.equal(/APPROVED|EXECUTABLE/i.test(scannerReadyPayload.content || ''), false, 'normalized canExecute=false must not allow approved/executable headline text');
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
 
+const blockedTargetRoomHighScoreCandidate = sampleCandidate('LONG');
+blockedTargetRoomHighScoreCandidate.setupType = SetupType.TurtleSoup;
+blockedTargetRoomHighScoreCandidate.decisionQualityScore = 98;
+blockedTargetRoomHighScoreCandidate.decisionQualityHardBlocker = 'Clean 1.5R path unavailable: imbalance sits before T1.';
+blockedTargetRoomHighScoreCandidate.targetRoom = {
+  targetRoomStatus: 'blocked_before_t1',
+  t1Available: false,
+  t2Available: false,
+  cleanPathToT1: false,
+  obstacleBeforeT1: true,
+  t2ExtensionAvailable: false,
+  t2ExtensionObstructed: true,
+  targetRoomReason: 'Clean 1.5R path unavailable: imbalance sits before T1.',
+};
+const blockedTargetRoomPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-07-09',
+  instrument: 'MES',
+  planVersionId: 'BLOCKED-TARGET-ROOM-NOT-HIGH-CONFIDENCE',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.NoTrade,
+    decision: 'NO TRADE',
+    noTradeReason: 'Clean 1.5R path unavailable.',
+  },
+  candidates: [blockedTargetRoomHighScoreCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+});
+const blockedTargetRoomText = flattenDiscordPayloadText(blockedTargetRoomPayload);
+assert.ok(!blockedTargetRoomText.includes('HIGH-CONFIDENCE CONDITIONAL'));
+assert.ok(blockedTargetRoomText.includes('NO TRADE') || blockedTargetRoomText.includes('WAIT'));
+
 const discordChartDriftCandidate = sampleCandidate('LONG');
 discordChartDriftCandidate.setupType = SetupType.TurtleSoup;
 discordChartDriftCandidate.scenarioLabel = 'Bullish Turtle Soup Reversal - normalized plan not executable';
