@@ -153,6 +153,7 @@ function Start-RestartSequence {
 Set-Location '$($Root.Replace("'", "''"))'
 & '$($StopScript.Replace("'", "''"))'
 Start-Sleep -Milliseconds 750
+npm run quant-desk:maintenance:off
 & '$($StartScript.Replace("'", "''"))'
 "@
   Write-TrayLog -Message 'Tray restart sequence requested.' -Details @{ stopScript = $StopScript; startScript = $StartScript }
@@ -345,7 +346,7 @@ $statusItem.Enabled = $false
 $menu.Items.Add('-') | Out-Null
 $startItem = $menu.Items.Add('Start Supervisor')
 $restartItem = $menu.Items.Add('Restart Supervisor Services')
-$stopItem = $menu.Items.Add('Stop All')
+$stopItem = $menu.Items.Add('Stop Supervisor Services')
 $menu.Items.Add('-') | Out-Null
 $repairCacheItem = $menu.Items.Add('Repair Market Cache Now')
 $menu.Items.Add('-') | Out-Null
