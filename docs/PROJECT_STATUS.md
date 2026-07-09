@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-09
+Task: Clean Discord compact-ticket duplicate labels and false warning noise.
+Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-artifact-lint.ts, docs/PROJECT_STATUS.md.
+Reason: Workflow loopback still emitted Discord formatter warnings for duplicate `Invalid` labels and valid compact ticket length. The formatter needed a single final description sanitizer and the lint warning budget needed to stop flagging valid chart-backed/current-plan payloads below the true Discord safety boundary.
+Tests run: `npx tsx tools/automation/discord-alert-format.test.ts`; `npm run workflow:loopback`; `npx tsc --noEmit`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Compact Discord descriptions now strip duplicate `Invalid`, `Invalidation`, `Action`, `Entry`, `Stop`, `T1`, and `T2` labels at the formatter boundary. Desk Play fallback now uses the existing compact fallback helpers only near the embed-size safety boundary. Workflow loopback completed with no Discord payload warnings.
+Trading logic changed: No. This is Discord formatter/lint presentation only; it does not change canExecute, execution approval, setup definitions, ranking, risk gates, stop/target math, model definitions, bridge behavior, or 5M bar-close handling.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: No schema migration.
+Known risks: Existing Discord messages and older audit artifacts are not rewritten.
+Next recommended action: Restart scanner services after commit so live Discord posts use the cleaned formatter.
+
+## Previous Change
+
+Date: 2026-07-09
 Task: Prevent blocked/stale high-confidence conditional drift and make HTF history rolling.
 Files changed: src/lib/tradeDecisionPipeline.ts, src/agents/scannerPlanSelectionAgent.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner.ts, tools/automation/discord-scheduler.ts, related regression tests, docs/PROJECT_STATUS.md.
 Reason: A July 9 AM long review posted as `LONG HIGH-CONFIDENCE CONDITIONAL` even though the app audit showed confidence 0, no executable trade, blocked target room before T1, and canExecute=false. The scanner/scheduler HTF context also needed to use an inclusive rolling 30-calendar-date history window instead of previous-month starts.

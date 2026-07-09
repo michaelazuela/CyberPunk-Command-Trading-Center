@@ -191,16 +191,16 @@ export function lintDiscordArtifacts(input: DiscordArtifactLintInput): DiscordAr
       message: 'Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.',
     });
   }
-  if (validFiles.length > 0 && text.length > 1600) {
+  if (validFiles.length > 0 && text.length > 1900) {
     issues.push({
       severity: 'warn',
       code: 'image_backed_text_limit',
-      message: `Discord payload warning: trade-plan compact alert text is ${text.length} characters; keep image-backed trade alerts under 1600 when practical.`,
+      message: `Discord payload warning: trade-plan compact alert text is ${text.length} characters; keep image-backed trade alerts under 1600 when practical; warning fires near the 1900 safety boundary.`,
     });
   }
   const preferredTextLimit = policy.category === 'current_desk_plan' && hasCompleteAppLevels(text) && validFiles.length > 0
-    ? 1400
-    : 1200;
+    ? 1900
+    : 1400;
   if (text.length > preferredTextLimit) {
     issues.push({
       severity: 'warn',

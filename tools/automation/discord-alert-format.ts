@@ -1375,8 +1375,7 @@ function compactGeneralAlertLines(args: CompactDiscordSummaryArgs, candidate: Se
     ...(htfLines.length ? [''] : []),
     'Decision support only. No automated orders.',
     '',
-    'Invalid:',
-    compactLine(candidate.invalidation || normalized.invalidation || 'Invalidation not available. Do not act without protected structure.', 92),
+    `Invalid: ${invalidInstruction(candidate.invalidation || normalized.invalidation, 'invalidation not available. Do not act without protected structure.')}`,
   ];
 }
 
@@ -2324,6 +2323,14 @@ function invalidInstruction(value: string | null | undefined, fallback: string):
     .replace(/^invalid(?:ation)?\s*:\s*/i, '')
     .replace(/^invalid\s+if\s+/i, '')
     .replace(/^invalid\s+/i, '');
+}
+
+function discordDescription(lines: string[]): string {
+  return professionalizeReportText(lines.join('\n'))
+    .replace(/\bInvalid:\s*Invalid(?:\s+if)?\s+/gi, 'Invalid: ')
+    .replace(/\bInvalidation:\s*Invalidation\s+/gi, 'Invalidation: ')
+    .replace(/\bAction:\s*Action\s+/gi, 'Action: ')
+    .replace(/\b(Entry|Stop|T1|T2):\s*\1\s+/gi, '$1: ');
 }
 
 function deskPlayStandDownLine(args: {
@@ -3320,7 +3327,7 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     embeds: [
       {
         title: `${args.instrument} Current Desk Plan`,
-        description: professionalizeReportText(lines.join('\n')),
+        description: discordDescription(lines),
         color: direction === 'LONG' ? 0x00a86b : direction === 'SHORT' ? 0xff6d00 : 0xffa000,
         fields: [],
         footer: { text: 'Quant Desk • Scanner DeskState play • Not execution approval' },
@@ -3329,19 +3336,29 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     ],
     ...(components?.length ? { components } : {}),
   };
-  const maxMainText = args.attachments.chartPlan || args.attachments.priceLevelMap ? 1600 : 1900;
+  const maxMainText = 3900;
   if (flattenDiscordPayloadText(payload).length <= maxMainText) return payload;
+  const fallbackLines = scannerDeskPlayFallbackLines(args, direction);
   const fallbackPayload: DiscordWebhookPayload = {
     ...payload,
     embeds: [
       {
         ...payload.embeds[0],
-        description: professionalizeReportText(lines.join('\n')),
+        description: discordDescription(fallbackLines),
       },
     ],
   };
   if (flattenDiscordPayloadText(fallbackPayload).length <= maxMainText) return fallbackPayload;
-  return fallbackPayload;
+  const ultraFallbackLines = scannerDeskPlayUltraFallbackLines(args, direction);
+  return {
+    ...payload,
+    embeds: [
+      {
+        ...payload.embeds[0],
+        description: discordDescription(ultraFallbackLines),
+      },
+    ],
+  };
 }
 
 function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
@@ -3857,7 +3874,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         title: bestCandidate && designerStatus !== 'NO TRADE' && bestCandidateHasFullPlan
           ? `${args.instrument} Current Desk Plan`
           : 'Compact Trade Plan Summary',
-        description: professionalizeReportText(lines.join('\n')),
+        description: discordDescription(lines),
         color: statusColor(finalStatus),
         fields: [],
         footer: { text: '' },
@@ -3893,7 +3910,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
       embeds: [
         {
           ...payload.embeds[0],
-          description: professionalizeReportText(shortLines.join('\n')),
+          description: discordDescription(shortLines),
         },
       ],
     };
