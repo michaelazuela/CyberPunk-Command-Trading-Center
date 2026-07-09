@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-09
+Task: Add daily bar-by-bar learning extract workflow.
+Files changed: tools/automation/daily-bar-by-bar-learning-extract.ts, tools/automation/daily-bar-by-bar-learning-extract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Bar-by-bar reviews were happening manually in chat, which made it too easy for lessons to remain informal. The new workflow turns scanner decision tapes into a durable daily learning artifact with candidate outcome, best reviewed campaign, one-MES gross result, Discord/suppression context, and explicit lesson cadence.
+Tests run: `npx tsx tools/automation/daily-bar-by-bar-learning-extract.test.ts`; `npx tsx tools/automation/daily-bar-by-bar-learning-extract.ts --tape tools/automation/discord-audit/scanner-decision-tape-2026-07-09-MES-lunch.json --out tools/automation/discord-audit/daily-learning-2026-07-09-MES-lunch.json --persist-rag`; `npx tsc --noEmit`; `npm run test`; `npm run workflow:loopback`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The July 9 lunch learning extract was generated locally and inserted into RAG as `LEARNING-2026-07-09-MES-LUNCH`.
+Trading logic changed: No. This is post-session review and learning persistence only. It does not change setup definitions, ranking, Discord send eligibility, canExecute, entry/stop/target math, risk gates, bridge behavior, or bar-close handling.
+Bridge impact: None. The extractor consumes existing scanner decision tapes and completed 5M bars already recorded in those tapes.
+Journal/RAG impact: Adds optional Supabase/RAG persistence for `daily_bar_by_bar_learning_extract` records when Supabase RAG env is available; otherwise it writes a local JSON artifact and reports skipped persistence.
+Supabase impact: No schema migration.
+Known risks: None known for normal scanner tapes. The extractor now records source-tape quality and refuses RAG persistence for data-limited tapes with missing scanner fields, malformed completed 5M bars, missing plan snapshots, or missing visibility metadata.
+Next recommended action: Run this after morning, lunch/PM, and evening sessions, then review the accumulated extracts weekly before promoting any repeated lesson into live scanner rules.
+
+## Previous Change
+
+Date: 2026-07-09
 Task: Add single active DeskTicket and hide canExecute from trader-facing Discord tickets.
 Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, src/lib/liveDiscordPostEligibility.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
 Reason: The scanner was producing useful candidates, but Discord could still read like multiple competing reports and expose internal canExecute churn. The new DeskTicket is a scanner-owned, single trader-facing ticket derived from existing DeskState/candidate evidence. Discord uses it as the compact ticket when present, while canExecute remains internal/audit-only.
