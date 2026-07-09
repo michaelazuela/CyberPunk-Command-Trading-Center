@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-09
+Task: Cleanup chunks 3/4 - compact scanner operator logging and preserve canonical Discord formatter paths.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The scanner already had a canonical compact cycle summary, but dry-run/disabled Discord posts could still dump full Discord JSON into operator logs. That made live troubleshooting noisy and encouraged reading logs instead of audit JSON. The cleanup keeps full evidence in audit artifacts and makes the default operator path compact.
+Tests run: `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/discord-alert-format.test.ts`; `npm run workflow:loopback`; `npx tsc --noEmit`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Dry-run/Discord-disabled scanner posts now log a single compact operator line with source, title, text length, files, and component count. Full dry-run payload JSON remains available only when `SCANNER_VERBOSE_DISCORD_PAYLOAD_LOG=true` or `--verbose-discord-payload-log true` is explicitly set. Suppression summary output is regression-tested as compact. No obsolete formatter/render path was removed because the remaining Desk Play fallback helpers are live safety fallbacks and architecture-guard protected.
+Trading logic changed: No. This changes operator logging and test coverage only; it does not change canExecute, execution approval, setup definitions, ranking, risk gates, stop/target math, model definitions, bridge behavior, Discord send eligibility, or 5M bar-close handling.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: No schema migration.
+Known risks: Existing log files are not rewritten. Non-scanner research/scheduler dry-run commands may still print their own dry-run summaries by design.
+Next recommended action: Use the next live scanner cycle to confirm the operator log shows one compact scanner line and compact Discord held/post lines.
+
+## Previous Change
+
+Date: 2026-07-09
 Task: Clean Discord compact-ticket duplicate labels and false warning noise.
 Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-artifact-lint.ts, docs/PROJECT_STATUS.md.
 Reason: Workflow loopback still emitted Discord formatter warnings for duplicate `Invalid` labels and valid compact ticket length. The formatter needed a single final description sanitizer and the lint warning budget needed to stop flagging valid chart-backed/current-plan payloads below the true Discord safety boundary.

@@ -117,6 +117,7 @@ import { buildDiscordTradePlanVisualProvenance } from './discord-visual-contract
 import {
   buildCanonicalTraderTicket,
   compactDiscordSummary,
+  flattenDiscordPayloadText,
   morningWatchlistDiscordSummary,
   scannerHealthDiscordSummary,
   shouldSendScannerHealthAlert,
@@ -170,6 +171,7 @@ export interface ScannerConfig {
   continuousMode: boolean;
   scanWindows: boolean;
   discordEnabled: boolean;
+  verboseDiscordPayloadLog?: boolean;
   afternoonEnabled: boolean;
   thresholds: ScannerThresholds;
   maxChaseDistancePoints: number;
@@ -1283,6 +1285,7 @@ function printHelp() {
     '  --bar-time-zone eastern        Timezone for NinjaTrader bar timestamps without offsets: eastern, central, pacific, or local.',
     '  --discord-message-cleanup true Delete scanner Discord messages after the configured TTL. Defaults to true.',
     '  --discord-message-ttl-minutes 15  Age in minutes before scanner Discord messages are deleted; 0 disables cleanup.',
+    '  --verbose-discord-payload-log true  Print full dry-run Discord JSON payloads. Defaults to compact operator lines.',
     '  --live-discord-policy-confirmed  Confirms Phase 11A dry-scan/replay checklist before live scanner trade/DeskState posts.',
     '  --preflight-active-campaign-ledger  Verify Supabase campaign ledger env/table and exit.',
     '',
@@ -1313,6 +1316,7 @@ function loadConfig(): ScannerConfig {
     continuousMode: boolArg('continuous', true),
     scanWindows: boolArg('scan-windows', true),
     discordEnabled: boolArg('discord', true),
+    verboseDiscordPayloadLog: boolArg('verbose-discord-payload-log', boolEnv('SCANNER_VERBOSE_DISCORD_PAYLOAD_LOG', false)),
     afternoonEnabled: boolArg('afternoon', false),
     thresholds: {
       conditional: numberArg('conditional-threshold', 65),
@@ -1769,7 +1773,7 @@ function scannerCandidateLabel(candidate: SetupCandidate | null, deskState: Desk
   return `${side} ${setup}`;
 }
 
-function scannerCycleSummaryLine(args: {
+export function scannerCycleSummaryLine(args: {
   session: LiveSession;
   completed5m: NinjaBridgeBar;
   currentPrice: number;
@@ -1805,7 +1809,7 @@ function scannerCycleSummaryLine(args: {
   ].join(' | ');
 }
 
-function scannerSuppressionSummaryLine(args: {
+export function scannerSuppressionSummaryLine(args: {
   label: string;
   category: string;
   reason: string;
@@ -1813,6 +1817,26 @@ function scannerSuppressionSummaryLine(args: {
 }): string {
   const previous = args.previousFingerprint ? ` | previous=${compactScannerLogText(args.previousFingerprint, 90)}` : '';
   return `[scanner] ${args.label} suppressed (${args.category}): ${compactScannerLogText(args.reason, 180)}${previous}`;
+}
+
+export function scannerDiscordDryRunSummaryLine(args: {
+  payload: DiscordWebhookPayload;
+  files: string[];
+  source: 'dry_run' | 'discord_disabled';
+}): string {
+  const text = flattenDiscordPayloadText(args.payload);
+  const title = args.payload.embeds[0]?.title || args.payload.content || 'Discord payload';
+  const components = args.payload.components?.length || 0;
+  const fileLabels = args.files.length ? args.files.map((file) => path.basename(file)).join(',') : 'none';
+  return [
+    '[scanner-discord]',
+    `held source=${args.source}`,
+    `title="${compactScannerLogText(title, 58)}"`,
+    `text=${text.length}`,
+    `files=${args.files.length}:${fileLabels}`,
+    `components=${components}`,
+    'set SCANNER_VERBOSE_DISCORD_PAYLOAD_LOG=true for full dry-run JSON',
+  ].join(' | ');
 }
 
 function timeframeMinutes(timeframe: MarketBarTimeframe): number {
@@ -8140,10 +8164,15 @@ async function postDiscord(
 ): Promise<ScannerDiscordPostReceipt> {
   validateDiscordPayload(payload, files);
   if (config.dryRun || !config.discordEnabled) {
-    console.log(JSON.stringify({ ...payload, chartMarkupFiles: files }, null, 2));
+    const source = config.dryRun ? 'dry_run' : 'discord_disabled';
+    if (config.verboseDiscordPayloadLog) {
+      console.log(JSON.stringify({ ...payload, chartMarkupFiles: files }, null, 2));
+    } else {
+      console.log(scannerDiscordDryRunSummaryLine({ payload, files, source }));
+    }
     return {
       deliveryStatus: 'skipped',
-      webhookSource: config.dryRun ? 'dry_run' : 'discord_disabled',
+      webhookSource: source,
       httpStatus: null,
       discordMessageId: null,
     };

@@ -96,6 +96,8 @@ import {
   writeScannerDiscordFinalDeliveryFailureOutcome,
   writeScannerDecisionTapeAuditLog,
   scannerMarketBarsUpsertSkipAuditLine,
+  scannerDiscordDryRunSummaryLine,
+  scannerSuppressionSummaryLine,
   upsertScannerDiscordAlertRagRecord,
   upsertScannerReversalWatchRagRecord,
   normalizeScannerBarTimestampMode,
@@ -153,6 +155,35 @@ assert.deepEqual(normalizeScannerOperatorDeliveryReason({
   code: 'HELD_DATA_LIMITED',
   reason: 'HELD_DATA_LIMITED: HTF/data context is insufficient; review-map only.',
 });
+const dryRunSummary = scannerDiscordDryRunSummaryLine({
+  source: 'dry_run',
+  files: [path.join(outputDir, 'desk-plan.png'), path.join(outputDir, 'level-map.png')],
+  payload: {
+    username: 'Quant Desk',
+    content: 'MES Current Desk Plan',
+    embeds: [{
+      title: 'MES Current Desk Plan',
+      description: 'Line in the Sand: 7500.00\nEntry: 7499.75\nStop: 7506.00\nT1: 7490.50\nT2: 7487.25',
+      color: 0xff6d00,
+      fields: [],
+      footer: { text: 'Quant Desk - Scanner DeskState play - Not execution approval' },
+      timestamp: '2026-07-09T14:00:00.000Z',
+    }],
+    components: [{ type: 1, components: [] }],
+  },
+});
+assert.match(dryRunSummary, /^\[scanner-discord\] \| held source=dry_run \| title="MES Current Desk Plan"/);
+assert.match(dryRunSummary, /files=2:desk-plan\.png,level-map\.png/);
+assert.match(dryRunSummary, /set SCANNER_VERBOSE_DISCORD_PAYLOAD_LOG=true/);
+assert.equal(dryRunSummary.includes('"embeds"'), false);
+const suppressionSummary = scannerSuppressionSummaryLine({
+  label: 'Desk Play refresh',
+  category: 'duplicate_refresh',
+  reason: 'Desk Play suppressed because primary side, readiness, HTF support/conflict, action state, and protected-structure map are unchanged from the latest posted Desk Play.',
+  previousFingerprint: 'LONG|7500|7499|7506|7490|7487|same tactical state',
+});
+assert.match(suppressionSummary, /^\[scanner\] Desk Play refresh suppressed \(duplicate_refresh\):/);
+assert.ok(suppressionSummary.length < 320, `suppression summary should stay compact, got ${suppressionSummary.length}`);
 assert.equal(shouldLogBridgeInstrumentResolution({
   instrument: 'MES 09-26',
   requestedInstrument: 'MES',
