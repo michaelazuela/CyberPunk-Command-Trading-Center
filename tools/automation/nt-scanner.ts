@@ -1697,6 +1697,68 @@ function compactScannerLogText(value: string | null | undefined, maxLength = 160
   return text.length > maxLength ? `${text.slice(0, maxLength - 1).trimEnd()}…` : text;
 }
 
+export type ScannerOperatorDeliveryReasonCode =
+  | 'POST_READY'
+  | 'HELD_DUPLICATE'
+  | 'HELD_STALE_NO_CHASE'
+  | 'HELD_DATA_LIMITED'
+  | 'HELD_MISSING_5M_PROOF'
+  | 'HELD_REVIEW_ONLY'
+  | 'HELD_LOCAL';
+
+export function normalizeScannerOperatorDeliveryReason(decision: ScannerAlertDecision): {
+  code: ScannerOperatorDeliveryReasonCode;
+  reason: string;
+} {
+  const raw = String(decision.reason || '').replace(/\s+/g, ' ').trim();
+  const lower = raw.toLowerCase();
+  if (decision.shouldSend) {
+    return {
+      code: 'POST_READY',
+      reason: raw || 'POST_READY: eligible scanner alert.',
+    };
+  }
+  if (/duplicate|already sent|durable ledger|one-trade-per-campaign|activecampaign duplicate/i.test(raw)) {
+    return {
+      code: 'HELD_DUPLICATE',
+      reason: 'HELD_DUPLICATE: existing Discord/campaign record already covers this setup.',
+    };
+  }
+  if (/stale|missed|no chase|already_triggered|no_fresh_entry|state=missed|zone_failed_completed_5m|already reached|passed t1|active tactical zone/i.test(raw)) {
+    return {
+      code: 'HELD_STALE_NO_CHASE',
+      reason: 'HELD_STALE_NO_CHASE: no fresh entry; wait for new completed 5M proof.',
+    };
+  }
+  if (/data-limited|data limited|htf\/data context insufficient|htf context insufficient|readiness gate is data-limited|pre-market data readiness/i.test(raw)) {
+    return {
+      code: 'HELD_DATA_LIMITED',
+      reason: 'HELD_DATA_LIMITED: HTF/data context is insufficient; review-map only.',
+    };
+  }
+  if (/missing proof|missing_proof|review_only_missing_proof|entrytriggerpending|triggerpending|waiting for completed 5m|completed 5m proof|pullback_or_new_5m_structure/i.test(raw)) {
+    return {
+      code: 'HELD_MISSING_5M_PROOF',
+      reason: 'HELD_MISSING_5M_PROOF: waiting for completed 5M trigger/retest proof.',
+    };
+  }
+  if (/canexecute=false|review only|not execution approval|htf\/protected structure conflict|conflicts with deskstate|conflicts with active htf fvg routing|readiness=not_aligned|readiness=blocked/i.test(lower)) {
+    return {
+      code: 'HELD_REVIEW_ONLY',
+      reason: 'HELD_REVIEW_ONLY: review only; execution gate is not clean.',
+    };
+  }
+  return {
+    code: 'HELD_LOCAL',
+    reason: raw ? `HELD_LOCAL: ${compactScannerLogText(raw, 140)}` : 'HELD_LOCAL: not eligible for trade-card delivery.',
+  };
+}
+
+function withNormalizedScannerOperatorDeliveryReason(decision: ScannerAlertDecision): ScannerAlertDecision {
+  const normalized = normalizeScannerOperatorDeliveryReason(decision);
+  return normalized.reason === decision.reason ? decision : { ...decision, reason: normalized.reason };
+}
+
 function scannerAuditFileLabel(filePath: string | null | undefined): string {
   return filePath ? path.basename(filePath) : 'N/A';
 }
@@ -9968,6 +10030,10 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         ],
       };
     }
+  }
+  const operatorNormalizedAlertDecision = withNormalizedScannerOperatorDeliveryReason(alertDecision);
+  if (operatorNormalizedAlertDecision.reason !== alertDecision.reason) {
+    alertDecision = operatorNormalizedAlertDecision;
   }
   if (!alertDecision.shouldSend && activeCampaignClaim.claimed && activeCampaignClaim.campaignId) {
     const suppressedReason = alertDecision.reason || 'Scanner alert suppressed after durable ActiveCampaign claim.';

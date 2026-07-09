@@ -99,6 +99,7 @@ import {
   upsertScannerDiscordAlertRagRecord,
   upsertScannerReversalWatchRagRecord,
   normalizeScannerBarTimestampMode,
+  normalizeScannerOperatorDeliveryReason,
   type ScannerAlertDeliveryRecord,
   type ScannerActiveCampaignDurableLedgerConfig,
   type ScannerActiveCampaignLedgerRecord,
@@ -124,6 +125,34 @@ assert.equal(normalizeScannerBarTimestampMode('close'), 'close');
 assert.equal(normalizeScannerBarTimestampMode('CLOSE'), 'close');
 assert.equal(normalizeScannerBarTimestampMode('bar-open'), 'open');
 assert.equal(normalizeScannerBarTimestampMode('bad-env-value'), 'open');
+assert.deepEqual(normalizeScannerOperatorDeliveryReason({
+  shouldSend: false,
+  reason: 'Primary trade-card suppressed by DeskState/readiness gate: canExecute=false; readiness=review_only_missing_proof; HTF/protected structure conflict.',
+}), {
+  code: 'HELD_MISSING_5M_PROOF',
+  reason: 'HELD_MISSING_5M_PROOF: waiting for completed 5M trigger/retest proof.',
+});
+assert.deepEqual(normalizeScannerOperatorDeliveryReason({
+  shouldSend: false,
+  reason: 'Discord duplicate suppressed by durable ledger.',
+}), {
+  code: 'HELD_DUPLICATE',
+  reason: 'HELD_DUPLICATE: existing Discord/campaign record already covers this setup.',
+});
+assert.deepEqual(normalizeScannerOperatorDeliveryReason({
+  shouldSend: false,
+  reason: 'state=Missed; stale/no-chase review state; current price already reached/passed T1.',
+}), {
+  code: 'HELD_STALE_NO_CHASE',
+  reason: 'HELD_STALE_NO_CHASE: no fresh entry; wait for new completed 5M proof.',
+});
+assert.deepEqual(normalizeScannerOperatorDeliveryReason({
+  shouldSend: false,
+  reason: 'HTF/data context insufficient for high-confidence review publication.',
+}), {
+  code: 'HELD_DATA_LIMITED',
+  reason: 'HELD_DATA_LIMITED: HTF/data context is insufficient; review-map only.',
+});
 assert.equal(shouldLogBridgeInstrumentResolution({
   instrument: 'MES 09-26',
   requestedInstrument: 'MES',
