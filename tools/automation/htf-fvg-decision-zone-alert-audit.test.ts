@@ -22,7 +22,7 @@ assert.equal(report.summary.noChaseRendered, true);
 assert.equal(report.summary.parentReactionRendered, true);
 assert.equal(report.summary.cascadeRendered, true);
 assert.equal(report.summary.boundaryRendered, true);
-assert.equal(report.summary.pendingLevelsPreserved, true);
+assert.equal(report.summary.watchOnlyNoPricedStopPreserved, true);
 assert.equal(report.summary.noAuthorityChange, true);
 assert.ok(report.filesScanned.includes('src/lib/localScannerEngine.ts'));
 assert.ok(report.filesScanned.includes('tools/automation/discord-alert-format.ts'));

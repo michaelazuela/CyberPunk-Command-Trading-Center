@@ -2,18 +2,18 @@
 
 ## Latest Change
 
-Date: 2026-07-06
-Task: Make Desk Play Discord reports globally actionable and compact.
-Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-artifact-lint.ts, scripts/architecture-guard.js, docs/PROJECT_STATUS.md.
-Reason: Full Desk Play reports were too long for fast action. Discord needed to lead with the decision contract: primary read, line in the sand, long/short condition, entry/stop/T1/T2 when app-owned levels exist, no-trade/no-chase status, HTF context, and chart status.
-Tests run: `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/discord-cleanup-verification.test.ts`; `npx tsc --noEmit`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
-Result: Passed. Desk Play output now uses the shared compact actionable conditional-plan format for morning, lunch, and evening DeskState posts, while preserving required HTF/FVG/fresh-reentry context and chart/RAG safety checks. The architecture guard now protects the new compact formatter helper instead of the removed verbose pending-level helper.
-Trading logic changed: No. This is Discord presentation and lint-threshold cleanup only; it does not change canExecute, execution approval, setup definitions, ranking, risk gates, stop/target math, model definitions, bridge behavior, or 5M bar-close handling.
+Date: 2026-07-08
+Task: Lock the global Discord Desk Play ticket format.
+Files changed: tools/automation/discord-alert-format.ts, tools/automation/nt-scanner.ts, tools/automation/discord-artifact-lint.ts, related formatter/scanner tests, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: The trader approved a simpler global Discord format: Primary, HTF context, Line in the Sand, Trigger, Trade Plan, Invalid, Status, Chart, and exact Entry/Stop/Protected 5M swing/T1/T2 when a priced app-owned plan exists. Watch-only output must not pretend a trade plan exists when the protected 5M swing stop is unpriced.
+Tests run: `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/htf-fvg-decision-zone-alert-audit.test.ts`; `npx tsc --noEmit`; `npm run test`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. Discord Desk Play/current-plan output now uses the approved global ticket format with explicit `Line in the Sand`, `Trigger`, `Trade Plan`, priced `Protected 5M swing`, `WATCH ONLY` when the stop is not priced, clean `Invalid` wording, and explicit chart attachment status. Architecture guard and formatter/scanner tests now protect the new wording to reduce drift.
+Trading logic changed: No. This is Discord/scanner presentation, lint direction inference, and documentation only; it does not change canExecute, execution approval, setup definitions, ranking, risk gates, stop/target math, model definitions, bridge behavior, or 5M bar-close handling.
 Bridge impact: None.
 Journal/RAG impact: None.
 Supabase impact: No schema migration.
-Known risks: None known.
-Next recommended action: Restart scanner services after commit so live Discord posts use the compact format.
+Known risks: Existing Discord messages and old audit artifacts are not rewritten.
+Next recommended action: Restart scanner services after commit so live Discord posts use the approved ticket format.
 
 ## Previous Change
 
@@ -206,9 +206,9 @@ Next recommended action: Run the live-observation proof after the next scanner r
 Date: 2026-06-26
 Task: Install Phase 9H HTF FVG decision-zone alert audit.
 Files changed: tools/automation/htf-fvg-decision-zone-alert-audit.ts, tools/automation/htf-fvg-decision-zone-alert-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
-Reason: Phase 9H runtime visibility already existed, but the desk needed a standalone loopback audit proving Current Desk Plan Discord output keeps HTF FVG decision-zone context visible with line, why, hold, fold, no-chase, parent reaction, cascade, pending-level/review-only wording, and no-authority-change boundaries.
+Reason: Phase 9H runtime visibility already existed, but the desk needed a standalone loopback audit proving Current Desk Plan Discord output keeps HTF FVG decision-zone context visible with line, why, hold, fold, no-chase, parent reaction, cascade, watch-only/no-priced-stop wording, and no-authority-change boundaries.
 Tests run: `npm run diagnostic:htf-fvg-decision-zone-alert -- --json`; `npx tsx tools/automation/htf-fvg-decision-zone-alert-audit.test.ts`; `npx tsx tools/automation/replay-validation-audit.test.ts`; `npx tsc --noEmit`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run test`; `npm run build`.
-Result: Passed. The focused Phase 9H audit reported `status=pass`, 0 findings, FVG decision-zone block rendered, line in the sand rendered, why/hold/fold rendered, no-chase rendered, HTF parent reaction rendered, HTF FVG cascade rendered, pending-level/review-only wording preserved, and no-authority-change true. Standard workflow loopback reported 32 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 35 pass, 0 fail, 11 skipped optional checks. Full test suite, TypeScript, required guards, lint, and build passed.
+Result: Passed. The focused Phase 9H audit reported `status=pass`, 0 findings, FVG decision-zone block rendered, line in the sand rendered, why/hold/fold rendered, no-chase rendered, HTF parent reaction rendered, HTF FVG cascade rendered, watch-only/no-priced-stop wording preserved, and no-authority-change true. Standard workflow loopback reported 32 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 35 pass, 0 fail, 11 skipped optional checks. Full test suite, TypeScript, required guards, lint, and build passed.
 Trading logic changed: No. This is read-only audit tooling, loopback coverage, and documentation only. It does not change setup definitions, ranking, candidate creation, candidate filtering, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
 Bridge impact: None.
 Discord impact: None at runtime. The audit renders a synthetic payload through the existing formatter; it does not post, route, suppress, edit, or delete messages.

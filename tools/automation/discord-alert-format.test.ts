@@ -245,14 +245,14 @@ function currentDeskPlanPayload(description: string, components: unknown[] | nul
 const completeLevelDescription = [
   'Primary: 🐂 LONG',
   'Decision class: HIGH-CONFIDENCE CONDITIONAL - execution arms only after the named completed 5M condition.',
-  'Line in sand: 7451.50',
+  'Line in the Sand: 7451.50',
   'Entry: 7450.50',
   'Stop: 7436.75',
   'T1: 7471.25',
   'T2: 7478.00',
-  'Next trigger: completed 5M close above 7451.50.',
-  'Invalidation: below 7436.75.',
-  'Chart: attached.',
+  'Trigger: completed 5M close above 7451.50.',
+  'Invalid: below 7436.75.',
+  'Chart: attached to Discord post.',
   'Decision support only.',
 ].join('\n');
 
@@ -280,13 +280,13 @@ assertWarnsWithoutThrow(
 assert.throws(
   () => validateDiscordPayload(currentDeskPlanPayload([
     'Primary: 🐂 LONG',
-    'Line in sand: 7426.75',
+    'Line in the Sand: 7426.75',
     'Entry: 7426.75',
     'Stop: 7422.00',
     'T1: 7447.00',
     'T2: 7446.50',
-    'Invalidation: below 7422.00.',
-    'Chart: attached.',
+    'Invalid: below 7422.00.',
+    'Chart: attached to Discord post.',
     'Decision support only.',
   ].join('\n')), ['desk-plan-chart.png']),
   /app targets are internally inconsistent/,
@@ -294,13 +294,13 @@ assert.throws(
 assert.throws(
   () => validateDiscordPayload(currentDeskPlanPayload([
     'Primary: 🐻 SHORT',
-    'Line in sand: 7426.75',
+    'Line in the Sand: 7426.75',
     'Entry: 7426.75',
     'Stop: 7432.00',
     'T1: 7420.00',
     'T2: 7421.00',
-    'Invalidation: above 7432.00.',
-    'Chart: attached.',
+    'Invalid: above 7432.00.',
+    'Chart: attached to Discord post.',
     'Decision support only.',
   ].join('\n')), ['desk-plan-chart.png']),
   /app targets are internally inconsistent/,
@@ -371,12 +371,11 @@ assert.ok(morning.content?.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRE
 const morningText = flattenDiscordPayloadText(morning);
 assert.ok(morningText.includes('MES Current Desk Plan'));
 assert.ok(morningText.includes('Primary: 🐂 LONG'));
-assert.ok(morningText.includes('Line in sand: 5329.00'));
-assert.ok(morningText.includes('Overall play: LONG above 5329.00.'));
-assert.ok(morningText.includes('Next trigger:'));
-assert.ok(morningText.includes('Invalidation:'));
-assert.ok(morningText.includes('Stand down:'));
-assert.ok(!morningText.includes('Stand down: Invalid if'));
+assert.ok(morningText.includes('Line in the Sand: 5329.00'));
+assert.ok(morningText.includes('Trigger:'));
+assert.ok(morningText.includes('Invalid:'));
+assert.ok(morningText.includes('Opposite Scenario:'));
+assert.ok(!morningText.includes('Opposite Scenario: stand down on Invalid if'));
 assert.ok(morningText.includes('LONG ABOVE 5329.00'));
 assert.ok(morningText.includes('Entry: 5320.00'));
 assert.ok(morningText.includes('Stop: 5316.00'));
@@ -385,9 +384,9 @@ assert.ok(morningText.includes('T2: 5328.00'));
 assert.ok(morningText.includes('Invalid below: 5316.00'));
 assert.ok(morningText.includes('HTF target: 5329.00 / runner N/A'));
 assert.ok(morningText.includes('Status: Review only until 5M trigger + canExecute.'));
-assert.ok(morningText.includes('Chart: attached.'));
+assert.ok(morningText.includes('Chart: attached to Discord post.'));
 assert.ok(!morningText.includes('Targets:'));
-assert.ok(!morningText.includes('Trigger:'));
+assert.ok(morningText.includes('Trigger:'));
 assert.ok(!morningText.includes('HTF Runner Map:'));
 assert.ok(!morningText.includes('HTF reaction:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
@@ -847,10 +846,10 @@ assert.deepEqual((deskPlayPayload.components || []).flatMap((row: any) => row.co
 assert.ok(deskPlayText.includes('MES Current Desk Plan'));
 assert.ok(deskPlayText.includes('Primary: 🛑 WAIT / 🐂 LONG REVIEW'));
 assert.ok(deskPlayText.includes('Bias: 🧭 HTF protected structure rows are scanner-owned context only.'));
-assert.ok(deskPlayText.includes('Line in sand: 7342.00'));
+assert.ok(deskPlayText.includes('Line in the Sand: 7342.00'));
 assert.ok(deskPlayText.includes('Battle Plan:'));
 assert.ok(deskPlayText.includes('Trigger:'));
-assert.ok(deskPlayText.includes('Invalidation:'));
+assert.ok(deskPlayText.includes('Invalid:'));
 assert.ok(deskPlayText.includes('Map Side: LONG 82/100 high'));
 assert.ok(!deskPlayText.includes('Map Role:'));
 assert.ok(!deskPlayText.includes('Opposing Side:'));
@@ -860,14 +859,16 @@ assert.ok(deskPlayText.includes('Readiness: review map - levels pending'));
 assert.ok(deskPlayText.includes('Battle Plan:'));
 assert.ok(deskPlayText.includes('Current:'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
-assert.ok(deskPlayText.includes('Entry: pending | Stop: pending'));
-assert.ok(deskPlayText.includes('T1: pending | T2: pending'));
+assert.ok(deskPlayText.includes('Entry: completed 5M close above 7342.00'));
+assert.ok(deskPlayText.includes('WATCH ONLY: no priced stop; protected 5M swing low price is not confirmed.'));
+assert.ok(deskPlayText.includes('T1/T2: use nearest mapped decision zones until a priced stop confirms.'));
 const longPrimarySection = [
   'Primary: 🛑 WAIT / 🐂 LONG REVIEW',
   'Battle Plan:',
   'LONG ABOVE 7342.00',
-  'Entry: pending | Stop: pending',
-  'Line in sand: 7342.00',
+  'Entry: completed 5M close above 7342.00',
+  'WATCH ONLY: no priced stop; protected 5M swing low price is not confirmed.',
+  'Line in the Sand: 7342.00',
   'Status: Review only until 5M trigger + canExecute.',
 ].map((line) => deskPlayText.indexOf(line));
 assert.ok(longPrimarySection.every((index) => index >= 0), 'expected compact LONG Desk Plan section');
@@ -879,7 +880,7 @@ assert.ok(!deskPlayText.includes('T1: 7372.50'));
 assert.ok(!deskPlayText.includes('T2: 7392.50'));
 assert.ok(deskPlayText.includes('HTF target: 7410.00 / runner 7428.75'));
 assert.ok(deskPlayText.includes('Bottom line: HTF map only; 5M proof + canExecute. No chase'));
-assert.ok(deskPlayText.includes('Chart: attached; levels pending.'));
+assert.ok(deskPlayText.includes('Chart: attached to Discord post; trade remains watch-only until priced stop/T1/T2 confirm.'));
 assert.ok(!deskPlayText.includes('Boundary: approvals unchanged.'));
 assert.ok(!deskPlayText.includes('Current Play:'));
 assert.ok(!deskPlayText.includes('HTF/Structure:'));
@@ -1068,8 +1069,9 @@ assert.ok(targetToLineReviewText.includes('Decision line / reaction: Round Numbe
 assert.ok(targetToLineReviewText.includes('Acceptance above 7480.00 -> Next HTF line 7488.25.'));
 assert.ok(targetToLineReviewText.includes('Reaction / failure: failure below 7480.00 keeps SHORT context active.'));
 assert.ok(targetToLineReviewText.includes('No chase: No chase into 7480; wait for completed 5M/15M acceptance.'));
-assert.ok(targetToLineReviewText.includes('Entry: pending | Stop: pending'));
-assert.ok(targetToLineReviewText.includes('T1: pending | T2: pending'));
+assert.ok(targetToLineReviewText.includes('WATCH ONLY: no priced stop; protected 5M'));
+assert.ok(targetToLineReviewText.includes('protected 5M'));
+assert.ok(targetToLineReviewText.includes('T1/T2: use nearest mapped decision zones until a priced stop confirms.'));
 assert.ok(!targetToLineReviewText.includes('Entry: 5320.00'));
 
 const decisionMapShortCandidate = sampleCandidate('SHORT');
@@ -1185,7 +1187,7 @@ assert.ok(deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - WAI
 assert.ok(deskPlayDecisionMapText.includes('MES Current Desk Plan'));
 assert.ok(deskPlayDecisionMapText.includes('Primary: 🛑 WAIT'));
 assert.ok(deskPlayDecisionMapText.includes('Bias:'));
-assert.ok(deskPlayDecisionMapText.includes('Line in sand: 7342.00'));
+assert.ok(deskPlayDecisionMapText.includes('Line in the Sand: 7342.00'));
 assert.ok(deskPlayDecisionMapText.includes('Map Side: SHORT N/A unavailable'));
 assert.ok(!deskPlayDecisionMapText.includes('Map Role:'));
 assert.ok(!deskPlayDecisionMapText.includes('Opposing Side:'));
@@ -1193,7 +1195,8 @@ assert.ok(!deskPlayDecisionMapText.includes('Opposing Role:'));
 assert.ok(deskPlayDecisionMapText.includes('Readiness: review map - levels pending'));
 assert.ok(deskPlayDecisionMapText.includes('Battle Plan:'));
 assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
-assert.ok(deskPlayDecisionMapText.includes('Entry: 7339.75 | Stop: 7350.25 | Risk: 10.50 pts'));
+assert.ok(deskPlayDecisionMapText.includes('Entry: 7339.75 | Risk: 10.50 pts'));
+assert.ok(deskPlayDecisionMapText.includes('Stop: 7350.25 | Protected 5M swing: 7350.25'));
 assert.ok(deskPlayDecisionMapText.includes('T1: 7324.00 | T2: 7318.75'));
 assert.ok(!deskPlayDecisionMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(deskPlayDecisionMapText.includes('Bottom line: HTF map only; 5M proof + canExecute. No chase'));
@@ -1204,8 +1207,9 @@ assert.ok(!deskPlayDecisionMapText.includes('Review Map:'));
 const waitMapShortRow = [
   'Primary: 🛑 WAIT',
   'Battle Plan:',
-  'Entry: 7339.75 | Stop: 7350.25 | Risk: 10.50 pts',
-  'Line in sand: 7342.00',
+  'Entry: 7339.75 | Risk: 10.50 pts',
+  'Stop: 7350.25 | Protected 5M swing: 7350.25',
+  'Line in the Sand: 7342.00',
   'Status: Review only until 5M trigger + canExecute.',
 ].map((line) => deskPlayDecisionMapText.indexOf(line));
 assert.ok(waitMapShortRow.every((index) => index >= 0), 'expected concise WAIT Desk Plan');
@@ -1406,7 +1410,7 @@ const invalidDeskMapPayload = compactDiscordSummary({
 });
 const invalidDeskMapText = flattenDiscordPayloadText(invalidDeskMapPayload);
 assert.ok(invalidDeskMapText.includes('Primary: 🛑 WAIT'));
-assert.ok(invalidDeskMapText.includes('Line in sand: 7437.50'));
+assert.ok(invalidDeskMapText.includes('Line in the Sand: 7437.50'));
 assert.ok(invalidDeskMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(!invalidDeskMapText.includes('LONG ABOVE 7410.00 | Entry 7426.50'));
 assert.ok(!invalidDeskMapText.includes('SHORT BELOW 7437.50 | Entry 7441.00'));
@@ -1530,7 +1534,7 @@ assert.ok(pullbackReferenceDeskMapText.includes('Stop: 7414.75'));
 assert.ok(pullbackReferenceDeskMapText.includes('T1: 7459.25'));
 assert.ok(pullbackReferenceDeskMapText.includes('T2: 7468.00'));
 assert.ok(!pullbackReferenceDeskMapText.includes('LONG ABOVE 7436.25\nEntry: pending'));
-assert.ok(!pullbackReferenceDeskMapText.includes('Chart: attached; levels pending.'));
+assert.ok(!pullbackReferenceDeskMapText.includes('Chart: attached to Discord post; trade remains watch-only until priced stop/T1/T2 confirm.'));
 
 const projectedDeskPlayPayload = compactDiscordSummary({
   session: 'evening',
@@ -1608,7 +1612,7 @@ const projectedDeskPlayPayload = compactDiscordSummary({
 });
 const projectedDeskPlayText = flattenDiscordPayloadText(projectedDeskPlayPayload);
 assert.ok(projectedDeskPlayText.includes('Primary: 🛑 WAIT'));
-assert.ok(projectedDeskPlayText.includes('Line in sand: 7570.00'));
+assert.ok(projectedDeskPlayText.includes('Line in the Sand: 7570.00'));
 assert.ok(projectedDeskPlayText.includes('Map Side: WAIT N/A'));
 assert.ok(!projectedDeskPlayText.includes('Map Role:'));
 assert.ok(!projectedDeskPlayText.includes('Opposing Side:'));
@@ -1688,7 +1692,7 @@ const waitDeskMapWithCandidateText = flattenDiscordPayloadText(waitDeskMapWithCa
 assert.ok(waitDeskMapWithCandidate.content?.includes('[AM DESK PLAY] MES - WAIT'));
 assert.ok(!waitDeskMapWithCandidate.content?.includes('[AM REVIEW] MES - LONG'));
 assert.ok(waitDeskMapWithCandidateText.includes('Primary: 🛑 WAIT'));
-assert.ok(waitDeskMapWithCandidateText.includes('Line in sand: 7407.25'));
+assert.ok(waitDeskMapWithCandidateText.includes('Line in the Sand: 7407.25'));
 assert.ok(waitDeskMapWithCandidateText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(waitDeskMapWithCandidateText.includes('Status: Review only until 5M trigger + canExecute.'));
 assert.ok(!waitDeskMapWithCandidateText.includes('Review Map:'));
@@ -1761,7 +1765,7 @@ assert.ok(deskPlaySupportedShortPayload.content?.includes('[PM DESK PLAY] MES - 
 assert.ok(deskPlaySupportedShortText.includes('MES Current Desk Plan'));
 assert.ok(deskPlaySupportedShortText.includes('Primary: 🐻 SHORT'));
 assert.ok(deskPlaySupportedShortText.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; execution arms only after the named completed 5M condition.'));
-assert.ok(deskPlaySupportedShortText.includes('Line in sand: 7342.00'));
+assert.ok(deskPlaySupportedShortText.includes('Line in the Sand: 7342.00'));
 assert.ok(!deskPlaySupportedShortText.includes('Map Role:'));
 assert.ok(!deskPlaySupportedShortText.includes('Opposing Side:'));
 assert.ok(!deskPlaySupportedShortText.includes('Opposing Role:'));
@@ -1775,7 +1779,7 @@ assert.ok(!/Entry:\s*pending|Stop:\s*pending|T1:\s*pending|T2:\s*pending/i.test(
 assert.ok(deskPlaySupportedShortText.includes('Invalid above: 7350.25'));
 assert.ok(deskPlaySupportedShortText.includes('Bottom line: HTF frames SHORT; needs 5M proof, stop, risk, canExecute. No chase'));
 assert.ok(deskPlaySupportedShortText.includes('Status: High-confidence conditional trade plan; armed only after the named completed 5M condition.'));
-assert.ok(deskPlaySupportedShortText.includes('Chart: attached.'));
+assert.ok(deskPlaySupportedShortText.includes('Chart: attached to Discord post.'));
 assert.ok(!deskPlaySupportedShortText.includes('Boundary: approvals unchanged.'));
 assert.ok(!/EXECUTABLE -|Trade now/i.test(deskPlaySupportedShortText));
 assert.throws(
@@ -1995,7 +1999,7 @@ assert.ok(pendingShortMapText.includes('FVG is a reaction/management zone only.'
 assert.ok(pendingShortMapText.includes('HTF FVG Reaction Memory:'));
 assert.ok(pendingShortMapText.includes('HTF parent reaction: 60M 7596.00-7604.00'));
 assert.ok(pendingShortMapText.includes('5M child proof: 7592.00-7594.00 (child fvg confirmed)'));
-assert.ok(pendingShortMapText.includes('Line in sand: SHORT BELOW 7600.00 from 60M parent FVG 7596.00-7604.00'));
+assert.ok(pendingShortMapText.includes('Line in the Sand: SHORT BELOW 7600.00 from 60M parent FVG 7596.00-7604.00'));
 assert.ok(pendingShortMapText.includes('Lifecycle: rejected'));
 assert.ok(pendingShortMapText.includes('Routing: SHORT surfaced from HTF parent reaction + 5M child proof.'));
 assert.ok(pendingShortMapText.includes('Boundary: communication/routing only; no canExecute, stop, target, risk, or approval change.'));
@@ -2006,8 +2010,9 @@ assert.ok(pendingShortMapText.includes('Trigger: Use the 60M parent FVG; wait fo
 assert.ok(pendingShortMapText.includes('Stand down on completed 5M acceptance above parent zone 7604.00.'));
 assert.ok(pendingShortMapText.includes('SHORT BELOW 7600.00'));
 assert.ok(pendingShortMapText.includes('LONG ABOVE 7610.00'));
-assert.ok(pendingShortMapText.includes('Entry: pending | Stop: pending'));
-assert.ok(pendingShortMapText.includes('T1: pending | T2: pending'));
+assert.ok(pendingShortMapText.includes('Entry: completed 5M close below'));
+assert.ok(pendingShortMapText.includes('WATCH ONLY: no priced stop; protected 5M swing high price is not confirmed.'));
+assert.ok(pendingShortMapText.includes('T1/T2: use nearest mapped decision zones until a priced stop confirms.'));
 assert.ok(pendingShortMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(!/Entry: 7615\.75|Stop: 7598\.50|T1: 7641\.75|T2: 7650\.25/.test(pendingShortMapText));
 
@@ -2500,13 +2505,14 @@ assert.ok(deskPlayWideReviewText.includes('Readiness: watch only - do not execut
 assert.ok(deskPlayWideReviewText.includes('SHORT BELOW 7591.00'), deskPlayWideReviewText);
 assert.ok(deskPlayWideReviewText.includes('Review levels only - not an executable trade plan.'), deskPlayWideReviewText);
 assert.ok(deskPlayWideReviewText.includes('No short plan yet. Current 7597.75 is above the line 7591.00'), deskPlayWideReviewText);
-assert.ok(deskPlayWideReviewText.includes('Entry: 7581.25 | Stop: 7600.50 | Risk: 19.25 pts'), deskPlayWideReviewText);
+assert.ok(deskPlayWideReviewText.includes('Entry: 7581.25 | Risk: 19.25 pts'), deskPlayWideReviewText);
+assert.ok(deskPlayWideReviewText.includes('Stop: 7600.50 | Protected 5M swing: 7600.50'), deskPlayWideReviewText);
 assert.ok(deskPlayWideReviewText.includes('T1: 7552.50 | T2: 7542.75'), deskPlayWideReviewText);
 assert.ok(deskPlayWideReviewText.includes('Reason: side quality is low.'));
 assert.ok(deskPlayWideReviewText.includes('Bottom line: HTF map only; 5M proof + canExecute. No chase'));
 assert.ok(deskPlayWideReviewText.includes('Status: Review levels only - not executable; side quality is low. Wait for completed 5M trigger + canExecute.'));
 assert.ok(deskPlayWideReviewPayload.content?.includes('[AM DESK PLAY] MES - WAIT / SHORT BELOW 7591.00'));
-assert.ok(deskPlayWideReviewText.includes('Chart: attached.'));
+assert.ok(deskPlayWideReviewText.includes('Chart: attached to Discord post.'));
 
 const lunch = compactDiscordSummary({
   session: 'lunch',
@@ -2577,7 +2583,7 @@ assert.ok(eveningMissedText.includes('Stop: 7546.50'));
 assert.ok(eveningMissedText.includes('T1: 7561.50'));
 assert.ok(eveningMissedText.includes('T2: 7564.50'));
 assert.ok(eveningMissedText.includes('Status: Risk review only; standard risk gate not clean.'));
-assert.ok(!eveningMissedText.includes('Trigger:'));
+assert.ok(eveningMissedText.includes('Trigger:'));
 assert.ok(!eveningMissedText.includes('No chase. Wait for completed 5M proof and protected structure.'));
 
 const extensionCandidate = sampleCandidate('LONG');
@@ -3000,7 +3006,7 @@ const scannerRetestPendingPayload = compactDiscordSummary({
 validateDiscordPayload(scannerRetestPendingPayload, ['chart-plan.png', 'price-level-map.png']);
 const scannerRetestPendingText = flattenDiscordPayloadText(scannerRetestPendingPayload);
 assert.ok(scannerRetestPendingText.includes('MES Current Desk Plan'));
-assert.ok(scannerRetestPendingText.includes('Next trigger:'));
+assert.ok(scannerRetestPendingText.includes('Trigger detail:') || scannerRetestPendingText.includes('Trigger:'));
 assert.ok(scannerRetestPendingText.includes('completed 5M retest/rejection below the decision level'));
 assert.ok(scannerRetestPendingText.includes('Status: Review only until 5M trigger + canExecute.'));
 assert.ok(!scannerRetestPendingText.includes('Trigger State: MSS_CONTINUATION_RETEST_PENDING'));
@@ -3453,7 +3459,7 @@ try {
       description: [
         'Primary: 🛑 WAIT',
         'Bias: No HTF-supported directional play confirmed.',
-        'Line in sand: 7410.00',
+        'Line in the Sand: 7410.00',
         '',
         'LONG ABOVE 7410.00',
         'Entry: pending',
@@ -3465,7 +3471,7 @@ try {
         'HTF target: N/A / runner N/A',
         '',
         'Status: Review only until 5M trigger + canExecute.',
-        'Chart: attached.',
+        'Chart: attached to Discord post.',
       ].join('\n'),
       color: 0,
       fields: [],
@@ -3893,7 +3899,7 @@ validateDiscordPayload(htfFvgMicroMssPayload, ['chart-plan.png', 'price-level-ma
 const htfFvgMicroMssText = flattenDiscordPayloadText(htfFvgMicroMssPayload);
 assert.match(htfFvgMicroMssText, /HTF (?:FVG|imbalance)(?: Reaction)?|HTF FVG Reaction Memory|Defended HTF FVG Reaction Memory/);
 assert.match(htfFvgMicroMssText, /60M/);
-assert.match(htfFvgMicroMssText, /Line in sand: (?:LONG ABOVE )?7500\.75|Line in the Sand:/i);
+assert.match(htfFvgMicroMssText, /Line in the Sand:/i);
 assert.match(htfFvgMicroMssText, /Entry: 7501\.25/);
 assert.match(htfFvgMicroMssText, /Stop: 7492\.75/);
 assert.match(htfFvgMicroMssText, /T1: 7514\.00/);
@@ -3904,7 +3910,7 @@ assert.match(htfFvgMicroMssText, /HTF FVG proof: sufficient/i);
 assert.match(htfFvgMicroMssText, /5M trigger proof: completed/i);
 assert.match(htfFvgMicroMssText, /Protected 5M swing proof: confirmed/i);
 assert.match(htfFvgMicroMssText, /Promotion: full plan allowed/i);
-assert.match(htfFvgMicroMssText, /Invalidation:/);
+assert.match(htfFvgMicroMssText, /Invalid:/);
 assert.match(htfFvgMicroMssText, /Review only|Decision support only|canExecute/i);
 assert.doesNotMatch(htfFvgMicroMssText, /No active plan candidate available|Stand down\. Recheck at next scheduled scan/);
 
@@ -3965,7 +3971,8 @@ assert.doesNotMatch(unarmedShortDeskPlayPayload.content || '', /MES - SHORT REVI
 assert.match(unarmedShortDeskPlayText, /No short plan yet\. Current 7542\.25 is above the line 7540\.00/);
 assert.match(unarmedShortDeskPlayText, /completed 5M close below 7540\.00/);
 assert.match(unarmedShortDeskPlayText, /Battle Plan:/);
-assert.match(unarmedShortDeskPlayText, /Entry: 7539\.50 \| Stop: 7561\.00 \| Risk: 21\.50 pts/);
+assert.match(unarmedShortDeskPlayText, /Entry: 7539\.50 \| Risk: 21\.50 pts/);
+assert.match(unarmedShortDeskPlayText, /Stop: 7561\.00 \| Protected 5M swing: 7572\.50/);
 assert.match(unarmedShortDeskPlayText, /T1: 7507\.25 \| T2: 7496\.50/);
 
 const staleZoneShortCandidate = sampleCandidate('SHORT');

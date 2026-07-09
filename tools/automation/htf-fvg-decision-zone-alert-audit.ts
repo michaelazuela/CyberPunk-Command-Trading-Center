@@ -30,7 +30,7 @@ export interface Phase9HDecisionZoneAuditReport {
     parentReactionRendered: boolean;
     cascadeRendered: boolean;
     boundaryRendered: boolean;
-    pendingLevelsPreserved: boolean;
+    watchOnlyNoPricedStopPreserved: boolean;
     noAuthorityChange: boolean;
   };
   findings: string[];
@@ -183,7 +183,11 @@ export function buildPhase9HDecisionZoneAlertAudit(
     parentReactionRendered: text.includes('HTF FVG Reaction Memory:') && text.includes('60M 7596.00-7604.00'),
     cascadeRendered: text.includes('HTF FVG Cascade:') && text.includes('Parent FVG: 60M 7596.00-7604.00'),
     boundaryRendered: text.includes('Boundary: communication/routing only; no canExecute, stop, target, risk, or approval change.'),
-    pendingLevelsPreserved: text.includes('Entry: pending') && text.includes('No active LONG/SHORT plan with complete app-owned levels.'),
+    watchOnlyNoPricedStopPreserved:
+      text.includes('Entry: completed 5M close below 7600.00') &&
+      text.includes('WATCH ONLY: no priced stop; protected 5M swing high price is not confirmed.') &&
+      text.includes('T1/T2: use nearest mapped decision zones until a priced stop confirms.') &&
+      text.includes('No active LONG/SHORT plan with complete app-owned levels.'),
     noAuthorityChange: !text.includes('Execution approved') && !text.includes('canExecute=true'),
   };
   const findings = [
@@ -194,7 +198,7 @@ export function buildPhase9HDecisionZoneAlertAudit(
     summary.parentReactionRendered ? null : 'HTF parent reaction memory missing.',
     summary.cascadeRendered ? null : 'HTF FVG cascade missing.',
     summary.boundaryRendered ? null : 'Authority boundary line missing.',
-    summary.pendingLevelsPreserved ? null : 'Pending levels/review-only wording missing.',
+    summary.watchOnlyNoPricedStopPreserved ? null : 'Watch-only/no-priced-stop wording missing.',
     summary.noAuthorityChange ? null : 'Text implies execution approval or canExecute mutation.',
   ].filter((item): item is string => Boolean(item));
   const reportWithoutMarkdown: Omit<Phase9HDecisionZoneAuditReport, 'markdown'> = {
@@ -225,7 +229,7 @@ export function buildPhase9HDecisionZoneAlertAudit(
     '',
     'Authority: read-only audit. It does not post Discord, write Supabase, change scanner behavior, change trading logic, change canExecute, change ranking, change risk rules, change bridge behavior, or change entry/stop/target math.',
     '',
-    `Rendered: fvg=${summary.fvgDecisionZoneRendered}; line=${summary.lineInSandRendered}; whyHoldFold=${summary.whyHoldFoldRendered}; noChase=${summary.noChaseRendered}; parent=${summary.parentReactionRendered}; cascade=${summary.cascadeRendered}; boundary=${summary.boundaryRendered}; pending=${summary.pendingLevelsPreserved}; noAuthorityChange=${summary.noAuthorityChange}.`,
+    `Rendered: fvg=${summary.fvgDecisionZoneRendered}; line=${summary.lineInSandRendered}; whyHoldFold=${summary.whyHoldFoldRendered}; noChase=${summary.noChaseRendered}; parent=${summary.parentReactionRendered}; cascade=${summary.cascadeRendered}; boundary=${summary.boundaryRendered}; watchOnlyNoPricedStop=${summary.watchOnlyNoPricedStopPreserved}; noAuthorityChange=${summary.noAuthorityChange}.`,
     '',
     findings.length ? `Findings:\n${findings.map((item) => `- ${item}`).join('\n')}` : 'Findings: none.',
   ].join('\n');

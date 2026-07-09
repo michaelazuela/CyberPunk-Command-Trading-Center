@@ -547,7 +547,7 @@ function markdownReport(report: any): string {
       `- Entry/Stop/Risk: ${candidate.entry ?? 'N/A'} / ${candidate.stop ?? 'N/A'} / ${candidate.riskPoints ?? 'N/A'}`,
       `- T1/T2: ${candidate.target1 ?? 'N/A'} / ${candidate.target2 ?? 'N/A'}`,
       `- FVG: ${candidate.fvg ? `${candidate.fvg.lower}-${candidate.fvg.upper} formed ${candidate.fvg.formedAt}` : 'N/A'}`,
-      `- Line in sand: ${candidate.lineInSand ? `${candidate.lineInSand.price} ${candidate.lineInSand.label} (${candidate.lineInSand.reason})` : 'N/A'}`,
+      `- Line in the Sand: ${candidate.lineInSand ? `${candidate.lineInSand.price} ${candidate.lineInSand.label} (${candidate.lineInSand.reason})` : 'N/A'}`,
       `- HTF validation: ${candidate.htfValidationStatus}`,
       `- Outcome to close: ${candidate.outcomeToClose.firstHit}; exit ${candidate.outcomeToClose.exitPrice ?? 'N/A'}; points ${candidate.outcomeToClose.points ?? 'N/A'}; MES P/L $${candidate.outcomeToClose.mesProfitLossDollars ?? 'N/A'}; MFE ${candidate.outcomeToClose.maxFavorablePoints ?? 'N/A'}; MAE ${candidate.outcomeToClose.maxAdversePoints ?? 'N/A'}`,
       `- Notes: ${candidate.notes.join(' ')}`,

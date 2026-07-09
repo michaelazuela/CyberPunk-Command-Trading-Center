@@ -1238,7 +1238,7 @@ function compactGeneralAlertLines(args: CompactDiscordSummaryArgs, candidate: Se
     ...(htfLines.length ? [''] : []),
     'Decision support only. No automated orders.',
     '',
-    'Invalidation:',
+    'Invalid:',
     compactLine(candidate.invalidation || normalized.invalidation || 'Invalidation not available. Do not act without protected structure.', 92),
   ];
 }
@@ -1284,7 +1284,7 @@ function scannerWatchDiscordSummary(args: CompactDiscordSummaryArgs, candidate: 
     `Line in the sand: ${lineInSand}`,
     `Trigger: ${trigger}`,
     `Reason: ${reason}`,
-    `Invalidation: ${invalidation}`,
+    `Invalid: ${invalidInstruction(invalidation, 'primary invalidation is not available.')}`,
     '',
     completedFiveMinuteProofLine(trigger),
     'Boundary: canExecute=false. This watch does not approve execution.',
@@ -1363,6 +1363,42 @@ interface DeskPlayPlanningLevels {
   entryZoneHigh: number;
   source: 'normalized_candidate' | 'protected_5m_review_path' | 'same_side_campaign_lead';
   noChase: boolean;
+}
+
+function deskPlayProtectedSwingBasis(args: {
+  side: 'LONG' | 'SHORT';
+  levels: { stop: number; source?: DeskPlayPlanningLevels['source'] };
+  play?: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null;
+}): { swing: number; stop: number; label: string } {
+  const mappedSwing = deskPlayFiveMinuteProtectedStructure(args.play);
+  const swing = isFinitePrice(mappedSwing) ? mappedSwing : args.levels.stop;
+  const sideLabel = args.side === 'LONG' ? 'swing low' : 'swing high';
+  const sourceLabel = args.levels.source === 'protected_5m_review_path'
+    ? 'protected 5M'
+    : 'priced 5M/structure';
+  return {
+    swing,
+    stop: args.levels.stop,
+    label: `${sourceLabel} ${sideLabel}`,
+  };
+}
+
+function deskPlayPricedStopLines(args: {
+  side: 'LONG' | 'SHORT';
+  levels: { stop: number; source?: DeskPlayPlanningLevels['source'] };
+  play?: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null;
+}): string[] {
+  const basis = deskPlayProtectedSwingBasis(args);
+  return [
+    `Stop: ${priceLine(basis.stop)} | Protected 5M swing: ${priceLine(basis.swing)} (${basis.label})`,
+  ];
+}
+
+function deskPlayWatchOnlyNoPricedStopLines(side: 'LONG' | 'SHORT'): string[] {
+  const swingSide = side === 'LONG' ? 'swing low' : 'swing high';
+  return [
+    `WATCH ONLY: no priced stop; protected 5M ${swingSide} price is not confirmed.`,
+  ];
 }
 
 function deskPlayFiveMinuteProtectedStructure(
@@ -2058,11 +2094,11 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     ...(candidateHtfContextLine(candidate) ? [candidateHtfContextLine(candidate)!] : []),
     ...htfFvgReactionCandidateLines(candidate),
     ...htfFvgMicroMssProofCandidateLines(args, candidate),
-    `Line in sand: ${priceLine(lineInSand)}`,
-    `Overall play: ${direction} ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`,
-    `Next trigger: ${compactInstruction(candidate.requiredTrigger || candidate.nextAction, `completed 5M acceptance ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`)}`,
-    `Invalidation: ${compactInstruction(candidate.invalidation, `invalid ${invalidWord} ${priceLine(levels.stop)}.`)}`,
-    `Stand down: ${standDownInstruction(candidate.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels.stop)}.`)}`,
+    `Line in the Sand: ${priceLine(lineInSand)}`,
+    `Trigger: completed 5M close ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}`,
+    `Why: ${direction} ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}; ${compactInstruction(candidate.requiredTrigger || candidate.nextAction, `completed 5M acceptance ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`)}`,
+    `Invalid: ${invalidInstruction(candidate.invalidation, `${invalidWord} ${priceLine(levels.stop)}.`)}`,
+    `Opposite Scenario: stand down on ${standDownInstruction(candidate.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels.stop)}.`)}`,
     '',
     ...counterStructureLines,
     ...(counterStructureLines.length ? [''] : []),
@@ -2099,10 +2135,10 @@ function deskPlayChartStatusLine(args: {
   hasChart: boolean;
   hasLevels: boolean;
 }): string {
-  if (args.hasChart && args.hasLevels) return 'Chart: attached.';
-  if (args.hasChart) return 'Chart: attached; levels pending.';
+  if (args.hasChart && args.hasLevels) return 'Chart: attached to Discord post.';
+  if (args.hasChart) return 'Chart: attached to Discord post; trade remains watch-only until priced stop/T1/T2 confirm.';
   if (args.hasLevels) return 'Chart: missing; app-owned levels require chart before Discord post.';
-  return 'Chart: not attached; waiting on app-owned levels.';
+  return 'Chart: not attached; watch-only until app-owned levels confirm.';
 }
 
 function hardBlockedDeskState(value: string): boolean {
@@ -2126,6 +2162,13 @@ function compactInstruction(value: string | null | undefined, fallback: string):
 
 function standDownInstruction(value: string | null | undefined, fallback: string): string {
   return compactInstruction(value, fallback).replace(/^invalid\s+if\s+/i, '');
+}
+
+function invalidInstruction(value: string | null | undefined, fallback: string): string {
+  return compactInstruction(value, fallback)
+    .replace(/^invalid(?:ation)?\s*:\s*/i, '')
+    .replace(/^invalid\s+if\s+/i, '')
+    .replace(/^invalid\s+/i, '');
 }
 
 function deskPlayStandDownLine(args: {
@@ -2217,7 +2260,7 @@ function deskPlayLineDisplayLines(
   direction: 'LONG' | 'SHORT' | 'WAIT',
   activeLine: number | null,
 ): string[] {
-  if (direction !== 'LONG' && direction !== 'SHORT') return [`Line in sand: ${priceLine(activeLine)}`];
+  if (direction !== 'LONG' && direction !== 'SHORT') return [`Line in the Sand: ${priceLine(activeLine)}`];
   const active = play.activeTacticalLine;
   const originalLine = deskPlayOriginalLine(play);
   if (active?.direction === direction && active.migrated && isFinitePrice(active.activeLine)) {
@@ -2230,7 +2273,7 @@ function deskPlayLineDisplayLines(
       `Line migration: ${priceLine(originalLine)} -> ${priceLine(active.activeLine)} via ${timeframes} structure.`,
     ];
   }
-  return [`Line in sand: ${priceLine(activeLine)}`];
+  return [`Line in the Sand: ${priceLine(activeLine)}`];
 }
 
 function deskPlayTargetToLinePromotionLines(
@@ -2466,7 +2509,7 @@ function deskPlayHtfFvgReactionMemoryLines(
     parentLine,
     `Reaction: ${reactionState}${active.latestReaction?.timestamp ? ` at ${compactLine(active.latestReaction.timestamp, 28)}` : ''}`,
     childLine,
-    ...(lineLabel ? [`Line in sand: ${lineLabel}`, `Decision line: ${lineLabel}`] : []),
+    ...(lineLabel ? [`Line in the Sand: ${lineLabel}`, `Decision line: ${lineLabel}`] : []),
     acceptanceLine,
     ...(lifecycleLine ? [lifecycleLine] : []),
     ...(stackLine ? [stackLine] : []),
@@ -2620,7 +2663,7 @@ function deskPlayFreshReentryCandidateLines(
     `Entry: ${priceLine(best.entry)} | Stop: ${priceLine(best.stop)} | Risk: ${risk}`,
     `T1: ${priceLine(best.target1)} | T2: ${priceLine(best.target2)}`,
     `Trigger: ${compactInstruction(best.requiredTrigger, 'fresh completed 5M acceptance plus retest/hold.')}`,
-    `Invalidation: ${compactInstruction(best.invalidation, `invalid through protected stop ${priceLine(best.stop)}.`)}`,
+    `Invalid: ${invalidInstruction(best.invalidation, `through protected stop ${priceLine(best.stop)}.`)}`,
     `Risk change vs old missed plan: ${oldRisk} -> ${risk} (${riskDelta}).`,
     'Status: approved for Discord conditional-plan display only; canExecute and execution approval unchanged.',
   ];
@@ -2669,8 +2712,8 @@ function deskPlayMainInstructionLines(args: {
       args.deskState?.nextTrigger;
     return [
       'Overall play: WAIT.',
-      `Next trigger: ${compactInstruction(waitTrigger, 'wait for one primary side with completed 5M proof.')}`,
-      'Invalidation: N/A until a primary side is active.',
+      `Trigger: ${compactInstruction(waitTrigger, 'wait for one primary side with completed 5M proof.')}`,
+      'Invalid: N/A until a primary side is active.',
       deskPlayStandDownLine(args),
     ];
   }
@@ -2689,8 +2732,8 @@ function deskPlayMainInstructionLines(args: {
   );
   return [
     `Overall play: ${args.direction} ${triggerWord} ${priceLine(args.lineInSand)}.`,
-    `Next trigger: ${compactInstruction(nextTrigger, `completed 5M acceptance ${triggerWord} ${priceLine(args.lineInSand)}.`)}`,
-    `Invalidation: ${compactInstruction(invalidation, 'primary invalidation is not available.')}`,
+    `Trigger: ${compactInstruction(nextTrigger, `completed 5M acceptance ${triggerWord} ${priceLine(args.lineInSand)}.`)}`,
+    `Invalid: ${invalidInstruction(invalidation, 'primary invalidation is not available.')}`,
     deskPlayStandDownLine(args),
   ];
 }
@@ -2764,16 +2807,22 @@ function deskPlayBattleSideLines(args: {
     `Trigger: ${trigger}`,
     ...(levels
       ? [
-          `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)} | Risk: ${numberLine(levels.riskPoints)} pts`,
+          `Entry: ${priceLine(levels.entry)} | Risk: ${numberLine(levels.riskPoints)} pts`,
+          ...deskPlayPricedStopLines({ side: args.side, levels, play: args.play }),
           `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}`,
           `Invalid ${args.side === 'LONG' ? 'below' : 'above'}: ${priceLine(levels.stop)}`,
         ]
       : args.compactPending
-        ? ['Plan levels pending until this side confirms.']
+        ? [
+            `Entry: completed 5M close ${sideWord} ${priceLine(args.line)}`,
+            ...deskPlayWatchOnlyNoPricedStopLines(args.side),
+            'T1/T2: use nearest mapped decision zones until a priced stop confirms.',
+          ]
         : [
-            `Entry: pending | Stop: pending - protected 5M ${args.side === 'LONG' ? 'swing low' : 'swing high'} required.`,
-            'T1: pending | T2: pending - app targets recalc from actual entry/stop.',
-            `Invalidation: ${invalidation}`,
+            `Entry: completed 5M close ${sideWord} ${priceLine(args.line)}`,
+            ...deskPlayWatchOnlyNoPricedStopLines(args.side),
+            'T1/T2: use nearest mapped decision zones until a priced stop confirms.',
+            `Invalid: ${invalidInstruction(invalidation, 'primary invalidation is not available.')}`,
           ]),
   ];
 }
@@ -2833,7 +2882,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       '',
       `Primary: ${primaryPlanLabel('WAIT')}`,
       'Bias: No DeskState play available.',
-      'Line in sand: N/A',
+      'Line in the Sand: N/A',
       '',
       'Status: Review only until 5M trigger + canExecute.',
       deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: false }),
@@ -2888,23 +2937,18 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       ? deskPlayDecisionMapLevels(args.normalized, side, line, play, args.currentPrice)
       : null;
     const triggerWord = side === 'LONG' ? 'above' : 'below';
-    const stopFallback = side === 'LONG'
-      ? 'below the protected 5M swing low after proof.'
-      : 'above the protected 5M swing high after proof.';
     return [
       arming.armed ? `${side} Plan:` : `WAIT / ${side} ${side === 'SHORT' ? 'BELOW' : 'ABOVE'} ${priceLine(line)}:`,
       sideBreakoutLabel(side, side === 'LONG' ? 'ABOVE' : 'BELOW', line),
       arming.reason,
       `${side} if completed 5M closes ${triggerWord} ${priceLine(line)} and holds/retests.`,
       levels
-        ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}`
-        : 'Entry: pending',
-      levels
-        ? null
-        : `Stop: pending - ${stopFallback}`,
+        ? `Entry: ${priceLine(levels.entry)}`
+        : `Entry: completed 5M close ${triggerWord} ${priceLine(line)}`,
+      ...(levels ? deskPlayPricedStopLines({ side, levels, play }) : deskPlayWatchOnlyNoPricedStopLines(side)),
       levels
         ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}`
-        : 'T1: pending | T2: pending - recalculated from actual entry and structure stop.',
+        : 'T1/T2: use nearest mapped decision zones until a priced stop confirms.',
       levels
         ? `Invalid ${side === 'LONG' ? 'below' : 'above'}: ${priceLine(levels.stop)}`
         : null,
@@ -3210,7 +3254,7 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayLineDisplayLines(play, displayDirection, lineInSand)
-      : [`Line in sand: ${priceLine(lineInSand)}`]),
+      : [`Line in the Sand: ${priceLine(lineInSand)}`]),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayTargetToLinePromotionLines(play, displayDirection)
       : []),
@@ -3251,13 +3295,17 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       : []),
     ...(play ? ['HTF Lines:', ...deskPlayHtfLineRows(play, args.currentPrice)] : []),
     ...(play && deskPlayFvgDecisionZoneLines(play).length ? deskPlayFvgDecisionZoneLines(play) : []),
-    `Line in sand: ${priceLine(lineInSand)}`,
+    `Line in the Sand: ${priceLine(lineInSand)}`,
     ...(decisionBand
       ? [
+          'Trigger: completed 5M close outside the battle zone.',
           'Overall play: CONFLICT / BATTLE ZONE / WAIT for completed 5M close outside the band.',
           ...decisionBand.lines,
         ]
       : [
+          displayDirection === 'LONG' || displayDirection === 'SHORT'
+            ? `Trigger: completed 5M close ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`
+            : 'Trigger: wait for one completed 5M side to confirm.',
           displayDirection === 'LONG' || displayDirection === 'SHORT'
             ? `Overall play: ${displayDirection} ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`
             : 'Overall play: WAIT for one side to confirm.',
@@ -3267,10 +3315,18 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
           ...(play?.longAbove != null && displayDirection !== 'LONG' ? [sideBreakoutLabel('LONG', 'ABOVE', play.longAbove)] : []),
           ...(play?.shortBelow != null && displayDirection !== 'SHORT' ? [sideBreakoutLabel('SHORT', 'BELOW', play.shortBelow)] : []),
         ]),
-    levels ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}` : 'Entry: pending',
-    levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'Stop: pending | T1: pending | T2: pending',
+    'Trade Plan:',
+    levels
+      ? `Entry: ${priceLine(levels.entry)}`
+      : `Entry: completed 5M close ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}`,
+    ...(levels && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayPricedStopLines({ side: displayDirection, levels, play })
+      : displayDirection === 'LONG' || displayDirection === 'SHORT'
+        ? deskPlayWatchOnlyNoPricedStopLines(displayDirection)
+        : ['Stop: N/A']),
+    levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'T1/T2: use nearest mapped decision zones until a priced stop confirms.',
     ...(levels ? [] : ['No active LONG/SHORT plan with complete app-owned levels.']),
-    `Next trigger: ${compactInstruction(
+    `Trigger detail: ${compactInstruction(
       ((displayDirection === 'LONG' || displayDirection === 'SHORT') && play?.activeTacticalZone?.direction === displayDirection
         ? play.activeTacticalZone.nextTrigger
         : null) ||
@@ -3281,8 +3337,8 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       play?.nextTrigger,
       `completed 5M acceptance ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`,
     )}`,
-    `Invalidation: ${compactInstruction(freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `invalid ${invalidWord} ${priceLine(levels?.stop ?? null)}.`)}`,
-    `Stand down: ${standDownInstruction(freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels?.stop ?? lineInSand)}.`)}`,
+    `Invalid: ${invalidInstruction(freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `${invalidWord} ${priceLine(levels?.stop ?? null)}.`)}`,
+    `Opposite Scenario: stand down on ${standDownInstruction(freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels?.stop ?? lineInSand)}.`)}`,
     ...(parentZone && isFinitePrice(parentZone.lower) && isFinitePrice(parentZone.upper)
       ? [`HTF FVG: ${parentZone.timeframe || 'HTF'} ${priceLine(parentZone.lower)}-${priceLine(parentZone.upper)} (${parentZone.state || 'mapped'}).`]
       : []),
@@ -3406,13 +3462,17 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlaySameSideCampaignStackLines(play, displayDirection).slice(0, 9)
       : []),
-    `Line in sand: ${priceLine(lineInSand)}`,
+    `Line in the Sand: ${priceLine(lineInSand)}`,
     ...(decisionBand
       ? [
+          'Trigger: completed 5M close outside the battle zone.',
           'Overall play: CONFLICT / BATTLE ZONE / WAIT for completed 5M close outside the band.',
           ...decisionBand.lines,
         ]
       : [
+          displayDirection === 'LONG' || displayDirection === 'SHORT'
+            ? `Trigger: completed 5M close ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`
+            : 'Trigger: wait for one completed 5M side to confirm.',
           displayDirection === 'LONG' || displayDirection === 'SHORT'
             ? `Overall play: ${displayDirection} ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`
             : 'Overall play: WAIT for one side to confirm.',
@@ -3420,14 +3480,25 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
           ...(play?.shortBelow != null && displayDirection !== 'SHORT' ? [sideBreakoutLabel('SHORT', 'BELOW', play.shortBelow)] : []),
           ...(play?.longAbove != null && displayDirection !== 'LONG' ? [sideBreakoutLabel('LONG', 'ABOVE', play.longAbove)] : []),
         ]),
-    levels ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}` : 'Entry: pending',
-    levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'Stop: pending | T1: pending | T2: pending',
-    `Next trigger: ${compactInstruction(activeZone?.nextTrigger || freshBest?.requiredTrigger || freshBest?.nextAction || candidate?.requiredTrigger || candidate?.nextAction || play?.nextTrigger, 'wait for completed 5M proof.' ).slice(0, 170)}`,
-    `Invalidation: ${compactInstruction(freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `invalid through ${priceLine(levels?.stop ?? lineInSand)}.`).slice(0, 130)}`,
+    'Trade Plan:',
+    levels
+      ? `Entry: ${priceLine(levels.entry)}`
+      : `Entry: completed 5M close ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}`,
+    ...(levels && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayPricedStopLines({ side: displayDirection, levels, play })
+      : displayDirection === 'LONG' || displayDirection === 'SHORT'
+        ? deskPlayWatchOnlyNoPricedStopLines(displayDirection)
+        : ['Stop: N/A']),
+    levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'T1/T2: use nearest mapped decision zones until a priced stop confirms.',
+    `Trigger detail: ${compactInstruction(activeZone?.nextTrigger || freshBest?.requiredTrigger || freshBest?.nextAction || candidate?.requiredTrigger || candidate?.nextAction || play?.nextTrigger, 'wait for completed 5M proof.' ).slice(0, 170)}`,
+    `Invalid: ${invalidInstruction(freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `through ${priceLine(levels?.stop ?? lineInSand)}.`).slice(0, 130)}`,
     ...(isFinitePrice(reaction) ? [`Reaction: ${compactLine(play?.targetReactionLabel || 'HTF/session level', 34)} ${priceLine(reaction)}.`] : []),
     `Status: ${status === 'EXECUTABLE' ? 'Executable only while completed 5M trigger + canExecute remain true.' : 'Review only until 5M trigger + canExecute.'}`,
     'Decision support only. No automated orders.',
-    'Chart: attached.',
+    deskPlayChartStatusLine({
+      hasChart: args.attachments.chartPlan,
+      hasLevels: Boolean(levels?.entry != null && levels?.stop != null && levels?.target1 != null && levels?.target2 != null),
+    }),
   ];
 }
 

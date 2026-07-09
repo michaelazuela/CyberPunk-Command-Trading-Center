@@ -56,14 +56,14 @@ function numericLevel(text: string, label: 'Entry' | 'Stop' | 'T1' | 'T2'): numb
 }
 
 function currentDeskPlanDirection(text: string): 'LONG' | 'SHORT' | null {
+  if (/\bPrimary:\s*(?:🐂\s*)?LONG\b/i.test(text)) return 'LONG';
+  if (/\bPrimary:\s*(?:🐻\s*)?SHORT\b/i.test(text)) return 'SHORT';
   const entryIndex = text.search(/\bEntry:\s*(-?\d+(?:\.\d{1,2})?)\b/i);
   const beforeEntry = entryIndex >= 0 ? text.slice(0, entryIndex) : text;
   const actionableMatches = [...beforeEntry.matchAll(/\b(LONG ABOVE|SHORT BELOW)\b/gi)];
   const activeSide = actionableMatches[actionableMatches.length - 1]?.[1]?.toUpperCase();
   if (activeSide === 'LONG ABOVE') return 'LONG';
   if (activeSide === 'SHORT BELOW') return 'SHORT';
-  if (/\bPrimary:\s*(?:🐂\s*)?LONG\b/i.test(text)) return 'LONG';
-  if (/\bPrimary:\s*(?:🐻\s*)?SHORT\b/i.test(text)) return 'SHORT';
   return null;
 }
 

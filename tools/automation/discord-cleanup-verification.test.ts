@@ -17,7 +17,8 @@ function currentDeskPlanPayload(withComponents: boolean): DiscordWebhookPayload 
       description: [
         'Primary: LONG',
         'Bias: 15M + 5M bullish, 1H supportive',
-        'Line in sand: 7630.00',
+        'Line in the Sand: 7630.00',
+        'Trigger: completed 5M close above 7630.00',
         '',
         'LONG ABOVE 7630.00',
         'Entry: 7632.75',
@@ -29,7 +30,7 @@ function currentDeskPlanPayload(withComponents: boolean): DiscordWebhookPayload 
         'HTF target: 7658.00 / runner 7672.00',
         '',
         'Status: Review only until 5M trigger + canExecute.',
-        'Chart: attached.',
+        'Chart: attached to Discord post.',
       ].join('\n'),
       color: 0x00a86b,
       fields: [],

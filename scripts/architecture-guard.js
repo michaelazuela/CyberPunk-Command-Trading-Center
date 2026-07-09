@@ -552,7 +552,11 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('Current Desk Plan') ||
     !formatterContent.includes('Primary:') ||
     !formatterContent.includes('Bias:') ||
-    !formatterContent.includes('Line in sand:') ||
+    !formatterContent.includes('Line in the Sand:') ||
+    !formatterContent.includes('Trigger:') ||
+    !formatterContent.includes('Trade Plan:') ||
+    !formatterContent.includes('Protected 5M swing:') ||
+    !formatterContent.includes('WATCH ONLY:') ||
     !formatterContent.includes('Map Side:') ||
     !formatterContent.includes('compactSidePlanLines') ||
     !formatterContent.includes("discordAction === 'post_conditional'") ||
@@ -571,7 +575,7 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('Invalid') ||
     !formatterContent.includes('HTF target:') ||
     !formatterContent.includes('Status: Review only until 5M trigger + canExecute.') ||
-    !formatterContent.includes('Chart: attached.') ||
+    !formatterContent.includes('Chart: attached to Discord post') ||
     !formatterContent.includes('assertDiscordArtifactsPassLint') ||
     !formatterContent.includes('protectedStructure') ||
     !formatterContent.includes('confirmationLine') ||

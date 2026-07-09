@@ -194,11 +194,11 @@ export function renderPhase9DWatchAlert(state: DeskState): string {
 
   return [
     `${direction} WATCH FORMING`,
-    `Line in the sand: ${line}`,
+    `Line in the Sand: ${line}`,
     `${lineSide}: ${line}`,
     `Trigger: ${trigger}`,
     `Reason: ${reason}`,
-    `Invalidation: ${invalidation}`,
+    `Invalid: ${invalidation.replace(/^Invalid(?:ation)?\s*:\s*/i, '').replace(/^Invalid\s+if\s+/i, '').replace(/^Invalid\s+/i, '')}`,
     'Stand down: No chase. Wait for completed 5M confirmation and a fresh scanner-owned plan.',
     `Execution: NOT APPROVED - watch alert only; canExecute=${state.canExecute}.`,
     'Decision support only. No automated orders.',
@@ -218,13 +218,13 @@ function buildFindings(sampleAlert: string, state: DeskState): DiscordWatchAlert
   if (!sampleAlert.includes('WATCH FORMING')) {
     findings.push(finding('headline', 'Watch alert headline does not say WATCH FORMING.', [sampleAlert]));
   }
-  if (!sampleAlert.includes('Line in the sand: 7469.75') || !sampleAlert.includes('SHORT BELOW: 7469.75')) {
+  if (!sampleAlert.includes('Line in the Sand: 7469.75') || !sampleAlert.includes('SHORT BELOW: 7469.75')) {
     findings.push(finding('line_in_sand', 'Watch alert does not show the line in the sand and side-specific line.', [sampleAlert]));
   }
   if (!lower.includes('completed 5m')) {
     findings.push(finding('completed_5m_trigger', 'Watch alert does not require completed 5M trigger language.', [sampleAlert]));
   }
-  if (!sampleAlert.includes('Invalidation:') || !sampleAlert.includes('7489.75')) {
+  if (!sampleAlert.includes('Invalid:') || !sampleAlert.includes('7489.75')) {
     findings.push(finding('invalidation', 'Watch alert does not show invalidation when available.', [sampleAlert]));
   }
   if (!sampleAlert.includes('Stand down:') || !lower.includes('no chase')) {
@@ -260,9 +260,9 @@ function buildSummary(sampleAlert: string, state: DeskState): Phase9DDiscordWatc
   return {
     watchAlertsAudited: 1,
     watchVisibilityObserved: state.visibilityMode === 'POST_WATCH' && state.discordAction === 'post_watch',
-    lineInSandPresent: sampleAlert.includes('Line in the sand: 7469.75') && sampleAlert.includes('SHORT BELOW: 7469.75'),
+    lineInSandPresent: sampleAlert.includes('Line in the Sand: 7469.75') && sampleAlert.includes('SHORT BELOW: 7469.75'),
     completedFiveMinuteTriggerPresent: lower.includes('completed 5m'),
-    invalidationPresent: sampleAlert.includes('Invalidation:') && sampleAlert.includes('7489.75'),
+    invalidationPresent: sampleAlert.includes('Invalid:') && sampleAlert.includes('7489.75'),
     standDownPresent: sampleAlert.includes('Stand down:') && lower.includes('no chase'),
     notExecutionApprovalPresent: sampleAlert.includes('NOT APPROVED') && sampleAlert.includes('canExecute=false'),
     canExecuteBoundaryPreserved: state.canExecute === false && state.visibilityMetadata.authority.canExecute === false,

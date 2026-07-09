@@ -2885,7 +2885,7 @@ assert.match(reversalPayloadText, /🐂 LONG ABOVE: 7411.00/);
 assert.match(reversalPayloadText, /🛑 Invalid Below: 7404.00/);
 assert.match(reversalPayloadText, /🚫 No Chase Above: 7421.50/);
 assert.match(reversalPayloadText, /📋 Watch Plan Levels \(Reference Only\)/);
-assert.match(reversalPayloadText, /🧭 Line in sand: 🐂 LONG ABOVE 7411.00/);
+assert.match(reversalPayloadText, /🧭 Line in the Sand: 🐂 LONG ABOVE 7411.00/);
 assert.match(reversalPayloadText, /🔬 1M may refine; completed 5M close\/hold required\./);
 assert.match(reversalPayloadText, /📍 Entry ref: 7411.00 \| 🛑 Stop ref: 7404.00/);
 assert.match(reversalPayloadText, /🎯 T1 7421.50 \| 🎯 T2 7425.00/);
@@ -5630,7 +5630,7 @@ const holdNoticeText = flattenDiscordPayloadText(holdNoticePayload);
 assert.match(holdNoticeText, /Scanner Hold/);
 assert.match(holdNoticeText, /missed_no_chase/);
 assert.match(holdNoticeText, /canExecute: false/);
-assert.match(holdNoticeText, /Line in the sand/);
+assert.match(holdNoticeText, /Line in the Sand/);
 for (const bannedText of BANNED_ACTIVE_DISCORD_ALERT_TEXT) {
   assert.ok(!holdNoticeText.includes(bannedText), `hold notice should not include banned active alert text: ${bannedText}`);
 }
@@ -5865,7 +5865,7 @@ try {
   assert.ok(text.includes('[AM REVIEW] MES - LONG HIGH-CONFIDENCE CONDITIONAL'));
   assert.ok(text.includes('Primary: 🐂 LONG'));
   assert.ok(text.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; execution arms only after the named completed 5M condition.'));
-  assert.ok(text.includes('Line in sand:'));
+  assert.ok(text.includes('Line in the Sand:'));
   assert.ok(text.includes('LONG ABOVE'));
   assert.ok(text.includes('Entry:'));
   assert.ok(text.includes('Stop:'));
@@ -5874,11 +5874,11 @@ try {
   assert.ok(text.includes('Invalid below:'));
   assert.ok(text.includes('HTF target:'));
   assert.ok(text.includes('Status: High-confidence conditional trade plan; armed after the named completed 5M condition.'));
-  assert.ok(text.includes('Chart: attached.'));
+  assert.ok(text.includes('Chart: attached to Discord post.'));
   assert.ok(!text.includes('Compact Trade Plan Summary'));
   assert.ok(!text.includes('Plan:'));
   assert.ok(!text.includes('Targets:'));
-  assert.ok(!text.includes('Trigger:'));
+  assert.ok(text.includes('Trigger:'));
   assert.ok(!text.includes('Memory:'));
   assert.ok(!text.includes('Action:'));
   assert.ok(!text.includes('Details:'));
@@ -6339,15 +6339,19 @@ try {
   assert.ok(deskPlayText.includes('MES Current Desk Plan'));
   assert.ok(deskPlayText.includes('Primary: LONG above 5324.25 | Current 5325.00'));
   assert.ok(deskPlayText.includes('HTF:'));
-  assert.ok(deskPlayText.includes('Line: 5324.25 | Trigger: 5M close above 5324.25'));
-  assert.ok(deskPlayText.includes('Plan: Entry 5324.25 | Stop 5319.25 | T1 5331.75 | T2 5334.25'));
+  assert.ok(deskPlayText.includes('Line in the Sand: 5324.25'));
+  assert.ok(deskPlayText.includes('Trigger: 5M close above 5324.25'));
+  assert.ok(deskPlayText.includes('Trade Plan:'));
+  assert.ok(deskPlayText.includes('Entry: 5324.25'));
+  assert.ok(deskPlayText.includes('Stop: 5319.25 | Protected 5M swing: 5319.25'));
+  assert.ok(deskPlayText.includes('T1: 5331.75 | T2: 5334.25'));
   assert.ok(deskPlayText.includes('Invalid:'));
   assert.ok(deskPlayText.includes('Status: review only;'));
-  assert.ok(deskPlayText.includes('Boundary: canExecute unchanged; no automated orders.'));
+  assert.ok(deskPlayText.includes('No automated orders.'));
   assert.ok(!deskPlayText.includes('Overall play:'));
   assert.ok(!deskPlayText.includes('Decision class:'));
   assert.ok(!deskPlayText.includes('Next trigger:'));
-  assert.ok(deskPlayText.length < 950, `expected Desk Play payload under actionable compact target, got ${deskPlayText.length}`);
+  assert.ok(deskPlayText.length < 1200, `expected Desk Play payload under actionable compact target, got ${deskPlayText.length}`);
   const staleMigratedShortDeskPlayState: typeof deskPlayState = {
     ...deskPlayState,
     htfContextStatus: 'sufficient',
@@ -6447,11 +6451,15 @@ try {
   const staleMigratedShortText = flattenDiscordPayloadText(staleMigratedShortResult.payload);
   assert.ok(staleMigratedShortText.includes('[EVENING DESK PLAY] MES - WAIT / SHORT NO CHASE'));
   assert.ok(staleMigratedShortText.includes('Primary: WAIT / battle zone 7549.50-7553.25 | Current 7551.25'));
-  assert.ok(staleMigratedShortText.includes('Line: 7549.50-7553.25 | Trigger: completed 5M close outside 7549.50-7553.25'));
+  assert.ok(staleMigratedShortText.includes('Line in the Sand: 7549.50-7553.25'));
+  assert.ok(staleMigratedShortText.includes('Trigger: completed 5M close outside 7549.50-7553.25'));
   assert.ok(staleMigratedShortText.includes('Prior SHORT line: 7580.25 already left; no chase.'));
   assert.ok(staleMigratedShortText.includes('LONG ABOVE 7553.25'));
   assert.ok(staleMigratedShortText.includes('SHORT BELOW 7549.50'));
-  assert.ok(staleMigratedShortText.includes('Plan: no entry/stop/T1/T2 until trigger and protected 5M stop are proven.'));
+  assert.ok(staleMigratedShortText.includes('WATCH ONLY:'));
+  assert.ok(staleMigratedShortText.includes('Stop: no priced stop yet'));
+  assert.ok(staleMigratedShortText.includes('Protected 5M swing: not confirmed'));
+  assert.ok(staleMigratedShortText.includes('T1/T2: use mapped zones until priced stop confirms'));
   assert.ok(!staleMigratedShortText.includes('Primary: SHORT below 7580.25'));
   assert.ok(!staleMigratedShortText.includes('Line: 7580.25 | Trigger: 5M close below 7580.25'));
   const deskPlayRagCalls: Array<{ url: string; method: string; body: any }> = [];

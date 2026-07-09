@@ -4126,7 +4126,7 @@ export async function upsertScannerReversalWatchRagRecord(args: {
   const embeddingText = [
     `Tactical Reversal Watch pending trader feedback for ${args.session} ${args.instrument} on ${args.tradeDate}.`,
     `Watch direction: ${direction || 'N/A'}; state at post: ${args.state.state}.`,
-    `Line in sand: ${args.lines.triggerLine ?? 'N/A'}; invalid: ${args.lines.invalidLine ?? 'N/A'}; no chase: ${args.lines.noChaseLine ?? 'N/A'}.`,
+    `Line in the Sand: ${args.lines.triggerLine ?? 'N/A'}; invalid: ${args.lines.invalidLine ?? 'N/A'}; no chase: ${args.lines.noChaseLine ?? 'N/A'}.`,
     'Feedback buttons record learning and research evidence only. They do not approve execution, change canExecute, or place orders.',
   ].join(' ');
 
@@ -6939,17 +6939,15 @@ function scannerDeskPlayBattleBranchLine(args: {
   const sideWord = args.side === 'LONG' ? 'above' : 'below';
   const trigger = plan.trigger ||
     `Completed 5M close + hold/retest ${sideWord} ${scannerDiscordLine(args.line)}.`;
-  const stopFallback = args.side === 'LONG'
-    ? 'pending protected 5M swing low'
-    : 'pending protected 5M swing high';
+  const swingLabel = args.side === 'LONG' ? 'swing low' : 'swing high';
   return [
     `${args.side} ${args.side === 'LONG' ? 'ABOVE' : 'BELOW'} ${scannerDiscordLine(args.line)}: ${clip(trigger, 110)}`,
     plan.entry !== null && plan.stop !== null
-      ? `Entry ${scannerDiscordLine(plan.entry)} | Stop ${scannerDiscordLine(plan.stop)} | Risk ${scannerDiscordLine(plan.risk)} pts`
-      : `Entry/Stop pending - ${stopFallback}.`,
+      ? `Entry ${scannerDiscordLine(plan.entry)} | Stop ${scannerDiscordLine(plan.stop)} (5M ${swingLabel} ${scannerDiscordLine(plan.stop)}) | Risk ${scannerDiscordLine(plan.risk)} pts`
+      : `Entry 5M close ${sideWord} ${scannerDiscordLine(args.line)} | WATCH ONLY: no priced stop; 5M ${swingLabel} unconfirmed.`,
     plan.t1 !== null && plan.t2 !== null
       ? `T1 ${scannerDiscordLine(plan.t1)} | T2 ${scannerDiscordLine(plan.t2)}`
-      : 'T1/T2 pending - recalc from actual entry and protected stop.',
+      : 'T1/T2: use nearest mapped decision zones until a priced stop confirms.',
   ];
 }
 
@@ -7075,14 +7073,25 @@ function scannerDeskPlayLiveCompactFallbackPayload(args: {
     ? battleZoneText
     : scannerDiscordLine(line);
   const planLine = hasPlanLevels
-    ? `Plan: Entry ${scannerDiscordLine(entry)} | Stop ${scannerDiscordLine(stop)} | T1 ${scannerDiscordLine(t1)} | T2 ${scannerDiscordLine(t2)}`
-    : 'Plan: no entry/stop/T1/T2 until trigger and protected 5M stop are proven.';
+    ? [
+      'Trade Plan:',
+      `Entry: ${scannerDiscordLine(entry)}`,
+      `Stop: ${scannerDiscordLine(stop)} | Protected 5M swing: ${scannerDiscordLine(stop)} (${direction === 'LONG' ? 'swing low' : 'swing high'})`,
+      `T1: ${scannerDiscordLine(t1)} | T2: ${scannerDiscordLine(t2)}`,
+    ].join('\n')
+    : [
+      'WATCH ONLY:',
+      `Entry: ${triggerRule}`,
+      `Stop: no priced stop yet`,
+      `Protected 5M swing: not confirmed`,
+      `T1/T2: use mapped zones until priced stop confirms`,
+    ].join('\n');
   const statusLine = t1Reached
     ? `No fresh entry: current already reached/passed T1 ${scannerDiscordLine(t1)}.`
     : `Status: review only; ${clip(noChase, 70)}`;
   const battlePlanLines = [
     'Battle Plan:',
-    `Current ${scannerDiscordLine(args.currentPrice)} | no chase between active lines.`,
+    `Current ${scannerDiscordLine(args.currentPrice)} | no chase between lines.`,
     ...scannerDeskPlayBattleBranchLine({ deskState: args.deskState, side: 'LONG', line: longBattleLine }),
     ...scannerDeskPlayBattleBranchLine({ deskState: args.deskState, side: 'SHORT', line: shortBattleLine }),
   ];
@@ -7096,13 +7105,15 @@ function scannerDeskPlayLiveCompactFallbackPayload(args: {
   const description = [
     `Primary: ${directionRule} | Current ${scannerDiscordLine(args.currentPrice)}`,
     `HTF: ${args.deskState.htfContextStatus || 'unknown'} / ${play.htfProtectedStructureMap?.reliability || 'unknown'}`,
-    `Line: ${displayLine} | Trigger: ${triggerRule}`,
+    `Line in the Sand: ${displayLine}`,
+    `Trigger: ${triggerRule}`,
     ...(priorLineNote ? [priorLineNote] : []),
     ...battlePlanLines,
     planLine,
     `Invalid: ${clip(cleanInvalidation, 82)}`,
+    `Opposite Scenario: stand down if completed 5M proof invalidates the active side.`,
     statusLine,
-    'Boundary: canExecute unchanged; no automated orders.',
+    'No automated orders.',
   ].join('\n');
   return {
     username: args.originalPayload.username || 'Quant Desk',
@@ -7323,7 +7334,7 @@ function buildScannerReversalWatchDiscordPayload(args: {
         activeZoneFailureTransition
           ? `${exhaustedEmoji} ${exhausted} structure failed / ${directionEmoji} ${direction} transition watch`
           : `${exhaustedEmoji} Primary: ${exhausted} campaign exhaustion / ${directionEmoji} ${direction} reversal watch`,
-        '⚠️ Execution: NOT APPROVED - completed 5M watch map only.',
+        '⚠️ Execution: NOT APPROVED - 5M watch map only.',
         `📌 Status: ${status}`,
         `📍 Reaction Zone: ${reaction}`,
         `${directionEmoji} ${directionLineLabel}: ${scannerDiscordLine(args.lines.triggerLine)}`,
@@ -7345,10 +7356,10 @@ function buildScannerReversalWatchDiscordPayload(args: {
         {
           name: '📋 Watch Plan Levels (Reference Only)',
           value: compactScannerDiscordText([
-            `🧭 Line in sand: ${directionEmoji} ${directionLineLabel} ${scannerDiscordLine(args.lines.triggerLine)}`,
+            `🧭 Line in the Sand: ${directionEmoji} ${directionLineLabel} ${scannerDiscordLine(args.lines.triggerLine)}`,
             `📍 Entry ref: ${scannerDiscordLine(args.lines.referenceEntry)} | 🛑 Stop ref: ${scannerDiscordLine(args.lines.referenceStop)}`,
             `🎯 T1 ${scannerDiscordLine(args.lines.referenceTarget1)} | 🎯 T2 ${scannerDiscordLine(args.lines.referenceTarget2)}`,
-            '⚠️ Reference only - not execution approval.',
+            '⚠️ Reference only - no execution approval.',
             '🔬 1M may refine; completed 5M close/hold required.',
             `🧾 Blocker: ${args.lines.referenceReason || 'No executable app-owned tactical levels; normal canExecute gates still control.'}`,
           ].join('\n'), 460),
@@ -7356,7 +7367,7 @@ function buildScannerReversalWatchDiscordPayload(args: {
         },
         {
           name: '🧾 Bottom Line',
-          value: compactScannerDiscordText(`${args.state.reason} No canExecute change; app-owned 5M trigger, stop, risk, targets, model, and session gates still control.`, 180),
+          value: compactScannerDiscordText(`${args.state.reason} No canExecute change; app-owned 5M trigger, stop, risk, targets, model, and session gates control.`, 180),
           inline: false,
         },
       ],
@@ -7609,7 +7620,7 @@ function scannerDeskStateHoldReason(deskState: DeskState): string {
     deskState.visibilityMetadata?.noTradeWithReason,
     deskState.visibilityMetadata?.dataQualityBlocker,
     deskState.promotion?.blockedBy?.join(' | '),
-    deskState.nextTrigger ? `Next trigger: ${deskState.nextTrigger}` : null,
+    deskState.nextTrigger ? `Trigger: ${deskState.nextTrigger}` : null,
   ].filter(Boolean);
   return reasons.length
     ? [...new Set(reasons.map((item) => String(item).trim()).filter(Boolean))].join(' | ')
@@ -7678,9 +7689,9 @@ export function buildScannerLiveHoldNoticePayload(args: {
           {
             name: 'Line / Next Condition',
             value: clip([
-              `Line in the sand: ${money(play.lineInSand ?? args.deskState.lineInSand)}`,
-              `Next trigger: ${play.nextTrigger || args.deskState.nextTrigger || 'N/A'}`,
-              `Invalidation: ${play.invalidation || args.deskState.invalidation || 'N/A'}`,
+              `Line in the Sand: ${money(play.lineInSand ?? args.deskState.lineInSand)}`,
+              `Trigger: ${play.nextTrigger || args.deskState.nextTrigger || 'N/A'}`,
+              `Invalid: ${String(play.invalidation || args.deskState.invalidation || 'N/A').replace(/^invalid(?:ation)?\s*:\s*/i, '').replace(/^invalid\s+if\s+/i, '').replace(/^invalid\s+/i, '')}`,
               `No chase: ${play.noChase || 'N/A'}`,
             ].join('\n')),
             inline: false,

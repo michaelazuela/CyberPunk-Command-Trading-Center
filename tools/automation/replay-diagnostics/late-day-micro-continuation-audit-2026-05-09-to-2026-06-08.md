@@ -48,7 +48,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7395.25 / 7386 / 9.25
 - T1/T2: 7409.25 / 7413.75
 - FVG: 7392-7395 formed 2026-05-18T03:05:00
-- Line in sand: 7398.5 London Bullish Displacement Imbalance Bottom (Asian low is below London low)
+- Line in the Sand: 7398.5 London Bullish Displacement Imbalance Bottom (Asian low is below London low)
 - Outcome to close: T1; MFE 15.5; MAE 2.5
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7398.5 London Bullish Displacement Imbalance Bottom. Human review only. No chase.
 
@@ -58,7 +58,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7401 / 7381 / 20
 - T1/T2: 7431 / 7441
 - FVG: 7381.25-7395.5 formed 2026-05-18T15:10:00
-- Line in sand: 7401.5 Asian Bearish Displacement Imbalance Midpoint (Asian low is below London low)
+- Line in the Sand: 7401.5 Asian Bearish Displacement Imbalance Midpoint (Asian low is below London low)
 - Outcome to close: T1; MFE 31; MAE 0.5
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7401.5 Asian Bearish Displacement Imbalance Midpoint. Human review only. No chase.
 
@@ -68,7 +68,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7410.25 / 7395.25 / 15
 - T1/T2: 7432.75 / 7440.25
 - FVG: 7395.5-7403.75 formed 2026-05-18T13:00:00
-- Line in sand: 7420 Round Number 7420 (Whole/round-number magnet inside imported context range.)
+- Line in the Sand: 7420 Round Number 7420 (Whole/round-number magnet inside imported context range.)
 - Outcome to close: T1; MFE 27.25; MAE 0.25
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7420 Round Number 7420. Human review only. No chase.
 
@@ -78,7 +78,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7418.5 / 7409.75 / 8.75
 - T1/T2: 7431.75 / 7436
 - FVG: 7418-7418.25 formed 2026-05-18T08:15:00
-- Line in sand: 7420 Round Number 7420 (Whole/round-number magnet inside imported context range.)
+- Line in the Sand: 7420 Round Number 7420 (Whole/round-number magnet inside imported context range.)
 - Outcome to close: T1; MFE 13.5; MAE 2.75
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7420 Round Number 7420. Human review only. No chase.
 
@@ -88,7 +88,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7447.5 / 7444 / 3.5
 - T1/T2: 7452.75 / 7454.5
 - FVG: 7444.25-7444.5 formed 2026-05-20T15:25:00
-- Line in sand: 7448.5 Current Imported Window High (16 bars reviewed for Current Imported Window.)
+- Line in the Sand: 7448.5 Current Imported Window High (16 bars reviewed for Current Imported Window.)
 - Outcome to close: T2; MFE 7; MAE 0.25
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7448.5 Current Imported Window High. Human review only. No chase.
 
@@ -98,7 +98,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7532.75 / 7527.5 / 5.25
 - T1/T2: 7540.75 / 7543.25
 - FVG: 7527.75-7530 formed 2026-05-26T14:20:00
-- Line in sand: 7533.75 Current Imported Window High (16 bars reviewed for Current Imported Window.)
+- Line in the Sand: 7533.75 Current Imported Window High (16 bars reviewed for Current Imported Window.)
 - Outcome to close: T1; MFE 8.25; MAE 0.5
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7533.75 Current Imported Window High. Human review only. No chase.
 
@@ -108,7 +108,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7536 / 7530.25 / 5.75
 - T1/T2: 7544.75 / 7547.5
 - FVG: 7530.5-7532.25 formed 2026-05-26T03:50:00
-- Line in sand: 7536.25 Current Imported Window High (16 bars reviewed for Current Imported Window.)
+- Line in the Sand: 7536.25 Current Imported Window High (16 bars reviewed for Current Imported Window.)
 - Outcome to close: STOP; MFE 6.25; MAE 5.75
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7536.25 Current Imported Window High. Human review only. No chase.
 
@@ -118,7 +118,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7538.5 / 7534.25 / 4.25
 - T1/T2: 7545 / 7547
 - FVG: 7534.5-7536.75 formed 2026-05-26T05:35:00
-- Line in sand: 7538.5 Asian Bullish Displacement Imbalance Midpoint (Asian high is above London high)
+- Line in the Sand: 7538.5 Asian Bullish Displacement Imbalance Midpoint (Asian high is above London high)
 - Outcome to close: STOP; MFE 3.75; MAE 4.25
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7538.5 Asian Bullish Displacement Imbalance Midpoint. Human review only. No chase.
 
@@ -128,7 +128,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7621.5 / 7619.75 / 1.75
 - T1/T2: 7624.25 / 7625
 - FVG: 7620-7620.5 formed 2026-06-02T15:10:00
-- Line in sand: 7623.75 Current Imported Window High (16 bars reviewed for Current Imported Window.)
+- Line in the Sand: 7623.75 Current Imported Window High (16 bars reviewed for Current Imported Window.)
 - Outcome to close: STOP; MFE 1.5; MAE 2
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7623.75 Current Imported Window High. Human review only. No chase.
 
@@ -138,7 +138,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7622.5 / 7620.75 / 1.75
 - T1/T2: 7625.25 / 7626
 - FVG: 7621-7621.5 formed 2026-06-02T11:00:00
-- Line in sand: 7623.75 Current Imported Window High (16 bars reviewed for Current Imported Window.)
+- Line in the Sand: 7623.75 Current Imported Window High (16 bars reviewed for Current Imported Window.)
 - Outcome to close: STOP; MFE 0.5; MAE 2.5
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7623.75 Current Imported Window High. Human review only. No chase.
 
@@ -148,7 +148,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7404 / 7410 / 6
 - T1/T2: 7395 / 7392
 - FVG: 7405.25-7407 formed 2026-06-05T15:15:00
-- Line in sand: 7403.75 RTH Open (First imported 5M RTH bar open.)
+- Line in the Sand: 7403.75 RTH Open (First imported 5M RTH bar open.)
 - Outcome to close: STOP; MFE 1.75; MAE 9
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7403.75 RTH Open. Human review only. No chase.
 
@@ -158,7 +158,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7402.75 / 7412.75 / 10
 - T1/T2: 7387.75 / 7382.75
 - FVG: 7405.25-7407 formed 2026-06-05T15:15:00
-- Line in sand: 7400 Round Number 7400 (Whole/round-number magnet inside imported context range.)
+- Line in the Sand: 7400 Round Number 7400 (Whole/round-number magnet inside imported context range.)
 - Outcome to close: STOP; MFE 1.75; MAE 12
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7400 Round Number 7400. Human review only. No chase.
 
@@ -168,7 +168,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7414.5 / 7415.5 / 1
 - T1/T2: 7413 / 7412.5
 - FVG: 7414.75-7415.25 formed 2026-06-08T00:10:00
-- Line in sand: 7410 Round Number 7410 (Whole/round-number magnet inside imported context range.)
+- Line in the Sand: 7410 Round Number 7410 (Whole/round-number magnet inside imported context range.)
 - Outcome to close: STOP; MFE 1; MAE 9.75
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7410 Round Number 7410. Human review only. No chase.
 
@@ -178,7 +178,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7417 / 7424.5 / 7.5
 - T1/T2: 7405.75 / 7402
 - FVG: 7418.5-7424.25 formed 2026-06-08T15:20:00
-- Line in sand: 7415.5 Morning Setup Scan Window Low (36 bars reviewed for Morning Setup Scan Window.)
+- Line in the Sand: 7415.5 Morning Setup Scan Window Low (36 bars reviewed for Morning Setup Scan Window.)
 - Outcome to close: NONE; MFE 6.5; MAE 5.25
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7415.5 Morning Setup Scan Window Low. Human review only. No chase.
 
@@ -188,7 +188,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7416.25 / 7424.5 / 8.25
 - T1/T2: 7404 / 7399.75
 - FVG: 7418.5-7424.25 formed 2026-06-08T15:20:00
-- Line in sand: 7415.5 Morning Setup Scan Window Low (36 bars reviewed for Morning Setup Scan Window.)
+- Line in the Sand: 7415.5 Morning Setup Scan Window Low (36 bars reviewed for Morning Setup Scan Window.)
 - Outcome to close: NONE; MFE 5.75; MAE 6
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7415.5 Morning Setup Scan Window Low. Human review only. No chase.
 
@@ -198,7 +198,7 @@ Line-in-the-sand source: scanner_structured_chart_context_levels
 - Entry/Stop/Risk: 7416 / 7424.5 / 8.5
 - T1/T2: 7403.25 / 7399
 - FVG: 7418.5-7424.25 formed 2026-06-08T15:20:00
-- Line in sand: 7415.5 Morning Setup Scan Window Low (36 bars reviewed for Morning Setup Scan Window.)
+- Line in the Sand: 7415.5 Morning Setup Scan Window Low (36 bars reviewed for Morning Setup Scan Window.)
 - Outcome to close: NONE; MFE 5.5; MAE 6.25
 - Notes: Late-day micro-continuation review only. 15M and 5M MSS aligned from structured OHLC. Completed 5M FVG retest/rejection detected. Named HTF line from scanner structured map: 7415.5 Morning Setup Scan Window Low. Human review only. No chase.
 

@@ -522,7 +522,19 @@ Make Discord name important 15M/60M/120M/240M FVG or imbalance decision zones wh
 
 `DeskState.primaryDeskPlay.fvgDecisionZone` is populated only when the active scanner-owned line in the sand is already tagged as an FVG/imbalance line. Current Desk Plan Discord output can then show a compact `FVG Decision Zone` block.
 
-Current decision-zone alert audit result: `pass`. The audit renders a Current Desk Plan fixture through the real Discord formatter and verifies the FVG Decision Zone block, line in the sand, why/hold/fold/no-chase instructions, HTF parent reaction memory, HTF FVG cascade, pending-level/review-only wording, and no-authority-change boundary.
+Current decision-zone alert audit result: `pass`. The audit renders a Current Desk Plan fixture through the real Discord formatter and verifies the FVG Decision Zone block, line in the sand, why/hold/fold/no-chase instructions, HTF parent reaction memory, HTF FVG cascade, watch-only/no-priced-stop wording, and no-authority-change boundary.
+
+Approved Discord Desk Play ticket contract:
+
+- `Primary:` states LONG, SHORT, or WAIT and the one-line read.
+- `HTF:` or `HTF Context:` states context sufficiency/reliability when HTF is referenced.
+- `Line in the Sand:` prints the exact price or battle-zone band.
+- `Trigger:` prints the completed 5M close/hold condition.
+- `Trade Plan:` may appear only when app-owned entry, stop, T1, and T2 are priced.
+- Priced plans must show `Entry:`, `Stop:`, `Protected 5M swing:`, `T1:`, and `T2:`.
+- If the protected 5M swing stop is not priced, the card must say `WATCH ONLY`, `Stop: no priced stop yet`, and `Protected 5M swing: not confirmed`.
+- `Invalid:` must not duplicate source labels such as `Invalid if`.
+- `Chart:` must explicitly say whether the chart is attached to the Discord post.
 
 ### Trading logic impact
 
