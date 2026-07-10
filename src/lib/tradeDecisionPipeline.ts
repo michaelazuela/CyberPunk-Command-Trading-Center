@@ -516,6 +516,31 @@ function hasActionablePlanLevels(candidate: SetupCandidate): boolean {
   return candidate.direction !== 'NO TRADE' && (isValidPrice(candidate.entry) || isValidPrice(candidate.stop));
 }
 
+function hasPromotionHardBlocker(candidate: SetupCandidate | null | undefined): boolean {
+  return Boolean(
+    candidate?.decisionQualityHardBlocker ||
+    candidate?.targetRoom?.targetRoomStatus === 'blocked_before_t1'
+  );
+}
+
+function isApprovalEligibleCandidate(candidate: SetupCandidate): boolean {
+  return (
+    candidate.executionStatus === ExecutionStatus.Executable &&
+    hasActionablePlanLevels(candidate) &&
+    !hasPromotionHardBlocker(candidate)
+  );
+}
+
+function isConditionalVisibilityCandidate(candidate: SetupCandidate): boolean {
+  return (
+    hasActionablePlanLevels(candidate) &&
+    (
+      candidate.executionStatus === ExecutionStatus.Conditional ||
+      (candidate.executionStatus === ExecutionStatus.Executable && hasPromotionHardBlocker(candidate))
+    )
+  );
+}
+
 function clampQualityScore(value: number, max: number): number {
   return Math.max(0, Math.min(max, Math.round(value)));
 }
@@ -937,14 +962,8 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     chartContext.structuralLevels || []
   ), chartContext).sort(qualitySort);
   const finalSelectionCandidates = [...setupCandidates].sort(finalSelectionSort);
-  const selectedExecutable = finalSelectionCandidates.find((candidate) =>
-    candidate.executionStatus === ExecutionStatus.Executable &&
-    hasActionablePlanLevels(candidate)
-  ) || null;
-  const selectedConditional = finalSelectionCandidates.find((candidate) =>
-    candidate.executionStatus === ExecutionStatus.Conditional &&
-    hasActionablePlanLevels(candidate)
-  ) || null;
+  const selectedExecutable = finalSelectionCandidates.find(isApprovalEligibleCandidate) || null;
+  const selectedConditional = finalSelectionCandidates.find(isConditionalVisibilityCandidate) || null;
   const selectedCandidate = selectedExecutable || selectedConditional;
   const displayCandidate = selectedCandidate || chooseDisplayCandidate(setupCandidates);
   const blockedCandidates = setupCandidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Blocked);

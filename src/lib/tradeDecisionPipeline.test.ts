@@ -1355,6 +1355,99 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.finalTradePlan.entry, null);
   }],
 
+  ['18b. Target-room hard blocker cannot promote to ApprovedTrade', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        structuredChartContext: withStructuredBias(structuredContext({
+          keyLevels: {
+            currentPrice: 7598,
+            activeSwingHigh: 7606,
+            activeSwingLow: 7592.5,
+            nearestResistance: 7600,
+            nearestSupport: 7594.25,
+          },
+          candles: [
+            { index: 1, timestamp: '10:05', open: 7596, high: 7598, low: 7595, close: 7596.5, direction: 'doji', confidence: 'High' },
+            { index: 2, timestamp: '10:10', open: 7595, high: 7598, low: 7592.5, close: 7597.5, direction: 'bullish', isRejection: true, confidence: 'High' },
+            { index: 3, timestamp: '10:15', open: 7597.5, high: 7601, low: 7597.25, close: 7600.5, direction: 'bullish', isExpansion: true, confidence: 'High' },
+          ],
+          liquiditySweeps: [{
+            type: 'sweep',
+            direction: 'LONG',
+            level: 7594.25,
+            sweptLevelLabel: 'Sell-side liquidity',
+            reclaimed: true,
+            timestamp: '10:10',
+            confidence: 'High',
+            evidence: 'Price swept below sell-side liquidity and reclaimed.',
+          }],
+          displacementCandles: [{
+            direction: 'LONG',
+            candleIndex: 3,
+            timestamp: '10:15',
+            session: 'rth_morning',
+            open: 7597.5,
+            high: 7601,
+            low: 7597.25,
+            close: 7600.5,
+            bodyPoints: 3,
+            rangePoints: 3.75,
+            bodyToRange: 0.78,
+            closeLocation: 'top_quarter',
+            displacementScore: 6,
+            quality: 'confirmed',
+            leavesImbalance: false,
+            breaksStructure: true,
+            confidence: 'High',
+            evidence: 'Bullish expansion confirms reversal attempt.',
+          }],
+          targetObjectives: [{
+            label: 'Round Number 7600',
+            price: 7600,
+            direction: 'LONG',
+            source: 'app',
+            type: 'round_number',
+            confidence: 'High',
+            score: 80,
+            distancePoints: 2.5,
+            rMultiple: 0.48,
+            reason: '7600 reaction level sits before app T1.',
+          }],
+          marketStructure: {
+            trend: 'bullish',
+            higherHigh: false,
+            higherLow: true,
+            lowerHigh: false,
+            lowerLow: false,
+            marketStructureShift: true,
+            chopRangeCondition: false,
+            compressionCondition: false,
+            expansionCondition: true,
+          },
+          setupEvidence: {},
+          setupReadyFacts: {
+            sweepThenReclaim: true,
+            breakOfStructure: true,
+            notes: [],
+          },
+        }), 'LONG'),
+      }),
+    });
+    const turtleSoup = result.setupCandidates?.find((candidate) =>
+      candidate.setupType === SetupType.TurtleSoup &&
+      candidate.direction === 'LONG' &&
+      candidate.targetRoom?.targetRoomStatus === 'blocked_before_t1'
+    );
+
+    assert.ok(turtleSoup);
+    assert.equal(turtleSoup.targetRoom?.targetRoomStatus, 'blocked_before_t1');
+    assert.match(turtleSoup.decisionQualityHardBlocker || '', /Round Number 7600/);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate, null);
+    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.setupType, SetupType.TurtleSoup);
+    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.notEqual(result.finalTradePlan.status, TradeDecisionStatus.ApprovedTrade);
+  }],
+
   ['19. High-priority wide structure stop remains visible as advisory', () => {
     const result = assertSameSequence({
       result: baseResult({
