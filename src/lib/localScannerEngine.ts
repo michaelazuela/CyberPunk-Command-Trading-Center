@@ -1524,6 +1524,20 @@ function isHighQualityConditionalReviewCandidate(candidate: SetupCandidate | nul
   );
 }
 
+function isFullLevelTriggerPendingWatchCandidate(candidate: SetupCandidate | null | undefined): boolean {
+  const score = candidateDecisionQuality(candidate);
+  return Boolean(
+    candidate &&
+    (candidate.direction === 'LONG' || candidate.direction === 'SHORT') &&
+    candidate.executionStatus === ExecutionStatus.Conditional &&
+    candidate.blockReason === NoTradeReason.EntryTriggerPending &&
+    hasFullPlanLevels(candidate) &&
+    hasMeaningfulStructuredEvidence(candidate) &&
+    score !== null &&
+    score >= 80
+  );
+}
+
 function hasMeaningfulStructuredEvidence(candidate: SetupCandidate | null | undefined): boolean {
   if (!candidate) return false;
   return Boolean(
@@ -5996,6 +6010,12 @@ export function shouldSendScannerAlert(args: {
       return {
         shouldSend: true,
         reason: 'High-quality conditional review map qualified for Discord: app-owned entry, stop, targets, and line/zone context are present. Completed 5M proof and canExecute still control execution.',
+      };
+    }
+    if (isFullLevelTriggerPendingWatchCandidate(args.candidate)) {
+      return {
+        shouldSend: true,
+        reason: 'Full-level trigger-pending watch qualified for Discord: app-owned entry, stop, targets, and trigger context are present. Completed 5M proof and canExecute still control execution.',
       };
     }
     return args.candidate && args.confidence >= thresholds.conditional

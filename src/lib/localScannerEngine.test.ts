@@ -505,6 +505,46 @@ assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.shortBias.state,
 assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.shortBelow, 7445);
 assert.equal(highQualityTriggerPendingDeskState.canExecute, false);
 
+const fullLevelConflictTriggerPendingShort = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Bearish Turtle Soup Reversal',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  entry: 7577.5,
+  stop: 7581.75,
+  target1: 7571.25,
+  target2: 7569,
+  riskPoints: 4.25,
+  rankScore: 172,
+  decisionQualityScore: 85,
+  evidence: ['Buy-side sweep and bearish rejection are forming from structured OHLC.'],
+  missingEvidence: ['HTF conflict remains; completed 5M trigger/retest proof still required.'],
+  requiredTrigger: 'Bearish Turtle Soup: buy-side sweep above 7580.75, reclaim back below the swept high, then confirm downward rejection or expansion.',
+  invalidation: 'Invalid if price trades above the sweep wick structure stop near 7581.75.',
+});
+const fullLevelConflictTriggerPendingAlert = shouldSendScannerAlert({
+  state: 'TriggerPending',
+  confidence: 0,
+  window: morningWindow,
+  candidate: fullLevelConflictTriggerPendingShort,
+});
+assert.equal(fullLevelConflictTriggerPendingAlert.shouldSend, true);
+assert.match(fullLevelConflictTriggerPendingAlert.reason, /Full-level trigger-pending watch qualified/);
+assert.match(fullLevelConflictTriggerPendingAlert.reason, /canExecute still control execution/);
+const fullLevelConflictTriggerPendingVisibility = classifyScannerVisibility({
+  state: 'TriggerPending',
+  candidate: fullLevelConflictTriggerPendingShort,
+  window: morningWindow,
+  alertDecision: fullLevelConflictTriggerPendingAlert,
+  canExecute: false,
+});
+assert.equal(fullLevelConflictTriggerPendingVisibility.visibilityMode, 'POST_WATCH');
+assert.equal(fullLevelConflictTriggerPendingVisibility.discordAction, 'post_watch');
+assert.equal(fullLevelConflictTriggerPendingVisibility.authority.discordEligible, true);
+assert.equal(fullLevelConflictTriggerPendingVisibility.authority.executionEligible, false);
+
 const june30SweepMssLong = candidate({
   setupType: SetupType.SweepMssFvgRetrace,
   scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
