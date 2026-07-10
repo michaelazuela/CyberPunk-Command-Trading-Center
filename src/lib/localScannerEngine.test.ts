@@ -1221,6 +1221,32 @@ assert.equal(deskState.selectedCandidate?.setupType, strongCandidate.setupType);
 assert.equal(deskState.bestLongPlan?.setupType, strongCandidate.setupType);
 assert.equal(deskState.suppressionReason, 'Discord duplicate suppressed by durable ledger.');
 assert.equal(deskState.dataQualityStatus, 'partial');
+const noTargetCandidate = candidate({ target1: null, target2: null });
+const noTargetLifecycleTrace = buildCandidateLifecycleTrace({
+  candidates: [noTargetCandidate],
+  selectedCandidate: noTargetCandidate,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Regression fixture: targets omitted upstream.' },
+  canExecute: false,
+});
+const noTargetDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: noTargetCandidate,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: noTargetCandidate,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Regression fixture: targets omitted upstream.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: noTargetLifecycleTrace,
+  canExecute: false,
+});
+assert.equal(noTargetDeskState.deskTicket.entry, noTargetDeskState.deskTicket.lineInSand);
+assert.equal(noTargetDeskState.deskTicket.stop, 96);
+assert.equal(noTargetDeskState.deskTicket.t1, 106);
+assert.equal(noTargetDeskState.deskTicket.t2, 108);
 assert.equal(deskState.notes.some((note) => note.includes('does not change trade approvals')), true);
 assert.equal(deskState.promotion.sourceOfTruth, 'scanner_desk_state_promotion_path');
 assert.equal(deskState.promotion.currentStage, 'human_review_ready');
@@ -1746,6 +1772,7 @@ assert.equal(protectedBullishStackDeskState.primaryDeskPlay.longBias.state, 'pri
 assert.equal(protectedBullishStackDeskState.primaryDeskPlay.shortBias.state, 'secondary');
 assert.equal(protectedBullishStackDeskState.primaryDeskPlay.modelRouting.primaryDirection, 'LONG');
 assert.equal(protectedBullishStackDeskState.deskTicket.primaryDirection, 'LONG');
+assert.equal(protectedBullishStackDeskState.deskTicket.entry, protectedBullishStackDeskState.deskTicket.lineInSand);
 assert.notEqual(protectedBullishStackDeskState.deskTicket.entry, protectedBullishCounterShort.entry);
 assert.notEqual(protectedBullishStackDeskState.deskTicket.stop, protectedBullishCounterShort.stop);
 assert.notEqual(protectedBullishStackDeskState.deskTicket.t1, protectedBullishCounterShort.target1);

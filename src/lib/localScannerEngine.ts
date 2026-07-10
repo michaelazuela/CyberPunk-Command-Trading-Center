@@ -2990,10 +2990,16 @@ function buildDeskTicket(args: {
   const lineInSand = finiteDeskTicketPrice(levelSource?.lineInSand) ??
     finiteDeskTicketPrice(candidateSource?.activeRuleset?.htfLineInSand?.lineInSand) ??
     finiteDeskTicketPrice(primaryDirection === 'LONG' ? play.longAbove : primaryDirection === 'SHORT' ? play.shortBelow : play.lineInSand);
-  const entry = finiteDeskTicketPrice(levelSource?.entry) ?? finiteDeskTicketPrice(candidateSource?.entry);
+  const entry = lineInSand ?? finiteDeskTicketPrice(levelSource?.entry) ?? finiteDeskTicketPrice(candidateSource?.entry);
   const stop = finiteDeskTicketPrice(levelSource?.stop) ?? finiteDeskTicketPrice(candidateSource?.stop);
-  const t1 = finiteDeskTicketPrice(levelSource?.target1) ?? finiteDeskTicketPrice(candidateSource?.target1);
-  const t2 = finiteDeskTicketPrice(levelSource?.target2) ?? finiteDeskTicketPrice(candidateSource?.target2);
+  const targetDirection = primaryDirection === 'LONG' || primaryDirection === 'SHORT' ? primaryDirection : null;
+  const computedTargets = targetsFromEntryStop(targetDirection, entry, stop);
+  const t1 = finiteDeskTicketPrice(levelSource?.target1) ??
+    finiteDeskTicketPrice(candidateSource?.target1) ??
+    finiteDeskTicketPrice(computedTargets.target1);
+  const t2 = finiteDeskTicketPrice(levelSource?.target2) ??
+    finiteDeskTicketPrice(candidateSource?.target2) ??
+    finiteDeskTicketPrice(computedTargets.target2);
   const invalidationText = levelSource?.invalidation ||
     candidateSource?.invalidation ||
     (stop === null ? 'Invalidation requires protected 5M structure proof.' : `Invalid at protected structure stop ${stop.toFixed(2)}.`);
