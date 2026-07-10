@@ -1383,10 +1383,13 @@ function compactGeneralAlertLines(args: CompactDiscordSummaryArgs, candidate: Se
   const htfCautionLines = scannerHtfCautionLines(args, candidate).slice(0, 2);
   const riskLines = conditionalRiskLines(candidate, normalized).slice(0, 4);
   const htfLines = compactHtfSufficiencyLines(candidate);
+  const oneMinuteLines = oneMinuteRefinementLines(candidate);
   return [
     `Status: ${statusLine(status, candidate, normalized)}`,
     '',
     ...(status === 'EXECUTABLE' ? compactPlanLines(candidate, normalized) : compactReviewPlanLines(candidate, normalized)),
+    ...oneMinuteLines,
+    ...(oneMinuteLines.length ? [''] : []),
     '',
     ...levelTransitionLines,
     ...(levelTransitionLines.length ? [''] : []),
@@ -1399,6 +1402,23 @@ function compactGeneralAlertLines(args: CompactDiscordSummaryArgs, candidate: Se
     'Decision support only. No automated orders.',
     '',
     `Invalid: ${invalidInstruction(candidate.invalidation || normalized.invalidation, 'invalidation not available. Do not act without protected structure.')}`,
+  ];
+}
+
+function oneMinuteRefinementLines(candidate: SetupCandidate): string[] {
+  const refinement = candidate.executionRefinement1m;
+  if (
+    !refinement ||
+    refinement.status !== 'available' ||
+    !isFinitePrice(refinement.entry) ||
+    !isFinitePrice(refinement.stop) ||
+    !isFinitePrice(refinement.target1) ||
+    !isFinitePrice(refinement.target2)
+  ) {
+    return [];
+  }
+  return [
+    `1M refine: entry ${priceLine(refinement.entry)} | stop ${priceLine(refinement.stop)} | T1/T2 ${priceLine(refinement.target1)} / ${priceLine(refinement.target2)}. 5M remains authority.`,
   ];
 }
 
@@ -2212,6 +2232,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     suppressReason: 'Prior tactical zone already left; wait for fresh completed 5M proof.',
   });
   const levels = canonicalTicket.levels;
+  const oneMinuteLines = oneMinuteRefinementLines(candidate);
   const conditionalLevelLines = (): string[] => {
     if ((status === 'EXECUTABLE' || !currentVsZone || currentVsZone.state === 'inside') && levels) {
       return [
@@ -2293,6 +2314,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     ] : [
       ...conditionalLevelLines(),
     ]),
+    ...oneMinuteLines,
     '',
     ...(activeZoneLeftBehind
       ? ['Fresh invalidation/targets: pending after new completed 5M proof.']

@@ -85,6 +85,7 @@ export interface NinjaBridgeLiveContext {
   health: NinjaBridgeHealth | null;
   accounts: string[];
   snapshot: NinjaBridgeSnapshot | null;
+  bars1m?: NinjaBridgeBar[];
   bars5m: NinjaBridgeBar[];
   bars15m: NinjaBridgeBar[];
   bars60m: NinjaBridgeBar[];
@@ -870,6 +871,7 @@ function buildMultiTimeframeContext({
 }
 
 export function buildNinjaChartContext({
+  bars1m = [],
   bars5m,
   htfBars5m,
   bars15m = [],
@@ -883,6 +885,7 @@ export function buildNinjaChartContext({
   barTimestampMode = 'open',
   barTimeZone = 'eastern',
 }: {
+  bars1m?: NinjaBridgeBar[];
   bars5m: NinjaBridgeBar[];
   htfBars5m?: NinjaBridgeBar[];
   bars15m?: NinjaBridgeBar[];
@@ -896,6 +899,7 @@ export function buildNinjaChartContext({
   barTimestampMode?: BridgeBarTimestampMode;
   barTimeZone?: BridgeBarTimeZoneMode;
 }): Partial<ChartContext> | null {
+  const normalizedBars1m = normalizeBarsToOpenTimestamps(bars1m, 1, barTimestampMode);
   const normalizedBars5m = normalizeBarsToOpenTimestamps(bars5m, 5, barTimestampMode);
   const normalizedHtfBars5m = htfBars5m ? normalizeBarsToOpenTimestamps(htfBars5m, 5, barTimestampMode) : undefined;
   const normalizedBars15m = normalizeBarsToOpenTimestamps(bars15m, 15, barTimestampMode);
@@ -903,6 +907,7 @@ export function buildNinjaChartContext({
   const normalizedBars120m = normalizeBarsToOpenTimestamps(bars120m, 120, barTimestampMode);
   const normalizedBars240m = normalizeBarsToOpenTimestamps(bars240m, 240, barTimestampMode);
   const normalizationWarnings = [
+    ...barSequenceGapWarnings('1M refinement', normalizedBars1m, 1),
     ...barSequenceGapWarnings('5M', normalizedBars5m, 5),
     ...(normalizedHtfBars5m ? barSequenceGapWarnings('5M context', normalizedHtfBars5m, 5) : []),
     ...barSequenceGapWarnings('15M', normalizedBars15m, 15),
@@ -930,6 +935,9 @@ export function buildNinjaChartContext({
   const contextLow = allContextBars.length ? Math.min(...allContextBars.map(bar => bar.low)) : activeSwingLow;
   const trend = last.close > first.close ? 'bullish' : last.close < first.close ? 'bearish' : 'neutral';
   const candles = toCandleFacts(executionBars);
+  const oneMinuteCandles = toCandleFacts(normalizedBars1m.filter(bar =>
+    Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close)
+  ));
   const contextCandles = toCandleFacts(allContextBars, 240);
   const lastCandle = candles[candles.length - 1];
   const fvgZones = detectFvgZones(candles);
@@ -1029,6 +1037,7 @@ export function buildNinjaChartContext({
     },
     structuralLevels: enrichedStructuralLevels,
     candles,
+    oneMinuteCandles,
     fvgZones,
     liquidityEvents: liquidityFacts.liquiditySweeps,
     liquiditySweeps: liquidityFacts.liquiditySweeps,
@@ -1101,7 +1110,7 @@ export function buildNinjaChartContext({
       rMultiple: null,
       reason: `${level.label} from ${level.source} is available as target context. Strength=${level.strengthLabel || 'Low'} (${level.strengthScore || 0}).`,
     })),
-    marketContext: `NinjaTrader live ${sessionType} ${instrument} machine-compatible OHLC context. 4H=${multiTimeframeContext.alignment.macroBias}, 2H=${multiTimeframeContext.twoHour ? trendToBias(multiTimeframeContext.twoHour.trend) : 'UNKNOWN'}, 1H=${multiTimeframeContext.alignment.sessionBias}, 15M=${multiTimeframeContext.alignment.liquidityBias}, 5M=${multiTimeframeContext.alignment.executionBias}. RTH/ETH hierarchy includes prior day, prior 3 sessions, prior week, and prior month when cached bars are available. ETH spans the full futures session, including RTH; RTH is also tracked separately for precision. 5M remains execution authority. Latest close ${last.close}. Active swing ${activeSwingLow}-${activeSwingHigh}. Structural levels=${enrichedStructuralLevels.length}.`,
-    ocrText: `NinjaTrader Bridge OHLC facts: 5m=${executionBars.length}, 15m=${bars15m.length}, 1h=${bars60m.length}, 2h=${bars120m.length}, 4h=${bars240m.length}. Multi-timeframe context=${multiTimeframeContext.alignment.alignedDirection}. RTH/ETH hierarchy=prior day/3-day/week/month. Structural levels=${enrichedStructuralLevels.length}.`,
+    marketContext: `NinjaTrader live ${sessionType} ${instrument} machine-compatible OHLC context. 4H=${multiTimeframeContext.alignment.macroBias}, 2H=${multiTimeframeContext.twoHour ? trendToBias(multiTimeframeContext.twoHour.trend) : 'UNKNOWN'}, 1H=${multiTimeframeContext.alignment.sessionBias}, 15M=${multiTimeframeContext.alignment.liquidityBias}, 5M=${multiTimeframeContext.alignment.executionBias}. RTH/ETH hierarchy includes prior day, prior 3 sessions, prior week, and prior month when cached bars are available. ETH spans the full futures session, including RTH; RTH is also tracked separately for precision. 5M remains execution authority; 1M is optional entry/stop refinement only. Latest close ${last.close}. Active swing ${activeSwingLow}-${activeSwingHigh}. Structural levels=${enrichedStructuralLevels.length}.`,
+    ocrText: `NinjaTrader Bridge OHLC facts: 1m=${oneMinuteCandles.length}, 5m=${executionBars.length}, 15m=${bars15m.length}, 1h=${bars60m.length}, 2h=${bars120m.length}, 4h=${bars240m.length}. Multi-timeframe context=${multiTimeframeContext.alignment.alignedDirection}. RTH/ETH hierarchy=prior day/3-day/week/month. Structural levels=${enrichedStructuralLevels.length}.`,
   };
 }

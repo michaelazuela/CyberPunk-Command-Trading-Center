@@ -1534,6 +1534,46 @@ const tests: Array<[string, () => void]> = [
     assert.equal((result.target2 as number) % 0.25, 0);
   }],
 
+  ['21b. 1M execution refinement is available only after a 5M candidate exists and improves risk', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        structuredChartContext: fullModelOneContext({
+          oneMinuteCandles: [
+            { index: 1, timestamp: '10:01', open: 7399.5, high: 7400.25, low: 7399, close: 7400, direction: 'bullish', confidence: 'High' },
+            { index: 2, timestamp: '10:02', open: 7400, high: 7400.75, low: 7399.5, close: 7400.5, direction: 'bullish', confidence: 'High' },
+            { index: 3, timestamp: '10:03', open: 7400.5, high: 7401, low: 7400.25, close: 7400.75, direction: 'bullish', confidence: 'High' },
+          ],
+        }),
+      }),
+    });
+    const refinement = result.finalTradePlan.executionRefinement1m;
+
+    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.ok(refinement);
+    assert.equal(refinement.status, 'available');
+    assert.equal(refinement.boundary.createsSetup, false);
+    assert.equal(refinement.boundary.overridesFiveMinuteDirection, false);
+    assert.equal(refinement.boundary.approvesExecution, false);
+    assert.equal(refinement.boundary.changesCanExecute, false);
+    assert.equal(refinement.direction, result.finalTradePlan.direction);
+    assert.equal(refinement.entry, 7400.75);
+    assert.equal(refinement.stop, 7398.75);
+    assert.equal(refinement.target1, 7403.75);
+    assert.equal(refinement.target2, 7404.75);
+    assert.ok((refinement.riskPoints || 0) < (result.riskAssessment.riskPoints || Number.POSITIVE_INFINITY));
+  }],
+
+  ['21c. 1M execution refinement does not appear without 1M OHLC evidence', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        structuredChartContext: fullModelOneContext(),
+      }),
+    });
+
+    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.finalTradePlan.executionRefinement1m, null);
+  }],
+
   ['22. Low screenshot quality blocks an otherwise executable structured trade from approval', () => {
     const result = assertSameSequence({
       result: baseResult({

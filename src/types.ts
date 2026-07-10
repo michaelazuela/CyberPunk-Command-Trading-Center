@@ -737,6 +737,7 @@ export interface ChartContext {
   targetObjectives?: TargetObjective[];
   extractedLevels?: ExtractedLevelFact[];
   candles?: ChartCandleFact[];
+  oneMinuteCandles?: ChartCandleFact[];
   swings?: SwingPointFact[];
   fvgZones?: FvgZoneFact[];
   breakerZones?: BreakerZoneFact[];
@@ -1146,6 +1147,30 @@ export interface TargetRoomAssessment {
   targetRoomReason: string;
 }
 
+export interface OneMinuteExecutionRefinement {
+  status: 'available' | 'unavailable';
+  source: 'ninjatrader_ohlc_1m';
+  authority: 'entry_stop_refinement_only_after_5m_setup';
+  direction: 'LONG' | 'SHORT';
+  entry: number | null;
+  stop: number | null;
+  target1: number | null;
+  target2: number | null;
+  riskPoints: number | null;
+  protectedSwing: number | null;
+  completedBarTime: string | null;
+  trigger: string;
+  invalidation: string | null;
+  evidence: string[];
+  blockers: string[];
+  boundary: {
+    createsSetup: false;
+    overridesFiveMinuteDirection: false;
+    approvesExecution: false;
+    changesCanExecute: false;
+  };
+}
+
 export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
@@ -1215,6 +1240,7 @@ export interface SetupCandidate {
   decisionQualityRecommendation?: string;
   decisionQualityScorecard?: DecisionQualityScoreItem[];
   decisionQualityHardBlocker?: string | null;
+  executionRefinement1m?: OneMinuteExecutionRefinement | null;
   rankScore?: number;
   evidence: string[];
   missingEvidence: string[];
@@ -1248,6 +1274,7 @@ export interface FinalTradePlan {
   confidence: 'High' | 'Medium' | 'Low';
   reasoning: string;
   noTradeReason?: NoTradeReason | null;
+  executionRefinement1m?: OneMinuteExecutionRefinement | null;
 }
 
 export type EarlyMoveReviewStatus = 'already_triggered_no_fresh_entry';

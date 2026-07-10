@@ -10,6 +10,7 @@ import {
   FinalTradePlan,
   KeyLevels,
   NoTradeReason,
+  OneMinuteExecutionRefinement,
   RiskAssessment,
   RiskStatus,
   SetupCandidate,
@@ -236,6 +237,7 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
     targetObjectives: structured.targetObjectives,
     extractedLevels: structured.extractedLevels,
     candles: structured.candles,
+    oneMinuteCandles: structured.oneMinuteCandles,
     swings: structured.swings,
     fvgZones: structured.fvgZones,
     liquidityEvents: structured.liquidityEvents,
@@ -363,6 +365,83 @@ function targets(direction: Direction, entry: number | null, stop: number | null
   const target1 = actualTargets.target1;
   const target2 = actualTargets.target2;
   return { target1, target2, target: target1 };
+}
+
+function buildOneMinuteExecutionRefinement(
+  chartContext: ChartContext,
+  candidate: SetupCandidate | null
+): OneMinuteExecutionRefinement | null {
+  if (!candidate || (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT')) return null;
+  if (!isValidPrice(candidate.entry) || !isValidPrice(candidate.stop)) return null;
+  const oneMinuteCandles = (chartContext.oneMinuteCandles || []).filter((candle) =>
+    isValidPrice(candle.open) &&
+    isValidPrice(candle.high) &&
+    isValidPrice(candle.low) &&
+    isValidPrice(candle.close)
+  );
+  if (!oneMinuteCandles.length) return null;
+
+  const direction = candidate.direction;
+  const recent = oneMinuteCandles.slice(-8);
+  const latest = recent[recent.length - 1];
+  const tick = TRADE_RULES.targetModel.tickSize;
+  const entry = roundToTick(latest.close as number);
+  const protectedSwing = direction === 'LONG'
+    ? roundToTick(Math.min(...recent.map((candle) => candle.low as number)))
+    : roundToTick(Math.max(...recent.map((candle) => candle.high as number)));
+  const stop = direction === 'LONG'
+    ? roundToTick(protectedSwing - tick)
+    : roundToTick(protectedSwing + tick);
+  const refinedRisk = riskPoints(entry, stop);
+  const originalRisk = riskPoints(candidate.entry, candidate.stop);
+  const confirmsCandidateLine = direction === 'LONG'
+    ? entry >= candidate.entry
+    : entry <= candidate.entry;
+  const validStop = direction === 'LONG'
+    ? stop < entry
+    : stop > entry;
+  const improvesRisk = refinedRisk !== null && originalRisk !== null && refinedRisk < originalRisk;
+  const refinedTargets = targets(direction, entry, stop);
+  const blockers = [
+    ...(!confirmsCandidateLine ? [`1M close has not confirmed through the active 5M entry line ${roundToTick(candidate.entry)}.`] : []),
+    ...(!validStop ? ['Protected 1M swing stop is not directionally valid.'] : []),
+    ...(!improvesRisk ? ['1M protected swing does not improve risk versus the active 5M structure stop.'] : []),
+    ...(refinedTargets.target1 === null || refinedTargets.target2 === null ? ['1M refined app targets are unavailable.'] : []),
+  ];
+
+  return {
+    status: blockers.length ? 'unavailable' : 'available',
+    source: 'ninjatrader_ohlc_1m',
+    authority: 'entry_stop_refinement_only_after_5m_setup',
+    direction,
+    entry: blockers.length ? null : entry,
+    stop: blockers.length ? null : stop,
+    target1: blockers.length ? null : refinedTargets.target1,
+    target2: blockers.length ? null : refinedTargets.target2,
+    riskPoints: blockers.length ? null : refinedRisk,
+    protectedSwing,
+    completedBarTime: latest.timestamp || null,
+    trigger: direction === 'LONG'
+      ? `Optional 1M refinement: completed 1M close/reclaim at or above active 5M line ${roundToTick(candidate.entry)}.`
+      : `Optional 1M refinement: completed 1M close/rejection at or below active 5M line ${roundToTick(candidate.entry)}.`,
+    invalidation: blockers.length
+      ? null
+      : direction === 'LONG'
+        ? `1M refinement invalid below protected 1M swing stop ${stop}. 5M invalidation remains primary.`
+        : `1M refinement invalid above protected 1M swing stop ${stop}. 5M invalidation remains primary.`,
+    evidence: [
+      '1M refinement evaluated only after an app-owned 5M setup candidate existed.',
+      `Latest completed 1M close ${entry}; protected 1M swing ${protectedSwing}.`,
+      '5M structure remains execution authority; 1M cannot create or flip the setup.',
+    ],
+    blockers,
+    boundary: {
+      createsSetup: false,
+      overridesFiveMinuteDirection: false,
+      approvesExecution: false,
+      changesCanExecute: false,
+    },
+  };
 }
 
 function confidenceScore(confidence: Confidence): number {
@@ -972,6 +1051,10 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
   const computedTargets = selectedCandidate
     ? { target: selectedCandidate.target1 ?? null, target1: selectedCandidate.target1 ?? null, target2: selectedCandidate.target2 ?? null }
     : { target: null, target1: null, target2: null };
+  const oneMinuteRefinement = buildOneMinuteExecutionRefinement(chartContext, selectedCandidate);
+  if (selectedCandidate && oneMinuteRefinement) {
+    selectedCandidate.executionRefinement1m = oneMinuteRefinement;
+  }
   const liveWindow = sessionKey(input.sessionType);
   const isReplay = input.sessionType === 'replay_morning' || input.sessionType === 'replay_lunch';
   const windowStatus = isReplay ? 'active' : input.windowStatusOverride || getWindowStatus(liveWindow);
@@ -1115,6 +1198,7 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     confidence: selectedCandidate?.confidence || displayCandidate?.confidence || 'Low',
     reasoning: selectedCandidate?.nextAction || displayCandidate?.nextAction || preliminaryFailure?.message || 'No executable or conditional opportunity.',
     noTradeReason: finalNoTradeReason,
+    executionRefinement1m: oneMinuteRefinement,
   };
 
   auditTrail.push(

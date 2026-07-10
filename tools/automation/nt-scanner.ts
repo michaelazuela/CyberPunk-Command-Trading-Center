@@ -2989,6 +2989,16 @@ async function fetchFreshBridgeBars(config: ScannerConfig, timeframe: MarketBarT
   return historical.bars;
 }
 
+async function fetchOneMinuteRefinementBars(config: ScannerConfig, limit = 120): Promise<NinjaBridgeBar[]> {
+  try {
+    const response = await getNinjaBridgeBars(config.bridgeInstrument, '1m', limit, config.bridgeUrl);
+    return response.ok ? response.bars || [] : [];
+  } catch (error) {
+    console.warn(`[scanner-bridge] 1m refinement bars unavailable; 5M execution remains authority: ${formatError(error)}`);
+    return [];
+  }
+}
+
 export async function fetchSegmentedBridgeHistoryRepair(args: {
   config: ScannerConfig;
   timeframe: MarketBarTimeframe;
@@ -3668,10 +3678,12 @@ async function analysisFromBars(args: {
   session: LiveSession;
   tradeDate: string;
   bars: Record<MarketBarTimeframe, NinjaBridgeBar[]>;
+  bars1m?: NinjaBridgeBar[];
   htfBars5m?: NinjaBridgeBar[];
   asOf?: Date;
 }): Promise<AnalysisResult> {
   const baseChartContext = buildNinjaChartContext({
+    bars1m: args.bars1m,
     bars5m: args.bars['5m'],
     htfBars5m: args.htfBars5m,
     bars15m: args.bars['15m'],
@@ -9360,10 +9372,11 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   }
   config = { ...config, bridgeInstrument: instrumentResolution.instrument };
 
-  const [snapshot, positions, fetchedLiveBars] = await Promise.all([
+  const [snapshot, positions, fetchedLiveBars, liveBars1m] = await Promise.all([
     getNinjaBridgeSnapshot(config.bridgeInstrument, config.bridgeUrl).catch(() => null),
     getNinjaBridgePositions(config.account, config.bridgeUrl).catch(() => null),
     fetchLiveBars(config),
+    fetchOneMinuteRefinementBars(config),
   ]);
 
   const completed5mRecovery = await resolveCompletedFiveMinuteWithSelfHealing({
@@ -9662,7 +9675,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     }
     : liveBars;
   const macroAsOf = completed5m ? parseBridgeTime(completed5m.time, config.barTimeZone) || new Date() : new Date();
-  const analysis = await analysisFromBars({ config, session, tradeDate, bars, htfBars5m, asOf: macroAsOf });
+  const analysis = await analysisFromBars({ config, session, tradeDate, bars, bars1m: liveBars1m, htfBars5m, asOf: macroAsOf });
   analysis.structuredChartContext = attachScannerHistoryCoverage(analysis.structuredChartContext, historyCoverage);
   const appOwnedFailedPlanEventsFromState = appOwnedFailedPlanEventsFromScannerState({
     state,
