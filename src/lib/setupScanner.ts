@@ -2611,6 +2611,39 @@ function evidenceAlignedFiveMinuteCandleIndex(
   });
 }
 
+function completedFiveMinuteCloseThroughEvidenceIndex(
+  candles: ReturnType<typeof readableCompletedFiveMinuteCandles>,
+  direction: Direction,
+  decisionLevel: number | null,
+  evidenceTimestamp?: string | null,
+): number {
+  if (direction !== 'LONG' && direction !== 'SHORT' || decisionLevel === null) return -1;
+  const matchingIndexes = candles
+    .map((candle, index) => {
+      const close = parsePrice(candle.close);
+      if (close === null) return null;
+      const crossed = direction === 'LONG'
+        ? close >= decisionLevel
+        : close <= decisionLevel;
+      return crossed ? index : null;
+    })
+    .filter((index): index is number => index !== null);
+  if (!matchingIndexes.length) return -1;
+
+  const evidenceTime = Date.parse(String(evidenceTimestamp || ''));
+  if (Number.isFinite(evidenceTime)) {
+    const beforeOrAt = matchingIndexes
+      .filter((index) => {
+        const candleTime = Date.parse(String(candles[index]?.timestamp || ''));
+        return Number.isFinite(candleTime) && candleTime <= evidenceTime + FIVE_MINUTE_MS;
+      })
+      .at(-1);
+    if (beforeOrAt !== undefined) return beforeOrAt;
+  }
+
+  return matchingIndexes.at(-1) ?? -1;
+}
+
 function protectedFiveMinuteMssStopResult(chartContext: ChartContext, direction: Direction): ProtectedMssStopResult {
   const directionLabelText = direction === 'LONG' ? 'bullish' : direction === 'SHORT' ? 'bearish' : 'directional';
   if (direction !== 'LONG' && direction !== 'SHORT') {
@@ -2634,13 +2667,17 @@ function protectedFiveMinuteMssStopResult(chartContext: ChartContext, direction:
   if (!Number.isFinite(Date.parse(String(evidence.evidenceTimestamp || '')))) {
     return { stop: null, reason: 'Protected 5M MSS swing stop blocked: 5M MSS evidence timestamp is missing or invalid.' };
   }
+  const structuredBreakLevel = parsePrice(evidence.structureBreak?.brokenLevel);
   const evidenceIndex = evidenceAlignedFiveMinuteCandleIndex(candles, evidence.evidenceTimestamp, evidence.barTimestampMode);
-  if (evidenceIndex < 0) {
+  const fallbackEvidenceIndex = evidenceIndex >= 0
+    ? evidenceIndex
+    : completedFiveMinuteCloseThroughEvidenceIndex(candles, direction, structuredBreakLevel, evidence.evidenceTimestamp);
+  if (fallbackEvidenceIndex < 0) {
     return { stop: null, reason: 'Protected 5M MSS swing stop blocked: 5M MSS evidence timestamp does not align to a completed 5M candle in open-time or close-time mode.' };
   }
   const swingType: FiveMinuteSwing['type'] = direction === 'LONG' ? 'low' : 'high';
   const protectedSwing = confirmedFiveMinuteSwings(chartContext)
-    .filter((swing) => swing.type === swingType && swing.index < evidenceIndex)
+    .filter((swing) => swing.type === swingType && swing.index < fallbackEvidenceIndex)
     .at(-1);
   if (!protectedSwing) {
     return { stop: null, reason: `Protected 5M MSS swing stop blocked: no confirmed protected 5M swing ${swingType} exists before the MSS evidence candle.` };
@@ -3455,9 +3492,12 @@ function fiveMinuteMssCloseThroughRetestPlan(chartContext: ChartContext, directi
   }
 
   const candles = readableCompletedFiveMinuteCandles(chartContext);
-  const evidenceIndex = evidenceAlignedFiveMinuteCandleIndex(candles, evidence?.evidenceTimestamp, evidence?.barTimestampMode || 'open');
-  const evidenceCandle = evidenceIndex >= 0 ? candles[evidenceIndex] : null;
   const structuredBreakLevel = parsePrice(evidence?.structureBreak?.brokenLevel);
+  const alignedEvidenceIndex = evidenceAlignedFiveMinuteCandleIndex(candles, evidence?.evidenceTimestamp, evidence?.barTimestampMode || 'open');
+  const evidenceIndex = alignedEvidenceIndex >= 0
+    ? alignedEvidenceIndex
+    : completedFiveMinuteCloseThroughEvidenceIndex(candles, direction, structuredBreakLevel, evidence?.evidenceTimestamp);
+  const evidenceCandle = evidenceIndex >= 0 ? candles[evidenceIndex] : null;
   const decisionLevel = roundToTick(structuredBreakLevel ?? parsePrice(evidenceCandle?.close) ?? 0);
   if (!evidenceCandle || !decisionLevel) {
     return {

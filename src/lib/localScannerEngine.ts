@@ -2965,6 +2965,7 @@ function buildDeskTicket(args: {
   primaryDeskPlay: PrimaryDeskPlay;
   candidate: SetupCandidate | null;
   selectedCandidate: ScannerCandidateLifecycleTraceItem | null;
+  primaryLifecycleCandidate: ScannerCandidateLifecycleTraceItem | null;
   visibilityMetadata: ScannerVisibilityMetadata;
   htfContextStatus: DeskStateHtfContextStatus;
 }): DeskTicket {
@@ -2977,13 +2978,25 @@ function buildDeskTicket(args: {
       : args.candidate?.direction === 'LONG' || args.candidate?.direction === 'SHORT'
         ? args.candidate.direction
         : 'WAIT';
-  const lineInSand = finiteDeskTicketPrice(selected?.lineInSand) ??
-    finiteDeskTicketPrice(args.candidate?.activeRuleset?.htfLineInSand?.lineInSand) ??
+
+  const primaryLifecycleCandidate = args.primaryLifecycleCandidate?.direction === primaryDirection
+    ? args.primaryLifecycleCandidate
+    : null;
+  const selectedForPrimaryDirection = selected?.direction === primaryDirection ? selected : null;
+  const candidateForPrimaryDirection = args.candidate?.direction === primaryDirection ? args.candidate : null;
+  const levelSource = primaryLifecycleCandidate ?? selectedForPrimaryDirection;
+  const candidateSource = candidateForPrimaryDirection;
+
+  const lineInSand = finiteDeskTicketPrice(levelSource?.lineInSand) ??
+    finiteDeskTicketPrice(candidateSource?.activeRuleset?.htfLineInSand?.lineInSand) ??
     finiteDeskTicketPrice(primaryDirection === 'LONG' ? play.longAbove : primaryDirection === 'SHORT' ? play.shortBelow : play.lineInSand);
-  const entry = finiteDeskTicketPrice(selected?.entry) ?? finiteDeskTicketPrice(args.candidate?.entry);
-  const stop = finiteDeskTicketPrice(selected?.stop) ?? finiteDeskTicketPrice(args.candidate?.stop);
-  const t1 = finiteDeskTicketPrice(selected?.target1) ?? finiteDeskTicketPrice(args.candidate?.target1);
-  const t2 = finiteDeskTicketPrice(selected?.target2) ?? finiteDeskTicketPrice(args.candidate?.target2);
+  const entry = finiteDeskTicketPrice(levelSource?.entry) ?? finiteDeskTicketPrice(candidateSource?.entry);
+  const stop = finiteDeskTicketPrice(levelSource?.stop) ?? finiteDeskTicketPrice(candidateSource?.stop);
+  const t1 = finiteDeskTicketPrice(levelSource?.target1) ?? finiteDeskTicketPrice(candidateSource?.target1);
+  const t2 = finiteDeskTicketPrice(levelSource?.target2) ?? finiteDeskTicketPrice(candidateSource?.target2);
+  const invalidationText = levelSource?.invalidation ||
+    candidateSource?.invalidation ||
+    (stop === null ? 'Invalidation requires protected 5M structure proof.' : `Invalid at protected structure stop ${stop.toFixed(2)}.`);
   const htfReliability = play.htfProtectedStructureMap?.reliability || args.htfContextStatus;
   const htfStory = args.htfContextStatus === 'insufficient'
     ? 'HTF context insufficient; do not use HTF as structural confirmation.'
@@ -2993,24 +3006,24 @@ function buildDeskTicket(args: {
   const state = deskTicketStateFrom({
     marketMode: args.marketMode,
     visibilityMetadata: args.visibilityMetadata,
-    candidate: selected,
+    candidate: levelSource,
   });
   return {
     sourceOfTruth: 'scanner_single_active_desk_ticket',
     state,
     primaryDirection,
     lineInSand,
-    triggerCondition: deskTicketTrigger(primaryDirection, lineInSand, args.visibilityMetadata.nextTrigger || selected?.requiredTrigger || selected?.nextTrigger || play.nextTrigger),
+    triggerCondition: deskTicketTrigger(primaryDirection, lineInSand, levelSource?.requiredTrigger || levelSource?.nextTrigger || args.visibilityMetadata.nextTrigger || play.nextTrigger),
     entry,
     stop,
     t1,
     t2,
     invalidation: stop,
-    invalidationText: selected?.invalidation || args.candidate?.invalidation || play.invalidation || (stop === null ? 'Invalidation requires protected 5M structure proof.' : `Invalid at protected structure stop ${stop.toFixed(2)}.`),
+    invalidationText,
     htfStatus: args.htfContextStatus,
     htfStory,
     oppositeScenario: deskTicketOppositeScenario({ primaryDirection, primaryDeskPlay: play }),
-    sourceCandidateKey: selected?.candidateKey || null,
+    sourceCandidateKey: levelSource?.candidateKey || null,
     humanReviewOnly: true,
     noAutomatedOrders: true,
     displayBoundary: 'trader_facing_ticket_only_can_execute_internal',
@@ -4236,6 +4249,11 @@ function lifecycleItemPrimaryEligible(
   return lifecycleItemHasHtfSupport(item) && !lifecycleItemHasHtfConflict(item);
 }
 
+function lifecycleItemHasCompletedInvalidationProof(item: ScannerCandidateLifecycleTraceItem | null | undefined): boolean {
+  if (!item) return false;
+  return /invalidated|stand down|zone_failed|traded through the structure stop|completed 5m .*invalidates/i.test(lifecycleItemReadinessText(item));
+}
+
 function htfFvgMicroMssPrimaryDirection(trace: ScannerCandidateLifecycleTrace): Exclude<DeskPlayDirection, 'WAIT'> | null {
   const long = lifecycleItemIsHtfFvgMicroMssReaction(trace.bestLongPlan) ? trace.bestLongPlan : null;
   const short = lifecycleItemIsHtfFvgMicroMssReaction(trace.bestShortPlan) ? trace.bestShortPlan : null;
@@ -4289,6 +4307,16 @@ function selectPrimaryDeskPlayDirection(
   htfProtectedStructureMap: DeskHtfProtectedStructureMap,
   htfFvgReactionMemory?: HtfFvgReactionMemory | null,
 ): DeskPlayDirection {
+  const protectedDirection = protectedStructureSupportDirection(htfProtectedStructureMap);
+  const protectedLifecycleItem = protectedDirection === 'LONG'
+    ? trace.bestLongPlan
+    : protectedDirection === 'SHORT'
+      ? trace.bestShortPlan
+      : null;
+  if (protectedDirection && protectedLifecycleItem && !lifecycleItemHasCompletedInvalidationProof(protectedLifecycleItem)) {
+    return protectedDirection;
+  }
+
   const htfFvgMicroMssDirection = htfFvgMicroMssPrimaryDirection(trace);
   if (htfFvgMicroMssDirection) return htfFvgMicroMssDirection;
   const htfFvgDirection = htfFvgMemoryRoutableDirection(trace, htfFvgReactionMemory || null);
@@ -4883,10 +4911,15 @@ function buildPrimaryDeskPlay(args: {
     : selectedPrimaryDirection === 'SHORT'
       ? args.candidateLifecycleTrace.bestShortPlan
       : null;
+  const protectedStructurePrimaryHeld = trendConfirmation.status === 'aligned' &&
+    trendConfirmation.direction === selectedPrimaryDirection &&
+    selectedPrimaryLifecycleItem &&
+    !lifecycleItemHasCompletedInvalidationProof(selectedPrimaryLifecycleItem);
   const primaryDirection = primaryCampaignStack &&
     primaryCampaignStack.campaignDirection !== selectedPrimaryDirection &&
     primaryCampaignStack.stackStatus !== 'invalidated' &&
     primaryCampaignStack.stackStatus !== 'stand_down' &&
+    !protectedStructurePrimaryHeld &&
     !lifecycleItemHasHtfSupport(selectedPrimaryLifecycleItem)
     ? primaryCampaignStack.campaignDirection
     : selectedPrimaryDirection;
@@ -5191,6 +5224,11 @@ export function buildDeskState(args: {
     primaryDeskPlay,
     candidate,
     selectedCandidate: args.candidateLifecycleTrace.selectedCandidate,
+    primaryLifecycleCandidate: primaryDeskPlay.direction === 'LONG'
+      ? args.candidateLifecycleTrace.bestLongPlan
+      : primaryDeskPlay.direction === 'SHORT'
+        ? args.candidateLifecycleTrace.bestShortPlan
+        : null,
     visibilityMetadata: args.visibilityMetadata,
     htfContextStatus,
   });

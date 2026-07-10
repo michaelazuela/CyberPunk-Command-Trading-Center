@@ -1655,6 +1655,108 @@ assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.approvalB
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.approvalBoundary.changesTradeApprovals, false);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.approvalBoundary.createsNewModel, false);
 
+const protectedBullishLongPlan = candidate({
+  setupType: SetupType.IntradayMssMicroContinuation,
+  scenarioLabel: 'Intraday MSS Micro Continuation',
+  direction: 'LONG',
+  detectedStatus: SetupCandidateStatus.Possible,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  entry: null,
+  stop: null,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  rankScore: 190,
+  decisionQualityScore: 48,
+  evidence: [
+    'bullish 15M MSS/displacement context confirmed from NinjaTrader OHLC timeframe evidence',
+    'bullish 5M MSS confirmed from NinjaTrader OHLC timeframe evidence',
+  ],
+  missingEvidence: [
+    'Protected 5M MSS swing stop',
+    'Entry, protected 5M stop, T1, or T2 is missing.',
+  ],
+  requiredTrigger: 'Human-review long: completed bullish 5M MSS plus bullish 15M MSS/displacement context.',
+  nextAction: 'Intraday MSS micro-continuation watch. No chase. Wait for completed 5M proof.',
+});
+const protectedBullishCounterShort = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Bearish Turtle Soup Reversal',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  entry: 7615.75,
+  stop: 7619.5,
+  target1: 7610.25,
+  target2: 7608.25,
+  riskPoints: 3.75,
+  rankScore: 253,
+  decisionQualityScore: 87,
+  evidence: ['Buy-side liquidity was swept and reclaimed.'],
+  missingEvidence: ['Completed 5M trigger/retest proof still required.'],
+  requiredTrigger: 'Bearish Turtle Soup: buy-side sweep above 7616.75, reclaim back below the swept high.',
+  nextAction: 'Preferred plan: take only the reclaim-confirmed reversal; do not chase.',
+});
+const protectedBullishCounterShortCompanion = candidate({
+  ...protectedBullishCounterShort,
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
+  entry: 7614.75,
+  stop: 7620.25,
+  target1: 7606.5,
+  target2: 7603.75,
+  riskPoints: 5.5,
+  rankScore: 230,
+  decisionQualityScore: 83,
+});
+const protectedBullishStackTrace = buildCandidateLifecycleTrace({
+  candidates: [protectedBullishLongPlan, protectedBullishCounterShort, protectedBullishCounterShortCompanion],
+  selectedCandidate: protectedBullishCounterShort,
+  state: 'TriggerPending',
+  window: morningWindow,
+  alertDecision: { shouldSend: true, reason: 'Regression fixture: countertrend short was visible while protected 15M+5M structure stayed bullish.' },
+  canExecute: false,
+});
+const protectedBullishStackDeskState = buildDeskState({
+  state: 'TriggerPending',
+  candidate: {
+    ...protectedBullishCounterShort,
+    htfLiquidityDrawState: june12ProtectedBullishHtfState,
+  },
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'TriggerPending',
+    candidate: protectedBullishCounterShort,
+    window: morningWindow,
+    alertDecision: { shouldSend: true, reason: 'Regression fixture: post watch.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: protectedBullishStackTrace,
+  htfLiquidityDrawState: june12ProtectedBullishHtfState,
+  currentPrice: 7618,
+  canExecute: false,
+});
+assert.equal(protectedBullishStackDeskState.selectedCandidate?.direction, 'SHORT');
+assert.equal(protectedBullishStackDeskState.primaryDeskPlay.trendConfirmation.direction, 'LONG');
+assert.equal(protectedBullishStackDeskState.primaryDeskPlay.trendConfirmation.status, 'aligned');
+assert.equal(protectedBullishStackDeskState.primaryDeskPlay.sameSideCampaignStack?.campaignDirection, 'SHORT');
+assert.equal(protectedBullishStackDeskState.primaryDeskPlay.direction, 'LONG');
+assert.equal(protectedBullishStackDeskState.primaryDeskPlay.longBias.state, 'primary');
+assert.equal(protectedBullishStackDeskState.primaryDeskPlay.shortBias.state, 'secondary');
+assert.equal(protectedBullishStackDeskState.primaryDeskPlay.modelRouting.primaryDirection, 'LONG');
+assert.equal(protectedBullishStackDeskState.deskTicket.primaryDirection, 'LONG');
+assert.notEqual(protectedBullishStackDeskState.deskTicket.entry, protectedBullishCounterShort.entry);
+assert.notEqual(protectedBullishStackDeskState.deskTicket.stop, protectedBullishCounterShort.stop);
+assert.notEqual(protectedBullishStackDeskState.deskTicket.t1, protectedBullishCounterShort.target1);
+assert.notEqual(protectedBullishStackDeskState.deskTicket.t2, protectedBullishCounterShort.target2);
+assert.match(protectedBullishStackDeskState.deskTicket.invalidationText, /below protected swing low/i);
+assert.doesNotMatch(protectedBullishStackDeskState.deskTicket.invalidationText, /above.*7619|above.*7620|sweep wick structure stop/i);
+assert.equal(protectedBullishStackDeskState.deskTicket.oppositeScenario?.direction, 'SHORT');
+assert.ok(!protectedBullishStackDeskState.deskTicket.sourceCandidateKey?.includes('TurtleSoup|SHORT'));
+assert.equal(protectedBullishStackDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(protectedBullishStackDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
+
 const june12DataLimitedProtectedHoldDeskState = buildDeskState({
   state: 'Conditional',
   candidate: june12UnsupportedShort,

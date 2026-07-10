@@ -2647,7 +2647,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(micro.evidence.some((item) => item.includes('Protected 5M MSS swing stop: 7338.75')));
   }],
 
-  ['Intraday MSS Micro Continuation long uses latest protected 5M retest swing after close-through campaign activation', () => {
+  ['Intraday MSS Micro Continuation long uses completed 5M OHLC close-through fallback when MSS timestamp is slightly misaligned', () => {
     const context = htfMssContext('LONG', {
       sessionType: 'lunch',
       chartTimestamp: '2026-06-10T14:20:00-04:00',
@@ -2662,7 +2662,7 @@ const tests: Array<[string, () => void]> = [
       riskPoints: null,
       timeframeMssEvidence: timeframeMssEvidenceLayer('bullish', {
         '5M': {
-          evidenceTimestamp: '2026-06-10T13:10:00-04:00',
+          evidenceTimestamp: '2026-06-10T13:12:00-04:00',
           barTimestampMode: 'open',
           structureBreak: {
             type: 'mss',
@@ -2722,6 +2722,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(micro.evidence.some((item) => item.includes('close-through activated the campaign at 7320.25')));
     assert.ok(micro.evidence.some((item) => item.includes('latest protected 5M retest swing 7301.00')));
     assert.ok(micro.evidence.some((item) => item.includes('Protected 5M MSS swing stop: 7300.75')));
+    assert.ok(!micro.missingEvidence.some((item) => item.includes('timestamp does not align')));
   }],
 
   ['Intraday MSS Micro Continuation accepts close-time MSS evidence timestamp for an open-time completed 5M candle', () => {
