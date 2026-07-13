@@ -4160,6 +4160,37 @@ assert.equal(missedNoChaseDeskPlaySuppression.shouldPost, false);
 assert.equal(missedNoChaseDeskPlaySuppression.category, 'missed_no_chase');
 assert.match(missedNoChaseDeskPlaySuppression.reason, /missed\/no-chase/);
 assert.doesNotMatch(missedNoChaseDeskPlaySuppression.reason, /completed 5M data is stale/i);
+const lineCrossNoChaseTransitionDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-07-12',
+  instrument: 'MES',
+  session: 'evening',
+  deskPlayKey: '2026-07-12:MES:evening:DESK_PLAN_REFRESH:2026-07-12T21:05:00.0000000:SHORT-line-cross-no-chase',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    htfContextStatus: 'sufficient',
+    dataQualityStatus: 'ready',
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      direction: 'SHORT',
+      lineInSand: 7605.75,
+      shortBelow: 7605.75,
+      longAbove: 7610,
+      shortBias: { state: 'primary', lineInSand: 7605.75, tradeReadiness: { status: 'missed_no_chase' } },
+      longBias: { state: 'secondary', lineInSand: 7610, tradeReadiness: { status: 'not_aligned' } },
+    },
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7593.75,
+  latestCompleted5m: '2026-07-12T21:05:00.0000000',
+  completed5m: { time: '2026-07-12T21:05:00.0000000', open: 7597, high: 7598, low: 7592.5, close: 7593.75, volume: 3389 },
+  staleReason: 'T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry.',
+});
+assert.equal(lineCrossNoChaseTransitionDeskPlaySuppression.shouldPost, true);
+assert.equal(lineCrossNoChaseTransitionDeskPlaySuppression.category, 'post');
+assert.match(lineCrossNoChaseTransitionDeskPlaySuppression.reason, /line-cross transition update/);
+assert.match(lineCrossNoChaseTransitionDeskPlaySuppression.reason, /completed 5M close 7593\.75/);
+assert.match(lineCrossNoChaseTransitionDeskPlaySuppression.reason, /fresh entry is missed\/no-chase/);
+assert.match(lineCrossNoChaseTransitionDeskPlaySuppression.reason, /canExecute remains false/);
 const waitHighQualityConditionalDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-23',
   instrument: 'MES',

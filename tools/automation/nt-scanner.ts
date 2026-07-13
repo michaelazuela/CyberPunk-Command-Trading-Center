@@ -6335,6 +6335,42 @@ function scannerEarlyLineInSandWatchReason(args: {
   return `${direction} early line-in-sand watch is eligible for Discord as WATCH ONLY / NOT EXECUTION APPROVAL: ${triggerWord} ${line.toFixed(2)}; current ${currentText === null ? 'N/A' : currentText.toFixed(2)}; readiness ${readiness}; HTF context ${htfStatus}; data ${dataStatus}; ${levels}; required completed 5M proof: ${proof}; stand down: ${standDown}; no automated orders; canExecute remains false.`;
 }
 
+function scannerLineCrossNoChaseTransitionReason(args: {
+  deskState: DeskState;
+  completed5m?: NinjaBridgeBar | null;
+  currentPrice: number | null;
+  staleReason?: string | null;
+}): string | null {
+  if (args.deskState.canExecute) return null;
+  if (args.deskState.dataQualityStatus === 'data_limited' || args.deskState.htfContextStatus === 'insufficient') return null;
+  if (!/already|stale|missed|no chase|passed|invalidated|reached/i.test(args.staleReason || '')) return null;
+
+  const play = args.deskState.primaryDeskPlay;
+  const direction = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : null;
+  if (!direction) return null;
+  const line = roundNullableTradePrice(play.activeTacticalLine?.activeLine) ??
+    roundNullableTradePrice(play.activeTacticalZone?.anchorLine) ??
+    roundNullableTradePrice(deskPlayLineForDirection(args.deskState, direction)) ??
+    roundNullableTradePrice(play.lineInSand);
+  const completedClose = roundNullableTradePrice(args.completed5m?.close);
+  if (line === null || completedClose === null) return null;
+
+  const crossed = direction === 'LONG'
+    ? completedClose >= line + 0.25
+    : completedClose <= line - 0.25;
+  if (!crossed) return null;
+
+  const current = roundNullableTradePrice(args.currentPrice);
+  const opposite = scannerOppositeDirection(direction);
+  const nextProof = direction === 'LONG'
+    ? `wait for completed 5M retest/hold above ${line.toFixed(2)} or fresh higher protected-structure break`
+    : `wait for completed 5M retest/rejection below ${line.toFixed(2)} or fresh lower protected-structure break`;
+  const failureText = direction === 'LONG'
+    ? `LONG line crossed above ${line.toFixed(2)}`
+    : `SHORT line crossed below ${line.toFixed(2)}`;
+  return `${direction} line-cross transition update is eligible for Discord as REVIEW ONLY / NOT EXECUTION APPROVAL: ${failureText} by completed 5M close ${completedClose.toFixed(2)}; current ${current === null ? 'N/A' : current.toFixed(2)}; fresh entry is missed/no-chase, so no entry/stop/T1/T2 execution ticket is promoted; ${nextProof}. Opposite ${opposite} remains secondary until a completed 5M reclaim invalidates the line-cross state. canExecute remains false.`;
+}
+
 export function evaluateScannerDeskPlayDiscordSuppression(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -6345,6 +6381,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
   currentPrice: number | null;
   latestCompleted5m?: string | null;
+  completed5m?: NinjaBridgeBar | null;
   staleReason?: string | null;
   now?: Date;
 }): ScannerDeskPlayDiscordSuppressionDecision {
@@ -6373,6 +6410,15 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     highQualityReviewCandidate,
   });
   if (args.staleReason && /already|stale|missed|no chase|passed|invalidated|reached/i.test(args.staleReason)) {
+    const lineCrossNoChaseTransitionReason = scannerLineCrossNoChaseTransitionReason({
+      deskState: args.deskState,
+      completed5m: args.completed5m,
+      currentPrice: args.currentPrice,
+      staleReason: args.staleReason,
+    });
+    if (lineCrossNoChaseTransitionReason) {
+      return scannerDeskPlaySuppressionPost(lineCrossNoChaseTransitionReason);
+    }
     const reactionOnlyNoChase = /reaction level|target\/reaction|decision line/i.test(args.staleReason) &&
       !/invalidated|protected stop|active tactical zone|active tactical line|t1|t2|stale/i.test(args.staleReason);
     if (reactionOnlyNoChase && targetToLinePromotionReason) {
@@ -10365,6 +10411,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       normalized,
       currentPrice,
       latestCompleted5m: completed5m.time,
+      completed5m,
       staleReason: stale.reason,
     });
     if (!deskPlaySuppression.shouldPost) {
