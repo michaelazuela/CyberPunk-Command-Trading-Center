@@ -359,6 +359,8 @@ export type ScannerDeskPlayDiscordSuppressionCategory =
   | 'passed_or_invalidated_levels'
   | 'duplicate_refresh';
 
+const SCANNER_DESK_PLAY_PUBLIC_REFRESH_MINUTES = 20;
+
 export interface ScannerDeskPlayDiscordSuppressionDecision {
   shouldPost: boolean;
   category: ScannerDeskPlayDiscordSuppressionCategory;
@@ -6005,6 +6007,50 @@ function scannerDeskPlanRefreshMateriallyMatches(
     normalizeDeskPlayInstructionText(previous.readiness) === normalizeDeskPlayInstructionText(current.readiness);
 }
 
+function minutesBetweenIso(startIso: string | null | undefined, end: Date): number | null {
+  if (!startIso) return null;
+  const startMs = new Date(startIso).getTime();
+  const endMs = end.getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return null;
+  return (endMs - startMs) / 60000;
+}
+
+function scannerDeskPlayPublicCadenceHoldReason(args: {
+  previous: ScannerDeskPlanRefreshLedgerRecord | null;
+  current: ScannerDeskPlanRefreshLedgerRecord;
+  now: Date;
+  highQualityReviewCandidate: SetupCandidate | null;
+  tacticalCampaignMap: ScannerTacticalCampaignMap;
+  htfFvgReviewMapReason: string | null;
+  targetToLinePromotionReason: string | null;
+}): string | null {
+  const previous = args.previous;
+  if (!previous) return null;
+  const elapsedMinutes = minutesBetweenIso(previous.sentAt, args.now);
+  if (elapsedMinutes === null || elapsedMinutes < 0 || elapsedMinutes >= SCANNER_DESK_PLAY_PUBLIC_REFRESH_MINUTES) return null;
+  if (args.highQualityReviewCandidate || args.tacticalCampaignMap.eligible || args.htfFvgReviewMapReason || args.targetToLinePromotionReason) return null;
+  if (previous.activeCampaignId !== args.current.activeCampaignId) return null;
+
+  const currentReadiness = normalizeDeskPlayInstructionText(args.current.readiness);
+  const previousReadiness = normalizeDeskPlayInstructionText(previous.readiness);
+  const directionChanged = previous.direction !== args.current.direction;
+  const lineMovedPoints = [
+    Math.abs((previous.lineInSand ?? args.current.lineInSand ?? 0) - (args.current.lineInSand ?? previous.lineInSand ?? 0)),
+    Math.abs((previous.activeTacticalLine ?? args.current.activeTacticalLine ?? 0) - (args.current.activeTacticalLine ?? previous.activeTacticalLine ?? 0)),
+  ].filter(Number.isFinite).reduce((max, value) => Math.max(max, value), 0);
+
+  const readinessImproved = previousReadiness !== currentReadiness &&
+    currentReadiness !== 'not_aligned' &&
+    currentReadiness !== 'missed_no_chase' &&
+    currentReadiness !== 'blocked' &&
+    currentReadiness !== 'data_limited';
+  const materialLineMove = lineMovedPoints >= 8 && currentReadiness !== 'not_aligned';
+  if (readinessImproved || materialLineMove) return null;
+  if (directionChanged && currentReadiness !== 'not_aligned' && currentReadiness !== 'missed_no_chase') return null;
+
+  return `Desk Play kept local by public cadence guard: latest Desk Play was posted ${elapsedMinutes.toFixed(1)} minutes ago, and this update is an internal review-map drift (${previous.direction}->${args.current.direction}, readiness ${previousReadiness || 'none'}->${currentReadiness || 'none'}) without a fresh high-quality plan, HTF/FVG promotion, target-to-line promotion, or tactical campaign upgrade. Full bar-by-bar evidence remains in audit JSON.`;
+}
+
 function latestDeskPlanRefreshRecord(args: {
   sent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
   tradeDate: string;
@@ -6480,6 +6526,22 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
       'duplicate_refresh',
       'Desk Play suppressed because primary side, readiness, HTF support/conflict, action state, and protected-structure map are unchanged from the latest posted Desk Play.',
       previousRecord.materialCadenceFingerprint || previousRecord.fingerprint,
+    );
+  }
+  const publicCadenceHoldReason = scannerDeskPlayPublicCadenceHoldReason({
+    previous: previousRecord,
+    current: currentRecord,
+    now: args.now || new Date(),
+    highQualityReviewCandidate,
+    tacticalCampaignMap,
+    htfFvgReviewMapReason,
+    targetToLinePromotionReason,
+  });
+  if (publicCadenceHoldReason) {
+    return scannerDeskPlaySuppressionBlocked(
+      'duplicate_refresh',
+      publicCadenceHoldReason,
+      previousRecord?.materialCadenceFingerprint || previousRecord?.fingerprint || null,
     );
   }
   if (readiness === 'data_limited' && hasReferenceLevels) {

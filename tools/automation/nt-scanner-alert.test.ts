@@ -3268,6 +3268,61 @@ assert.equal(duplicateDeskPlaySuppression.category, 'duplicate_refresh');
 assert.match(duplicateDeskPlaySuppression.previousFingerprint || '', /direction=SHORT/);
 assert.equal(duplicateDeskPlaySuppression.changesTradingLogic, false);
 assert.equal(duplicateDeskPlaySuppression.changesCanExecute, false);
+const noisyRecentReviewMapFlipDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: repeatedBaseDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    bestLongPlan: {
+      setupType: SetupType.IntradayMssMicroContinuation,
+      direction: 'LONG',
+      entry: 7417,
+      stop: 7411,
+      target1: 7426,
+      target2: 7429,
+      riskPoints: 6,
+      modelConfidenceScore: 44,
+      decisionQualityScore: 44,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      direction: 'LONG',
+      lineInSand: 7417,
+      activeTacticalLine: { direction: 'LONG', activeLine: 7417, source: 'test', migrated: false },
+      activeTacticalZone: null,
+      targetReactionLevel: null,
+      longBias: {
+        state: 'countertrend_review',
+        lineInSand: 7417,
+        tradeReadiness: { status: 'not_aligned' },
+      },
+      shortBias: {
+        state: 'primary',
+        lineInSand: 7416.5,
+        tradeReadiness: { status: 'wait_for_pullback_or_new_5m_structure' },
+      },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '4H', bias: 'BEAR', protectedStructure: 7424.75, confirmationLine: 7416.5 },
+          { timeframe: '1H', bias: 'BEAR', protectedStructure: 7424.75, confirmationLine: 7416.5 },
+          { timeframe: '5M', bias: 'BULL', protectedStructure: 7411, confirmationLine: 7417 },
+        ],
+      },
+    },
+  } as any,
+  deskPlanRefreshSent: { [firstDeskPlanRefreshKey]: previousDeskPlanRefreshRecord },
+  currentPrice: 7417,
+  latestCompleted5m: '2026-06-08T15:45:00.0000000',
+  now: new Date('2026-06-08T15:45:30.000Z'),
+});
+assert.equal(noisyRecentReviewMapFlipDeskPlaySuppression.shouldPost, false);
+assert.equal(noisyRecentReviewMapFlipDeskPlaySuppression.category, 'duplicate_refresh');
+assert.match(noisyRecentReviewMapFlipDeskPlaySuppression.reason, /public cadence guard/);
+assert.match(noisyRecentReviewMapFlipDeskPlaySuppression.reason, /audit JSON/);
+assert.equal(noisyRecentReviewMapFlipDeskPlaySuppression.changesTradingLogic, false);
+assert.equal(noisyRecentReviewMapFlipDeskPlaySuppression.changesCanExecute, false);
 const sameStateShiftedLevelsDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
