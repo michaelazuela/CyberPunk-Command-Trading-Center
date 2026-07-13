@@ -7903,11 +7903,10 @@ function scannerDeskStateHoldReason(deskState: DeskState): string {
     : 'Scanner held the post because DeskState is not a fresh live Discord plan.';
 }
 
-function scannerLiveHoldNoticeKey(args: {
+export function scannerLiveHoldNoticeKey(args: {
   tradeDate: string;
   instrument: Instrument;
   session: LiveSession;
-  completed5m: NinjaBridgeBar | null;
   deskState: DeskState;
   reason: string;
 }): string {
@@ -7916,11 +7915,32 @@ function scannerLiveHoldNoticeKey(args: {
     args.instrument,
     args.session,
     'live-hold',
-    args.completed5m?.time || 'no-completed-5m',
     args.deskState.visibilityMode || 'unknown',
     args.deskState.discordAction || 'unknown',
     args.reason.replace(/\s+/g, ' ').slice(0, 160),
   ].join('|');
+}
+
+function scannerLegacyLiveHoldNoticeAlreadySent(args: {
+  sent: Record<string, string>;
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  deskState: DeskState;
+  reason: string;
+}): boolean {
+  const prefix = [
+    args.tradeDate,
+    args.instrument,
+    args.session,
+    'live-hold',
+  ].join('|') + '|';
+  const suffix = [
+    args.deskState.visibilityMode || 'unknown',
+    args.deskState.discordAction || 'unknown',
+    args.reason.replace(/\s+/g, ' ').slice(0, 160),
+  ].join('|');
+  return Object.keys(args.sent).some((key) => key.startsWith(prefix) && key.endsWith(`|${suffix}`));
 }
 
 export function buildScannerLiveHoldNoticePayload(args: {
@@ -8009,11 +8029,18 @@ async function sendScannerLiveHoldNoticeIfNeeded(args: {
     tradeDate: args.tradeDate,
     instrument: args.config.instrument,
     session: args.session,
-    completed5m: args.completed5m,
     deskState: args.deskState,
     reason,
   });
-  if (args.state.liveHoldNoticeSent[key]) {
+  if (args.state.liveHoldNoticeSent[key] || scannerLegacyLiveHoldNoticeAlreadySent({
+    sent: args.state.liveHoldNoticeSent,
+    tradeDate: args.tradeDate,
+    instrument: args.config.instrument,
+    session: args.session,
+    deskState: args.deskState,
+    reason,
+  })) {
+    args.state.liveHoldNoticeSent[key] = args.state.liveHoldNoticeSent[key] || new Date().toISOString();
     console.log(`[scanner-discord] Live hold notice already posted for ${key}.`);
     return;
   }

@@ -82,6 +82,7 @@ import {
   shouldSendScannerMorningHtfDeskMap,
   shouldSendScannerEndOfDayMarketRecap,
   scannerLiveDiscordHoldNoticeEligible,
+  scannerLiveHoldNoticeKey,
   summarizeScannerHistoryCoverage,
   scannerHistoryNeedsFiveMinuteAggregationRepair,
   syncLocalMarketDataGapEventsToSupabase,
@@ -5802,6 +5803,18 @@ assert.match(holdNoticeText, /Line in the Sand/);
 for (const bannedText of BANNED_ACTIVE_DISCORD_ALERT_TEXT) {
   assert.ok(!holdNoticeText.includes(bannedText), `hold notice should not include banned active alert text: ${bannedText}`);
 }
+const holdNoticeStableKey = scannerLiveHoldNoticeKey({
+  tradeDate: '2026-06-02',
+  instrument: 'MES',
+  session: 'morning',
+  deskState: heldDeskState,
+  reason: heldDeskState.suppressionReason || 'Held.',
+});
+assert.equal(
+  holdNoticeStableKey,
+  '2026-06-02|MES|morning|live-hold|HOLD_WITH_REASON|hold|missed_no_chase: T1 was already reached before alert generation.',
+);
+assert.ok(!holdNoticeStableKey.includes('2026-06-02T10:05:00'), 'hold notice key must not include completed 5M time');
 
 try {
   await fs.mkdir(auditDir, { recursive: true });
