@@ -413,6 +413,79 @@ assert.ok(!morningText.includes('HTF Runner Map:'));
 assert.ok(!morningText.includes('HTF reaction:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 
+const overlappingOppositeTicketPayload = compactDiscordSummary({
+  session: 'evening',
+  tradeDate: '2026-07-13',
+  instrument: 'MES',
+  planVersionId: 'OVERLAPPING-OPPOSITE-TICKET',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'SHORT',
+    noTradeReason: null,
+    setupCandidates: [],
+  },
+  candidates: [],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: '18:45-22:15 ET',
+  deskState: {
+    marketMode: 'watching',
+    visibilityMode: 'POST_WATCH',
+    discordAction: 'post_watch',
+    deskTicket: {
+      sourceOfTruth: 'scanner_single_active_desk_ticket',
+      state: 'WATCH',
+      primaryDirection: 'SHORT',
+      lineInSand: 7552.5,
+      triggerCondition: 'Completed 5M close below 7552.50.',
+      entry: 7552.5,
+      stop: 7557.25,
+      t1: 7545.5,
+      t2: 7543,
+      invalidation: 7557.25,
+      invalidationText: 'price trades above the sweep high structure stop near 7557.25.',
+      htfStatus: 'sufficient',
+      htfStory: 'HTF context sufficient/structural; 5M remains execution authority.',
+      oppositeScenario: {
+        direction: 'LONG',
+        lineInSand: 7552.25,
+        triggerCondition: 'Long only if completed 5M closes above 7552.25.',
+      },
+      sourceCandidateKey: 'overlap-ticket',
+      humanReviewOnly: true,
+      noAutomatedOrders: true,
+    },
+    lineInSand: 7552.5,
+    nextTrigger: 'Completed 5M close below 7552.50.',
+    invalidation: 'Invalid above 7557.25.',
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      title: 'SHORT desk play',
+      summary: 'Short watch.',
+      lineInSand: 7552.5,
+      longAbove: 7552.25,
+      shortBelow: 7552.5,
+      targetReactionLevel: null,
+      targetReactionLabel: null,
+      targetReactionReason: null,
+      nextTrigger: 'Completed 5M close below 7552.50.',
+      invalidation: 'Invalid above 7557.25.',
+      noChase: 'No chase. Wait for completed 5M proof.',
+      htfConflict: false,
+      countertrendWarning: null,
+      discordEligible: true,
+    },
+  },
+});
+const overlappingOppositeTicketText = flattenDiscordPayloadText(overlappingOppositeTicketPayload);
+assert.ok(overlappingOppositeTicketText.includes('SHORT BELOW 7552.50'));
+assert.ok(overlappingOppositeTicketText.includes('Battle Zone: 7552.25-7552.50'));
+assert.ok(overlappingOppositeTicketText.includes('Do not treat both sides as clean triggers inside this band.'));
+assert.ok(overlappingOppositeTicketText.includes('LONG failure plan: no long from 7552.25 alone; long only on completed 5M reclaim above 7557.25 or a fresh protected 5M long setup.'));
+assert.ok(!overlappingOppositeTicketText.includes('Opposite: LONG above 7552.25'));
+
 const counterShortCandidate = {
   ...sampleCandidate('SHORT'),
   entry: 7467.5,

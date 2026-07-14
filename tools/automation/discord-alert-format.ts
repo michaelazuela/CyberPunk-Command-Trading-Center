@@ -3358,6 +3358,12 @@ function deskTicketCurrentPlanLines(args: CompactDiscordSummaryArgs): string[] {
     ? `${direction === 'SHORT' ? 'above' : 'below'} ${priceLine(ticket.invalidation)}.`
     : 'Invalidation requires protected 5M structure proof.');
   const opposite = ticket.oppositeScenario;
+  const oppositeLines = deskTicketOppositeDisplayLines({
+    direction,
+    line,
+    invalidation: ticket.invalidation,
+    opposite,
+  });
   return [
     `${args.instrument} Current Desk Ticket`,
     '',
@@ -3381,13 +3387,7 @@ function deskTicketCurrentPlanLines(args: CompactDiscordSummaryArgs): string[] {
     `Invalid: ${invalidInstruction(invalid, invalid)}`,
     '',
     `HTF: ${compactLine(ticket.htfStory || `${ticket.htfStatus || 'unknown'}; 5M remains execution authority.`, 180)}`,
-    ...(opposite
-      ? [
-          '',
-          `Opposite: ${opposite.direction === 'LONG' ? 'LONG' : 'SHORT'} ${opposite.direction === 'LONG' ? 'above' : 'below'} ${priceLine(opposite.lineInSand)}`,
-          compactInstruction(opposite.triggerCondition || 'Opposite side requires completed 5M failure proof.', 'Opposite side requires completed 5M failure proof.'),
-        ]
-      : []),
+    ...(oppositeLines.length ? ['', ...oppositeLines] : []),
     '',
     'Human review only.',
     'No automated orders.',
@@ -3395,6 +3395,56 @@ function deskTicketCurrentPlanLines(args: CompactDiscordSummaryArgs): string[] {
       hasChart: args.attachments.chartPlan,
       hasLevels,
     }),
+  ];
+}
+
+function deskTicketOppositeDisplayLines(args: {
+  direction: 'LONG' | 'SHORT' | 'WAIT';
+  line: number | null;
+  invalidation?: number | null;
+  opposite?: {
+    direction?: 'LONG' | 'SHORT' | string;
+    lineInSand?: number | null;
+    triggerCondition?: string | null;
+  } | null;
+}): string[] {
+  const opposite = args.opposite;
+  if (!opposite || (opposite.direction !== 'LONG' && opposite.direction !== 'SHORT')) return [];
+  const oppositeLine = isFinitePrice(opposite.lineInSand) ? opposite.lineInSand! : null;
+  const primaryLine = isFinitePrice(args.line) ? args.line! : null;
+  const invalidation = isFinitePrice(args.invalidation) ? args.invalidation! : null;
+  const cleanOpposite = [
+    `Opposite: ${opposite.direction} ${opposite.direction === 'LONG' ? 'above' : 'below'} ${priceLine(oppositeLine)}`,
+    compactInstruction(opposite.triggerCondition || 'Opposite side requires completed 5M failure proof.', 'Opposite side requires completed 5M failure proof.'),
+  ];
+  if (args.direction !== 'LONG' && args.direction !== 'SHORT') return cleanOpposite;
+  if (oppositeLine === null || primaryLine === null) return cleanOpposite;
+
+  const overlappingLines = args.direction === 'SHORT' && opposite.direction === 'LONG'
+    ? oppositeLine <= primaryLine
+    : args.direction === 'LONG' && opposite.direction === 'SHORT'
+      ? oppositeLine >= primaryLine
+      : false;
+  const oppositeInsideInvalidation = invalidation !== null && (
+    args.direction === 'SHORT' && opposite.direction === 'LONG'
+      ? oppositeLine < invalidation
+      : args.direction === 'LONG' && opposite.direction === 'SHORT'
+        ? oppositeLine > invalidation
+        : false
+  );
+  if (!overlappingLines && !oppositeInsideInvalidation) return cleanOpposite;
+
+  const zoneLow = Math.min(primaryLine, oppositeLine);
+  const zoneHigh = Math.max(primaryLine, oppositeLine);
+  const reclaimInstruction = invalidation !== null
+    ? args.direction === 'SHORT'
+      ? `LONG failure plan: no long from ${priceLine(oppositeLine)} alone; long only on completed 5M reclaim above ${priceLine(invalidation)} or a fresh protected 5M long setup.`
+      : `SHORT failure plan: no short from ${priceLine(oppositeLine)} alone; short only on completed 5M acceptance below ${priceLine(invalidation)} or a fresh protected 5M short setup.`
+    : `Opposite failure plan: no opposite entry from ${priceLine(oppositeLine)} alone; require a fresh protected 5M setup.`;
+  return [
+    `Battle Zone: ${priceLine(zoneLow)}-${priceLine(zoneHigh)}`,
+    `Do not treat both sides as clean triggers inside this band.`,
+    reclaimInstruction,
   ];
 }
 
