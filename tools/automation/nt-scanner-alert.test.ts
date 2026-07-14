@@ -3265,8 +3265,8 @@ const duplicateDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   now: new Date('2026-06-08T15:40:30.000Z'),
 });
 assert.equal(duplicateDeskPlaySuppression.shouldPost, false);
-assert.equal(duplicateDeskPlaySuppression.category, 'duplicate_refresh');
-assert.match(duplicateDeskPlaySuppression.previousFingerprint || '', /direction=SHORT/);
+assert.equal(duplicateDeskPlaySuppression.category, 'low_quality_map');
+assert.match(duplicateDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 assert.equal(duplicateDeskPlaySuppression.changesTradingLogic, false);
 assert.equal(duplicateDeskPlaySuppression.changesCanExecute, false);
 const noisyRecentReviewMapFlipDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
@@ -3319,9 +3319,8 @@ const noisyRecentReviewMapFlipDeskPlaySuppression = evaluateScannerDeskPlayDisco
   now: new Date('2026-06-08T15:45:30.000Z'),
 });
 assert.equal(noisyRecentReviewMapFlipDeskPlaySuppression.shouldPost, false);
-assert.equal(noisyRecentReviewMapFlipDeskPlaySuppression.category, 'duplicate_refresh');
-assert.match(noisyRecentReviewMapFlipDeskPlaySuppression.reason, /public cadence guard/);
-assert.match(noisyRecentReviewMapFlipDeskPlaySuppression.reason, /audit JSON/);
+assert.equal(noisyRecentReviewMapFlipDeskPlaySuppression.category, 'low_quality_map');
+assert.match(noisyRecentReviewMapFlipDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 assert.equal(noisyRecentReviewMapFlipDeskPlaySuppression.changesTradingLogic, false);
 assert.equal(noisyRecentReviewMapFlipDeskPlaySuppression.changesCanExecute, false);
 const sameStateShiftedLevelsDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
@@ -3344,8 +3343,8 @@ const sameStateShiftedLevelsDeskPlaySuppression = evaluateScannerDeskPlayDiscord
   now: new Date('2026-06-08T15:41:30.000Z'),
 });
 assert.equal(sameStateShiftedLevelsDeskPlaySuppression.shouldPost, false);
-assert.equal(sameStateShiftedLevelsDeskPlaySuppression.category, 'duplicate_refresh');
-assert.match(sameStateShiftedLevelsDeskPlaySuppression.reason, /primary side, readiness, HTF support/);
+assert.equal(sameStateShiftedLevelsDeskPlaySuppression.category, 'low_quality_map');
+assert.match(sameStateShiftedLevelsDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const priorFourHourOnlyDeskPlanRefreshRecord = {
   ...previousDeskPlanRefreshRecord,
   materialCadenceFingerprint: [
@@ -3397,8 +3396,8 @@ const newHtfSupportDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppressi
   now: new Date('2026-06-08T15:40:30.000Z'),
 });
 assert.equal(newHtfSupportDeskPlaySuppression.shouldPost, false);
-assert.equal(newHtfSupportDeskPlaySuppression.category, 'duplicate_refresh');
-assert.match(newHtfSupportDeskPlaySuppression.reason, /same-side public trader action/);
+assert.equal(newHtfSupportDeskPlaySuppression.category, 'low_quality_map');
+assert.match(newHtfSupportDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const changedInstructionDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -3415,8 +3414,9 @@ const changedInstructionDeskPlaySuppression = evaluateScannerDeskPlayDiscordSupp
   currentPrice: 7410,
   latestCompleted5m: '2026-06-08T15:40:00.0000000',
 });
-assert.equal(changedInstructionDeskPlaySuppression.shouldPost, true);
-assert.equal(changedInstructionDeskPlaySuppression.category, 'post');
+assert.equal(changedInstructionDeskPlaySuppression.shouldPost, false);
+assert.equal(changedInstructionDeskPlaySuppression.category, 'low_quality_map');
+assert.match(changedInstructionDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const shiftedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -3447,8 +3447,9 @@ const shiftedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   currentPrice: 7408,
   latestCompleted5m: '2026-06-08T15:40:00.0000000',
 });
-assert.equal(shiftedDeskPlaySuppression.shouldPost, true);
-assert.equal(shiftedDeskPlaySuppression.category, 'post');
+assert.equal(shiftedDeskPlaySuppression.shouldPost, false);
+assert.equal(shiftedDeskPlaySuppression.category, 'low_quality_map');
+assert.match(shiftedDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const recentSameSideShiftedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -3481,8 +3482,8 @@ const recentSameSideShiftedDeskPlaySuppression = evaluateScannerDeskPlayDiscordS
   now: new Date('2026-06-08T15:40:30.000Z'),
 });
 assert.equal(recentSameSideShiftedDeskPlaySuppression.shouldPost, false);
-assert.equal(recentSameSideShiftedDeskPlaySuppression.category, 'duplicate_refresh');
-assert.match(recentSameSideShiftedDeskPlaySuppression.reason, /public cadence guard/);
+assert.equal(recentSameSideShiftedDeskPlaySuppression.category, 'low_quality_map');
+assert.match(recentSameSideShiftedDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const recentSameSideIncompleteInstructionShiftDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -3512,8 +3513,8 @@ const recentSameSideIncompleteInstructionShiftDeskPlaySuppression = evaluateScan
   now: new Date('2026-06-08T15:40:30.000Z'),
 });
 assert.equal(recentSameSideIncompleteInstructionShiftDeskPlaySuppression.shouldPost, false);
-assert.equal(recentSameSideIncompleteInstructionShiftDeskPlaySuppression.category, 'duplicate_refresh');
-assert.match(recentSameSideIncompleteInstructionShiftDeskPlaySuppression.reason, /non-actionable instruction changes/);
+assert.equal(recentSameSideIncompleteInstructionShiftDeskPlaySuppression.category, 'low_quality_map');
+assert.match(recentSameSideIncompleteInstructionShiftDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const tacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -3533,10 +3534,9 @@ const tacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSupp
   currentPrice: 7410,
   latestCompleted5m: '2026-06-08T15:40:00.0000000',
 });
-assert.equal(tacticalNotAlignedDeskPlaySuppression.shouldPost, true);
-assert.equal(tacticalNotAlignedDeskPlaySuppression.category, 'post');
-assert.match(tacticalNotAlignedDeskPlaySuppression.reason, /Tactical campaign watch is eligible/);
-assert.match(tacticalNotAlignedDeskPlaySuppression.reason, /4H\/1H support plus aligned completed 5M structure/);
+assert.equal(tacticalNotAlignedDeskPlaySuppression.shouldPost, false);
+assert.equal(tacticalNotAlignedDeskPlaySuppression.category, 'low_quality_map');
+assert.match(tacticalNotAlignedDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const nonTacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -3562,11 +3562,9 @@ const nonTacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordS
   currentPrice: 7410,
   latestCompleted5m: '2026-06-08T15:40:00.0000000',
 });
-assert.equal(nonTacticalNotAlignedDeskPlaySuppression.shouldPost, true);
-assert.equal(nonTacticalNotAlignedDeskPlaySuppression.category, 'post');
-assert.match(nonTacticalNotAlignedDeskPlaySuppression.reason, /early line-in-sand watch is eligible/);
-assert.match(nonTacticalNotAlignedDeskPlaySuppression.reason, /WATCH ONLY \/ NOT EXECUTION APPROVAL/);
-assert.match(nonTacticalNotAlignedDeskPlaySuppression.reason, /SHORT BELOW 7416\.50/);
+assert.equal(nonTacticalNotAlignedDeskPlaySuppression.shouldPost, false);
+assert.equal(nonTacticalNotAlignedDeskPlaySuppression.category, 'low_quality_map');
+assert.match(nonTacticalNotAlignedDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 assert.equal(nonTacticalNotAlignedDeskPlaySuppression.changesTradingLogic, false);
 assert.equal(nonTacticalNotAlignedDeskPlaySuppression.changesCanExecute, false);
 const htfFvgReviewMapDeskState = {
@@ -3887,9 +3885,9 @@ const tacticalRequiredTriggerDeskPlaySuppression = evaluateScannerDeskPlayDiscor
   latestCompleted5m: '2026-06-08T15:40:00.0000000',
   staleReason: 'Completed 5M close below 7416.50 required before short continuation is active.',
 });
-assert.equal(tacticalRequiredTriggerDeskPlaySuppression.shouldPost, true);
-assert.equal(tacticalRequiredTriggerDeskPlaySuppression.category, 'post');
-assert.match(tacticalRequiredTriggerDeskPlaySuppression.reason, /app-owned 5M candidate lifecycle evidence/);
+assert.equal(tacticalRequiredTriggerDeskPlaySuppression.shouldPost, false);
+assert.equal(tacticalRequiredTriggerDeskPlaySuppression.category, 'low_quality_map');
+assert.match(tacticalRequiredTriggerDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const dataLimitedReferenceDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -3971,14 +3969,9 @@ const earlyLineInSandNoLevelsDeskPlaySuppression = evaluateScannerDeskPlayDiscor
   currentPrice: 7450.25,
   latestCompleted5m: '2026-06-25T19:25:00.0000000',
 });
-assert.equal(earlyLineInSandNoLevelsDeskPlaySuppression.shouldPost, true);
-assert.equal(earlyLineInSandNoLevelsDeskPlaySuppression.category, 'post');
-assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /SHORT early line-in-sand watch is eligible/);
-assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /SHORT BELOW 7450\.00/);
-assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /current 7450\.25/);
-assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /pending fresh 5M proof/);
-assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /required completed 5M proof/);
-assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /NOT EXECUTION APPROVAL/);
+assert.equal(earlyLineInSandNoLevelsDeskPlaySuppression.shouldPost, false);
+assert.equal(earlyLineInSandNoLevelsDeskPlaySuppression.category, 'low_quality_map');
+assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 assert.equal(earlyLineInSandNoLevelsDeskPlaySuppression.changesTradingLogic, false);
 assert.equal(earlyLineInSandNoLevelsDeskPlaySuppression.changesCanExecute, false);
 const dataLimitedEarlyLineInSandDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
@@ -4019,13 +4012,9 @@ const dataLimitedEarlyLineInSandDeskPlaySuppression = evaluateScannerDeskPlayDis
   currentPrice: 7449.75,
   latestCompleted5m: '2026-06-25T19:30:00.0000000',
 });
-assert.equal(dataLimitedEarlyLineInSandDeskPlaySuppression.shouldPost, true);
-assert.equal(dataLimitedEarlyLineInSandDeskPlaySuppression.category, 'post');
-assert.match(dataLimitedEarlyLineInSandDeskPlaySuppression.reason, /SHORT BELOW 7450\.00/);
-assert.match(dataLimitedEarlyLineInSandDeskPlaySuppression.reason, /readiness data_limited/);
-assert.match(dataLimitedEarlyLineInSandDeskPlaySuppression.reason, /HTF context insufficient/);
-assert.match(dataLimitedEarlyLineInSandDeskPlaySuppression.reason, /data data_limited/);
-assert.doesNotMatch(dataLimitedEarlyLineInSandDeskPlaySuppression.reason, /HTF confirmation/);
+assert.equal(dataLimitedEarlyLineInSandDeskPlaySuppression.shouldPost, false);
+assert.equal(dataLimitedEarlyLineInSandDeskPlaySuppression.category, 'low_quality_map');
+assert.match(dataLimitedEarlyLineInSandDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const missingFiveMinuteEarlyLineInSandDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-25',
   instrument: 'MES',
@@ -4059,8 +4048,8 @@ const missingFiveMinuteEarlyLineInSandDeskPlaySuppression = evaluateScannerDeskP
   currentPrice: 7449.75,
 });
 assert.equal(missingFiveMinuteEarlyLineInSandDeskPlaySuppression.shouldPost, false);
-assert.equal(missingFiveMinuteEarlyLineInSandDeskPlaySuppression.category, 'stale_data');
-assert.match(missingFiveMinuteEarlyLineInSandDeskPlaySuppression.reason, /no complete app-owned tactical levels or scanner-owned early watch line/);
+assert.equal(missingFiveMinuteEarlyLineInSandDeskPlaySuppression.category, 'low_quality_map');
+assert.match(missingFiveMinuteEarlyLineInSandDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const dataLimitedNoLevelDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -4096,8 +4085,8 @@ const dataLimitedNoLevelDeskPlaySuppression = evaluateScannerDeskPlayDiscordSupp
   latestCompleted5m: '2026-06-08T15:40:00.0000000',
 });
 assert.equal(dataLimitedNoLevelDeskPlaySuppression.shouldPost, false);
-assert.equal(dataLimitedNoLevelDeskPlaySuppression.category, 'stale_data');
-assert.match(dataLimitedNoLevelDeskPlaySuppression.reason, /data-limited and no complete app-owned tactical levels/);
+assert.equal(dataLimitedNoLevelDeskPlaySuppression.category, 'low_quality_map');
+assert.match(dataLimitedNoLevelDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const staleTargetDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -4109,9 +4098,8 @@ const staleTargetDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression
   latestCompleted5m: '2026-06-08T15:40:00.0000000',
 });
 assert.equal(staleTargetDeskPlaySuppression.shouldPost, false);
-assert.equal(staleTargetDeskPlaySuppression.category, 'passed_or_invalidated_levels');
-assert.match(staleTargetDeskPlaySuppression.reason, /already reached\/passed T1/);
-assert.doesNotMatch(staleTargetDeskPlaySuppression.reason, /stale/i);
+assert.equal(staleTargetDeskPlaySuppression.category, 'low_quality_map');
+assert.match(staleTargetDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const insideShortTacticalZoneDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-23',
   instrument: 'MES',
@@ -4159,8 +4147,9 @@ const insideShortTacticalZoneDeskPlaySuppression = evaluateScannerDeskPlayDiscor
   currentPrice: 7445.5,
   latestCompleted5m: '2026-06-23T15:25:00.0000000',
 });
-assert.equal(insideShortTacticalZoneDeskPlaySuppression.shouldPost, true);
-assert.equal(insideShortTacticalZoneDeskPlaySuppression.category, 'post');
+assert.equal(insideShortTacticalZoneDeskPlaySuppression.shouldPost, false);
+assert.equal(insideShortTacticalZoneDeskPlaySuppression.category, 'low_quality_map');
+assert.match(insideShortTacticalZoneDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const aboveShortTacticalZoneDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-23',
   instrument: 'MES',
@@ -4207,8 +4196,8 @@ const aboveShortTacticalZoneDeskPlaySuppression = evaluateScannerDeskPlayDiscord
   latestCompleted5m: '2026-06-23T15:20:00.0000000',
 });
 assert.equal(aboveShortTacticalZoneDeskPlaySuppression.shouldPost, false);
-assert.equal(aboveShortTacticalZoneDeskPlaySuppression.category, 'passed_or_invalidated_levels');
-assert.match(aboveShortTacticalZoneDeskPlaySuppression.reason, /above active tactical zone 7445\.00-7446\.50/);
+assert.equal(aboveShortTacticalZoneDeskPlaySuppression.category, 'low_quality_map');
+assert.match(aboveShortTacticalZoneDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const staleReferenceTargetDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-23',
   instrument: 'MES',
@@ -4279,9 +4268,8 @@ const missedNoChaseDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppressi
   staleReason: 'Preferred entry was missed before the alert. Do not chase.',
 });
 assert.equal(missedNoChaseDeskPlaySuppression.shouldPost, false);
-assert.equal(missedNoChaseDeskPlaySuppression.category, 'missed_no_chase');
-assert.match(missedNoChaseDeskPlaySuppression.reason, /missed\/no-chase/);
-assert.doesNotMatch(missedNoChaseDeskPlaySuppression.reason, /completed 5M data is stale/i);
+assert.equal(missedNoChaseDeskPlaySuppression.category, 'low_quality_map');
+assert.match(missedNoChaseDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const lineCrossNoChaseTransitionDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-07-12',
   instrument: 'MES',
@@ -4307,12 +4295,9 @@ const lineCrossNoChaseTransitionDeskPlaySuppression = evaluateScannerDeskPlayDis
   completed5m: { time: '2026-07-12T21:05:00.0000000', open: 7597, high: 7598, low: 7592.5, close: 7593.75, volume: 3389 },
   staleReason: 'T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry.',
 });
-assert.equal(lineCrossNoChaseTransitionDeskPlaySuppression.shouldPost, true);
-assert.equal(lineCrossNoChaseTransitionDeskPlaySuppression.category, 'post');
-assert.match(lineCrossNoChaseTransitionDeskPlaySuppression.reason, /line-cross transition update/);
-assert.match(lineCrossNoChaseTransitionDeskPlaySuppression.reason, /completed 5M close 7593\.75/);
-assert.match(lineCrossNoChaseTransitionDeskPlaySuppression.reason, /fresh entry is missed\/no-chase/);
-assert.match(lineCrossNoChaseTransitionDeskPlaySuppression.reason, /canExecute remains false/);
+assert.equal(lineCrossNoChaseTransitionDeskPlaySuppression.shouldPost, false);
+assert.equal(lineCrossNoChaseTransitionDeskPlaySuppression.category, 'low_quality_map');
+assert.match(lineCrossNoChaseTransitionDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 const waitHighQualityConditionalDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-23',
   instrument: 'MES',
@@ -4440,10 +4425,9 @@ const htfFvgMicroMssWatchSuppression = evaluateScannerDeskPlayDiscordSuppression
   currentPrice: 7504.25,
   latestCompleted5m: '2026-07-02T14:10:00.0000000',
 });
-assert.equal(htfFvgMicroMssWatchSuppression.shouldPost, true);
-assert.equal(htfFvgMicroMssWatchSuppression.category, 'post');
-assert.match(htfFvgMicroMssWatchSuppression.reason, /LONG early line-in-sand watch is eligible|Tactical campaign watch is eligible/);
-assert.doesNotMatch(htfFvgMicroMssWatchSuppression.reason, /NO TRADE|low_quality_map|suppressed/i);
+assert.equal(htfFvgMicroMssWatchSuppression.shouldPost, false);
+assert.equal(htfFvgMicroMssWatchSuppression.category, 'low_quality_map');
+assert.match(htfFvgMicroMssWatchSuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 
 const htfFvgMicroMssLongPlanDeskState = {
   ...htfFvgMicroMssLongWatchDeskState,

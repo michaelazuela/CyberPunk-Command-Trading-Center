@@ -6502,6 +6502,12 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     normalized: args.normalized,
     direction: play.direction,
   }) || highQualityConditionalReviewCandidate({ normalized: args.normalized });
+  if (!hasReferenceLevels && !highQualityReviewCandidate) {
+    return scannerDeskPlaySuppressionBlocked(
+      'low_quality_map',
+      'Desk Play kept local because the public ticket does not have complete app-owned entry, stop, T1, and T2. Line-in-sand/watch context remains in audit JSON only.',
+    );
+  }
   const targetToLinePromotionReason = scannerTargetToLinePromotionReviewReason({
     deskState: args.deskState,
     normalized: args.normalized,
