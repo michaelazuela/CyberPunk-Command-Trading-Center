@@ -5962,6 +5962,30 @@ function priceMateriallyEqual(a: number | null, b: number | null, tolerance = 0.
   return Math.abs(a - b) <= tolerance;
 }
 
+function scannerDeskPlanPublicLevelDriftPoints(
+  previous: ScannerDeskPlanRefreshLedgerRecord,
+  current: ScannerDeskPlanRefreshLedgerRecord,
+): number {
+  const pairs: Array<[number | null, number | null]> = [
+    [previous.lineInSand, current.lineInSand],
+    [previous.activeTacticalLine, current.activeTacticalLine],
+    [previous.activeTacticalZoneLow ?? null, current.activeTacticalZoneLow ?? null],
+    [previous.activeTacticalZoneHigh ?? null, current.activeTacticalZoneHigh ?? null],
+    [previous.longLine, current.longLine],
+    [previous.shortLine, current.shortLine],
+    [previous.entry, current.entry],
+    [previous.stop, current.stop],
+    [previous.target1, current.target1],
+    [previous.target2, current.target2],
+    [previous.targetReactionLevel, current.targetReactionLevel],
+  ];
+  return pairs.reduce((max, [a, b]) => {
+    if (a === null && b === null) return max;
+    if (a === null || b === null) return Number.POSITIVE_INFINITY;
+    return Math.max(max, Math.abs(a - b));
+  }, 0);
+}
+
 function normalizeDeskPlanMaterialCadenceFingerprint(value: string | null | undefined): string | null {
   if (!value) return null;
   return value
@@ -6015,6 +6039,17 @@ function minutesBetweenIso(startIso: string | null | undefined, end: Date): numb
   return (endMs - startMs) / 60000;
 }
 
+function scannerDeskPlayReadinessIsActionable(value: string | null | undefined): boolean {
+  const normalized = normalizeDeskPlayInstructionText(value);
+  return [
+    'execution_candidate',
+    'human_review_ready',
+    'structure_break_confirmed',
+    'triggered',
+    'ready',
+  ].includes(normalized);
+}
+
 function scannerDeskPlayPublicCadenceHoldReason(args: {
   previous: ScannerDeskPlanRefreshLedgerRecord | null;
   current: ScannerDeskPlanRefreshLedgerRecord;
@@ -6028,24 +6063,34 @@ function scannerDeskPlayPublicCadenceHoldReason(args: {
   if (!previous) return null;
   const elapsedMinutes = minutesBetweenIso(previous.sentAt, args.now);
   if (elapsedMinutes === null || elapsedMinutes < 0 || elapsedMinutes >= SCANNER_DESK_PLAY_PUBLIC_REFRESH_MINUTES) return null;
-  if (args.highQualityReviewCandidate || args.tacticalCampaignMap.eligible || args.htfFvgReviewMapReason || args.targetToLinePromotionReason) return null;
-  if (previous.activeCampaignId !== args.current.activeCampaignId) return null;
 
   const currentReadiness = normalizeDeskPlayInstructionText(args.current.readiness);
   const previousReadiness = normalizeDeskPlayInstructionText(previous.readiness);
   const directionChanged = previous.direction !== args.current.direction;
-  const lineMovedPoints = [
-    Math.abs((previous.lineInSand ?? args.current.lineInSand ?? 0) - (args.current.lineInSand ?? previous.lineInSand ?? 0)),
-    Math.abs((previous.activeTacticalLine ?? args.current.activeTacticalLine ?? 0) - (args.current.activeTacticalLine ?? previous.activeTacticalLine ?? 0)),
-  ].filter(Number.isFinite).reduce((max, value) => Math.max(max, value), 0);
+  const publicLevelDriftPoints = scannerDeskPlanPublicLevelDriftPoints(previous, args.current);
 
   const readinessImproved = previousReadiness !== currentReadiness &&
-    currentReadiness !== 'not_aligned' &&
-    currentReadiness !== 'missed_no_chase' &&
-    currentReadiness !== 'blocked' &&
-    currentReadiness !== 'data_limited';
-  const materialLineMove = lineMovedPoints >= 8 && currentReadiness !== 'not_aligned';
-  if (readinessImproved || materialLineMove) return null;
+    scannerDeskPlayReadinessIsActionable(currentReadiness) &&
+    !scannerDeskPlayReadinessIsActionable(previousReadiness);
+  const promotionalMap =
+    Boolean(args.highQualityReviewCandidate) ||
+    args.tacticalCampaignMap.eligible ||
+    Boolean(args.htfFvgReviewMapReason) ||
+    Boolean(args.targetToLinePromotionReason);
+  const publicInstructionChanged =
+    normalizeDeskPlayInstructionText(previous.activeTacticalZoneState) !== normalizeDeskPlayInstructionText(args.current.activeTacticalZoneState) ||
+    normalizeDeskPlayInstructionText(previous.nextTrigger) !== normalizeDeskPlayInstructionText(args.current.nextTrigger) ||
+    normalizeDeskPlayInstructionText(previous.invalidation) !== normalizeDeskPlayInstructionText(args.current.invalidation) ||
+    normalizeDeskPlayInstructionText(previous.standDown) !== normalizeDeskPlayInstructionText(args.current.standDown);
+  if (!directionChanged && !readinessImproved && !publicInstructionChanged) {
+    const driftText = Number.isFinite(publicLevelDriftPoints)
+      ? `${publicLevelDriftPoints.toFixed(2)} pts`
+      : 'new/missing priced levels';
+    return `Desk Play kept local by public cadence guard: latest Desk Play was posted ${elapsedMinutes.toFixed(1)} minutes ago, and this ${args.current.direction} update is still the same-side public trader action (${driftText} level drift). Tactical/high-quality/HTF refresh labels and same-side line shifts do not create another Discord post until the cadence expires, direction changes, readiness becomes actionable, or the trader instruction changes. Full bar-by-bar evidence remains in audit JSON.`;
+  }
+  if (promotionalMap) return null;
+  if (previous.activeCampaignId !== args.current.activeCampaignId) return null;
+  if (readinessImproved) return null;
   if (directionChanged && currentReadiness !== 'not_aligned' && currentReadiness !== 'missed_no_chase') return null;
 
   return `Desk Play kept local by public cadence guard: latest Desk Play was posted ${elapsedMinutes.toFixed(1)} minutes ago, and this update is an internal review-map drift (${previous.direction}->${args.current.direction}, readiness ${previousReadiness || 'none'}->${currentReadiness || 'none'}) without a fresh high-quality plan, HTF/FVG promotion, target-to-line promotion, or tactical campaign upgrade. Full bar-by-bar evidence remains in audit JSON.`;

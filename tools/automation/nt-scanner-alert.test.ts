@@ -3396,8 +3396,9 @@ const newHtfSupportDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppressi
   latestCompleted5m: '2026-06-08T15:40:00.0000000',
   now: new Date('2026-06-08T15:40:30.000Z'),
 });
-assert.equal(newHtfSupportDeskPlaySuppression.shouldPost, true);
-assert.equal(newHtfSupportDeskPlaySuppression.category, 'post');
+assert.equal(newHtfSupportDeskPlaySuppression.shouldPost, false);
+assert.equal(newHtfSupportDeskPlaySuppression.category, 'duplicate_refresh');
+assert.match(newHtfSupportDeskPlaySuppression.reason, /same-side public trader action/);
 const changedInstructionDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -3448,6 +3449,40 @@ const shiftedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
 });
 assert.equal(shiftedDeskPlaySuppression.shouldPost, true);
 assert.equal(shiftedDeskPlaySuppression.category, 'post');
+const recentSameSideShiftedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    bestShortPlan: {
+      ...baseDeskPlanRefreshState.bestShortPlan,
+      lineInSand: 7412.75,
+      entry: 7410.25,
+      stop: 7419.25,
+      target1: 7396.75,
+      target2: 7392.25,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      lineInSand: 7412.75,
+      shortBias: { state: 'primary', lineInSand: 7412.75 },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '5M', bias: 'BEAR', protectedStructure: 7419.25, confirmationLine: 7412.75 },
+        ],
+      },
+    },
+  } as any,
+  deskPlanRefreshSent: { [firstDeskPlanRefreshKey]: previousDeskPlanRefreshRecord },
+  currentPrice: 7408,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+  now: new Date('2026-06-08T15:40:30.000Z'),
+});
+assert.equal(recentSameSideShiftedDeskPlaySuppression.shouldPost, false);
+assert.equal(recentSameSideShiftedDeskPlaySuppression.category, 'duplicate_refresh');
+assert.match(recentSameSideShiftedDeskPlaySuppression.reason, /public cadence guard/);
 const tacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
