@@ -5858,13 +5858,13 @@ const holdNoticeStableKey = scannerLiveHoldNoticeKey({
   instrument: 'MES',
   session: 'morning',
   deskState: heldDeskState,
-  reason: heldDeskState.suppressionReason || 'Held.',
 });
 assert.equal(
   holdNoticeStableKey,
-  '2026-06-02|MES|morning|live-hold|HOLD_WITH_REASON|hold|missed_no_chase: T1 was already reached before alert generation.',
+  '2026-06-02|MES|morning|live-hold|HOLD_WITH_REASON|hold|LONG|unknown|watching',
 );
 assert.ok(!holdNoticeStableKey.includes('2026-06-02T10:05:00'), 'hold notice key must not include completed 5M time');
+assert.ok(!holdNoticeStableKey.includes('missed_no_chase'), 'hold notice key must not drift when hold reason prose changes');
 
 try {
   await fs.mkdir(auditDir, { recursive: true });
