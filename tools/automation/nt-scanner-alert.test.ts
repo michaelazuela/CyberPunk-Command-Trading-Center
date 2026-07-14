@@ -3483,6 +3483,37 @@ const recentSameSideShiftedDeskPlaySuppression = evaluateScannerDeskPlayDiscordS
 assert.equal(recentSameSideShiftedDeskPlaySuppression.shouldPost, false);
 assert.equal(recentSameSideShiftedDeskPlaySuppression.category, 'duplicate_refresh');
 assert.match(recentSameSideShiftedDeskPlaySuppression.reason, /public cadence guard/);
+const recentSameSideIncompleteInstructionShiftDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    bestShortPlan: {
+      ...baseDeskPlanRefreshState.bestShortPlan,
+      entry: null,
+      stop: null,
+      target1: null,
+      target2: null,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      nextTrigger: 'Fresh completed 5M proof is still required before a new review ticket.',
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        tradeReadiness: { status: 'missed_no_chase' },
+      },
+    },
+  } as any,
+  deskPlanRefreshSent: { [firstDeskPlanRefreshKey]: previousDeskPlanRefreshRecord },
+  currentPrice: 7408,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+  now: new Date('2026-06-08T15:40:30.000Z'),
+});
+assert.equal(recentSameSideIncompleteInstructionShiftDeskPlaySuppression.shouldPost, false);
+assert.equal(recentSameSideIncompleteInstructionShiftDeskPlaySuppression.category, 'duplicate_refresh');
+assert.match(recentSameSideIncompleteInstructionShiftDeskPlaySuppression.reason, /non-actionable instruction changes/);
 const tacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',

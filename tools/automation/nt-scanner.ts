@@ -6050,6 +6050,13 @@ function scannerDeskPlayReadinessIsActionable(value: string | null | undefined):
   ].includes(normalized);
 }
 
+function scannerDeskPlanRefreshHasCompletePricedPlan(record: ScannerDeskPlanRefreshLedgerRecord): boolean {
+  return isFiniteTradePrice(record.entry) &&
+    isFiniteTradePrice(record.stop) &&
+    isFiniteTradePrice(record.target1) &&
+    isFiniteTradePrice(record.target2);
+}
+
 function scannerDeskPlayPublicCadenceHoldReason(args: {
   previous: ScannerDeskPlanRefreshLedgerRecord | null;
   current: ScannerDeskPlanRefreshLedgerRecord;
@@ -6082,11 +6089,14 @@ function scannerDeskPlayPublicCadenceHoldReason(args: {
     normalizeDeskPlayInstructionText(previous.nextTrigger) !== normalizeDeskPlayInstructionText(args.current.nextTrigger) ||
     normalizeDeskPlayInstructionText(previous.invalidation) !== normalizeDeskPlayInstructionText(args.current.invalidation) ||
     normalizeDeskPlayInstructionText(previous.standDown) !== normalizeDeskPlayInstructionText(args.current.standDown);
-  if (!directionChanged && !readinessImproved && !publicInstructionChanged) {
+  const actionableInstructionChange = publicInstructionChanged &&
+    scannerDeskPlayReadinessIsActionable(currentReadiness) &&
+    scannerDeskPlanRefreshHasCompletePricedPlan(args.current);
+  if (!directionChanged && !readinessImproved && !actionableInstructionChange) {
     const driftText = Number.isFinite(publicLevelDriftPoints)
       ? `${publicLevelDriftPoints.toFixed(2)} pts`
       : 'new/missing priced levels';
-    return `Desk Play kept local by public cadence guard: latest Desk Play was posted ${elapsedMinutes.toFixed(1)} minutes ago, and this ${args.current.direction} update is still the same-side public trader action (${driftText} level drift). Tactical/high-quality/HTF refresh labels and same-side line shifts do not create another Discord post until the cadence expires, direction changes, readiness becomes actionable, or the trader instruction changes. Full bar-by-bar evidence remains in audit JSON.`;
+    return `Desk Play kept local by public cadence guard: latest Desk Play was posted ${elapsedMinutes.toFixed(1)} minutes ago, and this ${args.current.direction} update is still the same-side public trader action (${driftText} level drift). Tactical/high-quality/HTF refresh labels, same-side line shifts, and non-actionable instruction changes do not create another Discord post until the cadence expires, direction changes, or an actionable complete-level ticket appears. Full bar-by-bar evidence remains in audit JSON.`;
   }
   if (promotionalMap) return null;
   if (previous.activeCampaignId !== args.current.activeCampaignId) return null;
