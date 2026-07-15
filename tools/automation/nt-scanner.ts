@@ -6617,7 +6617,10 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     return scannerDeskPlaySuppressionPost(targetToLinePromotionReason);
   }
   if (readiness === 'not_aligned' && tacticalCampaignMap.eligible) {
-    return scannerDeskPlaySuppressionPost(`Tactical campaign watch is eligible for Discord: ${tacticalCampaignMap.reason}`);
+    return scannerDeskPlaySuppressionBlocked(
+      'low_quality_map',
+      `Desk Play kept local because ${play.direction} tactical campaign is not aligned with protected 5M structure yet: ${tacticalCampaignMap.reason}. Publish only after a completed 5M transition, HTF FVG reaction route, target-to-line transition, or complete high-quality conditional candidate qualifies it.`,
+    );
   }
   const earlyLineInSandWatchReason = scannerEarlyLineInSandWatchReason({
     deskState: args.deskState,
@@ -8742,6 +8745,7 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   alertDecision: ScannerAlertDecision;
   deskState: DeskState;
   candidate?: SetupCandidate | null;
+  confidence?: ScannerConfidenceBreakdown | null;
   normalizedCanExecute?: boolean | null;
   state: ScannerState;
   currentPrice?: number | null;
@@ -8759,8 +8763,16 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
     : null;
   const readinessStatus = candidateReadinessStatus(args.deskState, args.candidate);
   const staleText = `${args.staleReason || ''} ${args.scannerReviewStatus || ''}`.trim();
+  const confidenceHardBlocker = typeof args.confidence?.hardBlocker === 'string' && args.confidence.hardBlocker.trim()
+    ? args.confidence.hardBlocker.trim()
+    : null;
+  const confidenceScore = typeof args.confidence?.score === 'number' && Number.isFinite(args.confidence.score)
+    ? args.confidence.score
+    : null;
 
   if (!args.normalizedCanExecute) reasons.push('canExecute=false');
+  if (confidenceHardBlocker) reasons.push(`decision quality hard blocker: ${confidenceHardBlocker}`);
+  if (confidenceScore !== null && confidenceScore <= 0) reasons.push(`decision quality score=${confidenceScore}`);
   if (primaryDirection === 'WAIT') reasons.push('DeskState primary=WAIT');
   if (candidateDirection && primaryDirection !== 'WAIT' && candidateDirection !== primaryDirection) {
     reasons.push(`candidate side ${candidateDirection} conflicts with DeskState ${primaryDirection}`);
@@ -8825,6 +8837,8 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
     args.state !== 'Missed' &&
     !/stale|missed|no chase|already_triggered|no_fresh_entry/i.test(staleText) &&
     !candidateStaleReason &&
+    !confidenceHardBlocker &&
+    (confidenceScore === null || confidenceScore > 0) &&
     !campaignTransition.blocksOppositeDirection &&
     args.deskState.dataQualityStatus !== 'data_limited' &&
     args.deskState.htfContextStatus !== 'insufficient' &&
@@ -10161,6 +10175,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     scannerReviewStatus: selection.reviewStatus,
     priorActiveDelivery,
     completed5m,
+    confidence,
   });
   if (deskStateGatedAlertDecision.shouldSend !== alertDecision.shouldSend || deskStateGatedAlertDecision.reason !== alertDecision.reason) {
     alertDecision = deskStateGatedAlertDecision;

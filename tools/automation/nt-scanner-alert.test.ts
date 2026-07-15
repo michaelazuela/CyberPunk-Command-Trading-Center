@@ -891,6 +891,17 @@ const blockedTargetRoomPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingG
 });
 assert.equal(blockedTargetRoomPrimaryAlertGate.shouldSend, false);
 assert.doesNotMatch(blockedTargetRoomPrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
+const confidenceBlockedPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...reviewOnlyPrimaryAlertGateFixture,
+  confidence: {
+    score: 0,
+    hardBlocker: 'Clean 1.5R path unavailable',
+  } as any,
+});
+assert.equal(confidenceBlockedPrimaryAlertGate.shouldSend, false);
+assert.match(confidenceBlockedPrimaryAlertGate.reason, /decision quality hard blocker: Clean 1\.5R path unavailable/);
+assert.match(confidenceBlockedPrimaryAlertGate.reason, /decision quality score=0/);
+assert.doesNotMatch(confidenceBlockedPrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
 const priceAwayFromZonePrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
   ...reviewOnlyPrimaryAlertGateFixture,
   deskState: {
@@ -3537,6 +3548,33 @@ const tacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSupp
 assert.equal(tacticalNotAlignedDeskPlaySuppression.shouldPost, false);
 assert.equal(tacticalNotAlignedDeskPlaySuppression.category, 'low_quality_map');
 assert.match(tacticalNotAlignedDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
+const tacticalNotAlignedWithLevelsDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        tradeReadiness: { status: 'not_aligned' },
+      },
+    },
+  } as any,
+  normalized: {
+    entry: 7412.75,
+    stop: 7424.75,
+    setupCandidates: [],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+});
+assert.equal(tacticalNotAlignedWithLevelsDeskPlaySuppression.shouldPost, false);
+assert.equal(tacticalNotAlignedWithLevelsDeskPlaySuppression.category, 'low_quality_map');
+assert.match(tacticalNotAlignedWithLevelsDeskPlaySuppression.reason, /not aligned with protected 5M structure yet/);
 const nonTacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
