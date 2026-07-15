@@ -2,6 +2,21 @@
 
 ## Latest Change
 
+Date: 2026-07-15
+Task: Add behavior validation / live replay pack.
+Files changed: tools/automation/behavior-validation-pack.ts, tools/automation/behavior-validation-pack.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After the DeskPublishDecision cleanup, the project needed one repeatable read-only validation pack that proves scanner-owned DeskState, canonical publish decision, Discord visibility, suppression/hold reasons, and replay/loopback checks agree before any live-send stage or further cleanup.
+Tests run: `npx tsx tools/automation/behavior-validation-pack.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/desk-publish-contract-audit.test.ts`; `npm run diagnostic:behavior-validation -- --skip-commands --json`; `npm run diagnostic:behavior-validation -- --json`; `npm run test`; `npm run lint`; `npm run build`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`.
+Result: Passed. The pack runs the existing publish-contract, no-silent-drop, active-DeskState, replay-validation, workflow-loopback, and scanner-alert fixture checks, writes only local ignored diagnostic reports, and includes a failed-high breakdown regression proving a SHORT conditional ticket remains visible with line 7618.75, entry 7608.00, stop 7626.50, T1 7607.25, T2 7603.25, and canExecute=false.
+Trading logic changed: No. This is validation/reporting only. It does not change setup definitions, ranking, Discord send eligibility, canExecute, entry/stop/target math, risk gates, bridge behavior, bar-close handling, Supabase schema, or live scanner behavior.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: No schema migration and no Supabase writes.
+Known risks: The pack is read-only and does not replace a controlled live-send signoff. Live Discord posting still requires the existing live policy confirmation path.
+Next recommended action: Use `npm run diagnostic:behavior-validation -- --json` before any controlled live-send stage or future visibility cleanup.
+
+## Previous Change
+
 Date: 2026-07-09
 Task: Add daily bar-by-bar learning extract workflow.
 Files changed: tools/automation/daily-bar-by-bar-learning-extract.ts, tools/automation/daily-bar-by-bar-learning-extract.test.ts, package.json, docs/PROJECT_STATUS.md.
