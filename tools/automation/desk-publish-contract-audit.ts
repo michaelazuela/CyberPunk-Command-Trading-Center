@@ -35,6 +35,8 @@ interface ContractCheck {
   required?: string[];
   forbidden?: string[];
   forbiddenImports?: string[];
+  scopeStart?: string;
+  orderedBefore?: Array<{ before: string; after: string; reason: string }>;
   note: string;
 }
 
@@ -62,6 +64,29 @@ const DEFAULT_CHECKS: ContractCheck[] = [
       'prepareLiveScannerDeskPlayAlertArtifacts',
     ],
     note: 'Scanner artifact creation must use the canonical decision and fail on ticket/chart/payload drift.',
+  },
+  {
+    id: 'scanner_publish_contract_precedes_legacy_suppression',
+    file: 'tools/automation/nt-scanner.ts',
+    scopeStart: 'export function evaluateScannerDeskPlayDiscordSuppression',
+    required: [
+      'args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan',
+      'scannerDeskPlanRefreshMateriallyMatches',
+      'scannerDeskPlayPublicCadenceHoldReason',
+    ],
+    orderedBefore: [
+      {
+        before: 'args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan',
+        after: 'scannerDeskPlanRefreshMateriallyMatches',
+        reason: 'Canonical DeskPublishDecision POST must be honored before duplicate refresh suppression can hold it local.',
+      },
+      {
+        before: 'args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan',
+        after: 'scannerDeskPlayPublicCadenceHoldReason',
+        reason: 'Canonical DeskPublishDecision POST must be honored before public cadence suppression can hold it local.',
+      },
+    ],
+    note: 'Legacy stale/duplicate/cadence suppression cannot outrank a complete canonical DeskPublishDecision.',
   },
   {
     id: 'formatter_formats_only',
@@ -148,6 +173,9 @@ function finding(check: ContractCheck, reason: string, evidence: string[]): Desk
 function evaluateCheck(rootDir: string, check: ContractCheck): DeskPublishContractFinding[] {
   const text = readFile(rootDir, check.file);
   if (!text) return [finding(check, 'Required publish-contract surface is missing.', [check.file])];
+  const scopedText = check.scopeStart && text.includes(check.scopeStart)
+    ? text.slice(text.indexOf(check.scopeStart))
+    : text;
 
   const findings: DeskPublishContractFinding[] = [];
   for (const required of check.required || []) {
@@ -158,6 +186,14 @@ function evaluateCheck(rootDir: string, check: ContractCheck): DeskPublishContra
   }
   for (const forbiddenImport of check.forbiddenImports || []) {
     if (importPattern(forbiddenImport).test(text)) findings.push(finding(check, `Forbidden decision-owner import found: ${forbiddenImport}`, [forbiddenImport]));
+  }
+  for (const order of check.orderedBefore || []) {
+    const beforeIndex = scopedText.indexOf(order.before);
+    const afterIndex = scopedText.indexOf(order.after);
+    if (beforeIndex < 0 || afterIndex < 0) continue;
+    if (beforeIndex > afterIndex) {
+      findings.push(finding(check, `Publish-contract ordering violation: ${order.reason}`, [order.before, order.after]));
+    }
   }
   return findings;
 }

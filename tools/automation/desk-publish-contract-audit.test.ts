@@ -37,6 +37,9 @@ write(root, 'tools/automation/nt-scanner.ts', [
   'chart context line',
   'Canonical DeskPublishDecision line in the sand.',
   'prepareLiveScannerDeskPlayAlertArtifacts',
+  'args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan',
+  'scannerDeskPlanRefreshMateriallyMatches',
+  'scannerDeskPlayPublicCadenceHoldReason',
 ].join('\n'));
 write(root, 'tools/automation/discord-alert-format.ts', [
   'import { buildDeskPublishDecision } from "../../src/lib/localScannerEngine";',
@@ -64,6 +67,9 @@ write(root, 'tools/automation/nt-scanner.ts', [
   'DeskPublishDecision artifact agreement failed',
   'Canonical DeskPublishDecision line in the sand.',
   'prepareLiveScannerDeskPlayAlertArtifacts',
+  'args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan',
+  'scannerDeskPlanRefreshMateriallyMatches',
+  'scannerDeskPlayPublicCadenceHoldReason',
 ].join('\n'));
 write(root, 'tools/automation/discord-alert-format.ts', [
   'export interface CompactDeskStateForDiscord {}',
@@ -74,5 +80,24 @@ write(root, 'tools/automation/discord-alert-format.ts', [
 const missingChartLineReport = buildDeskPublishContractAudit(root);
 assert.equal(missingChartLineReport.status, 'fail');
 assert.ok(missingChartLineReport.findings.some((finding) => finding.file === 'tools/automation/nt-scanner.ts' && finding.reason.includes('chart context line')));
+
+write(root, 'tools/automation/nt-scanner.ts', [
+  'buildDeskPublishDecision',
+  'assertScannerDeskPublishArtifactAgreement',
+  'DeskPublishDecision artifact agreement failed',
+  'chart context line',
+  'Canonical DeskPublishDecision line in the sand.',
+  'prepareLiveScannerDeskPlayAlertArtifacts',
+  'scannerDeskPlanRefreshMateriallyMatches',
+  'scannerDeskPlayPublicCadenceHoldReason',
+  'args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan',
+].join('\n'));
+
+const legacySuppressionOutranksCanonicalReport = buildDeskPublishContractAudit(root);
+assert.equal(legacySuppressionOutranksCanonicalReport.status, 'fail');
+assert.ok(legacySuppressionOutranksCanonicalReport.findings.some((finding) =>
+  finding.checkId === 'scanner_publish_contract_precedes_legacy_suppression' &&
+  finding.reason.includes('Canonical DeskPublishDecision POST must be honored before duplicate refresh suppression')
+));
 
 console.log('Phase 3C DeskPublishDecision contract audit verified.');
