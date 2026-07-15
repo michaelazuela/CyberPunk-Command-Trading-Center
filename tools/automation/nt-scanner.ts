@@ -2651,19 +2651,13 @@ function summarizeScannerEventTapeFacts(chartContext: unknown, completed5m: Ninj
   const setupReadyFacts = asRecord(context?.setupReadyFacts);
   const htfState = asRecord(context?.htfLiquidityDrawState);
   const latestDisplacement = displacement.latest;
-  const fallbackBodyDirection =
-    completed5m && completed5m.close > completed5m.open
-      ? 'bullish'
-      : completed5m && completed5m.close < completed5m.open
-        ? 'bearish'
-        : null;
 
   return {
     displacement: {
       direction:
         stringField(latestDisplacement, ['direction', 'bias']) ||
         stringField(asRecord(latestDisplacement?.candle), ['direction']) ||
-        fallbackBodyDirection,
+        null,
       count: displacement.count,
       latest: latestDisplacement,
     },

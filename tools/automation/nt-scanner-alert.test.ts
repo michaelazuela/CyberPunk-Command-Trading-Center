@@ -5104,6 +5104,61 @@ assert.equal(tapeEvent.deskPublishDecision.sourceOfTruth, 'scanner_desk_publish_
 assert.equal(tapeEvent.discord.publishDecision.sourceOfTruth, 'scanner_desk_publish_decision');
 assert.equal(tapeEvent.deskPublishDecision.approvalBoundary.changesCanExecute, false);
 assert.equal(tapeEvent.deskPublishDecision.approvalBoundary.changesTradeApprovals, false);
+assert.equal(tapeEvent.facts.displacement.direction, 'SHORT');
+const noDisplacementTapePath = await writeScannerDecisionTapeAuditLog({
+  session: 'morning',
+  tradeDate: '2026-06-04',
+  instrument: 'MES',
+  completed5m: { time: '2026-06-04T10:15:00.0000000', open: 7590, high: 7597, low: 7587, close: 7593, volume: 1000 },
+  currentPrice: 7593,
+  chartContext: {
+    displacementCandles: [],
+    liquiditySweeps: [],
+    reclaimEvents: [],
+    marketStructure: { marketStructureShift: false },
+  },
+  candidate: null,
+  normalized: {
+    decision: 'NO TRADE',
+    decisionLabel: 'NO TRADE',
+    executionDecision: 'NO TRADE',
+    planningDecision: 'WAIT',
+    hasConditionalPlans: false,
+    entry: null,
+    stop: null,
+    t1: null,
+    t2: null,
+    riskPoints: null,
+    riskRewardT1: null,
+    riskRewardT2: null,
+    finalConfidence: 'Low',
+    whyThisPlan: 'No valid candidate existed first.',
+    invalidation: 'N/A',
+    source: 'app_rule_engine',
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    setupCandidates: [],
+  },
+  state: 'TriggerPending',
+  confidence: {
+    score: 0,
+    qualifiedReasons: [],
+    missingReasons: ['no ICT candidate/reference level'],
+    hardBlocker: 'no ICT candidate/reference level',
+    recommendation: 'No trade.',
+    scorecard: [],
+  },
+  staleReason: null,
+  scannerReviewStatus: 'no_structured_displacement_fixture',
+  scannerAuditWarnings: [],
+  alertDecision: { shouldSend: false, reason: 'TriggerPending is logged locally as developing context.' },
+  planVersionId: 'MORNING-20260604-101500-TAPE',
+  dryRun: true,
+  historyCoverage: [],
+  auditDir,
+});
+const noDisplacementTape = JSON.parse(await fs.readFile(noDisplacementTapePath, 'utf8'));
+assert.equal(noDisplacementTape.events['2026-06-04T10:15:00.0000000'].facts.displacement.direction, null);
 assert.equal(tapeEvent.candidateLifecycleTrace.sourceOfTruth, 'scanner_candidate_lifecycle_trace');
 assert.equal(tapeEvent.candidateLifecycleTrace.candidateCount, 0);
 assert.equal(tapeEvent.candidateLifecycleTrace.discordDecision.shouldSend, false);
