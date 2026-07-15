@@ -3542,10 +3542,14 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
 
 function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
   const play = args.deskState?.primaryDeskPlay;
+  const ticket = args.deskState?.deskTicket?.sourceOfTruth === 'scanner_single_active_desk_ticket'
+    ? args.deskState.deskTicket
+    : null;
   const candidate = args.candidates[0] || null;
   const candidateDirection = candidate?.direction === 'LONG' || candidate?.direction === 'SHORT' ? candidate.direction : null;
   const playDirection = play?.direction === 'LONG' || play?.direction === 'SHORT' ? play.direction : null;
-  const displayDirection = direction === 'WAIT' ? playDirection || candidateDirection || 'WAIT' : direction;
+  const ticketDirection = ticket?.primaryDirection === 'LONG' || ticket?.primaryDirection === 'SHORT' ? ticket.primaryDirection : null;
+  const displayDirection = direction === 'WAIT' ? ticketDirection || playDirection || candidateDirection || 'WAIT' : direction;
   const freshBest = play?.freshReentryCandidates?.approvalStatus === 'approved_discord_conditional_display' &&
     play.freshReentryCandidates.bestCandidate?.status === 'ready_for_owner_review' &&
     play.freshReentryCandidates.bestCandidate.direction === displayDirection
@@ -3564,13 +3568,23 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       }
     : null;
   const candidateLevels = candidate ? appTargetLevels(candidate, args.normalized) : null;
+  const ticketLevels = (displayDirection === 'LONG' || displayDirection === 'SHORT') && ticket
+    ? directionallyValidLevels(displayDirection, {
+        entry: ticket.entry,
+        stop: ticket.stop,
+        target1: ticket.t1,
+        target2: ticket.t2,
+      })
+    : null;
   const status = reportStatus(candidate, args.normalized, args.statusOverride || args.decisionOverride);
-  const lineInSand = freshBest?.lineInSand ??
+  const lineInSand = (isFinitePrice(ticket?.lineInSand) ? ticket!.lineInSand! : null) ??
+    freshBest?.lineInSand ??
     candidate?.activeRuleset?.htfLineInSand?.lineInSand ??
     (displayDirection === 'LONG' || displayDirection === 'SHORT' ? deskPlayLineForDirection(play, displayDirection) : play?.lineInSand) ??
     null;
   const levels = displayDirection === 'LONG' || displayDirection === 'SHORT'
-    ? freshLevels ||
+    ? ticketLevels ||
+      freshLevels ||
       deskPlayDecisionMapLevels(args.normalized, displayDirection, lineInSand, play, args.currentPrice) ||
       (candidate &&
       candidateLevels &&
@@ -3681,6 +3695,7 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       ((displayDirection === 'LONG' || displayDirection === 'SHORT') && play?.activeTacticalZone?.direction === displayDirection
         ? play.activeTacticalZone.nextTrigger
         : null) ||
+      ticket?.triggerCondition ||
       freshBest?.requiredTrigger ||
       freshBest?.nextAction ||
       candidate?.requiredTrigger ||
@@ -3688,8 +3703,8 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       play?.nextTrigger,
       `completed 5M acceptance ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`,
     )}`,
-    `Invalid: ${invalidInstruction(freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `${invalidWord} ${priceLine(levels?.stop ?? null)}.`)}`,
-    `Opposite Scenario: stand down on ${standDownInstruction(freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels?.stop ?? lineInSand)}.`)}`,
+    `Invalid: ${invalidInstruction(ticket?.invalidationText || freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `${invalidWord} ${priceLine(levels?.stop ?? null)}.`)}`,
+    `Opposite Scenario: stand down on ${standDownInstruction(ticket?.invalidationText || freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels?.stop ?? lineInSand)}.`)}`,
     ...(parentZone && isFinitePrice(parentZone.lower) && isFinitePrice(parentZone.upper)
       ? [`HTF FVG: ${parentZone.timeframe || 'HTF'} ${priceLine(parentZone.lower)}-${priceLine(parentZone.upper)} (${parentZone.state || 'mapped'}).`]
       : []),

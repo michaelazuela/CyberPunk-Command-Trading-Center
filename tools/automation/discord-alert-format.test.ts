@@ -413,6 +413,81 @@ assert.ok(!morningText.includes('HTF Runner Map:'));
 assert.ok(!morningText.includes('HTF reaction:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 
+const oversizedTicketFallbackCandidate = sampleCandidate('LONG');
+oversizedTicketFallbackCandidate.entry = 5320;
+oversizedTicketFallbackCandidate.stop = 5316;
+oversizedTicketFallbackCandidate.target1 = 5326;
+oversizedTicketFallbackCandidate.target2 = 5328;
+const oversizedTicketFallbackPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-05-26',
+  instrument: 'MES',
+  planVersionId: 'OVERSIZED-TICKET-FALLBACK',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'LONG',
+    noTradeReason: null,
+    setupCandidates: [oversizedTicketFallbackCandidate],
+  },
+  candidates: [oversizedTicketFallbackCandidate],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  sourceLabel: 'Morning',
+  windowLabel: '09:15-12:00 ET',
+  deskState: {
+    marketMode: 'human_review_ready',
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    deskTicket: {
+      sourceOfTruth: 'scanner_single_active_desk_ticket',
+      state: `ACTIVE_REVIEW ${'oversized-ticket-state '.repeat(220)}`,
+      primaryDirection: 'LONG',
+      lineInSand: 5400,
+      triggerCondition: 'Completed 5M close above 5400.00.',
+      entry: 5400,
+      stop: 5392,
+      t1: 5412,
+      t2: 5416,
+      invalidation: 5392,
+      invalidationText: 'Invalid below protected 5M structure stop 5392.00.',
+      htfStatus: 'sufficient',
+      htfStory: 'HTF context sufficient/structural; 5M remains execution authority.',
+      oppositeScenario: null,
+      sourceCandidateKey: 'oversized-ticket-fallback',
+      humanReviewOnly: true,
+      noAutomatedOrders: true,
+    },
+    lineInSand: 5320,
+    nextTrigger: 'Completed 5M close above 5320.00.',
+    invalidation: 'Invalid below 5316.00.',
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'LONG',
+      title: 'LONG desk play',
+      summary: 'Long remains primary.',
+      lineInSand: 5320,
+      longAbove: 5320,
+      shortBelow: 5316,
+      targetReactionLevel: null,
+      targetReactionLabel: null,
+      targetReactionReason: null,
+      nextTrigger: 'Completed 5M close above 5320.00.',
+      invalidation: 'Invalid below 5316.00.',
+      noChase: 'No chase. Wait for completed 5M proof.',
+      htfConflict: false,
+      countertrendWarning: null,
+      discordEligible: true,
+    },
+  },
+});
+const oversizedTicketFallbackText = flattenDiscordPayloadText(oversizedTicketFallbackPayload);
+assert.ok(oversizedTicketFallbackText.includes('LONG ABOVE 5400.00'));
+assert.ok(oversizedTicketFallbackText.includes('Entry: 5400.00'));
+assert.ok(oversizedTicketFallbackText.includes('Stop: 5392.00'));
+assert.ok(oversizedTicketFallbackText.includes('T1: 5412.00 | T2: 5416.00'));
+assert.ok(!oversizedTicketFallbackText.includes('Entry: 5320.00'));
+assert.ok(!oversizedTicketFallbackText.includes('T1: 5326.00 | T2: 5328.00'));
+
 const overlappingOppositeTicketPayload = compactDiscordSummary({
   session: 'evening',
   tradeDate: '2026-07-13',
