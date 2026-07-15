@@ -6551,6 +6551,16 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   if (args.deskState.canExecute) {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play refresh suppressed because executable approval should use the trade-alert path, not review-map Discord refresh.');
   }
+  if (args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan) {
+    return scannerDeskPlaySuppressionPost(args.publishDecision.discordReason);
+  }
+  const hasCanonicalPublishDecision = Boolean(args.publishDecision);
+  if (hasCanonicalPublishDecision) {
+    return scannerDeskPlaySuppressionBlocked(
+      args.publishDecision?.action === 'DATA_QUALITY_BLOCKER' ? 'stale_data' : 'low_quality_map',
+      args.publishDecision?.discordReason || 'Desk Play kept local because the canonical DeskPublishDecision did not approve public posting.',
+    );
+  }
   const referenceLevels = deskPlayPlanningLevels({
     deskState: args.deskState,
     normalized: args.normalized,
@@ -6560,7 +6570,6 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     isFiniteTradePrice(referenceLevels.target1) &&
     isFiniteTradePrice(referenceLevels.target2);
   const play = args.deskState.primaryDeskPlay;
-  const hasCanonicalPublishDecision = Boolean(args.publishDecision);
   const legacyDeskPlayPromotionAllowed = !hasCanonicalPublishDecision;
   const freshReentryBest = play.freshReentryCandidates?.approvalStatus === 'approved_discord_conditional_display' &&
     play.freshReentryCandidates.bestCandidate?.status === 'ready_for_owner_review' &&
@@ -6672,15 +6681,6 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
       'duplicate_refresh',
       publicCadenceHoldReason,
       previousRecord?.materialCadenceFingerprint || previousRecord?.fingerprint || null,
-    );
-  }
-  if (args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan) {
-    return scannerDeskPlaySuppressionPost(args.publishDecision.discordReason);
-  }
-  if (hasCanonicalPublishDecision) {
-    return scannerDeskPlaySuppressionBlocked(
-      args.publishDecision?.action === 'DATA_QUALITY_BLOCKER' ? 'stale_data' : 'low_quality_map',
-      args.publishDecision?.discordReason || 'Desk Play kept local because the canonical DeskPublishDecision did not approve public posting.',
     );
   }
   if (readiness === 'data_limited' && hasReferenceLevels) {

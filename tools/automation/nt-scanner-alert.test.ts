@@ -3280,6 +3280,58 @@ assert.equal(duplicateDeskPlaySuppression.category, 'low_quality_map');
 assert.match(duplicateDeskPlaySuppression.reason, /complete app-owned entry, stop, T1, and T2/);
 assert.equal(duplicateDeskPlaySuppression.changesTradingLogic, false);
 assert.equal(duplicateDeskPlaySuppression.changesCanExecute, false);
+const canonicalDuplicateBypassDecision: DeskPublishDecision = {
+  sourceOfTruth: 'scanner_desk_publish_decision',
+  action: 'POST_REVIEW',
+  discordAction: 'post_review',
+  shouldPost: true,
+  reason: 'Canonical contract owns this complete review ticket.',
+  displaySource: 'desk_ticket',
+  candidateKey: 'canonical-duplicate-bypass',
+  direction: 'SHORT',
+  setupType: SetupType.IntradayMssMicroContinuation,
+  lineInSand: 7416.5,
+  triggerCondition: 'Completed 5M close below 7416.50.',
+  entry: 7412.75,
+  stop: 7424.75,
+  t1: 7405.25,
+  t2: 7401.25,
+  invalidation: 7424.75,
+  invalidationText: 'Invalid above 7424.75.',
+  hasCompletePlan: true,
+  humanReviewOnly: true,
+  canExecute: false,
+  noChaseState: false,
+  htfContextStatus: 'sufficient',
+  dataQualityStatus: 'ok',
+  discordReason: 'Canonical DeskPublishDecision approved this complete review ticket.',
+  managementWarnings: [],
+  driftBlocker: null,
+  approvalBoundary: {
+    changesTradeApprovals: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesRiskRules: false,
+    changesBridgeBehavior: false,
+  },
+};
+const canonicalDuplicateBypassSuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: repeatedBaseDeskPlanRefreshKey,
+  deskState: baseDeskPlanRefreshState,
+  publishDecision: canonicalDuplicateBypassDecision,
+  deskPlanRefreshSent: { [firstDeskPlanRefreshKey]: previousDeskPlanRefreshRecord },
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+  now: new Date('2026-06-08T15:40:30.000Z'),
+});
+assert.equal(canonicalDuplicateBypassSuppression.shouldPost, true);
+assert.equal(canonicalDuplicateBypassSuppression.category, 'post');
+assert.equal(canonicalDuplicateBypassSuppression.reason, 'Canonical DeskPublishDecision approved this complete review ticket.');
+assert.equal(canonicalDuplicateBypassSuppression.changesTradingLogic, false);
+assert.equal(canonicalDuplicateBypassSuppression.changesCanExecute, false);
 const noisyRecentReviewMapFlipDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
