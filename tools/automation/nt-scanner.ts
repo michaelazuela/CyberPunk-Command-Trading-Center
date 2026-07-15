@@ -25,6 +25,7 @@ import {
 import {
   assessBridgeBarStaleness,
   buildCandidateLifecycleTrace,
+  buildDeskPublishDecision,
   buildDeskState,
   buildTargetCascade,
   buildTradeDecisionMapAudit,
@@ -49,6 +50,7 @@ import {
   type ScannerCandidateLifecycleTrace,
   type ScannerAlertDecision,
   type DeskState,
+  type DeskPublishDecision,
   type ScannerState,
   type ScannerThresholds,
   type ScannerVisibilityMetadata,
@@ -2189,6 +2191,7 @@ async function writeScannerDiscordAuditLog(args: {
   candidateLifecycleTrace?: ScannerCandidateLifecycleTrace;
   tradeDecisionMapAudit?: TradeDecisionMapAudit;
   deskState?: DeskState;
+  publishDecision?: DeskPublishDecision | null;
   chartMarkup: string | null;
   levelMap: string | null;
   auditDir?: string;
@@ -2231,6 +2234,11 @@ async function writeScannerDiscordAuditLog(args: {
     candidate: args.candidate,
     normalized: args.normalized,
   });
+  const publishDecision = args.publishDecision || buildDeskPublishDecision({
+    deskState,
+    currentPrice: args.currentPrice,
+    completed5mTime: args.completed5m?.time || null,
+  });
   const auditPayload = repairDuplicateAuditTargets({
     createdAt: new Date().toISOString(),
     source: 'live-scanner',
@@ -2257,6 +2265,7 @@ async function writeScannerDiscordAuditLog(args: {
     candidateLifecycleTrace,
     tradeDecisionMapAudit,
     deskState,
+    deskPublishDecision: publishDecision,
     counterStructureConditional: deskState.primaryDeskPlay.counterStructureConditional || null,
     mtfPrimarySideArbitration: deskState.primaryDeskPlay.mtfPrimarySideArbitration || null,
     htfTargetToLinePromotion: deskState.primaryDeskPlay.htfTargetToLinePromotion || null,
@@ -2266,6 +2275,7 @@ async function writeScannerDiscordAuditLog(args: {
     htfHistoryCoverage: htfHistoryCoverageReadiness(args.historyCoverage),
     targetCascade: args.targetCascade,
     alertReason: args.alertReason,
+    publishDecision,
     attachments: {
       chartMarkup: args.chartMarkup,
       priceLevelMap: args.levelMap,
@@ -2781,6 +2791,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
   tradeDecisionMapAudit?: TradeDecisionMapAudit;
   targetCascade?: TargetCascadeResult | null;
   deskState?: DeskState;
+  publishDecision?: DeskPublishDecision | null;
   planVersionId: string;
   dryRun: boolean;
   historyCoverage?: ScannerHistoryCoverageRecord[];
@@ -2829,6 +2840,11 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     candidate: args.candidate,
     normalized: args.normalized,
   });
+  const publishDecision = args.publishDecision || buildDeskPublishDecision({
+    deskState,
+    currentPrice: args.currentPrice,
+    completed5mTime: args.completed5m?.time || null,
+  });
   const reversalWatchLines = buildScannerReversalWatchLines({
     deskState,
     completed5m: args.completed5m,
@@ -2871,6 +2887,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     candidateLifecycleTrace,
     tradeDecisionMapAudit,
     deskState,
+    deskPublishDecision: publishDecision,
     counterStructureConditional: deskState.primaryDeskPlay.counterStructureConditional || null,
     mtfPrimarySideArbitration: deskState.primaryDeskPlay.mtfPrimarySideArbitration || null,
     htfTargetToLinePromotion: deskState.primaryDeskPlay.htfTargetToLinePromotion || null,
@@ -2885,6 +2902,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
       shouldSend: args.alertDecision.shouldSend,
       sendOrSuppressReason: args.alertDecision.reason,
       suppressed: !args.alertDecision.shouldSend,
+      publishDecision,
     },
     classification: {
       live: !args.dryRun,
@@ -6490,6 +6508,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   session: string;
   deskPlayKey: string;
   deskState: DeskState;
+  publishDecision?: DeskPublishDecision | null;
   normalized?: ReturnType<typeof buildAppTradePlan> | null;
   deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
   currentPrice: number | null;
@@ -6621,6 +6640,9 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
       publicCadenceHoldReason,
       previousRecord?.materialCadenceFingerprint || previousRecord?.fingerprint || null,
     );
+  }
+  if (args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan) {
+    return scannerDeskPlaySuppressionPost(args.publishDecision.discordReason);
   }
   if (readiness === 'data_limited' && hasReferenceLevels) {
     return scannerDeskPlaySuppressionPost(
@@ -7095,6 +7117,11 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     candidateLifecycleTrace,
     tradeDecisionMapAudit,
     deskState,
+    publishDecision: buildDeskPublishDecision({
+      deskState,
+      currentPrice: args.currentPrice,
+      completed5mTime: args.completed5m?.time || null,
+    }),
     chartMarkup,
     levelMap,
     auditDir: args.auditDir,
@@ -7134,6 +7161,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
   windowLabel: string;
   planVersionId: string;
   deskState: DeskState;
+  publishDecision?: DeskPublishDecision | null;
   decisionTapePath: string;
   outputDir?: string;
 }): Promise<{
@@ -7142,12 +7170,48 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
   chartMarkup: string | null;
   levelMap: string | null;
 }> {
+  const publishCandidate = args.publishDecision?.displaySource === 'selected_candidate'
+    ? (args.normalized.setupCandidates || []).find((candidate) =>
+        candidate.direction === args.publishDecision?.direction &&
+        candidate.setupType === args.publishDecision?.setupType &&
+        roundNullableTradePrice(candidate.entry) === roundNullableTradePrice(args.publishDecision?.entry) &&
+        roundNullableTradePrice(candidate.stop) === roundNullableTradePrice(args.publishDecision?.stop) &&
+        roundNullableTradePrice(candidate.target1) === roundNullableTradePrice(args.publishDecision?.t1) &&
+        roundNullableTradePrice(candidate.target2) === roundNullableTradePrice(args.publishDecision?.t2)
+      ) || null
+    : null;
+  const publishDeskState = args.publishDecision?.shouldPost && args.publishDecision.direction !== 'WAIT'
+    ? {
+        ...args.deskState,
+        deskTicket: {
+          ...args.deskState.deskTicket,
+          primaryDirection: args.publishDecision.direction,
+          lineInSand: args.publishDecision.lineInSand,
+          triggerCondition: args.publishDecision.triggerCondition || args.deskState.deskTicket.triggerCondition,
+          entry: args.publishDecision.entry,
+          stop: args.publishDecision.stop,
+          t1: args.publishDecision.t1,
+          t2: args.publishDecision.t2,
+          invalidation: args.publishDecision.invalidation,
+          invalidationText: args.publishDecision.invalidationText || args.deskState.deskTicket.invalidationText,
+          sourceCandidateKey: args.publishDecision.candidateKey,
+        },
+        primaryDeskPlay: {
+          ...args.deskState.primaryDeskPlay,
+          direction: args.publishDecision.direction,
+          lineInSand: args.publishDecision.lineInSand,
+          longAbove: args.publishDecision.direction === 'LONG' ? args.publishDecision.lineInSand : args.deskState.primaryDeskPlay.longAbove,
+          shortBelow: args.publishDecision.direction === 'SHORT' ? args.publishDecision.lineInSand : args.deskState.primaryDeskPlay.shortBelow,
+          nextTrigger: args.publishDecision.triggerCondition || args.deskState.primaryDeskPlay.nextTrigger,
+        },
+      }
+    : args.deskState;
   const deskState = withScannerReviewMapPresentation({
-    deskState: args.deskState,
-    candidate: candidateForDeskPlayContextChart(args.deskState, args.normalized, args.currentPrice, args.candidate),
+    deskState: publishDeskState,
+    candidate: publishCandidate || candidateForDeskPlayContextChart(publishDeskState, args.normalized, args.currentPrice, args.candidate),
     normalized: args.normalized,
   });
-  const contextCandidate = candidateForDeskPlayContextChart(deskState, args.normalized, args.currentPrice, args.candidate);
+  const contextCandidate = publishCandidate || candidateForDeskPlayContextChart(deskState, args.normalized, args.currentPrice, args.candidate);
   const play = deskState.primaryDeskPlay;
   const chartContextLine = play.activeTacticalLine?.activeLine ?? play.lineInSand;
   const chartMarkup = contextCandidate
@@ -10306,6 +10370,11 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   if (operatorNormalizedAlertDecision.reason !== alertDecision.reason) {
     alertDecision = operatorNormalizedAlertDecision;
   }
+  const deskPublishDecision = buildDeskPublishDecision({
+    deskState,
+    currentPrice,
+    completed5mTime: completed5m.time,
+  });
   if (!alertDecision.shouldSend && activeCampaignClaim.claimed && activeCampaignClaim.campaignId) {
     const suppressedReason = alertDecision.reason || 'Scanner alert suppressed after durable ActiveCampaign claim.';
     state.alertDeliveries[alertKey] = {
@@ -10354,6 +10423,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     candidateLifecycleTrace,
     targetCascade,
     deskState,
+    publishDecision: deskPublishDecision,
     planVersionId,
     dryRun: config.dryRun,
     historyCoverage,
@@ -10576,7 +10646,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     }
   }
 
-  if (!reversalWatchPosted && !alertDecision.shouldSend && window.allowsDiscordAlert && deskState.primaryDeskPlay.discordEligible) {
+  const canonicalDeskPublishEligible = deskPublishDecision.shouldPost && !alertDecision.shouldSend;
+  if (!reversalWatchPosted && !alertDecision.shouldSend && window.allowsDiscordAlert && (deskState.primaryDeskPlay.discordEligible || canonicalDeskPublishEligible)) {
     const deskPlayKey = scannerDeskPlanRefreshKey({
       tradeDate,
       instrument: config.instrument,
@@ -10590,6 +10661,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       session: window.session,
       deskPlayKey,
       deskState,
+      publishDecision: deskPublishDecision,
       deskPlanRefreshSent: state.deskPlanRefreshSent,
       normalized,
       currentPrice,
@@ -10620,6 +10692,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           windowLabel: window.label,
           planVersionId: deskPlayPlanVersionId,
           deskState,
+          publishDecision: deskPublishDecision,
           decisionTapePath,
         });
         // Phase 11B guard phrase retained: liveDiscordSendBoundary(decisionTapePath)

@@ -1049,6 +1049,42 @@ export interface DeskState {
   notes: string[];
 }
 
+export interface DeskPublishDecision {
+  sourceOfTruth: 'scanner_desk_publish_decision';
+  action: ScannerVisibilityMode;
+  discordAction: ScannerDiscordAction;
+  shouldPost: boolean;
+  reason: string;
+  displaySource: 'desk_ticket' | 'selected_candidate' | 'none';
+  candidateKey: string | null;
+  direction: DeskPlayDirection;
+  setupType: SetupType | null;
+  lineInSand: number | null;
+  triggerCondition: string | null;
+  entry: number | null;
+  stop: number | null;
+  t1: number | null;
+  t2: number | null;
+  invalidation: number | null;
+  invalidationText: string | null;
+  hasCompletePlan: boolean;
+  humanReviewOnly: true;
+  canExecute: boolean;
+  noChaseState: boolean;
+  htfContextStatus: DeskStateHtfContextStatus;
+  dataQualityStatus: DeskStateDataQualityStatus;
+  discordReason: string;
+  managementWarnings: string[];
+  driftBlocker: string | null;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesBridgeBehavior: false;
+  };
+}
+
 export interface DeskTicketOppositeScenario {
   direction: Exclude<DeskPlayDirection, 'WAIT'>;
   lineInSand: number | null;
@@ -2904,6 +2940,40 @@ function buildDeskStatePromotionPath(args: {
 
 function finiteDeskTicketPrice(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function lifecycleItemHasCompletePublishLevels(item: ScannerCandidateLifecycleTraceItem | null | undefined): item is ScannerCandidateLifecycleTraceItem {
+  return Boolean(
+    item &&
+    (item.direction === 'LONG' || item.direction === 'SHORT') &&
+    finiteDeskTicketPrice(item.entry) !== null &&
+    finiteDeskTicketPrice(item.stop) !== null &&
+    finiteDeskTicketPrice(item.target1) !== null &&
+    finiteDeskTicketPrice(item.target2) !== null
+  );
+}
+
+function lifecycleItemPublishableVisibility(item: ScannerCandidateLifecycleTraceItem | null | undefined): boolean {
+  return Boolean(
+    item &&
+    (
+      item.visibilityMode === 'POST_PLAN' ||
+      item.visibilityMode === 'POST_REVIEW' ||
+      item.visibilityMode === 'POST_CONDITIONAL' ||
+      item.visibilityMode === 'POST_WATCH'
+    )
+  );
+}
+
+function deskTicketHasCompletePublishLevels(ticket: DeskTicket | null | undefined): boolean {
+  return Boolean(
+    ticket &&
+    (ticket.primaryDirection === 'LONG' || ticket.primaryDirection === 'SHORT') &&
+    finiteDeskTicketPrice(ticket.entry) !== null &&
+    finiteDeskTicketPrice(ticket.stop) !== null &&
+    finiteDeskTicketPrice(ticket.t1) !== null &&
+    finiteDeskTicketPrice(ticket.t2) !== null
+  );
 }
 
 function deskTicketStateFrom(args: {
@@ -5339,6 +5409,145 @@ export function buildDeskState(args: {
       'DeskState is the scanner-owned visibility snapshot for Discord, RAG, and UI consumers.',
       'DeskState does not change trade approvals, entry, stop, target, risk, model definitions, or canExecute.',
     ],
+  };
+}
+
+export function buildDeskPublishDecision(args: {
+  deskState: DeskState;
+  currentPrice?: number | null;
+  completed5mTime?: string | null;
+}): DeskPublishDecision {
+  const deskState = args.deskState;
+  const ticket = deskState.deskTicket;
+  const selected = deskState.selectedCandidate;
+  const selectedHasCompletePlan = lifecycleItemHasCompletePublishLevels(selected);
+  const selectedCanPublish = selectedHasCompletePlan &&
+    lifecycleItemPublishableVisibility(selected) &&
+    selected.selected &&
+    !selected.filteredOutReason &&
+    selected.executionStatus !== ExecutionStatus.Blocked;
+  const ticketHasCompletePlan = deskTicketHasCompletePublishLevels(ticket);
+  const useSelected = Boolean(selectedCanPublish);
+  const selectedPublishDirection: DeskPlayDirection = selected?.direction === 'LONG' || selected?.direction === 'SHORT'
+    ? selected.direction
+    : 'WAIT';
+  const displaySource: DeskPublishDecision['displaySource'] = useSelected
+    ? 'selected_candidate'
+    : ticketHasCompletePlan
+      ? 'desk_ticket'
+      : 'none';
+  const direction = useSelected
+    ? selectedPublishDirection
+    : ticketHasCompletePlan
+      ? ticket.primaryDirection
+      : 'WAIT';
+  const hasCompletePlan = displaySource === 'selected_candidate'
+    ? selectedHasCompletePlan
+    : ticketHasCompletePlan;
+  const lineInSand = displaySource === 'selected_candidate'
+    ? finiteDeskTicketPrice(selected.lineInSand) ?? finiteDeskTicketPrice(selected.entry)
+    : displaySource === 'desk_ticket'
+      ? ticket.lineInSand
+      : null;
+  const entry = displaySource === 'selected_candidate' ? finiteDeskTicketPrice(selected.entry) : displaySource === 'desk_ticket' ? ticket.entry : null;
+  const stop = displaySource === 'selected_candidate' ? finiteDeskTicketPrice(selected.stop) : displaySource === 'desk_ticket' ? ticket.stop : null;
+  const t1 = displaySource === 'selected_candidate' ? finiteDeskTicketPrice(selected.target1) : displaySource === 'desk_ticket' ? ticket.t1 : null;
+  const t2 = displaySource === 'selected_candidate' ? finiteDeskTicketPrice(selected.target2) : displaySource === 'desk_ticket' ? ticket.t2 : null;
+  const invalidationText = displaySource === 'selected_candidate'
+    ? selected.invalidation || (stop === null ? null : `Invalid at protected structure stop ${stop.toFixed(2)}.`)
+    : displaySource === 'desk_ticket'
+      ? ticket.invalidationText
+      : null;
+  const triggerCondition = displaySource === 'selected_candidate'
+    ? selected.requiredTrigger || selected.nextTrigger || (direction === 'LONG' || direction === 'SHORT'
+      ? deskTicketTrigger(direction, lineInSand, null)
+      : null)
+    : displaySource === 'desk_ticket'
+      ? ticket.triggerCondition
+      : null;
+  const dataQualityBlocked = deskState.dataQualityStatus === 'data_limited' &&
+    deskState.visibilityMode === 'DATA_QUALITY_BLOCKER';
+  const action: ScannerVisibilityMode = dataQualityBlocked
+    ? 'DATA_QUALITY_BLOCKER'
+    : hasCompletePlan && (deskState.visibilityMode === 'POST_PLAN' || deskState.visibilityMode === 'POST_REVIEW' || deskState.visibilityMode === 'POST_CONDITIONAL')
+      ? deskState.visibilityMode
+      : hasCompletePlan && displaySource === 'selected_candidate'
+        ? selected.visibilityMode === 'POST_PLAN' || selected.visibilityMode === 'POST_REVIEW' || selected.visibilityMode === 'POST_CONDITIONAL'
+          ? selected.visibilityMode
+          : 'POST_CONDITIONAL'
+        : deskState.visibilityMode;
+  const discordAction: ScannerDiscordAction = action === 'POST_PLAN'
+    ? 'post_plan'
+    : action === 'POST_REVIEW'
+      ? 'post_review'
+      : action === 'POST_CONDITIONAL'
+        ? 'post_conditional'
+        : action === 'POST_WATCH'
+          ? 'post_watch'
+          : action === 'NO_TRADE_WITH_REASON'
+            ? 'no_trade'
+            : 'hold';
+  const driftBlocker = hasCompletePlan &&
+    displaySource === 'desk_ticket' &&
+    selectedHasCompletePlan &&
+    selected.direction !== ticket.primaryDirection &&
+    !ticket.oppositeScenario
+    ? `DeskTicket direction ${ticket.primaryDirection} conflicts with selected candidate ${selected.direction}; public output requires canonical selected-candidate ownership or counter-scenario marking.`
+    : null;
+  const shouldPost = Boolean(
+    !dataQualityBlocked &&
+    !driftBlocker &&
+    hasCompletePlan &&
+    (action === 'POST_PLAN' || action === 'POST_REVIEW' || action === 'POST_CONDITIONAL' || action === 'POST_WATCH')
+  );
+  const noChaseState = ticket.state === 'NO_CHASE' ||
+    /no chase|missed|already reached|already past/i.test(deskState.suppressionReason || selected?.filteredOutReason || '');
+  const managementWarnings = [
+    noChaseState ? 'No chase: use the named completed 5M condition and protected structure, not a late market entry.' : null,
+    deskState.htfContextStatus === 'insufficient' ? 'HTF context is insufficient; treat HTF as context only, not structural confirmation.' : null,
+    deskState.primaryDeskPlay.targetReactionLevel ? `Nearby reaction/management level: ${deskState.primaryDeskPlay.targetReactionLabel || 'reaction'} ${deskState.primaryDeskPlay.targetReactionLevel.toFixed(2)}.` : null,
+  ].filter((item): item is string => Boolean(item));
+  const reason = shouldPost
+    ? displaySource === 'selected_candidate'
+      ? 'Scanner-owned selected candidate has complete line, trigger, entry, stop, T1, T2, and invalidation; publish as human-review decision support even if execution/canExecute remains false.'
+      : 'Scanner-owned DeskTicket has complete line, trigger, entry, stop, T1, T2, and invalidation; publish as human-review decision support.'
+    : dataQualityBlocked
+      ? deskState.visibilityMetadata.dataQualityBlocker || 'Data-quality blocker prevents public trade-plan promotion.'
+      : driftBlocker || deskState.suppressionReason || 'Canonical publish contract does not have a complete scanner-owned ticket.';
+  return {
+    sourceOfTruth: 'scanner_desk_publish_decision',
+    action,
+    discordAction,
+    shouldPost,
+    reason,
+    displaySource,
+    candidateKey: displaySource === 'selected_candidate' ? selected.candidateKey : ticket.sourceCandidateKey,
+    direction,
+    setupType: displaySource === 'selected_candidate' ? selected.setupType : null,
+    lineInSand,
+    triggerCondition,
+    entry,
+    stop,
+    t1,
+    t2,
+    invalidation: stop,
+    invalidationText,
+    hasCompletePlan,
+    humanReviewOnly: true,
+    canExecute: deskState.canExecute,
+    noChaseState,
+    htfContextStatus: deskState.htfContextStatus,
+    dataQualityStatus: deskState.dataQualityStatus,
+    discordReason: reason,
+    managementWarnings,
+    driftBlocker,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
+    },
   };
 }
 

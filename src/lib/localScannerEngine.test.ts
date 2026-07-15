@@ -4,6 +4,7 @@ import {
   assessBridgeBarStaleness,
   applyStaleChaseGuard,
   buildCandidateLifecycleTrace,
+  buildDeskPublishDecision,
   buildDeskState,
   buildSameSideCampaignStacks,
   buildTradeDecisionMapAudit,
@@ -359,6 +360,96 @@ assert.equal(
   shouldSendScannerAlert({ state: 'Conditional', confidence: 64, window: morningWindow, candidate: strongCandidate }).shouldSend,
   false
 );
+
+const july15FailedHighBreakdownShort = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Bearish failed-high breakdown after 10:20 retest',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  entry: 7608,
+  stop: 7626.5,
+  target1: 7607.25,
+  target2: 7603.25,
+  riskPoints: 18.5,
+  rankScore: 44,
+  decisionQualityScore: 44,
+  modelConfidenceScore: 44,
+  activeRuleset: {
+    htfLineInSand: {
+      applied: true,
+      status: 'blocked',
+      required: 'completed_5m_or_15m_close_beyond_htf_line',
+      appliesToAllModels: true,
+      affectsExecution: false,
+      direction: 'SHORT',
+      lineInSand: 7618.75,
+      lineReason: '7618.75 was the 9:40 failed-high body close and 10:20 retest decision line.',
+      requiredClose: 'Completed 5M close below 7618.75 confirms the failed-high breakdown review.',
+      obstacleType: 'support',
+      obstacleSource: 'ninjatrader',
+      evidence: ['9:40 high 7626.25, 10:20 failed retest high 7626.00, 10:25 close 7608.00.'],
+      blockers: [],
+    },
+  },
+  evidence: [
+    'Buy-side failed auction at the morning high.',
+    'Completed 5M close below the failed-high decision line.',
+    'App-owned entry, stop, T1, and T2 are present.',
+  ],
+  requiredTrigger: 'SHORT only after completed 5M close below 7618.75.',
+  invalidation: 'Invalid above protected 5M failed-high swing at 7626.50.',
+});
+const july15LowScoreAlertDecision = shouldSendScannerAlert({
+  state: 'Conditional',
+  confidence: 44,
+  window: morningWindow,
+  candidate: july15FailedHighBreakdownShort,
+});
+assert.equal(july15LowScoreAlertDecision.shouldSend, false);
+assert.match(july15LowScoreAlertDecision.reason, /below 65/);
+const july15Visibility = classifyScannerVisibility({
+  state: 'Conditional',
+  candidate: july15FailedHighBreakdownShort,
+  window: morningWindow,
+  alertDecision: july15LowScoreAlertDecision,
+  canExecute: false,
+});
+const july15Trace = buildCandidateLifecycleTrace({
+  candidates: [july15FailedHighBreakdownShort],
+  selectedCandidate: july15FailedHighBreakdownShort,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: july15LowScoreAlertDecision,
+  canExecute: false,
+});
+const july15DeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: july15FailedHighBreakdownShort,
+  visibilityMetadata: july15Visibility,
+  candidateLifecycleTrace: july15Trace,
+  currentPrice: 7608,
+  canExecute: false,
+});
+const july15PublishDecision = buildDeskPublishDecision({
+  deskState: july15DeskState,
+  currentPrice: 7608,
+  completed5mTime: '2026-07-15T10:25:00-04:00',
+});
+assert.equal(july15PublishDecision.sourceOfTruth, 'scanner_desk_publish_decision');
+assert.equal(july15PublishDecision.shouldPost, true);
+assert.equal(july15PublishDecision.action, 'POST_CONDITIONAL');
+assert.equal(july15PublishDecision.displaySource, 'selected_candidate');
+assert.equal(july15PublishDecision.direction, 'SHORT');
+assert.equal(july15PublishDecision.lineInSand, 7618.75);
+assert.equal(july15PublishDecision.entry, 7608);
+assert.equal(july15PublishDecision.stop, 7626.5);
+assert.equal(july15PublishDecision.t1, 7607.25);
+assert.equal(july15PublishDecision.t2, 7603.25);
+assert.equal(july15PublishDecision.canExecute, false);
+assert.equal(july15PublishDecision.approvalBoundary.changesCanExecute, false);
+assert.match(july15PublishDecision.reason, /complete line, trigger, entry, stop, T1, T2/);
 
 const intradayMssWatchCandidate = candidate({
   setupType: SetupType.IntradayMssMicroContinuation,
