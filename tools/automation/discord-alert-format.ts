@@ -3326,13 +3326,6 @@ function deskTicketCurrentPlanLines(args: CompactDiscordSummaryArgs): string[] {
   const trigger = ticket.triggerCondition || (line !== null && direction !== 'WAIT'
     ? `Completed 5M close ${actionWord} ${priceLine(line)}.`
     : 'Wait for completed 5M proof before planning a fresh entry.');
-  const canonical = buildCanonicalTraderTicket({
-    candidate: args.candidates[0] || null,
-    normalized: args.normalized,
-    deskState: args.deskState,
-    currentPrice: args.currentPrice,
-  });
-  const candidateLevels = canonical.direction === direction ? canonical.levels : null;
   const ticketLevels = direction === 'LONG' || direction === 'SHORT'
     ? directionallyValidLevels(direction, {
         entry: ticket.entry,
@@ -3352,7 +3345,7 @@ function deskTicketCurrentPlanLines(args: CompactDiscordSummaryArgs): string[] {
         target2: computedTicketTargets.target2,
       })
     : null;
-  const levels = candidateLevels || ticketLevels || computedTicketLevels;
+  const levels = ticketLevels || computedTicketLevels;
   const hasLevels = Boolean(levels);
   const invalid = ticket.invalidationText || (isFinitePrice(ticket.invalidation)
     ? `${direction === 'SHORT' ? 'above' : 'below'} ${priceLine(ticket.invalidation)}.`

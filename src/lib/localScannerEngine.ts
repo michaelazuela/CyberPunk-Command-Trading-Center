@@ -2994,12 +2994,8 @@ function buildDeskTicket(args: {
   const stop = finiteDeskTicketPrice(levelSource?.stop) ?? finiteDeskTicketPrice(candidateSource?.stop);
   const targetDirection = primaryDirection === 'LONG' || primaryDirection === 'SHORT' ? primaryDirection : null;
   const computedTargets = targetsFromEntryStop(targetDirection, entry, stop);
-  const t1 = finiteDeskTicketPrice(levelSource?.target1) ??
-    finiteDeskTicketPrice(candidateSource?.target1) ??
-    finiteDeskTicketPrice(computedTargets.target1);
-  const t2 = finiteDeskTicketPrice(levelSource?.target2) ??
-    finiteDeskTicketPrice(candidateSource?.target2) ??
-    finiteDeskTicketPrice(computedTargets.target2);
+  const t1 = finiteDeskTicketPrice(computedTargets.target1);
+  const t2 = finiteDeskTicketPrice(computedTargets.target2);
   const invalidationText = levelSource?.invalidation ||
     candidateSource?.invalidation ||
     (stop === null ? 'Invalidation requires protected 5M structure proof.' : `Invalid at protected structure stop ${stop.toFixed(2)}.`);

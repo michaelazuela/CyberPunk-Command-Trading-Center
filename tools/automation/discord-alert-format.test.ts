@@ -486,6 +486,60 @@ assert.ok(overlappingOppositeTicketText.includes('Do not treat both sides as cle
 assert.ok(overlappingOppositeTicketText.includes('LONG failure plan: no long from 7552.25 alone; long only on completed 5M reclaim above 7557.25 or a fresh protected 5M long setup.'));
 assert.ok(!overlappingOppositeTicketText.includes('Opposite: LONG above 7552.25'));
 
+const staleDeskTicketTargetPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-07-15',
+  instrument: 'MES',
+  planVersionId: 'STALE-DESK-TICKET-TARGETS',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'SHORT',
+    noTradeReason: null,
+    setupCandidates: [],
+  },
+  candidates: [],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  sourceLabel: 'Morning',
+  windowLabel: '09:15-12:00 ET',
+  deskState: {
+    marketMode: 'conditional',
+    visibilityMode: 'POST_CONDITIONAL',
+    discordAction: 'post_conditional',
+    deskTicket: {
+      sourceOfTruth: 'scanner_single_active_desk_ticket',
+      state: 'TRIGGER_PENDING',
+      primaryDirection: 'SHORT',
+      lineInSand: 7606.75,
+      triggerCondition: 'Completed 5M close below 7606.75.',
+      entry: 7606.75,
+      stop: 7615.5,
+      t1: 7614.25,
+      t2: 7614,
+      invalidation: 7615.5,
+      invalidationText: 'Invalid above protected 5M structure stop 7615.50.',
+      htfStatus: 'sufficient',
+      htfStory: 'HTF context sufficient/structural; 5M remains execution authority.',
+      oppositeScenario: null,
+      sourceCandidateKey: 'stale-ticket-targets',
+      humanReviewOnly: true,
+      noAutomatedOrders: true,
+    },
+    lineInSand: 7606.75,
+    nextTrigger: 'Completed 5M close below 7606.75.',
+    invalidation: 'Invalid above protected 5M structure stop 7615.50.',
+    canExecute: false,
+  },
+});
+const staleDeskTicketTargetText = flattenDiscordPayloadText(staleDeskTicketTargetPayload);
+assert.ok(staleDeskTicketTargetText.includes('SHORT BELOW 7606.75'));
+assert.ok(staleDeskTicketTargetText.includes('Entry: 7606.75'));
+assert.ok(staleDeskTicketTargetText.includes('Stop: 7615.50'));
+assert.ok(staleDeskTicketTargetText.includes('T1: 7593.75'));
+assert.ok(staleDeskTicketTargetText.includes('T2: 7589.25'));
+assert.ok(!staleDeskTicketTargetText.includes('T1: 7614.25'));
+assert.ok(!staleDeskTicketTargetText.includes('T2: 7614.00'));
+
 const counterShortCandidate = {
   ...sampleCandidate('SHORT'),
   entry: 7467.5,

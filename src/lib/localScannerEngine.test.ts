@@ -1208,7 +1208,7 @@ assert.equal(deskState.deskTicket.primaryDirection, 'LONG');
 assert.equal(deskState.deskTicket.lineInSand, 100);
 assert.equal(deskState.deskTicket.entry, 100);
 assert.equal(deskState.deskTicket.stop, 96);
-assert.equal(deskState.deskTicket.t1, 108);
+assert.equal(deskState.deskTicket.t1, 106);
 assert.equal(deskState.deskTicket.t2, 108);
 assert.equal(deskState.deskTicket.humanReviewOnly, true);
 assert.equal(deskState.deskTicket.noAutomatedOrders, true);
@@ -1247,6 +1247,40 @@ assert.equal(noTargetDeskState.deskTicket.entry, noTargetDeskState.deskTicket.li
 assert.equal(noTargetDeskState.deskTicket.stop, 96);
 assert.equal(noTargetDeskState.deskTicket.t1, 106);
 assert.equal(noTargetDeskState.deskTicket.t2, 108);
+const staleShortTargetCandidate = candidate({
+  direction: 'SHORT',
+  entry: 7606.75,
+  stop: 7615.5,
+  target1: 7614.25,
+  target2: 7614,
+  invalidation: 'Invalid above protected 5M structure stop 7615.50.',
+});
+const staleShortLifecycleTrace = buildCandidateLifecycleTrace({
+  candidates: [staleShortTargetCandidate],
+  selectedCandidate: staleShortTargetCandidate,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Regression fixture: stale upstream short targets.' },
+  canExecute: false,
+});
+const staleShortDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: staleShortTargetCandidate,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: staleShortTargetCandidate,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Regression fixture: stale upstream short targets.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: staleShortLifecycleTrace,
+  canExecute: false,
+});
+assert.equal(staleShortDeskState.deskTicket.primaryDirection, 'SHORT');
+assert.equal(staleShortDeskState.deskTicket.entry, 7606.75);
+assert.equal(staleShortDeskState.deskTicket.stop, 7615.5);
+assert.equal(staleShortDeskState.deskTicket.t1, 7593.75);
+assert.equal(staleShortDeskState.deskTicket.t2, 7589.25);
 assert.equal(deskState.notes.some((note) => note.includes('does not change trade approvals')), true);
 assert.equal(deskState.promotion.sourceOfTruth, 'scanner_desk_state_promotion_path');
 assert.equal(deskState.promotion.currentStage, 'human_review_ready');
