@@ -4576,6 +4576,41 @@ function roundNullableTradePrice(value: unknown): number | null {
   return isFiniteTradePrice(value) ? roundToTradeTick(value) : null;
 }
 
+function assertScannerDeskPublishArtifactAgreement(args: {
+  publishDecision?: DeskPublishDecision | null;
+  deskState: DeskState;
+  contextCandidate: SetupCandidate | null;
+}): void {
+  const publishDecision = args.publishDecision;
+  if (!publishDecision?.shouldPost || !publishDecision.hasCompletePlan) return;
+  const expectedDirection = publishDecision.direction;
+  if (expectedDirection !== 'LONG' && expectedDirection !== 'SHORT') {
+    throw new Error('DeskPublishDecision artifact agreement failed: publishable decision must have LONG or SHORT direction.');
+  }
+  const ticket = args.deskState.deskTicket;
+  const mismatches: string[] = [];
+  const samePrice = (a: unknown, b: unknown): boolean => roundNullableTradePrice(a) === roundNullableTradePrice(b);
+  if (ticket.primaryDirection !== expectedDirection) mismatches.push(`ticket direction ${ticket.primaryDirection} != ${expectedDirection}`);
+  if (!samePrice(ticket.entry, publishDecision.entry)) mismatches.push(`ticket entry ${ticket.entry} != ${publishDecision.entry}`);
+  if (!samePrice(ticket.stop, publishDecision.stop)) mismatches.push(`ticket stop ${ticket.stop} != ${publishDecision.stop}`);
+  if (!samePrice(ticket.t1, publishDecision.t1)) mismatches.push(`ticket T1 ${ticket.t1} != ${publishDecision.t1}`);
+  if (!samePrice(ticket.t2, publishDecision.t2)) mismatches.push(`ticket T2 ${ticket.t2} != ${publishDecision.t2}`);
+  if (!samePrice(ticket.lineInSand, publishDecision.lineInSand)) mismatches.push(`ticket line ${ticket.lineInSand} != ${publishDecision.lineInSand}`);
+  const candidate = args.contextCandidate;
+  if (!candidate) {
+    mismatches.push('chart candidate missing');
+  } else {
+    if (candidate.direction !== expectedDirection) mismatches.push(`chart direction ${candidate.direction} != ${expectedDirection}`);
+    if (!samePrice(candidate.entry, publishDecision.entry)) mismatches.push(`chart entry ${candidate.entry} != ${publishDecision.entry}`);
+    if (!samePrice(candidate.stop, publishDecision.stop)) mismatches.push(`chart stop ${candidate.stop} != ${publishDecision.stop}`);
+    if (!samePrice(candidate.target1, publishDecision.t1)) mismatches.push(`chart T1 ${candidate.target1} != ${publishDecision.t1}`);
+    if (!samePrice(candidate.target2, publishDecision.t2)) mismatches.push(`chart T2 ${candidate.target2} != ${publishDecision.t2}`);
+  }
+  if (mismatches.length > 0) {
+    throw new Error(`DeskPublishDecision artifact agreement failed: ${mismatches.join('; ')}`);
+  }
+}
+
 function scannerLifecycleForDirection(
   deskState: DeskState,
   direction: ScannerReversalWatchDirection,
@@ -7212,6 +7247,11 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
     normalized: args.normalized,
   });
   const contextCandidate = publishCandidate || candidateForDeskPlayContextChart(deskState, args.normalized, args.currentPrice, args.candidate);
+  assertScannerDeskPublishArtifactAgreement({
+    publishDecision: args.publishDecision,
+    deskState,
+    contextCandidate,
+  });
   const play = deskState.primaryDeskPlay;
   const chartContextLine = play.activeTacticalLine?.activeLine ?? play.lineInSand;
   const chartMarkup = contextCandidate
