@@ -6011,6 +6011,31 @@ function scannerDeskPlaySuppressionBlocked(
   };
 }
 
+export function scannerDeskPlayCanonicalPreDeliveryHold(
+  publishDecision: DeskPublishDecision | null | undefined,
+  alertDecision?: ScannerAlertDecision | null,
+): ScannerDeskPlayDiscordSuppressionDecision | null {
+  if (publishDecision && !publishDecision.shouldPost) {
+    return scannerDeskPlaySuppressionBlocked(
+      publishDecision.action === 'DATA_QUALITY_BLOCKER' ? 'stale_data' : 'low_quality_map',
+      publishDecision.discordReason || 'Desk Play kept local because the canonical DeskPublishDecision did not approve public posting.',
+    );
+  }
+  if (alertDecision && !alertDecision.shouldSend) {
+    const operatorReason = normalizeScannerOperatorDeliveryReason(alertDecision);
+    if (operatorReason.code === 'HELD_STALE_NO_CHASE') {
+      return scannerDeskPlaySuppressionBlocked('missed_no_chase', operatorReason.reason);
+    }
+    if (operatorReason.code === 'HELD_MISSING_5M_PROOF') {
+      return scannerDeskPlaySuppressionBlocked('low_quality_map', operatorReason.reason);
+    }
+    if (operatorReason.code === 'HELD_DATA_LIMITED') {
+      return scannerDeskPlaySuppressionBlocked('stale_data', operatorReason.reason);
+    }
+  }
+  return null;
+}
+
 function scannerDeskPlayPrimaryLifecycle(deskState: DeskState): ScannerCandidateLifecycleTraceItem | null {
   const direction = deskState.primaryDeskPlay.direction;
   if (direction === 'LONG') return deskState.bestLongPlan;
@@ -10734,24 +10759,33 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         previousFingerprint: deskPlaySuppression.previousFingerprint,
       }));
     } else if (!state.deskPlanRefreshSent[deskPlayKey]) {
-      const deskPlayPlanVersionId = `${planVersionId}-DESK-PLAY`;
-      try {
-        const deskPlayArtifacts = await prepareLiveScannerDeskPlayAlertArtifacts({
-          session,
-          tradeDate,
-          config,
-          state: stateForAlert,
-          confidence,
-          normalized,
-          candidate,
-          chartContext: analysis.structuredChartContext || null,
-          currentPrice,
-          windowLabel: window.label,
-          planVersionId: deskPlayPlanVersionId,
-          deskState,
-          publishDecision: deskPublishDecision,
-          decisionTapePath,
-        });
+      const canonicalPreDeliveryHold = scannerDeskPlayCanonicalPreDeliveryHold(deskPublishDecision, alertDecision);
+      if (canonicalPreDeliveryHold) {
+        console.log(scannerSuppressionSummaryLine({
+          label: 'Desk Play refresh',
+          category: canonicalPreDeliveryHold.category,
+          reason: canonicalPreDeliveryHold.reason,
+          previousFingerprint: canonicalPreDeliveryHold.previousFingerprint,
+        }));
+      } else {
+        const deskPlayPlanVersionId = `${planVersionId}-DESK-PLAY`;
+        try {
+          const deskPlayArtifacts = await prepareLiveScannerDeskPlayAlertArtifacts({
+            session,
+            tradeDate,
+            config,
+            state: stateForAlert,
+            confidence,
+            normalized,
+            candidate,
+            chartContext: analysis.structuredChartContext || null,
+            currentPrice,
+            windowLabel: window.label,
+            planVersionId: deskPlayPlanVersionId,
+            deskState,
+            publishDecision: deskPublishDecision,
+            decisionTapePath,
+          });
         // Phase 11B guard phrase retained: liveDiscordSendBoundary(decisionTapePath)
         const deskPlayLiveBoundary = liveDiscordSendBoundary(decisionTapePath, 'desk_play');
         if (shouldPersistScannerAlertToRag(deskState) && (config.dryRun || !config.discordEnabled || deskPlayLiveBoundary.eligible)) {
@@ -10858,6 +10892,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         }
       } catch (error) {
         console.warn(`[scanner] Desk Play delivery failed safely; scanner will continue evaluating trade alerts: ${sanitizedError(error)}`);
+      }
       }
     } else {
       console.log(`[scanner] Desk Plan refresh already sent for ${deskPlayKey}.`);

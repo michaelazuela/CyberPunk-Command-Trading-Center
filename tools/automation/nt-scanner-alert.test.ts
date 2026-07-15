@@ -21,6 +21,7 @@ import {
   createPendingScannerAlertDeliveryRecord,
   evaluateCompletedFiveMinuteBarAssuranceGate,
   evaluateScannerDeskPlayDiscordSuppression,
+  scannerDeskPlayCanonicalPreDeliveryHold,
   evaluateScannerReversalWatchDiscordSuppression,
   evaluateScannerPrimaryAlertPublishingGate,
   evaluateScannerDiscordCampaignTransition,
@@ -4087,6 +4088,95 @@ const canonicalHeldDataLimitedReferenceDeskPlaySuppression = evaluateScannerDesk
 assert.equal(canonicalHeldDataLimitedReferenceDeskPlaySuppression.shouldPost, false);
 assert.equal(canonicalHeldDataLimitedReferenceDeskPlaySuppression.category, 'low_quality_map');
 assert.match(canonicalHeldDataLimitedReferenceDeskPlaySuppression.reason, /Canonical DeskPublishDecision held/);
+const canonicalHeldPreDeliveryGuard = scannerDeskPlayCanonicalPreDeliveryHold({
+  sourceOfTruth: 'scanner_desk_publish_decision',
+  action: 'HOLD_WITH_REASON',
+  discordAction: 'hold',
+  shouldPost: false,
+  reason: 'Canonical stale/no-chase hold fixture.',
+  displaySource: 'desk_ticket',
+  candidateKey: null,
+  direction: 'LONG',
+  setupType: null,
+  lineInSand: 7615.25,
+  triggerCondition: 'Wait for fresh completed 5M proof.',
+  entry: null,
+  stop: null,
+  t1: null,
+  t2: null,
+  invalidation: null,
+  invalidationText: 'No fresh invalidation until proof returns.',
+  hasCompletePlan: false,
+  humanReviewOnly: true,
+  canExecute: false,
+  noChaseState: true,
+  htfContextStatus: 'sufficient',
+  dataQualityStatus: 'ok',
+  discordReason: 'HELD_STALE_NO_CHASE: no fresh entry; wait for new completed 5M proof.',
+  managementWarnings: [],
+  driftBlocker: null,
+  approvalBoundary: {
+    changesTradeApprovals: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesRiskRules: false,
+    changesBridgeBehavior: false,
+  },
+});
+assert.ok(canonicalHeldPreDeliveryGuard);
+assert.equal(canonicalHeldPreDeliveryGuard.shouldPost, false);
+assert.equal(canonicalHeldPreDeliveryGuard.category, 'low_quality_map');
+assert.match(canonicalHeldPreDeliveryGuard.reason, /HELD_STALE_NO_CHASE/);
+assert.equal(canonicalHeldPreDeliveryGuard.changesTradingLogic, false);
+assert.equal(canonicalHeldPreDeliveryGuard.changesCanExecute, false);
+assert.equal(scannerDeskPlayCanonicalPreDeliveryHold(null), null);
+const missingProofPreDeliveryGuard = scannerDeskPlayCanonicalPreDeliveryHold(
+  {
+    sourceOfTruth: 'scanner_desk_publish_decision',
+    action: 'POST_CONDITIONAL',
+    discordAction: 'post_conditional',
+    shouldPost: true,
+    reason: 'Complete levels exist, but scanner operator decision is still held.',
+    displaySource: 'selected_candidate',
+    candidateKey: 'TurtleSoup|LONG|Bullish Turtle Soup Reversal|Conditional',
+    direction: 'LONG',
+    setupType: SetupType.TurtleSoup,
+    lineInSand: 7620,
+    triggerCondition: 'Bullish Turtle Soup requires completed 5M confirmation.',
+    entry: 7620.5,
+    stop: 7613.75,
+    t1: 7630.75,
+    t2: 7634,
+    invalidation: 7613.75,
+    invalidationText: 'Invalid below 7613.75.',
+    hasCompletePlan: true,
+    humanReviewOnly: true,
+    canExecute: false,
+    noChaseState: false,
+    htfContextStatus: 'sufficient',
+    dataQualityStatus: 'partial',
+    discordReason: 'Complete scanner-owned levels exist.',
+    managementWarnings: [],
+    driftBlocker: null,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
+    },
+  },
+  {
+    shouldSend: false,
+    reason: 'HELD_MISSING_5M_PROOF: waiting for completed 5M trigger/retest proof.',
+  },
+);
+assert.ok(missingProofPreDeliveryGuard);
+assert.equal(missingProofPreDeliveryGuard.shouldPost, false);
+assert.equal(missingProofPreDeliveryGuard.category, 'low_quality_map');
+assert.match(missingProofPreDeliveryGuard.reason, /HELD_MISSING_5M_PROOF/);
+assert.equal(missingProofPreDeliveryGuard.changesTradingLogic, false);
+assert.equal(missingProofPreDeliveryGuard.changesCanExecute, false);
 const earlyLineInSandNoLevelsDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-25',
   instrument: 'MES',
