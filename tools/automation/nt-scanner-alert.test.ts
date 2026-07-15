@@ -3964,6 +3964,77 @@ assert.equal(dataLimitedReferenceDeskPlaySuppression.category, 'post');
 assert.match(dataLimitedReferenceDeskPlaySuppression.reason, /reference map is eligible/);
 assert.match(dataLimitedReferenceDeskPlaySuppression.reason, /readiness is data-limited/);
 assert.match(dataLimitedReferenceDeskPlaySuppression.reason, /reference entry\/stop\/T1\/T2/);
+const canonicalHeldDataLimitedReferenceDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    dataQualityStatus: 'data_limited',
+    htfContextStatus: 'insufficient',
+    canExecute: false,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      lineInSand: 7450,
+      shortBelow: 7450,
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        lineInSand: 7450,
+        tradeReadiness: { status: 'data_limited' },
+      },
+    },
+  } as DeskState,
+  publishDecision: {
+    sourceOfTruth: 'scanner_desk_publish_decision',
+    action: 'HOLD_WITH_REASON',
+    discordAction: 'hold',
+    shouldPost: false,
+    reason: 'Canonical hold fixture.',
+    displaySource: 'desk_ticket',
+    candidateKey: null,
+    direction: 'SHORT',
+    setupType: null,
+    lineInSand: 7450,
+    triggerCondition: 'Completed 5M proof required.',
+    entry: 7449.5,
+    stop: 7461,
+    t1: 7432.25,
+    t2: 7420.75,
+    invalidation: 7461,
+    invalidationText: 'Invalid above 7461.00.',
+    hasCompletePlan: true,
+    humanReviewOnly: true,
+    canExecute: false,
+    noChaseState: false,
+    htfContextStatus: 'insufficient',
+    dataQualityStatus: 'data_limited',
+    discordReason: 'Canonical DeskPublishDecision held this Desk Play local.',
+    managementWarnings: [],
+    driftBlocker: null,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
+    },
+  },
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: 'HTF readiness gate is data-limited; review levels only.',
+    invalidation: null,
+    setupCandidates: [{ ...baseDeskPlanRefreshState.bestShortPlan, direction: 'SHORT' }],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+});
+assert.equal(canonicalHeldDataLimitedReferenceDeskPlaySuppression.shouldPost, false);
+assert.equal(canonicalHeldDataLimitedReferenceDeskPlaySuppression.category, 'low_quality_map');
+assert.match(canonicalHeldDataLimitedReferenceDeskPlaySuppression.reason, /Canonical DeskPublishDecision held/);
 const earlyLineInSandNoLevelsDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-25',
   instrument: 'MES',
