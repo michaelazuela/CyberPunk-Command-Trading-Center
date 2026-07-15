@@ -5815,8 +5815,8 @@ const deskPlayBoundaryWithNoChaseContext = buildScannerLiveDiscordSendBoundaryRe
   discordPayloadValidated: true,
   webhookConfigured: true,
 });
-assert.equal(deskPlayBoundaryWithNoChaseContext.eligible, true);
-assert.equal(deskPlayBoundaryWithNoChaseContext.blockers.length, 0);
+assert.equal(deskPlayBoundaryWithNoChaseContext.eligible, false);
+assert.ok(deskPlayBoundaryWithNoChaseContext.blockers.some((item) => item.includes('missed/no-chase')));
 assert.equal(scannerLiveDiscordHoldNoticeEligible(deskPlayBoundaryWithNoChaseContext), false);
 
 const tradeAlertWithNoChaseContext = buildScannerLiveDiscordSendBoundaryReport({
@@ -5869,7 +5869,7 @@ const heldBoundaryWithChecklist = buildScannerLiveDiscordSendBoundaryReport({
   webhookConfigured: true,
 });
 assert.equal(heldBoundaryWithChecklist.eligible, false);
-assert.equal(scannerLiveDiscordHoldNoticeEligible(heldBoundaryWithChecklist), true);
+assert.equal(scannerLiveDiscordHoldNoticeEligible(heldBoundaryWithChecklist), false);
 assert.ok(heldBoundaryWithChecklist.blockers.some((item) => item.includes('missed/no-chase')));
 const holdNoticePayload = buildScannerLiveHoldNoticePayload({
   tradeDate: '2026-06-02',

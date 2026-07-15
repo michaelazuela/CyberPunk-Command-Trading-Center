@@ -59,7 +59,16 @@ function deskState(): DeskState {
     activeCampaign: null,
     bestLongPlan: null,
     bestShortPlan: null,
-    selectedCandidate: null,
+    selectedCandidate: {
+      entry: 7547.25,
+      stop: 7530,
+      target1: 7573.25,
+      target2: 7581.75,
+      hasFullPlanLevels: true,
+      decisionQualityScore: 85,
+      modelConfidenceScore: 85,
+      filteredOutReason: null,
+    } as unknown as DeskState['selectedCandidate'],
     primaryDeskPlay: {
       sourceOfTruth: 'scanner_primary_desk_play',
       direction: 'WAIT',
@@ -254,7 +263,7 @@ const missedNoChaseBlocked = evaluateLiveDiscordPostEligibility(input({
 assert.equal(missedNoChaseBlocked.eligible, false);
 assert.ok(missedNoChaseBlocked.blockers.some((item) => item.includes('missed/no-chase')));
 
-const deskPlayReportsMissedNoChaseInsteadOfSuppressing = evaluateLiveDiscordPostEligibility(input({
+const deskPlayBlocksMissedNoChaseLikeTradeAlerts = evaluateLiveDiscordPostEligibility(input({
   postKind: 'desk_play',
   deskState: {
     ...deskState(),
@@ -274,8 +283,8 @@ const deskPlayReportsMissedNoChaseInsteadOfSuppressing = evaluateLiveDiscordPost
     },
   },
 }));
-assert.equal(deskPlayReportsMissedNoChaseInsteadOfSuppressing.eligible, true);
-assert.equal(deskPlayReportsMissedNoChaseInsteadOfSuppressing.blockers.length, 0);
+assert.equal(deskPlayBlocksMissedNoChaseLikeTradeAlerts.eligible, false);
+assert.ok(deskPlayBlocksMissedNoChaseLikeTradeAlerts.blockers.some((item) => item.includes('missed/no-chase')));
 
 const deskPlayStillBlocksDuplicateLedger = evaluateLiveDiscordPostEligibility(input({
   postKind: 'desk_play',
@@ -352,6 +361,68 @@ const highQualitySelectedPlanIgnoresNonSelectedPromotionNoise = evaluateLiveDisc
 }));
 assert.equal(highQualitySelectedPlanIgnoresNonSelectedPromotionNoise.eligible, true);
 assert.equal(highQualitySelectedPlanIgnoresNonSelectedPromotionNoise.authorityBoundary.createsTradeApproval, false);
+
+const incompleteDeskPlayBlockedAtFinalEgress = evaluateLiveDiscordPostEligibility(input({
+  postKind: 'desk_play',
+  deskState: {
+    ...deskState(),
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    selectedCandidate: {
+      entry: 7547.25,
+      stop: null,
+      target1: null,
+      target2: null,
+      hasFullPlanLevels: false,
+      decisionQualityScore: 85,
+      modelConfidenceScore: 85,
+      filteredOutReason: null,
+    } as unknown as DeskState['selectedCandidate'],
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      visibilityMode: 'POST_REVIEW',
+      discordAction: 'post_review',
+      authority: {
+        ...deskState().visibilityMetadata.authority,
+        planEligible: true,
+        discordEligible: true,
+      },
+    },
+  },
+}));
+assert.equal(incompleteDeskPlayBlockedAtFinalEgress.eligible, false);
+assert.ok(incompleteDeskPlayBlockedAtFinalEgress.blockers.some((item) => item.includes('entry, stop, T1, T2')));
+
+const zeroScoreDeskPlayBlockedAtFinalEgress = evaluateLiveDiscordPostEligibility(input({
+  postKind: 'desk_play',
+  deskState: {
+    ...deskState(),
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    selectedCandidate: {
+      entry: 7547.25,
+      stop: 7530,
+      target1: 7573.25,
+      target2: 7581.75,
+      hasFullPlanLevels: true,
+      decisionQualityScore: 0,
+      modelConfidenceScore: 0,
+      filteredOutReason: null,
+    } as unknown as DeskState['selectedCandidate'],
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      visibilityMode: 'POST_REVIEW',
+      discordAction: 'post_review',
+      authority: {
+        ...deskState().visibilityMetadata.authority,
+        planEligible: true,
+        discordEligible: true,
+      },
+    },
+  },
+}));
+assert.equal(zeroScoreDeskPlayBlockedAtFinalEgress.eligible, false);
+assert.ok(zeroScoreDeskPlayBlockedAtFinalEgress.blockers.some((item) => item.includes('positive decision quality')));
 
 const heldDeskStateBlocked = evaluateLiveDiscordPostEligibility(input({
   deskState: {

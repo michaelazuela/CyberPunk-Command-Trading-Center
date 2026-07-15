@@ -7948,6 +7948,10 @@ export function scannerLiveDiscordHoldNoticeEligible(report: LiveDiscordEligibil
   if (!report || report.eligible) return false;
   const failed = scannerLiveDiscordBoundaryFailedKeys(report);
   if (!failed.length) return false;
+  const blockerText = (report.blockers || []).join(' ');
+  if (/\b(missed|no[-\s]?chase|stale|chasing|already\s+reached|target\s+already|T1\s+was\s+already\s+reached)\b/i.test(blockerText)) {
+    return false;
+  }
   const deskStateKeys = new Set(['desk_state_live_post_actionable', 'desk_state_not_operationally_suppressed']);
   return failed.every((key) => deskStateKeys.has(key));
 }

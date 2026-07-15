@@ -12,6 +12,7 @@ export type LiveDiscordEligibilityCheckKey =
   | 'desk_state_approval_boundary_preserved'
   | 'desk_state_live_post_actionable'
   | 'desk_state_not_operationally_suppressed'
+  | 'desk_state_trade_ticket_complete'
   | 'decision_tape_writable'
   | 'audit_path_present'
   | 'discord_payload_validated'
@@ -148,6 +149,25 @@ function deskStateHasQualifiedSelectedPlan(deskState: DeskState): boolean {
   );
 }
 
+function deskStateHasCompleteTradeTicket(deskState: DeskState | null, postKind = 'trade_alert'): boolean {
+  if (postKind !== 'trade_alert' && postKind !== 'desk_play') return true;
+  if (!deskState) return false;
+  const selected = deskState.selectedCandidate;
+  const score = selected?.decisionQualityScore ?? selected?.modelConfidenceScore ?? null;
+  return Boolean(
+    selected &&
+    isFinitePlanPrice(selected.entry) &&
+    isFinitePlanPrice(selected.stop) &&
+    isFinitePlanPrice(selected.target1) &&
+    isFinitePlanPrice(selected.target2) &&
+    selected.hasFullPlanLevels !== false &&
+    typeof score === 'number' &&
+    Number.isFinite(score) &&
+    score > 0 &&
+    !selected.filteredOutReason,
+  );
+}
+
 function deskStateOperationallySuppressed(deskState: DeskState | null, postKind = 'trade_alert'): boolean {
   if (!deskState) return true;
   const isTradeLikePost = postKind === 'trade_alert' || postKind === 'desk_play';
@@ -163,7 +183,7 @@ function deskStateOperationallySuppressed(deskState: DeskState | null, postKind 
   }
   if (deskState.dataQualityStatus === 'data_limited' || deskState.htfContextStatus === 'insufficient') return true;
   const text = collectDeskStateSuppressionText(deskState);
-  if (postKind !== 'trade_alert') {
+  if (!isTradeLikePost) {
     return /\b(duplicate|ledger|already\s+pending)\b/i.test(text);
   }
   return /\b(duplicate|ledger|already\s+pending|missed|no[-\s]?chase|stale|chasing|already\s+reached|target\s+already|T1\s+was\s+already\s+reached)\b/i.test(text);
@@ -207,9 +227,14 @@ export function evaluateLiveDiscordPostEligibility(input: LiveDiscordEligibility
     check(
       'desk_state_not_operationally_suppressed',
       !deskStateOperationallySuppressed(input.deskState, input.postKind),
-      input.postKind && input.postKind !== 'trade_alert'
+      input.postKind && input.postKind !== 'trade_alert' && input.postKind !== 'desk_play'
         ? 'Review/status Discord posts must not be duplicate ledger/already-pending, data-quality, hold, or no-trade states.'
         : 'Trade-alert Discord posts must not be held for duplicate ledger, missed/no-chase, stale/chasing, already-reached target, data-quality, hold, or no-trade reasons.',
+    ),
+    check(
+      'desk_state_trade_ticket_complete',
+      deskStateHasCompleteTradeTicket(input.deskState, input.postKind),
+      'Trade-like Discord posts require a selected scanner-owned ticket with entry, stop, T1, T2, positive decision quality, and no filtered-out reason.',
     ),
     check('decision_tape_writable', input.decisionTapeWritable, 'Decision tape must be writable.'),
     check('audit_path_present', Boolean(input.auditPath), 'Discord/scanner audit path must be available.'),
