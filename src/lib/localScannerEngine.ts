@@ -2984,19 +2984,39 @@ function buildDeskTicket(args: {
     : null;
   const selectedForPrimaryDirection = selected?.direction === primaryDirection ? selected : null;
   const candidateForPrimaryDirection = args.candidate?.direction === primaryDirection ? args.candidate : null;
+  const freshReentryCandidate = args.primaryDeskPlay.freshReentryCandidates?.approvalStatus === 'approved_discord_conditional_display' &&
+    args.primaryDeskPlay.freshReentryCandidates.bestCandidate?.status === 'ready_for_owner_review' &&
+    args.primaryDeskPlay.freshReentryCandidates.bestCandidate.direction === primaryDirection
+    ? args.primaryDeskPlay.freshReentryCandidates.bestCandidate
+    : null;
+  const freshReentryWatch = args.primaryDeskPlay.freshReentryWatch?.eligible &&
+    args.primaryDeskPlay.freshReentryWatch.direction === primaryDirection
+    ? args.primaryDeskPlay.freshReentryWatch
+    : null;
   const levelSource = primaryLifecycleCandidate ?? selectedForPrimaryDirection;
   const candidateSource = candidateForPrimaryDirection;
 
-  const lineInSand = finiteDeskTicketPrice(levelSource?.lineInSand) ??
+  const lineInSand = finiteDeskTicketPrice(freshReentryCandidate?.lineInSand) ??
+    finiteDeskTicketPrice(freshReentryWatch?.lineInSand) ??
+    finiteDeskTicketPrice(levelSource?.lineInSand) ??
     finiteDeskTicketPrice(candidateSource?.activeRuleset?.htfLineInSand?.lineInSand) ??
     finiteDeskTicketPrice(primaryDirection === 'LONG' ? play.longAbove : primaryDirection === 'SHORT' ? play.shortBelow : play.lineInSand);
-  const entry = lineInSand ?? finiteDeskTicketPrice(levelSource?.entry) ?? finiteDeskTicketPrice(candidateSource?.entry);
-  const stop = finiteDeskTicketPrice(levelSource?.stop) ?? finiteDeskTicketPrice(candidateSource?.stop);
+  const entry = finiteDeskTicketPrice(freshReentryCandidate?.entry) ??
+    lineInSand ??
+    finiteDeskTicketPrice(levelSource?.entry) ??
+    finiteDeskTicketPrice(candidateSource?.entry);
+  const stop = freshReentryWatch && !freshReentryCandidate
+    ? null
+    : finiteDeskTicketPrice(freshReentryCandidate?.stop) ??
+      finiteDeskTicketPrice(levelSource?.stop) ??
+      finiteDeskTicketPrice(candidateSource?.stop);
   const targetDirection = primaryDirection === 'LONG' || primaryDirection === 'SHORT' ? primaryDirection : null;
   const computedTargets = targetsFromEntryStop(targetDirection, entry, stop);
-  const t1 = finiteDeskTicketPrice(computedTargets.target1);
-  const t2 = finiteDeskTicketPrice(computedTargets.target2);
-  const invalidationText = levelSource?.invalidation ||
+  const t1 = finiteDeskTicketPrice(freshReentryCandidate?.target1) ?? finiteDeskTicketPrice(computedTargets.target1);
+  const t2 = finiteDeskTicketPrice(freshReentryCandidate?.target2) ?? finiteDeskTicketPrice(computedTargets.target2);
+  const invalidationText = freshReentryCandidate?.invalidation ||
+    (freshReentryWatch ? 'Invalidation requires fresh protected 5M structure proof.' : null) ||
+    levelSource?.invalidation ||
     candidateSource?.invalidation ||
     (stop === null ? 'Invalidation requires protected 5M structure proof.' : `Invalid at protected structure stop ${stop.toFixed(2)}.`);
   const htfReliability = play.htfProtectedStructureMap?.reliability || args.htfContextStatus;
@@ -3005,7 +3025,7 @@ function buildDeskTicket(args: {
     : args.htfContextStatus === 'partial'
       ? `HTF context partial/${htfReliability}; treat as caution and management context only.`
       : `HTF context sufficient/${htfReliability}; 5M remains execution authority.`;
-  const state = deskTicketStateFrom({
+  const state = freshReentryCandidate ? 'ACTIVE_REVIEW' : freshReentryWatch ? 'TRIGGER_PENDING' : deskTicketStateFrom({
     marketMode: args.marketMode,
     visibilityMetadata: args.visibilityMetadata,
     candidate: levelSource,
@@ -3015,7 +3035,7 @@ function buildDeskTicket(args: {
     state,
     primaryDirection,
     lineInSand,
-    triggerCondition: deskTicketTrigger(primaryDirection, lineInSand, levelSource?.requiredTrigger || levelSource?.nextTrigger || args.visibilityMetadata.nextTrigger || play.nextTrigger),
+    triggerCondition: deskTicketTrigger(primaryDirection, lineInSand, freshReentryCandidate?.requiredTrigger || freshReentryWatch?.requiredProof || levelSource?.requiredTrigger || levelSource?.nextTrigger || args.visibilityMetadata.nextTrigger || play.nextTrigger),
     entry,
     stop,
     t1,
@@ -3025,7 +3045,7 @@ function buildDeskTicket(args: {
     htfStatus: args.htfContextStatus,
     htfStory,
     oppositeScenario: deskTicketOppositeScenario({ primaryDirection, primaryDeskPlay: play }),
-    sourceCandidateKey: levelSource?.candidateKey || null,
+    sourceCandidateKey: freshReentryCandidate?.candidateKey || levelSource?.candidateKey || null,
     humanReviewOnly: true,
     noAutomatedOrders: true,
     displayBoundary: 'trader_facing_ticket_only_can_execute_internal',
@@ -4636,6 +4656,57 @@ function freshReentryFiveMinuteCandles(chartContext?: Partial<ChartContext> | nu
   );
 }
 
+function freshReentryCandleTime(candle: FreshReentryFiveMinuteCandle): string | null {
+  const value = (candle as { timestamp?: unknown; time?: unknown }).timestamp ?? (candle as { time?: unknown }).time;
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function freshReentryCandlesAsOf(
+  candles: FreshReentryFiveMinuteCandle[],
+  asOfCompleted5mTime?: string | null,
+): FreshReentryFiveMinuteCandle[] {
+  if (!asOfCompleted5mTime) return candles;
+  const asOfMs = Date.parse(asOfCompleted5mTime);
+  if (!Number.isFinite(asOfMs)) return candles;
+  return candles.filter((candle) => {
+    const candleTime = freshReentryCandleTime(candle);
+    if (!candleTime) return true;
+    const candleMs = Date.parse(candleTime);
+    return !Number.isFinite(candleMs) || candleMs <= asOfMs;
+  });
+}
+
+function filterChartContextAsOf(
+  chartContext?: Partial<ChartContext> | null,
+  asOfCompleted5mTime?: string | null,
+): Partial<ChartContext> | null | undefined {
+  if (!chartContext || !asOfCompleted5mTime) return chartContext;
+  const filterCandles = <T extends FreshReentryFiveMinuteCandle>(candles?: T[] | null): T[] | undefined => {
+    if (!Array.isArray(candles)) return undefined;
+    return freshReentryCandlesAsOf(candles, asOfCompleted5mTime) as T[];
+  };
+  const rootCandles = filterCandles(chartContext.candles as FreshReentryFiveMinuteCandle[] | undefined);
+  const fiveMinute = chartContext.multiTimeframeContext?.fiveMinute;
+  const fiveMinuteCandles = filterCandles(fiveMinute?.candles as FreshReentryFiveMinuteCandle[] | undefined);
+  const fiveMinuteFullWindow = filterCandles(fiveMinute?.fullWindowCandles as FreshReentryFiveMinuteCandle[] | undefined);
+  return {
+    ...chartContext,
+    ...(rootCandles ? { candles: rootCandles as ChartContext['candles'] } : {}),
+    multiTimeframeContext: chartContext.multiTimeframeContext
+      ? {
+          ...chartContext.multiTimeframeContext,
+          fiveMinute: fiveMinute
+            ? {
+                ...fiveMinute,
+                ...(fiveMinuteCandles ? { candles: fiveMinuteCandles as typeof fiveMinute.candles } : {}),
+                ...(fiveMinuteFullWindow ? { fullWindowCandles: fiveMinuteFullWindow as typeof fiveMinute.fullWindowCandles } : {}),
+              }
+            : fiveMinute,
+        }
+      : chartContext.multiTimeframeContext,
+  };
+}
+
 function latestFreshReentryCandle(candles: FreshReentryFiveMinuteCandle[]): FreshReentryFiveMinuteCandle | null {
   return candles.length ? candles[candles.length - 1] : null;
 }
@@ -4710,12 +4781,16 @@ function buildFreshReentryCandidateSet(args: {
   chartContext?: Partial<ChartContext> | null;
   currentPrice?: number | null;
   activeScannerWindow: boolean;
+  asOfCompleted5mTime?: string | null;
 }): DeskFreshReentryCandidateSet | null {
   const watch = args.freshReentryWatch;
   if (!watch) return null;
   const direction = watch.direction;
   const lineInSand = numericOrNull(watch.lineInSand);
-  const candles = freshReentryFiveMinuteCandles(args.chartContext);
+  const candles = freshReentryCandlesAsOf(
+    freshReentryFiveMinuteCandles(args.chartContext),
+    args.asOfCompleted5mTime,
+  );
   const latest = latestFreshReentryCandle(candles);
   const latestClose = numericOrNull(latest?.close);
   const currentPrice = numericOrNull(args.currentPrice) ?? latestClose;
@@ -4895,11 +4970,13 @@ function buildPrimaryDeskPlay(args: {
   currentPrice?: number | null;
   canExecute: boolean;
   chartContext?: Partial<ChartContext> | null;
+  asOfCompleted5mTime?: string | null;
 }): PrimaryDeskPlay {
+  const chartContext = filterChartContextAsOf(args.chartContext, args.asOfCompleted5mTime);
   const htfProtectedStructureMap = buildHtfProtectedStructureMap(args.candidate, args.htfLiquidityDrawState, args.currentPrice);
   const trendConfirmation = buildProtectedStructureTrendConfirmation(htfProtectedStructureMap);
   const preselectHtfFvgReactionMemory = buildHtfFvgReactionMemory({
-    chartContext: args.chartContext,
+    chartContext,
     direction: null,
   });
   const sameSideCampaignStacks = buildSameSideCampaignStacks({
@@ -5053,7 +5130,7 @@ function buildPrimaryDeskPlay(args: {
     nextTrigger,
     currentPrice: args.currentPrice,
     lineInSand: activeTacticalLine.activeLine ?? selectedLine,
-    chartContext: args.chartContext,
+    chartContext,
     htfFvgReactionMemory: preselectHtfFvgReactionMemory,
   });
   const htfFvgReactionMemory = preselectHtfFvgReactionMemory;
@@ -5087,9 +5164,10 @@ function buildPrimaryDeskPlay(args: {
     freshReentryWatch,
     htfFvgReactionRouting,
     htfFvgCascade,
-    chartContext: args.chartContext,
+    chartContext,
     currentPrice: args.currentPrice,
     activeScannerWindow: Boolean(args.visibilityMetadata.authority.activeModel),
+    asOfCompleted5mTime: args.asOfCompleted5mTime,
   });
   longBias.tradeReadiness = decorateTradeReadinessDisplay({
     readiness: longBias.tradeReadiness,
@@ -5193,6 +5271,7 @@ export function buildDeskState(args: {
   currentPrice?: number | null;
   canExecute?: boolean;
   chartContext?: Partial<ChartContext> | null;
+  asOfCompleted5mTime?: string | null;
 }): DeskState {
   const candidate = args.candidate || null;
   const marketMode = marketModeFromDeskVisibility({
@@ -5215,6 +5294,7 @@ export function buildDeskState(args: {
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.canExecute),
     chartContext: args.chartContext,
+    asOfCompleted5mTime: args.asOfCompleted5mTime,
   });
   const htfContextStatus = htfContextStatusForDeskState(candidate, args.htfLiquidityDrawState);
   const dataQualityStatus = dataQualityStatusForDeskState({

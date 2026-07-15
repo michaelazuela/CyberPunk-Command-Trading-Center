@@ -3939,6 +3939,18 @@ function deskPlayPlanningLevels(args: {
   if (direction !== 'LONG' && direction !== 'SHORT') {
     return { entry: null, stop: null, target1: null, target2: null, riskPoints: null };
   }
+  const freshBest = args.deskState.primaryDeskPlay.freshReentryCandidates?.approvalStatus === 'approved_discord_conditional_display' &&
+    args.deskState.primaryDeskPlay.freshReentryCandidates.bestCandidate?.status === 'ready_for_owner_review' &&
+    args.deskState.primaryDeskPlay.freshReentryCandidates.bestCandidate.direction === direction
+    ? args.deskState.primaryDeskPlay.freshReentryCandidates.bestCandidate
+    : null;
+  const freshLevels = validDeskPlayPlanningLevels(
+    direction,
+    freshBest?.entry,
+    freshBest?.stop,
+    false,
+  );
+  if (freshLevels) return freshLevels;
   const candidate = deskPlayPlanningCandidate(args);
   const entry = isFiniteTradePrice(args.normalized?.entry)
     ? args.normalized.entry
@@ -6498,6 +6510,11 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     isFiniteTradePrice(referenceLevels.target1) &&
     isFiniteTradePrice(referenceLevels.target2);
   const play = args.deskState.primaryDeskPlay;
+  const freshReentryBest = play.freshReentryCandidates?.approvalStatus === 'approved_discord_conditional_display' &&
+    play.freshReentryCandidates.bestCandidate?.status === 'ready_for_owner_review' &&
+    play.freshReentryCandidates.bestCandidate.direction === play.direction
+    ? play.freshReentryCandidates.bestCandidate
+    : null;
   const highQualityReviewCandidate = highQualityConditionalReviewCandidate({
     normalized: args.normalized,
     direction: play.direction,
@@ -6516,7 +6533,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     hasReferenceLevels,
     highQualityReviewCandidate,
   });
-  if (args.staleReason && /already|stale|missed|no chase|passed|invalidated|reached/i.test(args.staleReason)) {
+  if (args.staleReason && /already|stale|missed|no chase|passed|invalidated|reached/i.test(args.staleReason) && !freshReentryBest) {
     const lineCrossNoChaseTransitionReason = scannerLineCrossNoChaseTransitionReason({
       deskState: args.deskState,
       completed5m: args.completed5m,
@@ -10152,6 +10169,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     targetCascade,
     htfLiquidityDrawState: analysis.structuredChartContext?.htfLiquidityDrawState || null,
     chartContext: analysis.structuredChartContext || null,
+    asOfCompleted5mTime: completed5m.time,
     currentPrice,
     canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
   });
@@ -10208,6 +10226,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       targetCascade,
       htfLiquidityDrawState: analysis.structuredChartContext?.htfLiquidityDrawState || null,
       chartContext: analysis.structuredChartContext || null,
+      asOfCompleted5mTime: completed5m.time,
       currentPrice,
       canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
     });
@@ -10265,6 +10284,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       targetCascade,
       htfLiquidityDrawState: analysis.structuredChartContext?.htfLiquidityDrawState || null,
       chartContext: analysis.structuredChartContext || null,
+      asOfCompleted5mTime: completed5m.time,
       currentPrice,
       canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
     });

@@ -2386,6 +2386,7 @@ if (freshReentryPhase3ChartContext.multiTimeframeContext?.fiveMinute) {
   freshReentryPhase3ChartContext.multiTimeframeContext.fiveMinute.candles = [
     { index: 0, timestamp: '2026-06-23T12:00:00.0000000', open: 7598, high: 7599.75, low: 7594, close: 7597, direction: 'bearish', confidence: 'High' },
     { index: 1, timestamp: '2026-06-23T12:05:00.0000000', open: 7597, high: 7598.25, low: 7589, close: 7592, direction: 'bearish', confidence: 'High' },
+    { index: 2, timestamp: '2026-06-23T12:10:00.0000000', open: 7592, high: 7604, low: 7591.5, close: 7602, direction: 'bullish', confidence: 'High' },
   ];
 }
 const freshReentryPhase3DeskState = buildDeskState({
@@ -2410,12 +2411,14 @@ const freshReentryPhase3DeskState = buildDeskState({
   currentPrice: 7592,
   canExecute: false,
   chartContext: freshReentryPhase3ChartContext,
+  asOfCompleted5mTime: '2026-06-23T12:05:00.0000000',
 });
 const phase3CandidateSet = freshReentryPhase3DeskState.primaryDeskPlay.freshReentryCandidates;
 assert.equal(phase3CandidateSet?.sourceOfTruth, 'scanner_fresh_tactical_reentry_candidate_builder');
 assert.equal(phase3CandidateSet?.oldBehavior.watchOnly, true);
 assert.equal(phase3CandidateSet?.approvalStatus, 'approved_discord_conditional_display');
 assert.equal(phase3CandidateSet?.inputs.fiveMinuteAcceptance, true);
+assert.equal(phase3CandidateSet?.inputs.latestFiveMinuteTimestamp, '2026-06-23T12:05:00.0000000');
 assert.equal(phase3CandidateSet?.bestCandidate?.source, 'active_line_retest');
 assert.equal(phase3CandidateSet?.bestCandidate?.entry, 7596);
 assert.equal(phase3CandidateSet?.bestCandidate?.stop, 7600);
@@ -2432,6 +2435,13 @@ assert.equal(phase3CandidateSet?.approvalBoundary.approvedForDiscordConditionalD
 assert.equal(phase3CandidateSet?.approvalBoundary.changesExecutionApproval, false);
 assert.equal(freshReentryPhase3DeskState.canExecute, false);
 assert.equal(freshReentryPhase3DeskState.visibilityMetadata.authority.canExecute, false);
+assert.equal(freshReentryPhase3DeskState.deskTicket.state, 'ACTIVE_REVIEW');
+assert.equal(freshReentryPhase3DeskState.deskTicket.lineInSand, 7596);
+assert.equal(freshReentryPhase3DeskState.deskTicket.entry, 7596);
+assert.equal(freshReentryPhase3DeskState.deskTicket.stop, 7600);
+assert.equal(freshReentryPhase3DeskState.deskTicket.t1, 7590);
+assert.equal(freshReentryPhase3DeskState.deskTicket.t2, 7588);
+assert.equal(freshReentryPhase3DeskState.deskTicket.sourceCandidateKey, phase3CandidateSet?.bestCandidate?.candidateKey);
 const phase3Comparison = compareFreshReentryPhase3Behavior([missedHtfReactionDeskState, freshReentryPhase3DeskState]);
 assert.equal(phase3Comparison.oldWatchOnlyCycles, 2);
 assert.equal(phase3Comparison.newCandidateCycles, 1);
