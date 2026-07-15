@@ -4580,6 +4580,7 @@ function assertScannerDeskPublishArtifactAgreement(args: {
   publishDecision?: DeskPublishDecision | null;
   deskState: DeskState;
   contextCandidate: SetupCandidate | null;
+  contextLine?: number | null;
 }): void {
   const publishDecision = args.publishDecision;
   if (!publishDecision?.shouldPost || !publishDecision.hasCompletePlan) return;
@@ -4596,6 +4597,7 @@ function assertScannerDeskPublishArtifactAgreement(args: {
   if (!samePrice(ticket.t1, publishDecision.t1)) mismatches.push(`ticket T1 ${ticket.t1} != ${publishDecision.t1}`);
   if (!samePrice(ticket.t2, publishDecision.t2)) mismatches.push(`ticket T2 ${ticket.t2} != ${publishDecision.t2}`);
   if (!samePrice(ticket.lineInSand, publishDecision.lineInSand)) mismatches.push(`ticket line ${ticket.lineInSand} != ${publishDecision.lineInSand}`);
+  if (!samePrice(args.contextLine, publishDecision.lineInSand)) mismatches.push(`chart context line ${args.contextLine} != ${publishDecision.lineInSand}`);
   const candidate = args.contextCandidate;
   if (!candidate) {
     mismatches.push('chart candidate missing');
@@ -7246,6 +7248,16 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
           longAbove: args.publishDecision.direction === 'LONG' ? args.publishDecision.lineInSand : args.deskState.primaryDeskPlay.longAbove,
           shortBelow: args.publishDecision.direction === 'SHORT' ? args.publishDecision.lineInSand : args.deskState.primaryDeskPlay.shortBelow,
           nextTrigger: args.publishDecision.triggerCondition || args.deskState.primaryDeskPlay.nextTrigger,
+          activeTacticalLine: {
+            ...args.deskState.primaryDeskPlay.activeTacticalLine,
+            direction: args.publishDecision.direction,
+            originalLine: args.publishDecision.lineInSand,
+            activeLine: args.publishDecision.lineInSand,
+            migrated: false,
+            reason: 'Canonical DeskPublishDecision line in the sand.',
+            nextTrigger: args.publishDecision.triggerCondition || args.deskState.primaryDeskPlay.activeTacticalLine.nextTrigger,
+            standDown: args.publishDecision.invalidationText || args.deskState.primaryDeskPlay.activeTacticalLine.standDown,
+          },
         },
       }
     : args.deskState;
@@ -7255,13 +7267,17 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
     normalized: args.normalized,
   });
   const contextCandidate = publishCandidate || candidateForDeskPlayContextChart(deskState, args.normalized, args.currentPrice, args.candidate);
+  const play = deskState.primaryDeskPlay;
+  const canonicalChartLine = args.publishDecision?.shouldPost && args.publishDecision.direction !== 'WAIT';
+  const chartContextLine = args.publishDecision?.shouldPost && args.publishDecision.direction !== 'WAIT'
+    ? args.publishDecision.lineInSand
+    : play.activeTacticalLine?.activeLine ?? play.lineInSand;
   assertScannerDeskPublishArtifactAgreement({
     publishDecision: args.publishDecision,
     deskState,
     contextCandidate,
+    contextLine: chartContextLine,
   });
-  const play = deskState.primaryDeskPlay;
-  const chartContextLine = play.activeTacticalLine?.activeLine ?? play.lineInSand;
   const chartMarkup = contextCandidate
     ? await renderChartMarkup({
         chartContext: args.chartContext || null,
@@ -7271,7 +7287,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
         sessionLabel: args.session,
         renderMode: 'desk_play_context',
         contextLine: chartContextLine,
-        contextLabel: play.activeTacticalLine?.migrated ? 'Active tactical line' : 'Line in the sand',
+        contextLabel: !canonicalChartLine && play.activeTacticalLine?.migrated ? 'Active tactical line' : 'Line in the sand',
         outputDir: args.outputDir,
         filePrefix: `scanner-desk-play-${args.session}-${args.tradeDate}-${args.config.instrument}`,
       })

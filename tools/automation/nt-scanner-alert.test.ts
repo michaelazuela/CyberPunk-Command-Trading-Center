@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
-import { buildCandidateLifecycleTrace, buildDeskState, resolveScannerWindow, type DeskState, type ScannerState, type ScannerVisibilityMetadata } from '../../src/lib/localScannerEngine';
+import { buildCandidateLifecycleTrace, buildDeskState, resolveScannerWindow, type DeskPublishDecision, type DeskState, type ScannerState, type ScannerVisibilityMetadata } from '../../src/lib/localScannerEngine';
 import type { ScannerHealthReport } from '../../src/agents/scannerHealthAgent';
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
 import {
@@ -6706,6 +6706,89 @@ try {
   assert.ok(!deskPlayText.includes('Decision class:'));
   assert.ok(!deskPlayText.includes('Next trigger:'));
   assert.ok(deskPlayText.length < 1200, `expected Desk Play payload under actionable compact target, got ${deskPlayText.length}`);
+  const canonicalDeskPublishDecision: DeskPublishDecision = {
+    sourceOfTruth: 'scanner_desk_publish_decision' as const,
+    action: 'POST_CONDITIONAL' as const,
+    discordAction: 'post_conditional' as const,
+    shouldPost: true,
+    reason: 'Regression fixture: canonical artifact agreement.',
+    displaySource: 'desk_ticket' as const,
+    candidateKey: deskPlayState.deskTicket.sourceCandidateKey,
+    direction: 'LONG' as const,
+    setupType: null,
+    lineInSand: 5324.25,
+    triggerCondition: 'Completed 5M close above 5324.25.',
+    entry: 5324.25,
+    stop: 5319.25,
+    t1: 5331.75,
+    t2: 5334.25,
+    invalidation: 5319.25,
+    invalidationText: 'Invalid below 5319.25.',
+    hasCompletePlan: true,
+    humanReviewOnly: true,
+    canExecute: false,
+    noChaseState: false,
+    htfContextStatus: 'sufficient' as const,
+    dataQualityStatus: 'ok' as const,
+    discordReason: 'Regression fixture: canonical artifact agreement.',
+    managementWarnings: [],
+    driftBlocker: null,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
+    },
+  };
+  const canonicalLineDeskPlayResult = await prepareLiveScannerDeskPlayAlertArtifacts({
+    session: 'lunch',
+    tradeDate: '2026-05-26',
+    config: { instrument: 'MES' },
+    state: 'Conditional',
+    confidence: {
+      score: 81,
+      qualifiedReasons: ['Desk Play context fixture.'],
+      missingReasons: ['No executable plan approval yet.'],
+      recommendation: 'Watch only.',
+      hardBlocker: null,
+    },
+    normalized: deskPlayNormalized,
+    candidate: deskPlayCandidate,
+    chartContext: chartContext as ChartContext,
+    currentPrice: 5325,
+    windowLabel: 'Lunch/PM Setup Scanner',
+    planVersionId: 'SCANNER-DESK-PLAY-CANONICAL-LINE-FIXTURE',
+    deskState: {
+      ...deskPlayState,
+      primaryDeskPlay: {
+        ...deskPlayState.primaryDeskPlay,
+        activeTacticalLine: {
+          sourceOfTruth: 'scanner_active_tactical_line',
+          direction: 'LONG',
+          originalLine: 5310,
+          activeLine: 5310,
+          migrated: true,
+          supportingTimeframes: ['15M', '5M'],
+          reason: 'Stale migrated tactical line fixture.',
+          nextTrigger: 'Stale migrated tactical line fixture.',
+          standDown: 'Stand down fixture.',
+          approvalBoundary: {
+            changesTradeApprovals: false,
+            changesCanExecute: false,
+            changesEntryStopTargets: false,
+          },
+        },
+      },
+    },
+    publishDecision: canonicalDeskPublishDecision,
+    decisionTapePath: path.join(auditDir, 'desk-play-canonical-line-decision-tape.json'),
+    outputDir,
+  });
+  assert.equal(canonicalLineDeskPlayResult.files.length, 2);
+  const canonicalLineDeskPlayText = flattenDiscordPayloadText(canonicalLineDeskPlayResult.payload);
+  assert.ok(canonicalLineDeskPlayText.includes('5324.25'));
+  assert.ok(!canonicalLineDeskPlayText.includes('5310'));
   await assert.rejects(
     prepareLiveScannerDeskPlayAlertArtifacts({
       session: 'lunch',
@@ -6727,39 +6810,10 @@ try {
       planVersionId: 'SCANNER-DESK-PLAY-MISMATCH-FIXTURE',
       deskState: deskPlayState,
       publishDecision: {
-        sourceOfTruth: 'scanner_desk_publish_decision',
-        action: 'POST_CONDITIONAL',
-        discordAction: 'post_conditional',
-        shouldPost: true,
+        ...canonicalDeskPublishDecision,
         reason: 'Regression fixture: force mismatch guard.',
-        displaySource: 'desk_ticket',
-        candidateKey: deskPlayState.deskTicket.sourceCandidateKey,
-        direction: 'LONG',
-        setupType: null,
-        lineInSand: 5324.25,
-        triggerCondition: 'Completed 5M close above 5324.25.',
-        entry: 5324.25,
-        stop: 5319.25,
         t1: 5332,
-        t2: 5334.25,
-        invalidation: 5319.25,
-        invalidationText: 'Invalid below 5319.25.',
-        hasCompletePlan: true,
-        humanReviewOnly: true,
-        canExecute: false,
-        noChaseState: false,
-        htfContextStatus: 'sufficient',
-        dataQualityStatus: 'ok',
         discordReason: 'Regression fixture: force mismatch guard.',
-        managementWarnings: [],
-        driftBlocker: null,
-        approvalBoundary: {
-          changesTradeApprovals: false,
-          changesCanExecute: false,
-          changesEntryStopTargets: false,
-          changesRiskRules: false,
-          changesBridgeBehavior: false,
-        },
       },
       decisionTapePath: path.join(auditDir, 'desk-play-mismatch-decision-tape.json'),
       outputDir,
