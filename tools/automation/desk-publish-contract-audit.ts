@@ -74,6 +74,9 @@ const DEFAULT_CHECKS: ContractCheck[] = [
       'scannerDeskPlanRefreshMateriallyMatches',
       'scannerDeskPlayPublicCadenceHoldReason',
     ],
+    forbidden: [
+      'legacyDeskPlayPromotionAllowed',
+    ],
     orderedBefore: [
       {
         before: 'args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan',

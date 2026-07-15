@@ -6570,7 +6570,6 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     isFiniteTradePrice(referenceLevels.target1) &&
     isFiniteTradePrice(referenceLevels.target2);
   const play = args.deskState.primaryDeskPlay;
-  const legacyDeskPlayPromotionAllowed = !hasCanonicalPublishDecision;
   const freshReentryBest = play.freshReentryCandidates?.approvalStatus === 'approved_discord_conditional_display' &&
     play.freshReentryCandidates.bestCandidate?.status === 'ready_for_owner_review' &&
     play.freshReentryCandidates.bestCandidate.direction === play.direction
@@ -6601,12 +6600,12 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
       currentPrice: args.currentPrice,
       staleReason: args.staleReason,
     });
-    if (lineCrossNoChaseTransitionReason && legacyDeskPlayPromotionAllowed) {
+    if (lineCrossNoChaseTransitionReason) {
       return scannerDeskPlaySuppressionPost(lineCrossNoChaseTransitionReason);
     }
     const reactionOnlyNoChase = /reaction level|target\/reaction|decision line/i.test(args.staleReason) &&
       !/invalidated|protected stop|active tactical zone|active tactical line|t1|t2|stale/i.test(args.staleReason);
-    if (reactionOnlyNoChase && targetToLinePromotionReason && legacyDeskPlayPromotionAllowed) {
+    if (reactionOnlyNoChase && targetToLinePromotionReason) {
       return scannerDeskPlaySuppressionPost(targetToLinePromotionReason);
     }
     return scannerDeskPlaySuppressionBlocked('missed_no_chase', `Desk Play kept local because the selected setup is missed/no-chase: ${args.staleReason}`);
@@ -6616,7 +6615,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     return scannerDeskPlaySuppressionBlocked('passed_or_invalidated_levels', highQualityReviewStaleReason);
   }
   if (play.direction === 'WAIT') {
-    if (highQualityReviewCandidate && legacyDeskPlayPromotionAllowed) {
+    if (highQualityReviewCandidate) {
       const reviewScore = highQualityReviewCandidate.decisionQualityScore ?? highQualityReviewCandidate.modelConfidenceScore ?? null;
       return scannerDeskPlaySuppressionPost(
         `${highQualityReviewCandidate.direction} high-confidence conditional trade plan is eligible: app-owned entry/stop/T1/T2 are present, decision quality is ${reviewScore}, and execution arms only after the named completed 5M condition.`,
@@ -6640,7 +6639,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   if (staleLevelReason) {
     const reactionOnlyNoChase = /reaction level|target\/reaction|decision line/i.test(staleLevelReason) &&
       !/invalidated|protected stop|active tactical zone|active tactical line|t1|t2|stale/i.test(staleLevelReason);
-    if (reactionOnlyNoChase && targetToLinePromotionReason && legacyDeskPlayPromotionAllowed) {
+    if (reactionOnlyNoChase && targetToLinePromotionReason) {
       return scannerDeskPlaySuppressionPost(targetToLinePromotionReason);
     }
     return scannerDeskPlaySuppressionBlocked('passed_or_invalidated_levels', staleLevelReason);

@@ -100,4 +100,24 @@ assert.ok(legacySuppressionOutranksCanonicalReport.findings.some((finding) =>
   finding.reason.includes('Canonical DeskPublishDecision POST must be honored before duplicate refresh suppression')
 ));
 
+write(root, 'tools/automation/nt-scanner.ts', [
+  'buildDeskPublishDecision',
+  'assertScannerDeskPublishArtifactAgreement',
+  'DeskPublishDecision artifact agreement failed',
+  'chart context line',
+  'Canonical DeskPublishDecision line in the sand.',
+  'prepareLiveScannerDeskPlayAlertArtifacts',
+  'args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan',
+  'const legacyDeskPlayPromotionAllowed = !hasCanonicalPublishDecision;',
+  'scannerDeskPlanRefreshMateriallyMatches',
+  'scannerDeskPlayPublicCadenceHoldReason',
+].join('\n'));
+
+const redundantLegacyGateReport = buildDeskPublishContractAudit(root);
+assert.equal(redundantLegacyGateReport.status, 'fail');
+assert.ok(redundantLegacyGateReport.findings.some((finding) =>
+  finding.checkId === 'scanner_publish_contract_precedes_legacy_suppression' &&
+  finding.reason.includes('legacyDeskPlayPromotionAllowed')
+));
+
 console.log('Phase 3C DeskPublishDecision contract audit verified.');
