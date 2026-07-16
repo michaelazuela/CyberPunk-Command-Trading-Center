@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Check HTF context sufficiency for rebuilt no-chase artifacts.
+Files changed: tools/automation/no-chase-htf-context-sufficiency.ts, tools/automation/no-chase-htf-context-sufficiency.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The rebuild simulation produced 3 human-review-only artifacts. Before any scanner-visible discussion, this phase checks whether saved structured 5M/15M/60M/120M/240M context covers each artifact's 30-calendar-day lookback through the completed 5M proof bar.
+Tests run: `npx tsx tools/automation/no-chase-htf-context-sufficiency.test.ts`; `npx tsx tools/automation/no-chase-artifact-rebuild-simulation.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/no-chase-htf-context-sufficiency.ts --simulation-report tools/automation/diagnostic-reports/no-chase-artifact-rebuild-simulation-1784241406765.json --htf-coverage-report tools/automation/diagnostic-reports/controlled-htf-ohlc-acquisition-MES-2026-06-01-to-2026-07-02-1784221366520.json --out-dir tools/automation/diagnostic-reports --json`; `git diff --check`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run test`; `npm run lint`; `npm run build`.
+Result: Focused tests, typecheck, guards, full test suite, lint, and build passed. The local sufficiency check reviewed the 3 rebuilt artifacts against the saved controlled HTF coverage report. One artifact is sufficient: 2026-06-17 lunch AfterLunchDriveFvgContinuation SHORT has 5M/15M/60M/120M/240M coverage from early May through its 2026-06-17 14:05 proof bar. Two artifacts remain data-limited: 2026-06-25 morning IntradayMssMicroContinuation SHORT and 2026-06-26 lunch IntradayMssMicroContinuation SHORT require coverage through June 25/26, but the saved HTF source ends June 18. `canExecute=false` and `publishDiscord=false` remain true for all 3 rows. HTF promotion evidence allowed: 0. Report paths: `tools/automation/diagnostic-reports/no-chase-htf-context-sufficiency-1784241889331.json` and `.md`.
+Trading logic changed: No. This is a read-only local sufficiency report. It does not run setupScanner, change setup detection, live scanner ranking, canExecute creation, Discord posting, bridge reads, Supabase schema/writes, entry/stop/T1/T2 math, risk gates, or automated execution behavior.
+Bridge impact: None in this phase. The runner reads a prior local controlled HTF coverage report only. That source report had historical live reads when it was originally created, but this phase did not perform live reads.
+Journal/RAG impact: None. The runner does not write RAG/journal records.
+Supabase impact: No schema migration and no Supabase reads/writes in this phase.
+Known risks: The sufficient June 17 row still remains human-review-only and does not approve execution. The two Intraday rows are data-limited, not failed. They need controlled HTF data reload/backfill before scanner-visible review-ticket discussion.
+Next recommended action: Keep scanner-visible wiring off. Either manually review only the June 17 AfterLunch artifact as a single sufficient-context case, or first run a controlled read-only HTF reload/backfill for June 25-26 before revisiting the Intraday artifacts.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Simulate read-only no-chase human-review artifact rebuilds.
 Files changed: tools/automation/no-chase-artifact-rebuild-simulation.ts, tools/automation/no-chase-artifact-rebuild-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The rebuild pack isolated 3 positive no-chase rows. This phase proves those rows can be reconstructed into complete local human-review artifacts while preserving `canExecute=false`, no Discord posting, no scanner execution, and no live system side effects.
