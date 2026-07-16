@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add read-only OHLC proof extractor for target no-chase cases.
+Files changed: tools/automation/no-chase-ohlc-proof-extractor.ts, tools/automation/no-chase-ohlc-proof-extractor.test.ts, docs/PROJECT_STATUS.md.
+Reason: The prior no-chase proof audit showed saved scanner candidate artifacts did not convert missed/no-chase positives into fresh review tickets. This phase checks whether local completed 5M OHLC later crossed or retested the candidate-owned reference line after the no-chase timestamp, without changing scanner behavior or creating tickets.
+Tests run: `npx tsx tools/automation/no-chase-ohlc-proof-extractor.test.ts`; `npx tsx tools/automation/no-chase-proof-audit.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/no-chase-ohlc-proof-extractor.ts --audit-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --out-dir tools/automation/diagnostic-reports --json`; full verification pending below.
+Result: Focused tests and typecheck passed. The extractor loaded 1,919 saved decision-tape completed 5M bars and reviewed the same 383 scanner snapshots / 29 target no-chase cases. Local OHLC proof was found for 24 cases: 21 of 26 IntradayMssMicroContinuation and 3 of 3 AfterLunchDriveFvgContinuation. Five Intraday cases still have no local OHLC proof. Report paths: `tools/automation/diagnostic-reports/no-chase-ohlc-proof-extractor-1784236106923.json` and `.md`.
+Trading logic changed: No. This is a read-only research extractor. It does not run setupScanner, change setup detection, live scanner ranking, canExecute creation, Discord posting, bridge reads, Supabase schema/writes, entry/stop/T1/T2 math, risk gates, or automated execution behavior.
+Bridge impact: None. The runner reads saved local decision-tape 5M bars unless a local market-bars JSON is explicitly provided.
+Journal/RAG impact: None. The runner does not write RAG/journal records.
+Supabase impact: No schema migration and no Supabase reads/writes.
+Known risks: The proof-found result is not a trade ticket. Several cases have missing entry/stop/target fields in the no-chase artifact, so the result proves a possible scanner capture/rebuild gap, not executable readiness. Decision-tape OHLC is 5M-only; HTF sufficiency was not reloaded in this phase.
+Next recommended action: Add a second read-only classifier over the 24 proof-found cases that separates `reviewable_full_plan` from `proof_only_missing_plan_fields`, then only consider scanner artifact rebuild logic for full-plan cases. Keep TurtleSoup/Sweep strict and keep live Discord/canExecute untouched.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Run narrow no-chase proof audit for Intraday MSS and After-Lunch FVG continuation.
 Files changed: tools/automation/no-chase-proof-audit.ts, tools/automation/no-chase-proof-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Planning review narrowed the next phase to proving whether prior positive missed/no-chase cases later produced scanner-owned completed 5M proof before any live scanner or Discord behavior change. The new audit is local/read-only and checks only `IntradayMssMicroContinuation` and `AfterLunchDriveFvgContinuation`; TurtleSoup and SweepMssFvgRetrace are intentionally out of scope and remain strict.
