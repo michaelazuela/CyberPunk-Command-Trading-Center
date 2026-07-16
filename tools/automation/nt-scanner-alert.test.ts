@@ -3821,6 +3821,65 @@ assert.match(htfFvgReviewMapDeskPlaySuppression.reason, /SHORT high-quality HTF\
 assert.match(htfFvgReviewMapDeskPlaySuppression.reason, /240M parent FVG 7472\.25-7512\.00/);
 assert.match(htfFvgReviewMapDeskPlaySuppression.reason, /complete app-owned entry\/stop\/T1\/T2 are present/);
 assert.match(htfFvgReviewMapDeskPlaySuppression.reason, /Discord remains review-only/);
+const priorSamePublicHtfFvgDeskPlayRecord = {
+  ...previousDeskPlanRefreshRecord,
+  tradeDate: '2026-06-25',
+  instrument: 'MES',
+  session: 'morning',
+  activeCampaignId: null,
+  direction: 'SHORT',
+  lineInSand: 7472.25,
+  activeTacticalLine: 7472.25,
+  activeTacticalZoneLow: 7444,
+  activeTacticalZoneHigh: 7465.25,
+  activeTacticalZoneState: 'in_zone',
+  longLine: null,
+  shortLine: 7472.25,
+  entry: 7465.25,
+  stop: 7468,
+  target1: 7461.25,
+  target2: 7459.75,
+  targetReactionLevel: null,
+  readiness: 'not_aligned',
+  mainPlayFingerprint: 'older-internal-review-map-shape',
+  materialCadenceFingerprint: 'older-internal-review-map-label',
+  sentAt: '2026-06-25T10:50:00.000Z',
+} as any;
+const repeatedHtfFvgReviewMapDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-25',
+  instrument: 'MES',
+  session: 'morning',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: htfFvgReviewMapDeskState,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [{
+      setupType: SetupType.IntradayMssMicroContinuation,
+      scenarioLabel: 'HTF FVG review level carrier',
+      direction: 'SHORT',
+      detectedStatus: SetupCandidateStatus.Conditional,
+      executionStatus: ExecutionStatus.Conditional,
+      blockReason: NoTradeReason.EntryTriggerPending,
+      entry: 7465.25,
+      stop: 7468,
+      target1: 7461.25,
+      target2: 7459.75,
+      riskPoints: 2.75,
+      decisionQualityScore: 50,
+    }],
+  } as any,
+  deskPlanRefreshSent: { 'prior-same-public-htf-fvg': priorSamePublicHtfFvgDeskPlayRecord },
+  currentPrice: 7463,
+  latestCompleted5m: '2026-06-25T10:55:00.0000000',
+  now: new Date('2026-06-25T10:55:30.000Z'),
+});
+assert.equal(repeatedHtfFvgReviewMapDeskPlaySuppression.shouldPost, false);
+assert.equal(repeatedHtfFvgReviewMapDeskPlaySuppression.category, 'duplicate_refresh');
+assert.match(repeatedHtfFvgReviewMapDeskPlaySuppression.reason, /same-side public trader action/);
+assert.equal(repeatedHtfFvgReviewMapDeskPlaySuppression.changesTradingLogic, false);
+assert.equal(repeatedHtfFvgReviewMapDeskPlaySuppression.changesCanExecute, false);
 const staleHtfFvgReviewMapDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-25',
   instrument: 'MES',

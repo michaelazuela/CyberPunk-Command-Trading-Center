@@ -6145,6 +6145,22 @@ function scannerDeskPlanRefreshHasCompletePricedPlan(record: ScannerDeskPlanRefr
     isFiniteTradePrice(record.target2);
 }
 
+function scannerDeskPlayPublicActionFingerprint(record: ScannerDeskPlanRefreshLedgerRecord): string {
+  return [
+    record.activeCampaignId || 'no-campaign',
+    record.direction,
+    `line=${deskPlanRefreshPrice(record.lineInSand)}`,
+    `tactical=${deskPlanRefreshPrice(record.activeTacticalLine)}`,
+    `zone=${deskPlanRefreshPrice(record.activeTacticalZoneLow ?? null)}-${deskPlanRefreshPrice(record.activeTacticalZoneHigh ?? null)}`,
+    `entry=${deskPlanRefreshPrice(record.entry)}`,
+    `stop=${deskPlanRefreshPrice(record.stop)}`,
+    `t1=${deskPlanRefreshPrice(record.target1)}`,
+    `t2=${deskPlanRefreshPrice(record.target2)}`,
+    `reaction=${deskPlanRefreshPrice(record.targetReactionLevel)}`,
+    `readiness=${normalizeDeskPlayInstructionText(record.readiness) || 'none'}`,
+  ].join('|');
+}
+
 function scannerDeskPlayPublicCadenceHoldReason(args: {
   previous: ScannerDeskPlanRefreshLedgerRecord | null;
   current: ScannerDeskPlanRefreshLedgerRecord;
@@ -6163,6 +6179,8 @@ function scannerDeskPlayPublicCadenceHoldReason(args: {
   const previousReadiness = normalizeDeskPlayInstructionText(previous.readiness);
   const directionChanged = previous.direction !== args.current.direction;
   const publicLevelDriftPoints = scannerDeskPlanPublicLevelDriftPoints(previous, args.current);
+  const publicActionChanged = scannerDeskPlayPublicActionFingerprint(previous) !==
+    scannerDeskPlayPublicActionFingerprint(args.current);
 
   const readinessImproved = previousReadiness !== currentReadiness &&
     scannerDeskPlayReadinessIsActionable(currentReadiness) &&
@@ -6180,13 +6198,17 @@ function scannerDeskPlayPublicCadenceHoldReason(args: {
   const actionableInstructionChange = publicInstructionChanged &&
     scannerDeskPlayReadinessIsActionable(currentReadiness) &&
     scannerDeskPlanRefreshHasCompletePricedPlan(args.current);
-  if (!directionChanged && !readinessImproved && !actionableInstructionChange) {
+  const completePlanChanged = scannerDeskPlanRefreshHasCompletePricedPlan(args.current) &&
+    publicActionChanged &&
+    Number.isFinite(publicLevelDriftPoints) &&
+    publicLevelDriftPoints >= 1;
+  if (!directionChanged && !readinessImproved && !actionableInstructionChange && !completePlanChanged) {
     const driftText = Number.isFinite(publicLevelDriftPoints)
       ? `${publicLevelDriftPoints.toFixed(2)} pts`
       : 'new/missing priced levels';
     return `Desk Play kept local by public cadence guard: latest Desk Play was posted ${elapsedMinutes.toFixed(1)} minutes ago, and this ${args.current.direction} update is still the same-side public trader action (${driftText} level drift). Tactical/high-quality/HTF refresh labels, same-side line shifts, and non-actionable instruction changes do not create another Discord post until the cadence expires, direction changes, or an actionable complete-level ticket appears. Full bar-by-bar evidence remains in audit JSON.`;
   }
-  if (promotionalMap) return null;
+  if (promotionalMap && (readinessImproved || actionableInstructionChange || completePlanChanged || directionChanged)) return null;
   if (previous.activeCampaignId !== args.current.activeCampaignId) return null;
   if (readinessImproved) return null;
   if (directionChanged && currentReadiness !== 'not_aligned' && currentReadiness !== 'missed_no_chase') return null;
