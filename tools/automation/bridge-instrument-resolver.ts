@@ -14,6 +14,12 @@ export interface BridgeInstrumentResolution {
   warning: string | null;
 }
 
+export interface BridgeContractLeg {
+  bridgeInstrument: string;
+  fromDate: string;
+  toDate: string;
+}
+
 export interface BridgeInstrumentResolverDeps {
   getHealth?: (bridgeUrl: string) => Promise<NinjaBridgeHealth>;
 }
@@ -77,6 +83,16 @@ function rolloverDate(year: number, month: number): Date {
   return new Date(Date.UTC(expiration.getUTCFullYear(), expiration.getUTCMonth(), expiration.getUTCDate() - 8));
 }
 
+function dateText(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+function addDays(dateTextValue: string, days: number): string {
+  const date = new Date(`${dateTextValue}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return dateText(date);
+}
+
 function frontMonthContract(root: string, asOf: Date): string {
   const normalizedRoot = rootSymbol(root) || 'MES';
   const quarterlyMonths = [3, 6, 9, 12];
@@ -90,6 +106,29 @@ function frontMonthContract(root: string, asOf: Date): string {
   return `${normalizedRoot} 03-${String(year + 1).slice(-2)}`;
 }
 
+function frontMonthPartsForDate(root: string, dateValue: string): { root: string; month: number; year: number } {
+  const contract = frontMonthContract(root, new Date(`${dateValue}T12:00:00Z`));
+  return contractParts(contract) || { root: rootSymbol(root) || 'MES', month: 3, year: new Date(`${dateValue}T12:00:00Z`).getUTCFullYear() };
+}
+
+function nextQuarter(month: number, year: number): { month: number; year: number } {
+  const months = [3, 6, 9, 12];
+  const index = months.indexOf(month);
+  if (index >= 0 && index < months.length - 1) return { month: months[index + 1], year };
+  return { month: 3, year: year + 1 };
+}
+
+function previousQuarter(month: number, year: number): { month: number; year: number } {
+  const months = [3, 6, 9, 12];
+  const index = months.indexOf(month);
+  if (index > 0) return { month: months[index - 1], year };
+  return { month: 12, year: year - 1 };
+}
+
+function contractName(root: string, month: number, year: number): string {
+  return `${rootSymbol(root) || 'MES'} ${String(month).padStart(2, '0')}-${String(year).slice(-2)}`;
+}
+
 function contractParts(value: string): { root: string; month: number; year: number } | null {
   const match = normalize(value).match(/^(MES|MNQ|ES|NQ)\s+(\d{2})-(\d{2})$/i);
   if (!match) return null;
@@ -98,6 +137,41 @@ function contractParts(value: string): { root: string; month: number; year: numb
     month: Number(match[2]),
     year: 2000 + Number(match[3]),
   };
+}
+
+export function buildRolloverAwareContractLegs(options: {
+  appInstrument: string;
+  bridgeInstrument?: string | null;
+  fromDate: string;
+  toDate: string;
+}): BridgeContractLeg[] {
+  const fromDate = options.fromDate;
+  const toDate = options.toDate;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || !/^\d{4}-\d{2}-\d{2}$/.test(toDate) || fromDate > toDate) {
+    const fallbackRoot = rootSymbol(options.bridgeInstrument) || rootSymbol(options.appInstrument) || 'MES';
+    return [{ bridgeInstrument: contractName(fallbackRoot, frontMonthPartsForDate(fallbackRoot, toDate || fromDate).month, frontMonthPartsForDate(fallbackRoot, toDate || fromDate).year), fromDate, toDate }];
+  }
+  const root = rootSymbol(options.bridgeInstrument) || rootSymbol(options.appInstrument) || 'MES';
+  let current = frontMonthPartsForDate(root, fromDate);
+  const legs: BridgeContractLeg[] = [];
+  while (true) {
+    const previous = previousQuarter(current.month, current.year);
+    const legStart = dateText(rolloverDate(previous.year, previous.month));
+    const nextRollover = dateText(rolloverDate(current.year, current.month));
+    const legFrom = legStart > fromDate ? legStart : fromDate;
+    const legTo = addDays(nextRollover, -1) < toDate ? addDays(nextRollover, -1) : toDate;
+    if (legFrom <= legTo) {
+      legs.push({
+        bridgeInstrument: contractName(root, current.month, current.year),
+        fromDate: legFrom,
+        toDate: legTo,
+      });
+    }
+    if (nextRollover > toDate) break;
+    current = { root, ...nextQuarter(current.month, current.year) };
+    if (legs.length > 8) break;
+  }
+  return legs.length ? legs : [{ bridgeInstrument: contractName(root, current.month, current.year), fromDate, toDate }];
 }
 
 function isContractStale(value: string, asOf: Date): boolean {

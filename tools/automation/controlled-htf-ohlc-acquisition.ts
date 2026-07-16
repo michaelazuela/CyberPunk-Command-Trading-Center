@@ -22,6 +22,7 @@ import {
   verifyMarketDataWindow,
   type MarketDataWindowVerification,
 } from './market-data-ingestion';
+import { buildRolloverAwareContractLegs, type BridgeContractLeg } from './bridge-instrument-resolver';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -202,82 +203,18 @@ function requestToDate(endDate: string): string {
   return `${endDate}T23:59:59${easternOffsetFor(endDate)}`;
 }
 
-function rootSymbol(value: string): string {
-  const match = String(value || '').trim().toUpperCase().match(/^(MES|MNQ|ES|NQ)\b/);
-  return match?.[1] || 'MES';
-}
-
-function contractMonth(value: string): { root: string; month: number; year: number } | null {
-  const match = String(value || '').trim().toUpperCase().match(/^(MES|MNQ|ES|NQ)\s+(\d{1,2})-(\d{2})$/);
-  if (!match) return null;
-  return { root: match[1], month: Number(match[2]), year: 2000 + Number(match[3]) };
-}
-
-function thirdFriday(year: number, month: number): Date {
-  const first = new Date(Date.UTC(year, month - 1, 1));
-  const daysToFriday = (5 - first.getUTCDay() + 7) % 7;
-  return new Date(Date.UTC(year, month - 1, 1 + daysToFriday + 14));
-}
-
-function rolloverDate(year: number, month: number): string {
-  const expiration = thirdFriday(year, month);
-  const rollover = new Date(Date.UTC(expiration.getUTCFullYear(), expiration.getUTCMonth(), expiration.getUTCDate() - 8));
-  return rollover.toISOString().slice(0, 10);
-}
-
-function previousQuarter(month: number, year: number): { month: number; year: number } {
-  const months = [3, 6, 9, 12];
-  const index = months.indexOf(month);
-  if (index > 0) return { month: months[index - 1], year };
-  return { month: 12, year: year - 1 };
-}
-
-function nextQuarter(month: number, year: number): { month: number; year: number } {
-  const months = [3, 6, 9, 12];
-  const index = months.indexOf(month);
-  if (index >= 0 && index < months.length - 1) return { month: months[index + 1], year };
-  return { month: 3, year: year + 1 };
-}
-
-function contractName(root: string, month: number, year: number): string {
-  return `${root} ${String(month).padStart(2, '0')}-${String(year).slice(-2)}`;
-}
-
-function frontMonthForDate(dateText: string): { month: number; year: number } {
-  const asOf = new Date(`${dateText}T12:00:00Z`);
-  const year = asOf.getUTCFullYear();
-  for (const month of [3, 6, 9, 12]) {
-    if (dateText < rolloverDate(year, month)) return { month, year };
-  }
-  return { month: 3, year: year + 1 };
-}
-
-function contractLegsForRange(options: CliOptions): Array<{ bridgeInstrument: string; fromDate: string; toDate: string }> {
+function contractLegsForRange(options: CliOptions): BridgeContractLeg[] {
   const rangeFrom = addDays(options.startDate, -options.lookbackDays);
   const rangeTo = options.endDate;
   if (!options.rolloverAware) {
     return [{ bridgeInstrument: options.bridgeInstrument, fromDate: rangeFrom, toDate: rangeTo }];
   }
-  const root = rootSymbol(options.bridgeInstrument || options.instrument);
-  const first = contractMonth(options.bridgeInstrument)?.root === root
-    ? contractMonth(options.bridgeInstrument)
-    : frontMonthForDate(rangeFrom);
-  let current = first || frontMonthForDate(rangeFrom);
-  const legs: Array<{ bridgeInstrument: string; fromDate: string; toDate: string }> = [];
-  while (true) {
-    const prev = previousQuarter(current.month, current.year);
-    const currentStart = rolloverDate(prev.year, prev.month);
-    const currentEndExclusive = rolloverDate(current.year, current.month);
-    const fromDate = currentStart > rangeFrom ? currentStart : rangeFrom;
-    const toDate = addDays(currentEndExclusive, -1) < rangeTo ? addDays(currentEndExclusive, -1) : rangeTo;
-    if (fromDate <= toDate) {
-      legs.push({ bridgeInstrument: contractName(root, current.month, current.year), fromDate, toDate });
-    }
-    if (currentEndExclusive > rangeTo) break;
-    current = nextQuarter(current.month, current.year);
-    if (legs.length > 8) break;
-  }
-  return legs.length ? legs : [{ bridgeInstrument: options.bridgeInstrument, fromDate: rangeFrom, toDate: rangeTo }];
+  return buildRolloverAwareContractLegs({
+    appInstrument: options.instrument,
+    bridgeInstrument: options.bridgeInstrument,
+    fromDate: rangeFrom,
+    toDate: rangeTo,
+  });
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

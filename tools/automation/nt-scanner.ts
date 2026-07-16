@@ -139,7 +139,12 @@ import {
   PROFESSIONAL_MODEL_TWO_LABEL,
   professionalizeReportText,
 } from './professional-report-language';
-import { resolveCurrentBridgeInstrument, type BridgeInstrumentResolution } from './bridge-instrument-resolver';
+import {
+  buildRolloverAwareContractLegs,
+  resolveCurrentBridgeInstrument,
+  type BridgeContractLeg,
+  type BridgeInstrumentResolution,
+} from './bridge-instrument-resolver';
 import { readCliArgValue } from './cli-args';
 import { etDateTime } from './et-time';
 import { readQuantDeskMaintenanceStatus } from './quant-desk-maintenance';
@@ -584,6 +589,7 @@ export interface ScannerHistoryCoverageRecord {
   cacheBars: number;
   bridgeRepairBars: number;
   fiveMinuteAggregationRepairBars?: number;
+  contractLegs?: string[];
   selfHealed: boolean;
   sufficient: boolean;
   warning: string | null;
@@ -1974,6 +1980,24 @@ export function buildSegmentedHistoryRepairWindows(from: string, to: string, chu
   return windows;
 }
 
+export function scannerHistoryContractLegs(config: ScannerConfig, from: string, to: string): BridgeContractLeg[] {
+  return buildRolloverAwareContractLegs({
+    appInstrument: config.instrument,
+    bridgeInstrument: config.bridgeInstrument,
+    fromDate: ymdInEt(from),
+    toDate: ymdInEt(to),
+  });
+}
+
+function scannerHistoryLegWindow(leg: BridgeContractLeg, requestedFrom: string, requestedTo: string): { from: string; to: string } {
+  const requestedFromDate = ymdInEt(requestedFrom);
+  const requestedToDate = ymdInEt(requestedTo);
+  return {
+    from: leg.fromDate === requestedFromDate ? requestedFrom : etDateTime(leg.fromDate, '00:00'),
+    to: leg.toDate === requestedToDate ? requestedTo : etDateTime(leg.toDate, '23:59'),
+  };
+}
+
 function scannerHistoryPreloadTo(tradeDate: string, session: LiveSession, asOf?: string | Date | null): string {
   const sessionClose = etDateTime(tradeDate, session === 'morning' ? '12:00' : session === 'evening' ? '22:15' : '16:00');
   if (!asOf) return sessionClose;
@@ -2053,8 +2077,9 @@ export function summarizeScannerHistoryCoverage(record: ScannerHistoryCoverageRe
   const status = record.sufficient ? 'sufficient' : 'insufficient';
   const healed = record.selfHealed ? ', self-healed from bridge' : '';
   const aggregated = record.fiveMinuteAggregationRepairBars ? `, 5m-aggregated=${record.fiveMinuteAggregationRepairBars}` : '';
+  const legs = record.contractLegs?.length ? `, legs=${record.contractLegs.join(' + ')}` : '';
   const limitation = record.dataLimitation?.message ? `, data-limit=${record.dataLimitation.message}` : '';
-  return `${record.timeframe}: ${status}, ${record.barsLoaded} bars, ${record.rangeStart || 'N/A'} to ${record.rangeEnd || 'N/A'}, source=${record.source}${healed}${aggregated}${limitation}`;
+  return `${record.timeframe}: ${status}, ${record.barsLoaded} bars, ${record.rangeStart || 'N/A'} to ${record.rangeEnd || 'N/A'}, source=${record.source}${healed}${aggregated}${legs}${limitation}`;
 }
 
 export function twoHourCoverageDiagnostic(
@@ -3109,26 +3134,31 @@ export async function fetchSegmentedBridgeHistoryRepair(args: {
   to: string;
   limit: number;
   chunkDays?: number;
+  contractLegs?: BridgeContractLeg[];
 }): Promise<NinjaBridgeBar[]> {
-  const windows = buildSegmentedHistoryRepairWindows(args.from, args.to, args.chunkDays ?? 5);
   const bars: NinjaBridgeBar[] = [];
-  for (const window of windows) {
-    try {
-      const historical = await getNinjaHistoricalBars({
-        instrument: args.config.bridgeInstrument,
-        timeframe: args.timeframe,
-        from: window.from,
-        to: window.to,
-        limit: args.limit,
-        baseUrl: args.config.bridgeUrl,
-      });
-      if (historical.ok && historical.bars?.length) {
-        bars.push(...historical.bars);
-      } else {
-        console.warn(`[scanner-history] ${args.timeframe}: segmented bridge repair returned no bars for ${window.from} to ${window.to}: ${historical.error || 'unknown error'}`);
+  const contractLegs = args.contractLegs?.length ? args.contractLegs : scannerHistoryContractLegs(args.config, args.from, args.to);
+  for (const leg of contractLegs) {
+    const legWindow = scannerHistoryLegWindow(leg, args.from, args.to);
+    const windows = buildSegmentedHistoryRepairWindows(legWindow.from, legWindow.to, args.chunkDays ?? 5);
+    for (const window of windows) {
+      try {
+        const historical = await getNinjaHistoricalBars({
+          instrument: leg.bridgeInstrument,
+          timeframe: args.timeframe,
+          from: window.from,
+          to: window.to,
+          limit: args.limit,
+          baseUrl: args.config.bridgeUrl,
+        });
+        if (historical.ok && historical.bars?.length) {
+          bars.push(...historical.bars);
+        } else {
+          console.warn(`[scanner-history] ${args.timeframe}: segmented bridge repair returned no ${leg.bridgeInstrument} bars for ${window.from} to ${window.to}: ${historical.error || 'unknown error'}`);
+        }
+      } catch (error) {
+        console.warn(`[scanner-history] ${args.timeframe}: segmented bridge repair failed for ${leg.bridgeInstrument} ${window.from} to ${window.to}: ${formatError(error)}`);
       }
-    } catch (error) {
-      console.warn(`[scanner-history] ${args.timeframe}: segmented bridge repair failed for ${window.from} to ${window.to}: ${formatError(error)}`);
     }
   }
   return mergeBars([], bars);
@@ -3153,6 +3183,16 @@ function completedHtfAggregateBars(bars: NinjaBridgeBar[], timeframe: MarketBarT
   return bars.filter((bar) => {
     const openMs = barTimeMs(bar.time);
     return openMs !== null && openMs + timeframeMs <= requestedToMs;
+  });
+}
+
+function scannerBarsWithinWindow(bars: NinjaBridgeBar[], from: string, to: string): NinjaBridgeBar[] {
+  const fromMs = barTimeMs(from);
+  const toMs = barTimeMs(to);
+  if (fromMs === null || toMs === null) return [];
+  return bars.filter((bar) => {
+    const time = barTimeMs(bar.time);
+    return time !== null && time >= fromMs && time <= toMs;
   });
 }
 
@@ -3248,55 +3288,75 @@ async function fetchFiveMinuteBarsForHtfAggregation(args: {
   to: string;
   limit: number;
   marketConfig: MarketDataConfig | null;
+  contractLegs?: BridgeContractLeg[];
 }): Promise<NinjaBridgeBar[]> {
+  const contractLegs = args.contractLegs?.length ? args.contractLegs : scannerHistoryContractLegs(args.config, args.from, args.to);
   let cached5m: NinjaBridgeBar[] = [];
   if (args.marketConfig) {
-    try {
-      cached5m = await fetchCachedMarketBars({
-        instrument: args.config.bridgeInstrument,
-        timeframe: '5m',
-        from: args.from,
-        to: args.to,
-        config: args.marketConfig,
-        limit: args.limit,
-      });
-    } catch (error) {
-      console.warn(`[scanner-history] 5m: market_bars preload for HTF aggregation failed, attempting bridge repair: ${formatError(error)}`);
+    const chunks: NinjaBridgeBar[][] = [];
+    for (const leg of contractLegs) {
+      const legWindow = scannerHistoryLegWindow(leg, args.from, args.to);
+      try {
+        chunks.push(await fetchCachedMarketBars({
+          instrument: leg.bridgeInstrument,
+          timeframe: '5m',
+          from: legWindow.from,
+          to: legWindow.to,
+          config: args.marketConfig,
+          limit: args.limit,
+        }));
+      } catch (error) {
+        console.warn(`[scanner-history] 5m: market_bars preload for HTF aggregation failed for ${leg.bridgeInstrument}, attempting bridge repair: ${formatError(error)}`);
+      }
     }
+    cached5m = mergeBars([], chunks.flat());
   }
   const cacheSufficient = barsCoverRequestedLookback(cached5m, args.from, args.to, '5m');
   if (cacheSufficient) return cached5m;
 
   try {
-    const historical = await getNinjaHistoricalBars({
-      instrument: args.config.bridgeInstrument,
-      timeframe: '5m',
-      from: args.from,
-      to: args.to,
-      limit: args.limit,
-      baseUrl: args.config.bridgeUrl,
-    });
+    const bridgeChunks: NinjaBridgeBar[][] = [];
+    for (const leg of contractLegs) {
+      const legWindow = scannerHistoryLegWindow(leg, args.from, args.to);
+      const historical = await getNinjaHistoricalBars({
+        instrument: leg.bridgeInstrument,
+        timeframe: '5m',
+        from: legWindow.from,
+        to: legWindow.to,
+        limit: args.limit,
+        baseUrl: args.config.bridgeUrl,
+      });
+      bridgeChunks.push(historical.ok ? historical.bars || [] : []);
+      if (!historical.ok) {
+        console.warn(`[scanner-history] 5m: bridge repair for HTF aggregation returned no ${leg.bridgeInstrument} bars for ${legWindow.from} to ${legWindow.to}: ${historical.error || 'unknown error'}`);
+      }
+    }
     const repair5m = scannerHistoryRepairBarsForTimeframe(
       '5m',
-      historical.ok ? historical.bars || [] : [],
+      bridgeChunks.flat(),
       '5m bridge repair for HTF aggregation',
     );
     if (!repair5m.length) {
-      console.warn(`[scanner-history] 5m: bridge repair for HTF aggregation returned no bars for ${args.from} to ${args.to}: ${historical.error || 'unknown error'}`);
+      console.warn(`[scanner-history] 5m: bridge repair for HTF aggregation returned no usable bars for ${args.from} to ${args.to}.`);
       return cached5m;
     }
     if (args.marketConfig) {
-      try {
-        const upsertResult = await upsertMarketBars({
-          bars: repair5m,
-          instrument: args.config.instrument,
-          bridgeInstrument: args.config.bridgeInstrument,
-          timeframe: '5m',
-          config: args.marketConfig,
-        });
-        warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-history', timeframe: '5m', result: upsertResult });
-      } catch (error) {
-        console.warn(`[scanner-history] 5m: HTF aggregation repair bars loaded but cache upsert failed: ${formatError(error)}`);
+      for (const leg of contractLegs) {
+        const legWindow = scannerHistoryLegWindow(leg, args.from, args.to);
+        const legBars = scannerBarsWithinWindow(repair5m, legWindow.from, legWindow.to);
+        if (!legBars.length) continue;
+        try {
+          const upsertResult = await upsertMarketBars({
+            bars: legBars,
+            instrument: args.config.instrument,
+            bridgeInstrument: leg.bridgeInstrument,
+            timeframe: '5m',
+            config: args.marketConfig,
+          });
+          warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-history', timeframe: '5m', result: upsertResult });
+        } catch (error) {
+          console.warn(`[scanner-history] 5m: HTF aggregation repair bars loaded but ${leg.bridgeInstrument} cache upsert failed: ${formatError(error)}`);
+        }
       }
     }
     return mergeBars(repair5m, cached5m);
@@ -3338,58 +3398,79 @@ async function fetchScannerHistoryFrame(args: {
   limit: number;
 }): Promise<{ bars: NinjaBridgeBar[]; coverage: ScannerHistoryCoverageRecord }> {
   const marketConfig = loadMarketDataConfig();
+  const contractLegs = scannerHistoryContractLegs(args.config, args.from, args.to);
+  const contractLegSummary = contractLegs.map((leg) => `${leg.bridgeInstrument}:${leg.fromDate}->${leg.toDate}`);
   let cached: NinjaBridgeBar[] = [];
   if (marketConfig) {
-    try {
-      cached = await fetchCachedMarketBars({
-        instrument: args.config.bridgeInstrument,
-        timeframe: args.timeframe,
-        from: args.from,
-        to: args.to,
-        config: marketConfig,
-        limit: args.limit,
-      });
-    } catch (error) {
-      console.warn(`[scanner-history] ${args.timeframe}: market_bars preload failed, attempting bridge self-heal: ${formatError(error)}`);
+    const chunks: NinjaBridgeBar[][] = [];
+    for (const leg of contractLegs) {
+      const legWindow = scannerHistoryLegWindow(leg, args.from, args.to);
+      try {
+        chunks.push(await fetchCachedMarketBars({
+          instrument: leg.bridgeInstrument,
+          timeframe: args.timeframe,
+          from: legWindow.from,
+          to: legWindow.to,
+          config: marketConfig,
+          limit: args.limit,
+        }));
+      } catch (error) {
+        console.warn(`[scanner-history] ${args.timeframe}: market_bars preload failed for ${leg.bridgeInstrument}, attempting bridge self-heal: ${formatError(error)}`);
+      }
     }
+    cached = mergeBars([], chunks.flat());
   }
 
   let repaired: NinjaBridgeBar[] = [];
   let fiveMinuteAggregationRepairBars = 0;
   const cacheSufficient = barsCoverRequestedLookback(cached, args.from, args.to, args.timeframe);
   if (!cacheSufficient) {
-    try {
-      const historical = await getNinjaHistoricalBars({
-        instrument: args.config.bridgeInstrument,
-        timeframe: args.timeframe,
-        from: args.from,
-        to: args.to,
-        limit: args.limit,
-        baseUrl: args.config.bridgeUrl,
-      });
-      repaired = scannerHistoryRepairBarsForTimeframe(
-        args.timeframe,
-        historical.ok ? historical.bars || [] : [],
-        'bridge self-heal',
-      );
-      if (!repaired.length) {
-        console.warn(`[scanner-history] ${args.timeframe}: bridge self-heal returned no bars for ${args.from} to ${args.to}: ${historical.error || 'unknown error'}`);
-      } else if (marketConfig) {
+    const bridgeChunks: NinjaBridgeBar[][] = [];
+    for (const leg of contractLegs) {
+      const legWindow = scannerHistoryLegWindow(leg, args.from, args.to);
+      try {
+        const historical = await getNinjaHistoricalBars({
+          instrument: leg.bridgeInstrument,
+          timeframe: args.timeframe,
+          from: legWindow.from,
+          to: legWindow.to,
+          limit: args.limit,
+          baseUrl: args.config.bridgeUrl,
+        });
+        if (historical.ok && historical.bars?.length) {
+          bridgeChunks.push(historical.bars);
+        } else {
+          console.warn(`[scanner-history] ${args.timeframe}: bridge self-heal returned no ${leg.bridgeInstrument} bars for ${legWindow.from} to ${legWindow.to}: ${historical.error || 'unknown error'}`);
+        }
+      } catch (error) {
+        console.warn(`[scanner-history] ${args.timeframe}: bridge self-heal failed for ${leg.bridgeInstrument}: ${formatError(error)}`);
+      }
+    }
+    repaired = scannerHistoryRepairBarsForTimeframe(
+      args.timeframe,
+      bridgeChunks.flat(),
+      'bridge self-heal',
+    );
+    if (!repaired.length) {
+      console.warn(`[scanner-history] ${args.timeframe}: bridge self-heal returned no usable bars for ${args.from} to ${args.to}.`);
+    } else if (marketConfig) {
+      for (const leg of contractLegs) {
+        const legWindow = scannerHistoryLegWindow(leg, args.from, args.to);
+        const legBars = scannerBarsWithinWindow(repaired, legWindow.from, legWindow.to);
+        if (!legBars.length) continue;
         try {
           const upsertResult = await upsertMarketBars({
-            bars: repaired,
+            bars: legBars,
             instrument: args.config.instrument,
-            bridgeInstrument: args.config.bridgeInstrument,
+            bridgeInstrument: leg.bridgeInstrument,
             timeframe: args.timeframe,
             config: marketConfig,
           });
           warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-history', timeframe: args.timeframe, result: upsertResult });
         } catch (error) {
-          console.warn(`[scanner-history] ${args.timeframe}: self-healed bars loaded but cache upsert failed: ${formatError(error)}`);
+          console.warn(`[scanner-history] ${args.timeframe}: self-healed ${leg.bridgeInstrument} bars loaded but cache upsert failed: ${formatError(error)}`);
         }
       }
-    } catch (error) {
-      console.warn(`[scanner-history] ${args.timeframe}: bridge self-heal failed: ${formatError(error)}`);
     }
   }
 
@@ -3403,6 +3484,7 @@ async function fetchScannerHistoryFrame(args: {
         from: args.from,
         to: args.to,
         limit: args.limit,
+        contractLegs,
       }),
       'segmented bridge repair',
     );
@@ -3410,17 +3492,22 @@ async function fetchScannerHistoryFrame(args: {
       repaired = mergeBars(segmented, repaired);
       bars = mergeBars(repaired, cached);
       if (marketConfig) {
-        try {
-          const upsertResult = await upsertMarketBars({
-            bars: segmented,
-            instrument: args.config.instrument,
-            bridgeInstrument: args.config.bridgeInstrument,
-            timeframe: args.timeframe,
-            config: marketConfig,
-          });
-          warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-history', timeframe: args.timeframe, result: upsertResult });
-        } catch (error) {
-          console.warn(`[scanner-history] ${args.timeframe}: segmented self-healed bars loaded but cache upsert failed: ${formatError(error)}`);
+        for (const leg of contractLegs) {
+          const legWindow = scannerHistoryLegWindow(leg, args.from, args.to);
+          const legBars = scannerBarsWithinWindow(segmented, legWindow.from, legWindow.to);
+          if (!legBars.length) continue;
+          try {
+            const upsertResult = await upsertMarketBars({
+              bars: legBars,
+              instrument: args.config.instrument,
+              bridgeInstrument: leg.bridgeInstrument,
+              timeframe: args.timeframe,
+              config: marketConfig,
+            });
+            warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-history', timeframe: args.timeframe, result: upsertResult });
+          } catch (error) {
+            console.warn(`[scanner-history] ${args.timeframe}: segmented self-healed ${leg.bridgeInstrument} bars loaded but cache upsert failed: ${formatError(error)}`);
+          }
         }
       }
     }
@@ -3438,6 +3525,7 @@ async function fetchScannerHistoryFrame(args: {
       to: args.to,
       limit: args.limit,
       marketConfig,
+      contractLegs,
     });
     const rebuilt = scannerHistoryRepairBarsForTimeframe(
       args.timeframe,
@@ -3467,17 +3555,22 @@ async function fetchScannerHistoryFrame(args: {
         console.log(`[scanner-history] ${args.timeframe}: rebuilt ${rebuilt.length} bars from trusted 5M OHLC after native HTF repair remained incomplete.`);
       }
       if (marketConfig) {
-        try {
-          const upsertResult = await upsertMarketBars({
-            bars: rebuilt,
-            instrument: args.config.instrument,
-            bridgeInstrument: args.config.bridgeInstrument,
-            timeframe: args.timeframe,
-            config: marketConfig,
-          });
-          warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-history', timeframe: args.timeframe, result: upsertResult });
-        } catch (error) {
-          console.warn(`[scanner-history] ${args.timeframe}: 5M-derived self-healed bars loaded but cache upsert failed: ${formatError(error)}`);
+        for (const leg of contractLegs) {
+          const legWindow = scannerHistoryLegWindow(leg, args.from, args.to);
+          const legBars = scannerBarsWithinWindow(rebuilt, legWindow.from, legWindow.to);
+          if (!legBars.length) continue;
+          try {
+            const upsertResult = await upsertMarketBars({
+              bars: legBars,
+              instrument: args.config.instrument,
+              bridgeInstrument: leg.bridgeInstrument,
+              timeframe: args.timeframe,
+              config: marketConfig,
+            });
+            warnScannerMarketBarsUpsertSkippedOnce({ label: 'scanner-history', timeframe: args.timeframe, result: upsertResult });
+          } catch (error) {
+            console.warn(`[scanner-history] ${args.timeframe}: 5M-derived self-healed ${leg.bridgeInstrument} bars loaded but cache upsert failed: ${formatError(error)}`);
+          }
         }
       }
     } else {
@@ -3495,12 +3588,13 @@ async function fetchScannerHistoryFrame(args: {
     source: marketDataSourceFromCounts(cached.length, repaired.length),
     cacheBars: cached.length,
     bridgeRepairBars: repaired.length,
-    bridgeInstrument: args.config.bridgeInstrument,
+    bridgeInstrument: contractLegSummary.join(', '),
   });
   const coverage: ScannerHistoryCoverageRecord = {
     ...verification,
     fiveMinuteAggregationRepairBars,
     requiredLookbackDays: SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
+    contractLegs: contractLegSummary,
   };
   if (!coverage.sufficient) {
     await persistMarketDataGapEventWithFallback({
@@ -3528,6 +3622,7 @@ async function fetchScannerHistoryFrame(args: {
           invalidBars: coverage.invalidBars || 0,
           duplicateTimestamps: coverage.duplicateTimestamps || 0,
           fiveMinuteAggregationRepairBars,
+          contractLegs: contractLegSummary,
         },
       }),
     });

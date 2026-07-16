@@ -1,10 +1,32 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
+import { buildRolloverAwareContractLegs, resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
 
 const bridgeUrl = 'http://127.0.0.1:8765';
 const beforeJuneRollover = new Date('2026-06-10T12:00:00Z');
 const afterJuneRollover = new Date('2026-06-14T12:00:00Z');
+
+const rolloverLegsFromActiveContract = buildRolloverAwareContractLegs({
+  appInstrument: 'MES',
+  bridgeInstrument: 'MES 09-26',
+  fromDate: '2026-05-26',
+  toDate: '2026-06-26',
+});
+assert.deepEqual(rolloverLegsFromActiveContract, [
+  { bridgeInstrument: 'MES 06-26', fromDate: '2026-05-26', toDate: '2026-06-10' },
+  { bridgeInstrument: 'MES 09-26', fromDate: '2026-06-11', toDate: '2026-06-26' },
+]);
+
+const rolloverLegsFromRoot = buildRolloverAwareContractLegs({
+  appInstrument: 'MNQ',
+  bridgeInstrument: 'MNQ',
+  fromDate: '2026-08-20',
+  toDate: '2026-09-20',
+});
+assert.deepEqual(rolloverLegsFromRoot, [
+  { bridgeInstrument: 'MNQ 09-26', fromDate: '2026-08-20', toDate: '2026-09-09' },
+  { bridgeInstrument: 'MNQ 12-26', fromDate: '2026-09-10', toDate: '2026-09-20' },
+]);
 
 const rootMes = await resolveCurrentBridgeInstrument({
   bridgeUrl,

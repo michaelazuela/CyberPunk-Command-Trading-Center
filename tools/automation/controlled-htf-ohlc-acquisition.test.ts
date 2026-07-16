@@ -145,6 +145,47 @@ assert.equal(new Set(rolloverCalls.map((call) => call.instrument)).has('MES 06-2
 assert.equal(new Set(rolloverCalls.map((call) => call.instrument)).has('MES 09-26'), true);
 assert.equal(rolloverReport.coverage.every((row) => row.contractLegs.length === 2), true);
 
+const activeContractAnchoredRolloverCalls: Array<{ instrument?: string; timeframe?: string; from?: string; to?: string }> = [];
+const activeContractAnchoredRolloverReport = await buildControlledHtfOhlcAcquisitionReport({
+  startDate: '2026-06-25',
+  endDate: '2026-06-26',
+  instrument: 'MES',
+  bridgeInstrument: 'MES 09-26',
+  bridgeUrl: 'http://127.0.0.1:8765',
+  source: 'bridge',
+  inputJson: null,
+  outDir,
+  chunkDays: 60,
+  lookbackDays: 30,
+  rolloverAware: true,
+  json: true,
+}, '2026-07-16T00:00:00.000Z', {
+  fetchHistorical: async (request) => {
+    activeContractAnchoredRolloverCalls.push({
+      instrument: request.instrument,
+      timeframe: request.timeframe,
+      from: request.from,
+      to: request.to,
+    });
+    return {
+      ok: true,
+      instrument: request.instrument || 'MES',
+      timeframe: request.timeframe || '5m',
+      count: 2,
+      bars: request.instrument === 'MES 06-26'
+        ? [bar('2026-05-26T00:00:00', 100), bar('2026-06-10T23:55:00', 101)]
+        : [bar('2026-06-11T00:00:00', 102), bar('2026-06-26T23:55:00', 103)],
+    };
+  },
+});
+
+assert.equal(activeContractAnchoredRolloverReport.summary.rolloverAware, true);
+assert.ok(activeContractAnchoredRolloverReport.summary.contractLegs.some((leg) => leg.includes('MES 06-26:2026-05-26->2026-06-10')));
+assert.ok(activeContractAnchoredRolloverReport.summary.contractLegs.some((leg) => leg.includes('MES 09-26:2026-06-11->2026-06-26')));
+assert.equal(new Set(activeContractAnchoredRolloverCalls.map((call) => call.instrument)).has('MES 06-26'), true);
+assert.equal(new Set(activeContractAnchoredRolloverCalls.map((call) => call.instrument)).has('MES 09-26'), true);
+assert.equal(activeContractAnchoredRolloverReport.coverage.every((row) => row.contractLegs.length === 2), true);
+
 const dirtyCacheReport = await buildControlledHtfOhlcAcquisitionReport({
   startDate: '2026-06-01',
   endDate: '2026-06-01',
