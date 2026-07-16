@@ -48,6 +48,8 @@ export interface NoChaseOhlcProofCase {
   proofType: 'completed_5m_close_through' | 'completed_5m_retest_hold' | null;
   proofBarTime: string | null;
   proofBar: OhlcBar | null;
+  reviewClassification: 'reviewable_full_plan' | 'proof_only_missing_plan_fields' | 'not_reviewable_no_ohlc_proof';
+  reviewBlockers: string[];
   blocker: string | null;
   recommendation: string;
 }
@@ -90,6 +92,9 @@ export interface NoChaseOhlcProofExtractorReport {
     intradayProofFound: number;
     afterLunchCases: number;
     afterLunchProofFound: number;
+    reviewableFullPlan: number;
+    proofOnlyMissingPlanFields: number;
+    notReviewableNoOhlcProof: number;
     fiveMinuteBarsLoaded: number;
     fiveMinuteSource: 'local_market_bars_json' | 'scanner_decision_tape_completed_5m' | 'missing';
   };
@@ -323,7 +328,40 @@ function findProof(args: {
   return { proofType: null, proofBarTime: null, proofBar: null };
 }
 
-function recommendationFor(item: Pick<NoChaseOhlcProofCase, 'proofStatus' | 'proofType'>): string {
+function planFieldBlockers(item: Pick<NoChaseOhlcProofCase, 'direction' | 'entry' | 'stop' | 'target1' | 'target2'>): string[] {
+  const blockers: string[] = [];
+  if (item.entry === null) blockers.push('missing entry');
+  if (item.stop === null) blockers.push('missing stop');
+  if (item.target1 === null) blockers.push('missing T1');
+  if (item.target2 === null) blockers.push('missing T2');
+  if (blockers.length) return blockers;
+  if (item.direction === 'LONG') {
+    if (!(item.stop < item.entry && item.entry < item.target1 && item.target1 <= item.target2)) {
+      blockers.push('directionally invalid long entry/stop/target geometry');
+    }
+  } else if (!(item.stop > item.entry && item.entry > item.target1 && item.target1 >= item.target2)) {
+    blockers.push('directionally invalid short entry/stop/target geometry');
+  }
+  return blockers;
+}
+
+function reviewClassificationFor(item: Pick<NoChaseOhlcProofCase, 'proofStatus' | 'direction' | 'entry' | 'stop' | 'target1' | 'target2'>): Pick<NoChaseOhlcProofCase, 'reviewClassification' | 'reviewBlockers'> {
+  if (item.proofStatus !== 'ohlc_proof_found') {
+    return { reviewClassification: 'not_reviewable_no_ohlc_proof', reviewBlockers: ['no local completed 5M OHLC proof'] };
+  }
+  const blockers = planFieldBlockers(item);
+  return blockers.length
+    ? { reviewClassification: 'proof_only_missing_plan_fields', reviewBlockers: blockers }
+    : { reviewClassification: 'reviewable_full_plan', reviewBlockers: [] };
+}
+
+function recommendationFor(item: Pick<NoChaseOhlcProofCase, 'proofStatus' | 'proofType' | 'reviewClassification'>): string {
+  if (item.reviewClassification === 'reviewable_full_plan') {
+    return 'Local completed 5M OHLC proof and full plan fields are present. Eligible for manual replay review of scanner artifact rebuild only.';
+  }
+  if (item.reviewClassification === 'proof_only_missing_plan_fields') {
+    return 'Local completed 5M OHLC proof exists, but the no-chase artifact is missing a full valid plan. Do not create a ticket without rebuild validation.';
+  }
   if (item.proofStatus === 'ohlc_proof_found') {
     return 'Local completed 5M OHLC shows later proof. Investigate scanner artifact capture; do not wire live behavior from this extractor alone.';
   }
@@ -360,6 +398,15 @@ function buildCase(args: {
       : proof.proofType
         ? 'ohlc_proof_found'
         : 'no_local_ohlc_proof';
+  const reviewInput = {
+    proofStatus,
+    direction: first.direction,
+    entry: first.item.entry,
+    stop: first.item.stop,
+    target1: first.item.target1,
+    target2: first.item.target2,
+  };
+  const review = reviewClassificationFor(reviewInput);
   const base = {
     caseId: observationKey(first),
     tradeDate: first.tradeDate,
@@ -379,7 +426,8 @@ function buildCase(args: {
     proofType: proof.proofType,
     proofBarTime: proof.proofBarTime,
     proofBar: proof.proofBar,
-    blocker: proofStatus === 'ohlc_proof_found' ? null : recommendationFor({ proofStatus, proofType: null }),
+    ...review,
+    blocker: proofStatus === 'ohlc_proof_found' ? null : recommendationFor({ proofStatus, proofType: null, reviewClassification: review.reviewClassification }),
   };
   return { ...base, recommendation: recommendationFor(base) };
 }
@@ -390,7 +438,10 @@ function buildRecommendations(report: Omit<NoChaseOhlcProofExtractorReport, 'rec
     'Keep TurtleSoup and SweepMssFvgRetrace out of scope for this phase.',
   ];
   if (report.summary.ohlcProofFound > 0) {
-    lines.push('Review proof-found cases manually against chart context, then decide whether scanner artifact capture missed valid completed 5M proof.');
+    lines.push('Review only proof-found cases classified as reviewable_full_plan before considering scanner artifact rebuild logic.');
+  }
+  if (report.summary.proofOnlyMissingPlanFields > 0) {
+    lines.push('Proof-only cases with missing plan fields must not become tickets until scanner rebuild validation can produce entry, stop, T1, and T2.');
   } else {
     lines.push('No local OHLC proof was found for target no-chase cases; keep the current no-chase block intact.');
   }
@@ -415,12 +466,15 @@ function buildMarkdown(report: Omit<NoChaseOhlcProofExtractorReport, 'markdown'>
     `- Missing reference level: ${report.summary.missingReferenceLevel}.`,
     `- Intraday MSS cases/proof found: ${report.summary.intradayCases}/${report.summary.intradayProofFound}.`,
     `- After-lunch FVG cases/proof found: ${report.summary.afterLunchCases}/${report.summary.afterLunchProofFound}.`,
+    `- Reviewable full-plan cases: ${report.summary.reviewableFullPlan}.`,
+    `- Proof-only missing-plan cases: ${report.summary.proofOnlyMissingPlanFields}.`,
+    `- Not reviewable / no OHLC proof: ${report.summary.notReviewableNoOhlcProof}.`,
     `- 5M bars loaded: ${report.summary.fiveMinuteBarsLoaded} from ${report.summary.fiveMinuteSource}.`,
     '',
     '## Cases',
-    '| Date | Session | Setup | Side | Ref | Ref Source | Future Bars | Status | Proof Type | Proof Time | Recommendation |',
-    '|---|---|---|---|---:|---|---:|---|---|---|---|',
-    ...report.cases.map((item) => `| ${item.tradeDate} | ${item.sessionType} | ${item.setupType} | ${item.direction} | ${item.referenceLevel ?? '-'} | ${item.referenceSource} | ${item.futureBarsChecked} | ${item.proofStatus} | ${item.proofType || '-'} | ${item.proofBarTime || '-'} | ${item.recommendation} |`),
+    '| Date | Session | Setup | Side | Ref | Future Bars | Status | Review Class | Review Blockers | Proof Time | Recommendation |',
+    '|---|---|---|---|---:|---:|---|---|---|---|---|',
+    ...report.cases.map((item) => `| ${item.tradeDate} | ${item.sessionType} | ${item.setupType} | ${item.direction} | ${item.referenceLevel ?? '-'} | ${item.futureBarsChecked} | ${item.proofStatus} | ${item.reviewClassification} | ${item.reviewBlockers.join('; ') || '-'} | ${item.proofBarTime || '-'} | ${item.recommendation} |`),
     '',
     '## Recommendations',
     ...report.recommendations.map((item) => `- ${item}`),
@@ -486,6 +540,9 @@ export function buildNoChaseOhlcProofExtractorReport(args: {
       intradayProofFound: cases.filter((item) => item.setupType === SetupType.IntradayMssMicroContinuation && item.proofStatus === 'ohlc_proof_found').length,
       afterLunchCases: cases.filter((item) => item.setupType === SetupType.AfterLunchDriveFvgContinuation).length,
       afterLunchProofFound: cases.filter((item) => item.setupType === SetupType.AfterLunchDriveFvgContinuation && item.proofStatus === 'ohlc_proof_found').length,
+      reviewableFullPlan: cases.filter((item) => item.reviewClassification === 'reviewable_full_plan').length,
+      proofOnlyMissingPlanFields: cases.filter((item) => item.reviewClassification === 'proof_only_missing_plan_fields').length,
+      notReviewableNoOhlcProof: cases.filter((item) => item.reviewClassification === 'not_reviewable_no_ohlc_proof').length,
       fiveMinuteBarsLoaded: args.bars.length,
       fiveMinuteSource: args.fiveMinuteSource || (args.bars.length ? 'local_market_bars_json' : 'missing'),
     },

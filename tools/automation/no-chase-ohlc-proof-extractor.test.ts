@@ -83,10 +83,26 @@ const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
     currentCanExecute: false,
   },
   {
-    snapshotId: 'turtle-out-of-scope',
+    snapshotId: 'intraday-proof-missing-stop',
     tradeDate: '2026-06-13',
     sessionType: 'morning',
     completedBarTime: '2026-06-13T10:00:00',
+    candidates: [
+      candidate({
+        entry: 105,
+        stop: null,
+        target1: 111,
+        target2: 113,
+        activeRuleset: { htfLineInSand: { lineInSand: 106 } } as SetupCandidate['activeRuleset'],
+      }),
+    ],
+    currentCanExecute: false,
+  },
+  {
+    snapshotId: 'turtle-out-of-scope',
+    tradeDate: '2026-06-14',
+    sessionType: 'morning',
+    completedBarTime: '2026-06-14T10:00:00',
     candidates: [candidate({ setupType: SetupType.TurtleSoup })],
     currentCanExecute: false,
   },
@@ -97,6 +113,7 @@ const bars = [
   { time: '2026-06-10T10:10:00', open: 101.25, high: 101.5, low: 100.75, close: 101.25 },
   { time: '2026-06-11T10:05:00', open: 100, high: 100.5, low: 99.25, close: 99.5 },
   { time: '2026-06-12T12:45:00', open: 99.25, high: 99.5, low: 98.25, close: 98.75 },
+  { time: '2026-06-13T10:05:00', open: 105.5, high: 106.5, low: 105.25, close: 106.25 },
 ];
 
 const report = buildNoChaseOhlcProofExtractorReport({
@@ -119,29 +136,40 @@ assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.runsSetupScanner, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
-assert.equal(report.summary.snapshotsAudited, 4);
-assert.equal(report.summary.noChaseCases, 3);
-assert.equal(report.summary.ohlcProofFound, 2);
+assert.equal(report.summary.snapshotsAudited, 5);
+assert.equal(report.summary.noChaseCases, 4);
+assert.equal(report.summary.ohlcProofFound, 3);
 assert.equal(report.summary.noLocalOhlcProof, 1);
-assert.equal(report.summary.intradayCases, 2);
-assert.equal(report.summary.intradayProofFound, 1);
+assert.equal(report.summary.intradayCases, 3);
+assert.equal(report.summary.intradayProofFound, 2);
 assert.equal(report.summary.afterLunchCases, 1);
 assert.equal(report.summary.afterLunchProofFound, 1);
+assert.equal(report.summary.reviewableFullPlan, 2);
+assert.equal(report.summary.proofOnlyMissingPlanFields, 1);
+assert.equal(report.summary.notReviewableNoOhlcProof, 1);
 assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.TurtleSoup), false);
 
 const intradayProof = report.cases.find((item) => item.caseId === '2026-06-10|morning|IntradayMssMicroContinuation|LONG');
 const intradayBlocked = report.cases.find((item) => item.caseId === '2026-06-11|morning|IntradayMssMicroContinuation|SHORT');
 const afterLunchProof = report.cases.find((item) => item.caseId === '2026-06-12|lunch|AfterLunchDriveFvgContinuation|SHORT');
+const proofOnly = report.cases.find((item) => item.caseId === '2026-06-13|morning|IntradayMssMicroContinuation|LONG');
 
 assert.equal(intradayProof?.referenceSource, 'htf_line_in_sand');
 assert.equal(intradayProof?.referenceLevel, 101);
 assert.equal(intradayProof?.proofStatus, 'ohlc_proof_found');
 assert.equal(intradayProof?.proofType, 'completed_5m_close_through');
 assert.equal(intradayProof?.proofBarTime, '2026-06-10T10:05:00');
+assert.equal(intradayProof?.reviewClassification, 'reviewable_full_plan');
 assert.equal(intradayBlocked?.proofStatus, 'no_local_ohlc_proof');
+assert.equal(intradayBlocked?.reviewClassification, 'not_reviewable_no_ohlc_proof');
 assert.equal(afterLunchProof?.proofStatus, 'ohlc_proof_found');
 assert.equal(afterLunchProof?.proofBarTime, '2026-06-12T12:45:00');
+assert.equal(afterLunchProof?.reviewClassification, 'reviewable_full_plan');
+assert.equal(proofOnly?.proofStatus, 'ohlc_proof_found');
+assert.equal(proofOnly?.reviewClassification, 'proof_only_missing_plan_fields');
+assert.deepEqual(proofOnly?.reviewBlockers, ['missing stop']);
 assert.match(report.markdown, /No-Chase OHLC Proof Extractor/);
+assert.match(report.markdown, /reviewable_full_plan/);
 assert.match(report.recommendations.join(' '), /research-only/);
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'no-chase-ohlc-proof-extractor-'));

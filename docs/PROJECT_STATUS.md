@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Classify OHLC proof-found no-chase cases by full-plan readiness.
+Files changed: tools/automation/no-chase-ohlc-proof-extractor.ts, tools/automation/no-chase-ohlc-proof-extractor.test.ts, docs/PROJECT_STATUS.md.
+Reason: The OHLC extractor found 24 local completed-5M proof cases, but some no-chase artifacts lacked entry/stop/T1/T2. This phase adds a conservative read-only classifier so proof does not get confused with a reviewable ticket.
+Tests run: `npx tsx tools/automation/no-chase-ohlc-proof-extractor.test.ts`; `npx tsx tools/automation/no-chase-proof-audit.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/no-chase-ohlc-proof-extractor.ts --audit-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --out-dir tools/automation/diagnostic-reports --json`; full verification pending below.
+Result: Focused tests and typecheck passed. The updated extractor again found 24 OHLC proof cases out of 29 target no-chase cases, then classified them as 10 `reviewable_full_plan`, 14 `proof_only_missing_plan_fields`, and 5 `not_reviewable_no_ohlc_proof`. All 3 AfterLunchDriveFvgContinuation cases are full-plan reviewable. IntradayMssMicroContinuation has 7 full-plan reviewable, 14 proof-only incomplete, and 5 no-proof blocked. Report paths: `tools/automation/diagnostic-reports/no-chase-ohlc-proof-extractor-1784236475743.json` and `.md`.
+Trading logic changed: No. This is a read-only research classifier inside the diagnostic extractor. It does not run setupScanner, change setup detection, live scanner ranking, canExecute creation, Discord posting, bridge reads, Supabase schema/writes, entry/stop/T1/T2 math, risk gates, or automated execution behavior.
+Bridge impact: None. The runner reads saved local decision-tape 5M bars unless a local market-bars JSON is explicitly provided.
+Journal/RAG impact: None. The runner does not write RAG/journal records.
+Supabase impact: No schema migration and no Supabase reads/writes.
+Known risks: Full-plan reviewable means the historical artifact contains completed 5M proof plus valid entry/stop/T1/T2 geometry. It is still not a live ticket, not canExecute, and not HTF 30-day sufficiency proof. The 14 proof-only cases must not become tickets until rebuild logic can produce full deterministic plan fields.
+Next recommended action: Manually replay only the 10 `reviewable_full_plan` cases against chart context and outcome, then decide whether a small scanner artifact-rebuild phase is justified for Intraday/AfterLunch only. Keep TurtleSoup/Sweep strict and keep live Discord/canExecute untouched.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add read-only OHLC proof extractor for target no-chase cases.
 Files changed: tools/automation/no-chase-ohlc-proof-extractor.ts, tools/automation/no-chase-ohlc-proof-extractor.test.ts, docs/PROJECT_STATUS.md.
 Reason: The prior no-chase proof audit showed saved scanner candidate artifacts did not convert missed/no-chase positives into fresh review tickets. This phase checks whether local completed 5M OHLC later crossed or retested the candidate-owned reference line after the no-chase timestamp, without changing scanner behavior or creating tickets.
