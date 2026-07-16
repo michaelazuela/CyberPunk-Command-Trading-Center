@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Run narrow no-chase proof audit for Intraday MSS and After-Lunch FVG continuation.
+Files changed: tools/automation/no-chase-proof-audit.ts, tools/automation/no-chase-proof-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Planning review narrowed the next phase to proving whether prior positive missed/no-chase cases later produced scanner-owned completed 5M proof before any live scanner or Discord behavior change. The new audit is local/read-only and checks only `IntradayMssMicroContinuation` and `AfterLunchDriveFvgContinuation`; TurtleSoup and SweepMssFvgRetrace are intentionally out of scope and remain strict.
+Tests run: `npx tsx tools/automation/no-chase-proof-audit.test.ts`; `npx tsx tools/automation/unified-desk-candidate-book-diagnostic.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/no-chase-proof-audit.ts --input-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --out-dir tools/automation/diagnostic-reports --json`; full verification pending below.
+Result: Focused tests and typecheck passed. The local proof audit reviewed 383 snapshots and found 29 target no-chase cases: 26 IntradayMssMicroContinuation and 3 AfterLunchDriveFvgContinuation. Zero converted to human-review/executable review tickets with later fresh completed 5M proof; all 29 remain no-chase. Report paths: `tools/automation/diagnostic-reports/no-chase-proof-audit-1784234622948.json` and `.md`.
+Trading logic changed: No. This is a read-only diagnostic/report phase. It does not change setup detection, live scanner ranking, canExecute creation, Discord posting, bridge reads, Supabase schema/writes, entry/stop/T1/T2 math, risk gates, or automated execution behavior.
+Bridge impact: None. The runner reads local scanner audit JSON only.
+Journal/RAG impact: None. The runner does not write RAG/journal records.
+Supabase impact: No schema migration and no Supabase reads/writes.
+Known risks: The audit proves the current scanner artifacts do not contain later completed-5M re-entry proof for these no-chase cases; it does not prove such proof never occurred in market data outside the saved artifacts.
+Next recommended action: Keep the no-chase block intact. Do not broaden TurtleSoup/Sweep or wire unified ranking live. If further improvement is desired, build a separate after-the-fact OHLC proof extractor for the positive Intraday/AfterLunch research set to see whether the scanner failed to save proof that the market actually produced.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Run Unified Desk Candidate Book diagnostic on June 1-July 2 scanner audit artifacts.
 Files changed: src/lib/unifiedDeskCandidateBook.ts, tools/automation/unified-desk-candidate-book-diagnostic.ts, tools/automation/unified-desk-candidate-book-diagnostic.test.ts, docs/PROJECT_STATUS.md.
 Reason: The prior phase built the diagnostic runner. This phase fed local scanner audit artifacts from June 1 through July 2 into the runner, using scanner-owned `normalizedPlan.setupCandidates`, `sourceCandidate`, completed 5M timestamps, and existing canExecute status. The runner now supports scanner-audit directory ingestion and evening-session diagnostics while preserving read-only/no-side-effect authority.
