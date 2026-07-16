@@ -78,6 +78,7 @@ export interface DeliveryVisibilityReport {
   preFixHistoricalDeliveries?: ScannerDeliveryRecord[];
   failedDeliveries: ScannerDeliveryRecord[];
   pendingDeliveries: ScannerDeliveryRecord[];
+  protectedSuppressedDeliveries?: ScannerDeliveryRecord[];
   skippedDeliveries: ScannerDeliveryRecord[];
   lastWatchlist: WatchlistRecord | null;
   recentAuditFiles: AuditFileSummary[];
@@ -192,6 +193,24 @@ function isPreFixHistoricalDelivery(delivery: Pick<ScannerDeliveryRecord, 'attem
 function historicalReason(delivery: Pick<ScannerDeliveryRecord, 'attemptedAt' | 'sentAt' | 'webhookSource' | 'error'>): string | null {
   if (!isPreFixHistoricalDelivery(delivery)) return null;
   return `pre_fix_historical: before scanner restart ${DISCORD_VISIBILITY_FIX_RESTARTED_AT} after commit ${DISCORD_VISIBILITY_FIX_COMMIT}; kept as evidence, excluded from active suppression risk.`;
+}
+
+function isProtectedSuppressionDelivery(delivery: ScannerDeliveryRecord): boolean {
+  if (delivery.deliveryStatus !== 'skipped') return false;
+  const reason = (delivery.error || '').toLowerCase();
+  return (
+    delivery.stale === true ||
+    reason.startsWith('held_') ||
+    reason.includes('primary trade-card suppressed by deskstate/readiness gate') ||
+    reason.includes('stale/no-chase') ||
+    reason.includes('no-chase') ||
+    reason.includes('no chase') ||
+    reason.includes('already reached/passed') ||
+    reason.includes('already reached') ||
+    reason.includes('already passed') ||
+    reason.includes('missed') ||
+    reason.includes('invalidated')
+  );
 }
 
 function sortByRecentDate<T>(items: T[], getDate: (item: T) => string | null): T[] {
@@ -412,6 +431,8 @@ export function buildDeliveryVisibilityReport(args: {
   );
   const operationalDeliveries = deliveries.filter((delivery) => !isDryRunDelivery(delivery));
   const activeRiskOperationalDeliveries = operationalDeliveries.filter((delivery) => delivery.historicalClassification !== 'pre_fix_historical');
+  const protectedSuppressedDeliveries = activeRiskOperationalDeliveries.filter(isProtectedSuppressionDelivery);
+  const deliveryRiskOperationalDeliveries = activeRiskOperationalDeliveries.filter((delivery) => !isProtectedSuppressionDelivery(delivery));
   const preFixHistoricalDeliveries = operationalDeliveries.filter((delivery) => delivery.historicalClassification === 'pre_fix_historical');
   const activeTradeDate = latestTradeDate(state, now);
   const currentOperationalDeliveries = activeRiskOperationalDeliveries.filter((delivery) => {
@@ -425,9 +446,9 @@ export function buildDeliveryVisibilityReport(args: {
     (item) => item.sentAt,
   );
 
-  const failedDeliveries = activeRiskOperationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'failed');
-  const pendingDeliveries = activeRiskOperationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'pending');
-  const skippedDeliveries = activeRiskOperationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'skipped');
+  const failedDeliveries = deliveryRiskOperationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'failed');
+  const pendingDeliveries = deliveryRiskOperationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'pending');
+  const skippedDeliveries = deliveryRiskOperationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'skipped');
   const heartbeatFreshness = recorderHeartbeatFreshness(recorderHeartbeatPath, now, staleAfterMs);
   const blockers = stateReadable ? staleBlockers(state, now, staleAfterMs, heartbeatFreshness) : ['Scanner state file is not readable.'];
   const pendingGapSync = pendingMarketDataGapSyncSummary(marketDataGapLedgerPath, now, staleAfterMs);
@@ -462,6 +483,7 @@ export function buildDeliveryVisibilityReport(args: {
     preFixHistoricalDeliveries,
     failedDeliveries,
     pendingDeliveries,
+    protectedSuppressedDeliveries,
     skippedDeliveries,
     lastWatchlist: watchlists[0] || null,
     recentAuditFiles: recentFiles,

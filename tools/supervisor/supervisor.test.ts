@@ -961,6 +961,36 @@ fs.writeFileSync(preFixHistoricalStatePath, JSON.stringify({
       stale: false,
       retryEligible: true,
     },
+    '2026-06-30:SHORT:CURRENT-PROTECTED-SUPPRESSION': {
+      alertKey: '2026-06-30:SHORT:CURRENT-PROTECTED-SUPPRESSION',
+      planVersionId: 'EVENING-20260630-214735',
+      instrument: 'MES',
+      tradeDate: '2026-06-30',
+      session: 'evening',
+      state: 'Missed',
+      confidence: 71,
+      deliveryStatus: 'skipped',
+      webhookSource: null,
+      error: 'Primary trade-card suppressed by DeskState/readiness gate: state=Missed; stale/no-chase review state; current price already reached/passed T1.',
+      attemptedAt: '2026-07-01T01:47:35.538Z',
+      stale: true,
+      retryEligible: false,
+    },
+    '2026-06-30:LONG:CURRENT-SKIP-RISK': {
+      alertKey: '2026-06-30:LONG:CURRENT-SKIP-RISK',
+      planVersionId: 'EVENING-20260630-215000',
+      instrument: 'MES',
+      tradeDate: '2026-06-30',
+      session: 'evening',
+      state: 'TriggerPending',
+      confidence: 90,
+      deliveryStatus: 'skipped',
+      webhookSource: 'unexpected_boundary',
+      error: 'Discord delivery skipped: unexpected_boundary.',
+      attemptedAt: '2026-07-01T01:50:00.000Z',
+      stale: false,
+      retryEligible: false,
+    },
   },
   lastCompleted5mBySession: {
     '2026-06-30:evening': '2026-06-30T21:35:00.0000000',
@@ -978,7 +1008,10 @@ const preFixHistoricalReport = buildDeliveryVisibilityReport({
 });
 assert.equal(preFixHistoricalReport.preFixHistoricalDeliveries?.length, 2);
 assert.ok(preFixHistoricalReport.preFixHistoricalDeliveries?.every((delivery) => delivery.historicalClassification === 'pre_fix_historical'));
-assert.equal(preFixHistoricalReport.skippedDeliveries.length, 0);
+assert.equal(preFixHistoricalReport.protectedSuppressedDeliveries?.length, 1);
+assert.equal(preFixHistoricalReport.protectedSuppressedDeliveries?.[0]?.alertKey, '2026-06-30:SHORT:CURRENT-PROTECTED-SUPPRESSION');
+assert.equal(preFixHistoricalReport.skippedDeliveries.length, 1);
+assert.equal(preFixHistoricalReport.skippedDeliveries[0]?.alertKey, '2026-06-30:LONG:CURRENT-SKIP-RISK');
 assert.equal(preFixHistoricalReport.failedDeliveries.length, 1);
 assert.equal(preFixHistoricalReport.failedDeliveries[0]?.alertKey, '2026-06-30:LONG:CURRENT-FAILED');
 assert.equal(preFixHistoricalReport.historicalAuditCutoff?.commit, 'bb30bc4');
