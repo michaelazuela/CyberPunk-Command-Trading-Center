@@ -2371,13 +2371,20 @@ recordActiveCampaignScannerAlertSent({
   alertKey: 'first-alert-key',
   sentAt: '2026-06-08T15:35:00.000Z',
 });
+const exactCampaignDecision = shouldSuppressActiveCampaignScannerAlert({
+  activeCampaignSent: activeCampaignLedger,
+  candidate: campaignCandidate,
+});
+assert.equal(exactCampaignDecision.shouldSuppress, true);
+assert.equal(exactCampaignDecision.campaignId, '2026-06-08:SHORT:15M5M-MSS');
+assert.match(exactCampaignDecision.reason || '', /one trade alert already sent/);
 const repeatedCampaignDecision = shouldSuppressActiveCampaignScannerAlert({
   activeCampaignSent: activeCampaignLedger,
   candidate: shiftedCampaignCandidate,
 });
-assert.equal(repeatedCampaignDecision.shouldSuppress, true);
+assert.equal(repeatedCampaignDecision.shouldSuppress, false);
 assert.equal(repeatedCampaignDecision.campaignId, '2026-06-08:SHORT:15M5M-MSS');
-assert.match(repeatedCampaignDecision.reason || '', /one trade alert already sent/);
+assert.match(repeatedCampaignDecision.reason || '', /material update allowed/);
 recordActiveCampaignScannerAlertSuppressed({
   activeCampaignSent: activeCampaignLedger,
   campaignId: '2026-06-08:SHORT:15M5M-MSS',
@@ -4976,6 +4983,8 @@ assert.equal(durableClaim.shouldSuppress, false);
 assert.equal(durableFetchCalls[0].method, 'POST');
 assert.equal(durableFetchCalls[0].body.campaign_id, '2026-06-08:SHORT:15M5M-MSS');
 assert.equal(durableFetchCalls[0].body.delivery_status, 'pending');
+const initialPublicActionFingerprint = durableFetchCalls[0]?.body?.metadata?.publicActionFingerprint;
+assert.equal(typeof initialPublicActionFingerprint, 'string');
 durableFetchCalls.length = 0;
 const sundayEveningDurableClaim = await claimDurableActiveCampaignScannerAlert({
   config: durableLedgerConfig,
@@ -5052,6 +5061,52 @@ const durableDuplicate = await claimDurableActiveCampaignScannerAlert({
 assert.equal(durableDuplicate.claimed, false);
 assert.equal(durableDuplicate.shouldSuppress, true);
 assert.match(durableDuplicate.reason || '', /durable Supabase ledger/);
+
+const priorPublicActionFingerprint = initialPublicActionFingerprint;
+assert.equal(typeof priorPublicActionFingerprint, 'string');
+let durableMaterialUpdatePatched = false;
+const durableMaterialUpdateFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const method = init?.method || 'GET';
+  if (method === 'POST') return new Response('duplicate', { status: 409 });
+  if (method === 'GET') {
+    return new Response(JSON.stringify([{
+      delivery_status: 'sent',
+      alert_key: 'first-alert-key',
+      plan_version_id: 'LUNCH-20260608',
+      suppressed_count: 2,
+      metadata: {
+        existing: true,
+        publicActionFingerprint: priorPublicActionFingerprint,
+      },
+    }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (method === 'PATCH') {
+    const body = JSON.parse(String(init?.body || '{}'));
+    durableMaterialUpdatePatched = body.delivery_status === 'pending'
+      && body.metadata?.campaignUpdateReason === 'material_public_action_update'
+      && body.metadata?.priorPublicActionFingerprint === priorPublicActionFingerprint
+      && typeof body.metadata?.publicActionFingerprint === 'string'
+      && body.metadata.publicActionFingerprint !== priorPublicActionFingerprint;
+    return new Response(JSON.stringify([{ id: 'claim-1' }]), { status: 200 });
+  }
+  return new Response('', { status: 500 });
+};
+const durableMaterialUpdate = await claimDurableActiveCampaignScannerAlert({
+  config: durableLedgerConfig,
+  candidate: shiftedCampaignCandidate,
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  state: 'Conditional',
+  confidence: 82,
+  alertKey: 'shifted-alert-key',
+  planVersionId: 'LUNCH-20260608-B',
+  fetchImpl: durableMaterialUpdateFetch,
+});
+assert.equal(durableMaterialUpdate.claimed, true);
+assert.equal(durableMaterialUpdate.shouldSuppress, false);
+assert.match(durableMaterialUpdate.reason || '', /material campaign update/);
+assert.equal(durableMaterialUpdatePatched, true);
 
 let stalePendingReclaimed = false;
 const durableStalePendingFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {

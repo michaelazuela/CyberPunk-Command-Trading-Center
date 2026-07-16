@@ -262,6 +262,8 @@ export interface ScannerActiveCampaignLedgerRecord {
   lastSeenAt: string;
   suppressedCount: number;
   resetPolicy: ScannerActiveCampaignResetPolicy;
+  publicActionFingerprint?: string | null;
+  publicActionComplete?: boolean;
 }
 
 export interface ScannerDeskPlanRefreshLedgerRecord {
@@ -764,6 +766,39 @@ function normalizeActiveCampaignIdForTradeDate(campaignId: string | null | undef
   return `${normalizedTradeDate}:${campaignId}`;
 }
 
+function activeCampaignPublicActionFingerprint(candidate?: SetupCandidate | null): string | null {
+  const direction = candidate?.direction === 'LONG' || candidate?.direction === 'SHORT'
+    ? candidate.direction
+    : null;
+  if (!direction) return null;
+  const entry = isFiniteTradePrice(candidate?.entry) ? roundToTradeTick(candidate.entry) : null;
+  const stop = isFiniteTradePrice(candidate?.stop) ? roundToTradeTick(candidate.stop) : null;
+  const target1 = isFiniteTradePrice(candidate?.target1) ? roundToTradeTick(candidate.target1) : null;
+  const target2 = isFiniteTradePrice(candidate?.target2) ? roundToTradeTick(candidate.target2) : null;
+  if (entry === null || stop === null || target1 === null || target2 === null) return null;
+  const line = isFiniteTradePrice(candidate?.activeCampaign?.obstacleMap?.lineInSand)
+    ? roundToTradeTick(candidate.activeCampaign.obstacleMap.lineInSand)
+    : null;
+  return [
+    direction,
+    candidate?.setupType || 'UNKNOWN_SETUP',
+    candidate?.executionStatus || 'UNKNOWN_STATUS',
+    line === null ? 'line:N/A' : `line:${line.toFixed(2)}`,
+    `entry:${entry.toFixed(2)}`,
+    `stop:${stop.toFixed(2)}`,
+    `t1:${target1.toFixed(2)}`,
+    `t2:${target2.toFixed(2)}`,
+  ].join('|');
+}
+
+function activeCampaignMaterialUpdateAllowed(args: {
+  candidate?: SetupCandidate | null;
+  previousFingerprint?: string | null;
+}): boolean {
+  const currentFingerprint = activeCampaignPublicActionFingerprint(args.candidate);
+  return Boolean(currentFingerprint && args.previousFingerprint && currentFingerprint !== args.previousFingerprint);
+}
+
 export function shouldSuppressActiveCampaignScannerAlert(args: {
   activeCampaignSent?: Record<string, ScannerActiveCampaignLedgerRecord>;
   candidate?: SetupCandidate | null;
@@ -783,6 +818,14 @@ export function shouldSuppressActiveCampaignScannerAlert(args: {
   const record = args.activeCampaignSent?.[campaignId] || null;
   if (!record) {
     return { shouldSuppress: false, campaignId, reason: null, record: null };
+  }
+  if (activeCampaignMaterialUpdateAllowed({ candidate: args.candidate, previousFingerprint: record.publicActionFingerprint || null })) {
+    return {
+      shouldSuppress: false,
+      campaignId,
+      record,
+      reason: `ActiveCampaign material update allowed for ${campaignId}: new complete entry/stop/T1/T2 differs from prior public action.`,
+    };
   }
   return {
     shouldSuppress: true,
@@ -805,6 +848,7 @@ export function recordActiveCampaignScannerAlertSent(args: {
   if (!campaignId) return;
   const sentAt = args.sentAt || new Date().toISOString();
   const previous = args.activeCampaignSent[campaignId];
+  const publicActionFingerprint = activeCampaignPublicActionFingerprint(args.candidate);
   args.activeCampaignSent[campaignId] = {
     campaignId,
     tradeDate: args.tradeDate,
@@ -817,6 +861,8 @@ export function recordActiveCampaignScannerAlertSent(args: {
     lastSeenAt: sentAt,
     suppressedCount: previous?.suppressedCount || 0,
     resetPolicy: 'trade_date_direction_campaign',
+    publicActionFingerprint,
+    publicActionComplete: Boolean(publicActionFingerprint),
   };
 }
 
@@ -879,6 +925,7 @@ function scannerActiveCampaignRow(args: {
   planVersionId?: string | null;
   deliveryStatus?: 'pending' | 'sent' | 'failed' | 'skipped' | 'released';
 }): Record<string, unknown> {
+  const publicActionFingerprint = activeCampaignPublicActionFingerprint(args.candidate);
   return {
     user_id: args.config.userId,
     campaign_id: args.campaignId,
@@ -899,6 +946,8 @@ function scannerActiveCampaignRow(args: {
       authority: args.candidate?.activeCampaign?.authority || null,
       htfRelationship: args.candidate?.activeCampaign?.htfRelationship || null,
       lineInSand: args.candidate?.activeCampaign?.obstacleMap?.lineInSand ?? null,
+      publicActionFingerprint,
+      publicActionComplete: Boolean(publicActionFingerprint),
     },
   };
 }
@@ -1001,6 +1050,44 @@ export async function claimDurableActiveCampaignScannerAlert(args: {
 
   const existing = (await fetchScannerActiveCampaignRows({ config: args.config, campaignId, fetchImpl }))[0] || null;
   const status = typeof existing?.delivery_status === 'string' ? existing.delivery_status : 'pending';
+  const existingMetadata = existing?.metadata && typeof existing.metadata === 'object' ? existing.metadata : {};
+  const previousPublicActionFingerprint = typeof existingMetadata.publicActionFingerprint === 'string'
+    ? existingMetadata.publicActionFingerprint
+    : null;
+  const currentPublicActionFingerprint = activeCampaignPublicActionFingerprint(args.candidate);
+  if (
+    status === 'sent' &&
+    currentPublicActionFingerprint &&
+    previousPublicActionFingerprint &&
+    currentPublicActionFingerprint !== previousPublicActionFingerprint
+  ) {
+    await patchScannerActiveCampaignLedger({
+      config: args.config,
+      campaignId,
+      fetchImpl,
+      patch: {
+        ...row,
+        delivery_status: 'pending',
+        first_claimed_at: new Date().toISOString(),
+        metadata: {
+          ...existingMetadata,
+          ...(row.metadata && typeof row.metadata === 'object' ? row.metadata : {}),
+          priorPublicActionFingerprint: previousPublicActionFingerprint,
+          campaignUpdateReason: 'material_public_action_update',
+          campaignUpdateFromAlertKey: existing?.alert_key || null,
+          campaignUpdateFromPlanVersionId: existing?.plan_version_id || null,
+        },
+      },
+    });
+    return {
+      source: 'supabase',
+      claimed: true,
+      shouldSuppress: false,
+      campaignId,
+      reason: `ActiveCampaign durable ledger accepted material campaign update for ${campaignId}: new complete entry/stop/T1/T2 differs from prior public action.`,
+      durableAvailable: true,
+    };
+  }
   if (status === 'failed' || status === 'skipped' || status === 'released' || isStalePendingActiveCampaignClaim(existing)) {
     await patchScannerActiveCampaignLedger({
       config: args.config,
@@ -1011,7 +1098,7 @@ export async function claimDurableActiveCampaignScannerAlert(args: {
         delivery_status: 'pending',
         first_claimed_at: new Date().toISOString(),
         metadata: {
-          ...(existing?.metadata && typeof existing.metadata === 'object' ? existing.metadata : {}),
+          ...existingMetadata,
           ...(row.metadata && typeof row.metadata === 'object' ? row.metadata : {}),
           reclaimedFromDeliveryStatus: status,
           reclaimedReason: status === 'pending'
