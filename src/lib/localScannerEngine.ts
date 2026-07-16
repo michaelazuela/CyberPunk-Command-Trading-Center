@@ -3102,10 +3102,17 @@ function buildDeskTicket(args: {
       finiteDeskTicketPrice(candidateSource?.stop);
   const targetDirection = primaryDirection === 'LONG' || primaryDirection === 'SHORT' ? primaryDirection : null;
   const computedTargets = targetsFromEntryStop(targetDirection, entry, stop);
-  const t1 = finiteDeskTicketPrice(freshReentryCandidate?.target1) ??
+  const freshReentryTargetsDirectionallyValid = directionallyValidPlanLevels({
+    direction: primaryDirection,
+    entry,
+    stop,
+    target1: freshReentryCandidate?.target1,
+    target2: freshReentryCandidate?.target2,
+  });
+  const t1 = (freshReentryTargetsDirectionallyValid ? finiteDeskTicketPrice(freshReentryCandidate?.target1) : null) ??
     finiteDeskTicketPrice(canonicalSelectedCandidate?.target1) ??
     finiteDeskTicketPrice(computedTargets.target1);
-  const t2 = finiteDeskTicketPrice(freshReentryCandidate?.target2) ??
+  const t2 = (freshReentryTargetsDirectionallyValid ? finiteDeskTicketPrice(freshReentryCandidate?.target2) : null) ??
     finiteDeskTicketPrice(canonicalSelectedCandidate?.target2) ??
     finiteDeskTicketPrice(computedTargets.target2);
   const invalidationText = freshReentryCandidate?.invalidation ||
