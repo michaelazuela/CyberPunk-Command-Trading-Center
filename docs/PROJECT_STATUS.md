@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Build read-only no-chase artifact rebuild candidate pack.
+Files changed: tools/automation/no-chase-artifact-rebuild-pack.ts, tools/automation/no-chase-artifact-rebuild-pack.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The replay phase showed 10 full-plan no-chase cases with +$173.75 gross one-MES, but not all rows deserve rebuild promotion. This phase creates a local research-only pack that separates positive replay rows from no-fill, unresolved, stopped, and ambiguous rows before any scanner-visible work.
+Tests run: `npx tsx tools/automation/no-chase-artifact-rebuild-pack.test.ts`; `npx tsx tools/automation/no-chase-ohlc-proof-extractor.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/no-chase-ohlc-proof-extractor.ts --audit-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --out-dir tools/automation/diagnostic-reports --json`; `npx tsx tools/automation/no-chase-artifact-rebuild-pack.ts --proof-report tools/automation/diagnostic-reports/no-chase-ohlc-proof-extractor-1784240569590.json --out-dir tools/automation/diagnostic-reports --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `git diff --check`; `npm run test`; `npm run lint`; `npm run build`.
+Result: Focused tests and typecheck passed. The rebuilt proof source again found 29 target no-chase cases, 10 full-plan replay rows, 14 proof-only missing-plan rows, and 5 no-proof rows. The rebuild pack contains all 10 full-plan rows but marks only 3 as `include_for_rebuild_review`: 2026-06-17 lunch AfterLunchDriveFvgContinuation SHORT (+$112.50), 2026-06-25 morning IntradayMssMicroContinuation SHORT (+$107.50), and 2026-06-26 lunch IntradayMssMicroContinuation SHORT (+$50.00). It holds 6 rows for filter review due to no-fill or filled-open outcomes and excludes 1 stopped row until revalidated. Pack summary: 10 rows, 3 include, 6 hold, 1 exclude, 1 AfterLunch include, 2 Intraday includes, +$173.75 total gross one-MES across the full pack. Report paths: `tools/automation/diagnostic-reports/no-chase-artifact-rebuild-pack-1784240574825.json` and `.md`.
+Trading logic changed: No. This is a read-only local research pack. It does not run setupScanner, change setup detection, live scanner ranking, canExecute creation, Discord posting, bridge reads, Supabase schema/writes, entry/stop/T1/T2 math, risk gates, or automated execution behavior.
+Bridge impact: None. The runner reads a local diagnostic JSON report only.
+Journal/RAG impact: None. The runner does not write RAG/journal records.
+Supabase impact: No schema migration and no Supabase reads/writes.
+Known risks: The pack is not a ticket list and does not validate live execution. P/L excludes commissions/slippage, relies on saved completed 5M decision-tape data, does not reload 30-day HTF context, and treats no-fill/filled-open rows as filter evidence rather than promotions.
+Next recommended action: Run a read-only scanner artifact rebuild simulation only for the 3 `include_for_rebuild_review` rows, proving whether the scanner can reconstruct complete human-review artifacts from saved evidence while preserving `canExecute=false` and no Discord posting.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Replay reviewable no-chase full-plan cases from completed 5M OHLC.
 Files changed: tools/automation/no-chase-ohlc-proof-extractor.ts, tools/automation/no-chase-ohlc-proof-extractor.test.ts, docs/PROJECT_STATUS.md.
 Reason: The prior classifier found 10 no-chase cases with completed 5M proof and valid entry/stop/T1/T2 fields. This phase adds read-only outcome replay for those full-plan cases only, so the desk can decide whether scanner artifact rebuild work is justified before touching live behavior.
