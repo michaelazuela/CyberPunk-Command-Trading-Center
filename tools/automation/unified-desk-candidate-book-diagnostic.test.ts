@@ -6,6 +6,8 @@ import { ExecutionStatus, SetupCandidateStatus, SetupType, type SetupCandidate }
 import {
   buildUnifiedDeskCandidateDiagnosticReport,
   loadUnifiedDeskCandidateDiagnosticSnapshots,
+  loadUnifiedDeskCandidateDiagnosticSnapshotsFromDir,
+  snapshotFromScannerAuditFile,
   writeUnifiedDeskCandidateDiagnosticReport,
   type UnifiedDeskCandidateDiagnosticSnapshot,
 } from './unified-desk-candidate-book-diagnostic';
@@ -134,5 +136,36 @@ assert.equal(loadUnifiedDeskCandidateDiagnosticSnapshots(inputPath).length, 3);
 const paths = writeUnifiedDeskCandidateDiagnosticReport(report, root);
 assert.equal(fs.existsSync(paths.jsonPath), true);
 assert.equal(fs.existsSync(paths.markdownPath), true);
+
+const scannerAuditPath = path.join(root, 'scanner-morning-2026-07-01-MES-fixture.json');
+fs.writeFileSync(scannerAuditPath, `${JSON.stringify({
+  tradeDate: '2026-07-01',
+  session: 'evening',
+  sourceCandidate: humanReview,
+  candidate: { ...humanReview, scenarioLabel: 'display normalized copy' },
+  completed5m: { time: '2026-07-01T19:05:00' },
+  normalizedPlan: {
+    canExecute: false,
+    setupCandidates: [noChase, humanReview],
+    opportunitySelection: { bestConditionalCandidate: humanReview },
+  },
+  deskState: { canExecute: false },
+}, null, 2)}\n`, 'utf8');
+
+const scannerSnapshot = snapshotFromScannerAuditFile(scannerAuditPath);
+assert.equal(scannerSnapshot?.snapshotId, 'scanner-morning-2026-07-01-MES-fixture');
+assert.equal(scannerSnapshot?.sessionType, 'evening');
+assert.equal(scannerSnapshot?.candidates.length, 2);
+assert.equal(scannerSnapshot?.currentSelectedCandidate?.scenarioLabel, 'fresh-retest');
+
+const directorySnapshots = loadUnifiedDeskCandidateDiagnosticSnapshotsFromDir(root, {
+  startDate: '2026-07-01',
+  endDate: '2026-07-01',
+});
+assert.equal(directorySnapshots.length, 1);
+const directoryReport = buildUnifiedDeskCandidateDiagnosticReport(directorySnapshots, '2026-07-16T00:05:00.000Z');
+assert.equal(directoryReport.summary.snapshotsAudited, 1);
+assert.equal(directoryReport.summary.samePrimaryCount, 1);
+assert.equal(directoryReport.rows[0].sessionType, 'evening');
 
 console.log('unified desk candidate-book diagnostic verified.');

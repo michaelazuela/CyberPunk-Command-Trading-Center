@@ -8,7 +8,7 @@ import {
 } from '../../src/lib/unifiedDeskCandidateBook';
 import type { SetupCandidate } from '../../src/types';
 
-type DiagnosticSessionType = 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
+type DiagnosticSessionType = 'morning' | 'lunch' | 'evening' | 'replay_morning' | 'replay_lunch' | 'replay_evening';
 type SelectionComparison = 'same_primary' | 'unified_promotes_different' | 'current_missing' | 'no_candidates';
 
 export interface UnifiedDeskCandidateDiagnosticSnapshot {
@@ -80,6 +80,14 @@ export interface UnifiedDeskCandidateDiagnosticReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_OUT_DIR = path.join(__dirname, 'diagnostic-reports');
+const DIAGNOSTIC_SESSIONS = new Set<DiagnosticSessionType>([
+  'morning',
+  'lunch',
+  'evening',
+  'replay_morning',
+  'replay_lunch',
+  'replay_evening',
+]);
 
 function authority(): UnifiedDeskCandidateDiagnosticReport['authority'] {
   return {
@@ -99,6 +107,28 @@ function authority(): UnifiedDeskCandidateDiagnosticReport['authority'] {
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function booleanValue(value: unknown): boolean {
+  return value === true;
+}
+
+function normalizeSession(value: unknown): DiagnosticSessionType | null {
+  const session = stringValue(value);
+  return session && DIAGNOSTIC_SESSIONS.has(session as DiagnosticSessionType)
+    ? session as DiagnosticSessionType
+    : null;
+}
+
+function dateInRange(value: string | null, startDate?: string | null, endDate?: string | null): boolean {
+  if (!value) return false;
+  if (startDate && value < startDate) return false;
+  if (endDate && value > endDate) return false;
+  return true;
 }
 
 function sameCandidate(a: SetupCandidate | null | undefined, b: SetupCandidate | null | undefined): boolean {
@@ -269,6 +299,47 @@ export function loadUnifiedDeskCandidateDiagnosticSnapshots(file: string): Unifi
   return snapshots as UnifiedDeskCandidateDiagnosticSnapshot[];
 }
 
+export function snapshotFromScannerAuditFile(file: string): UnifiedDeskCandidateDiagnosticSnapshot | null {
+  const raw = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
+  const root = asRecord(raw);
+  const normalizedPlan = asRecord(root.normalizedPlan);
+  const candidates = Array.isArray(normalizedPlan.setupCandidates)
+    ? normalizedPlan.setupCandidates as SetupCandidate[]
+    : [];
+  if (!candidates.length) return null;
+  const tradeDate = stringValue(root.tradeDate);
+  const sessionType = normalizeSession(root.session);
+  if (!tradeDate || !sessionType) return null;
+  const completed5m = asRecord(root.completed5m);
+  const selected = root.sourceCandidate || root.candidate || asRecord(normalizedPlan.opportunitySelection).bestExecutableCandidate || asRecord(normalizedPlan.opportunitySelection).bestConditionalCandidate || null;
+  return {
+    snapshotId: path.basename(file, '.json'),
+    tradeDate,
+    sessionType,
+    completedBarTime: stringValue(completed5m.time) || stringValue(root.scoringTimestamp) || stringValue(root.createdAt),
+    candidates,
+    currentSelectedCandidate: selected as SetupCandidate | null,
+    currentCanExecute: booleanValue(normalizedPlan.canExecute) || booleanValue(asRecord(root.deskState).canExecute),
+  };
+}
+
+export function loadUnifiedDeskCandidateDiagnosticSnapshotsFromDir(
+  dir: string,
+  options: { startDate?: string | null; endDate?: string | null } = {},
+): UnifiedDeskCandidateDiagnosticSnapshot[] {
+  const files = fs.readdirSync(dir)
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => path.join(dir, name))
+    .sort();
+  const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [];
+  for (const file of files) {
+    const snapshot = snapshotFromScannerAuditFile(file);
+    if (!snapshot || !dateInRange(snapshot.tradeDate || null, options.startDate, options.endDate)) continue;
+    snapshots.push(snapshot);
+  }
+  return snapshots;
+}
+
 export function writeUnifiedDeskCandidateDiagnosticReport(
   report: UnifiedDeskCandidateDiagnosticReport,
   outDir = DEFAULT_OUT_DIR,
@@ -291,9 +362,16 @@ function readFlag(args: string[], flag: string): string | null {
 
 export async function runUnifiedDeskCandidateDiagnosticCli(args = process.argv.slice(2)): Promise<void> {
   const inputJson = readFlag(args, '--input-json');
-  if (!inputJson) throw new Error('--input-json is required for unified desk candidate-book diagnostic.');
+  const inputDir = readFlag(args, '--input-dir');
+  if (!inputJson && !inputDir) throw new Error('--input-json or --input-dir is required for unified desk candidate-book diagnostic.');
   const outDir = readFlag(args, '--out-dir') || DEFAULT_OUT_DIR;
-  const report = buildUnifiedDeskCandidateDiagnosticReport(loadUnifiedDeskCandidateDiagnosticSnapshots(inputJson));
+  const snapshots = inputDir
+    ? loadUnifiedDeskCandidateDiagnosticSnapshotsFromDir(inputDir, {
+      startDate: readFlag(args, '--start-date'),
+      endDate: readFlag(args, '--end-date'),
+    })
+    : loadUnifiedDeskCandidateDiagnosticSnapshots(inputJson as string);
+  const report = buildUnifiedDeskCandidateDiagnosticReport(snapshots);
   const paths = writeUnifiedDeskCandidateDiagnosticReport(report, outDir);
   if (args.includes('--json')) {
     console.log(JSON.stringify({ ...paths, summary: report.summary }, null, 2));

@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Run Unified Desk Candidate Book diagnostic on June 1-July 2 scanner audit artifacts.
+Files changed: src/lib/unifiedDeskCandidateBook.ts, tools/automation/unified-desk-candidate-book-diagnostic.ts, tools/automation/unified-desk-candidate-book-diagnostic.test.ts, docs/PROJECT_STATUS.md.
+Reason: The prior phase built the diagnostic runner. This phase fed local scanner audit artifacts from June 1 through July 2 into the runner, using scanner-owned `normalizedPlan.setupCandidates`, `sourceCandidate`, completed 5M timestamps, and existing canExecute status. The runner now supports scanner-audit directory ingestion and evening-session diagnostics while preserving read-only/no-side-effect authority.
+Tests run: `npx tsx tools/automation/unified-desk-candidate-book-diagnostic.test.ts`; `npx tsx src/lib/unifiedDeskCandidateBook.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-desk-candidate-book-diagnostic.ts --input-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --out-dir tools/automation/diagnostic-reports --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `git diff --check`; `npm run test`; `npm run lint`; `npm run build`.
+Result: Passed. Diagnostic completed with 383 snapshots, 157 same-primary, 226 unified-different-primary, 0 current-missing, 0 no-candidate, 1 executable current selection preserved, 213 human-review primaries, 164 no-chase primaries, and 0 authority/canExecute findings. The local report paths are `tools/automation/diagnostic-reports/unified-desk-candidate-book-diagnostic-1784227593597.json` and `.md`. Cross-checking against the formal replay/master desk audit shows the current unified score policy would over-promote broad SweepMssFvgRetrace human-review candidates; do not wire this into scanner visibility yet.
+Trading logic changed: No. This is a read-only diagnostic loader/report phase. It does not change setup detection, live scanner ranking, canExecute creation, Discord posting, bridge reads, Supabase schema/writes, entry/stop/T1/T2 math, risk gates, or automated execution behavior.
+Bridge impact: None. The runner reads local scanner audit JSON only.
+Journal/RAG impact: None. The runner does not write RAG/journal records.
+Supabase impact: No schema migration and no Supabase reads/writes.
+Known risks: The unified book proves authority boundaries but the ranking policy is not ready for live visibility. Formal replay P/L still favors IntradayMssMicroContinuation (+$181.25) and AfterLunchDriveFvgContinuation (+$45.01) while broad TurtleSoup/Sweep human-review expansion is negative. The diagnostic also shows no AfterLunch primary promotion in this run, so that family needs targeted isolation rather than broad unified wiring.
+Next recommended action: Add a narrow candidate-book scoring calibration test that keeps TurtleSoup and SweepMssFvgRetrace strict unless existing deterministic gates pass, then separately isolates Intraday MSS and After-Lunch FVG human-review candidates before any scanner-visible wiring.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add read-only Unified Desk Candidate Book diagnostic runner.
 Files changed: src/lib/unifiedDeskCandidateBook.ts, tools/automation/unified-desk-candidate-book-diagnostic.ts, tools/automation/unified-desk-candidate-book-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The audit-only candidate book needed a replay-safe comparator before live wiring. The new diagnostic accepts scanner/replay snapshots, maps the existing selected candidate and existing canExecute state into the unified book, compares current selection versus the unified primary desk idea, and reports whether the unified book agrees, promotes a different human-review idea, preserves no-chase, or has no candidate. It is local/read-only and writes only optional local diagnostic JSON/Markdown output when run from the CLI.

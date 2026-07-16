@@ -19,7 +19,7 @@ export type UnifiedDeskCandidateFamily =
 
 export interface UnifiedDeskCandidateBookInput {
   candidates: SetupCandidate[];
-  sessionType: 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
+  sessionType: 'morning' | 'lunch' | 'evening' | 'replay_morning' | 'replay_lunch' | 'replay_evening';
   completedBarTime?: string | null;
   canExecuteByCandidateKey?: Record<string, boolean>;
 }
