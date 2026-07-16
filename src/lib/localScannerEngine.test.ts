@@ -3460,4 +3460,208 @@ assert.equal(mirroredShortDeskState.primaryDeskPlay.htfFvgMicroMssProof?.htfFvgP
 assert.equal(mirroredShortDeskState.primaryDeskPlay.htfFvgMicroMssProof?.fiveMinuteTriggerProof.status, 'completed');
 assert.equal(mirroredShortDeskState.primaryDeskPlay.htfFvgMicroMssProof?.protectedSwingProof.status, 'pending');
 
+function topDownFvgConfluenceChartContext(direction: 'LONG' | 'SHORT'): Partial<ChartContext> {
+  const context = JSON.parse(JSON.stringify(htfFvgMicroMssChartContext(direction))) as Partial<ChartContext>;
+  const mtf = context.multiTimeframeContext;
+  assert.ok(mtf);
+  const sameSideZones = direction === 'LONG'
+    ? [
+        { timeframe: '4h' as const, lower: 7326.75, upper: 7340.5 },
+        { timeframe: '2h' as const, lower: 7336.25, upper: 7340.5 },
+        { timeframe: '15m' as const, lower: 7555.75, upper: 7559.25 },
+      ]
+    : [
+        { timeframe: '4h' as const, lower: 7660, upper: 7676 },
+        { timeframe: '2h' as const, lower: 7648, upper: 7656 },
+        { timeframe: '15m' as const, lower: 7621.5, upper: 7622.5 },
+      ];
+  const oppositeDirection = direction === 'LONG' ? 'SHORT' : 'LONG';
+  const oppositeSet = {
+    ...mtf.oneHour,
+    timeframe: '1h' as const,
+    trend: oppositeDirection === 'LONG' ? 'bullish' as const : 'bearish' as const,
+    candles: [{
+      index: 0,
+      timestamp: '2026-07-06T10:20:00.0000000',
+      open: oppositeDirection === 'LONG' ? 7560 : 7624,
+      high: oppositeDirection === 'LONG' ? 7580 : 7625,
+      low: oppositeDirection === 'LONG' ? 7558 : 7616,
+      close: oppositeDirection === 'LONG' ? 7578 : 7618,
+      direction: oppositeDirection === 'LONG' ? 'bullish' as const : 'bearish' as const,
+      confidence: 'High' as const,
+    }],
+    fullWindowCandles: [{
+      index: 0,
+      timestamp: '2026-07-06T10:20:00.0000000',
+      open: oppositeDirection === 'LONG' ? 7560 : 7624,
+      high: oppositeDirection === 'LONG' ? 7580 : 7625,
+      low: oppositeDirection === 'LONG' ? 7558 : 7616,
+      close: oppositeDirection === 'LONG' ? 7578 : 7618,
+      direction: oppositeDirection === 'LONG' ? 'bullish' as const : 'bearish' as const,
+      confidence: 'High' as const,
+    }],
+    fvgZones: [{
+      direction: oppositeDirection,
+      lower: oppositeDirection === 'LONG' ? 7558 : 7621.5,
+      upper: oppositeDirection === 'LONG' ? 7560 : 7622.5,
+      midpoint: oppositeDirection === 'LONG' ? 7559 : 7622,
+      formedAt: '2026-07-06T09:45:00.0000000',
+      impulseQualified: true,
+      confidence: 'High' as const,
+    }],
+    fullWindowFvgZones: [{
+      direction: oppositeDirection,
+      lower: oppositeDirection === 'LONG' ? 7558 : 7621.5,
+      upper: oppositeDirection === 'LONG' ? 7560 : 7622.5,
+      midpoint: oppositeDirection === 'LONG' ? 7559 : 7622,
+      formedAt: '2026-07-06T09:45:00.0000000',
+      impulseQualified: true,
+      confidence: 'High' as const,
+    }],
+  } satisfies TimeframeFactSet;
+  mtf.oneHour = oppositeSet;
+  for (const zone of sameSideZones) {
+    const set = {
+      ...mtf.oneHour,
+      timeframe: zone.timeframe,
+      role: zone.timeframe === '15m' ? 'session_structure' as const : 'macro_context' as const,
+      trend: direction === 'LONG' ? 'bullish' as const : 'bearish' as const,
+      high: zone.upper + 10,
+      low: zone.lower - 10,
+      open: zone.lower,
+      close: direction === 'LONG' ? zone.upper + 8 : zone.lower - 8,
+      midpoint: (zone.lower + zone.upper) / 2,
+      rangePoints: 20,
+      candles: [],
+      fullWindowCandles: [],
+      fvgZones: [{
+        direction,
+        lower: zone.lower,
+        upper: zone.upper,
+        midpoint: (zone.lower + zone.upper) / 2,
+        formedAt: '2026-07-06T08:00:00.0000000',
+        impulseQualified: true,
+        confidence: 'High' as const,
+      }],
+      fullWindowFvgZones: [{
+        direction,
+        lower: zone.lower,
+        upper: zone.upper,
+        midpoint: (zone.lower + zone.upper) / 2,
+        formedAt: '2026-07-06T08:00:00.0000000',
+        impulseQualified: true,
+        confidence: 'High' as const,
+      }],
+    } satisfies TimeframeFactSet;
+    if (zone.timeframe === '4h') mtf.fourHour = set;
+    if (zone.timeframe === '2h') mtf.twoHour = set;
+    if (zone.timeframe === '15m') mtf.fifteenMinute = set;
+  }
+  return context;
+}
+
+const topDownBullishLong = htfFvgMicroMssCandidate('LONG', {
+  scenarioLabel: 'Top-down bullish FVG confluence with completed 5M child proof',
+  entry: 7562.5,
+  stop: 7555,
+  target1: 7573.75,
+  target2: 7577.5,
+  riskPoints: 7.5,
+});
+const nearerOppositeShort = htfFvgMicroMssCandidate('SHORT', {
+  setupType: SetupType.SweepMssFvgRetrace,
+  rankScore: 280,
+  decisionQualityScore: 98,
+  evidence: ['Nearer 60M bearish FVG parent is active above price.'],
+});
+const topDownBullishTrace = buildCandidateLifecycleTrace({
+  candidates: [nearerOppositeShort, topDownBullishLong],
+  selectedCandidate: nearerOppositeShort,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Top-down FVG confluence fixture.' },
+  canExecute: false,
+});
+const topDownBullishDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: nearerOppositeShort,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: nearerOppositeShort,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Top-down FVG confluence fixture.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: topDownBullishTrace,
+  currentPrice: 7562.5,
+  canExecute: false,
+  chartContext: topDownFvgConfluenceChartContext('LONG'),
+});
+assert.equal(topDownBullishDeskState.primaryDeskPlay.direction, 'LONG');
+assert.equal(topDownBullishDeskState.primaryDeskPlay.htfFvgReactionMemory?.activeReaction?.direction, 'SHORT');
+assert.equal(topDownBullishDeskState.primaryDeskPlay.htfFvgCascade?.direction, 'LONG');
+assert.equal(topDownBullishDeskState.primaryDeskPlay.htfFvgCascade?.parentZone?.direction, 'LONG');
+assert.equal(topDownBullishDeskState.primaryDeskPlay.longBias.state, 'primary');
+assert.equal(topDownBullishDeskState.primaryDeskPlay.topDownFvgDecisionLadder?.modelName, 'TopDownFvgDecisionLadder');
+assert.equal(topDownBullishDeskState.primaryDeskPlay.topDownFvgDecisionLadder?.bias, 'LONG_FVG_STACK');
+assert.equal(topDownBullishDeskState.primaryDeskPlay.topDownFvgDecisionLadder?.supportMetadata.alignedWithPrimary, true);
+assert.equal(topDownBullishDeskState.primaryDeskPlay.topDownFvgDecisionLadder?.activeBattlefield.zone?.direction, 'LONG');
+assert.equal(topDownBullishDeskState.primaryDeskPlay.topDownFvgDecisionLadder?.nextReactionZone?.direction, 'SHORT');
+assert.match(topDownBullishDeskState.deskTicket.htfStory, /TopDownFvgDecisionLadder|LONG FVG STACK|Next HTF reaction/i);
+assert.equal(topDownBullishDeskState.canExecute, false);
+assert.equal(topDownBullishDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(topDownBullishDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.changesEntryStopTargets, false);
+
+const topDownBearishShort = htfFvgMicroMssCandidate('SHORT', {
+  scenarioLabel: 'Top-down bearish FVG confluence with completed 5M child proof',
+  entry: 7618,
+  stop: 7626.5,
+  target1: 7605.25,
+  target2: 7601,
+  riskPoints: 8.5,
+});
+const nearerOppositeLong = htfFvgMicroMssCandidate('LONG', {
+  setupType: SetupType.SweepMssFvgRetrace,
+  rankScore: 280,
+  decisionQualityScore: 98,
+  evidence: ['Nearer 60M bullish FVG parent is active below price.'],
+});
+const topDownBearishTrace = buildCandidateLifecycleTrace({
+  candidates: [nearerOppositeLong, topDownBearishShort],
+  selectedCandidate: nearerOppositeLong,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Mirrored top-down FVG confluence fixture.' },
+  canExecute: false,
+});
+const topDownBearishDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: nearerOppositeLong,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: nearerOppositeLong,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Mirrored top-down FVG confluence fixture.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: topDownBearishTrace,
+  currentPrice: 7618,
+  canExecute: false,
+  chartContext: topDownFvgConfluenceChartContext('SHORT'),
+});
+assert.equal(topDownBearishDeskState.primaryDeskPlay.direction, 'SHORT');
+assert.equal(topDownBearishDeskState.primaryDeskPlay.htfFvgReactionMemory?.activeReaction?.direction, 'LONG');
+assert.equal(topDownBearishDeskState.primaryDeskPlay.htfFvgCascade?.direction, 'SHORT');
+assert.equal(topDownBearishDeskState.primaryDeskPlay.htfFvgCascade?.parentZone?.direction, 'SHORT');
+assert.equal(topDownBearishDeskState.primaryDeskPlay.shortBias.state, 'primary');
+assert.equal(topDownBearishDeskState.primaryDeskPlay.topDownFvgDecisionLadder?.modelName, 'TopDownFvgDecisionLadder');
+assert.equal(topDownBearishDeskState.primaryDeskPlay.topDownFvgDecisionLadder?.bias, 'SHORT_FVG_STACK');
+assert.equal(topDownBearishDeskState.primaryDeskPlay.topDownFvgDecisionLadder?.supportMetadata.alignedWithPrimary, true);
+assert.equal(topDownBearishDeskState.primaryDeskPlay.topDownFvgDecisionLadder?.activeBattlefield.zone?.direction, 'SHORT');
+assert.equal(topDownBearishDeskState.primaryDeskPlay.topDownFvgDecisionLadder?.nextReactionZone?.direction, 'LONG');
+assert.match(topDownBearishDeskState.deskTicket.htfStory, /TopDownFvgDecisionLadder|SHORT FVG STACK|Next HTF reaction/i);
+assert.equal(topDownBearishDeskState.canExecute, false);
+assert.equal(topDownBearishDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(topDownBearishDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.changesEntryStopTargets, false);
+
 console.log('localScannerEngine tests passed');

@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-15
+Task: Install TopDownFvgDecisionLadder support model.
+Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, docs/PROJECT_STATUS.md.
+Reason: The scanner needed a professional top-down FVG confluence model that treats 4H/2H/1H/15M FVG stacks as directional support and decision-zone context while preserving 5M execution authority. The ladder identifies bias/support metadata, decision-zone inventory, active battlefield, completed-5M acceptance/rejection state, next HTF reaction zone, extension condition, ranking support, and ticket-builder story from scanner-owned OHLC facts.
+Tests run: `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsc --noEmit`; `npm run live:desk-observer -- --trade-date 2026-07-06 --instrument MES --session morning --json`; `npm run live:desk-observer -- --trade-date 2026-07-09 --instrument MES --session morning --json`; full verification pending below.
+Result: Focused tests and typecheck passed. July 6 morning remained LONG with bullish FVG stack support despite a nearby opposite FVG context zone. July 9 morning routed SHORT from bearish HTF FVG stack context with zero candidate/desk conflicts.
+Trading logic changed: Yes. Scanner-owned primary direction support now considers same-direction top-down HTF FVG stacks when a 5M scanner candidate already exists, and HTF FVG cascade parent selection can no longer borrow an opposite-direction active parent zone. Execution approval, canExecute, entry/stop/T1/T2 math, risk gates, bridge behavior, Supabase, and Discord send eligibility are unchanged.
+Bridge impact: None.
+Journal/RAG impact: DeskState records now include derived `topDownFvgDecisionLadder` metadata when current scanner code writes them.
+Supabase impact: No schema migration.
+Known risks: Existing audit artifacts and Discord messages are not rewritten. The ladder supports/ranks existing scanner-owned candidates only; it does not create trades without 5M evidence.
+Next recommended action: Run full checks, replay morning/lunch/evening loopbacks, then commit/push and restart scanner services.
+
+## Previous Change
+
+Date: 2026-07-15
 Task: Add behavior validation / live replay pack.
 Files changed: tools/automation/behavior-validation-pack.ts, tools/automation/behavior-validation-pack.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After the DeskPublishDecision cleanup, the project needed one repeatable read-only validation pack that proves scanner-owned DeskState, canonical publish decision, Discord visibility, suppression/hold reasons, and replay/loopback checks agree before any live-send stage or further cleanup.

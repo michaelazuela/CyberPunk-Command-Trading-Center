@@ -453,6 +453,80 @@ export interface DeskHtfFvgParentZone {
   evidence: string;
 }
 
+export type DeskTopDownFvgBias =
+  | 'LONG_FVG_STACK'
+  | 'SHORT_FVG_STACK'
+  | 'MIXED'
+  | 'DATA_LIMITED'
+  | 'NONE';
+
+export type DeskTopDownFvgBattlefieldState =
+  | 'holding_support'
+  | 'holding_resistance'
+  | 'swept_below_reclaimed'
+  | 'swept_above_rejected'
+  | 'accepted_below'
+  | 'accepted_above'
+  | 'inside_zone'
+  | 'no_proof';
+
+export interface DeskTopDownFvgInventoryZone extends DeskHtfFvgParentZone {
+  lifecycleState: string | null;
+  latestReactionState: string | null;
+  latestReactionClose: number | null;
+}
+
+export interface DeskTopDownFvgDecisionLadder {
+  sourceOfTruth: 'scanner_top_down_fvg_decision_ladder';
+  modelName: 'TopDownFvgDecisionLadder';
+  bias: DeskTopDownFvgBias;
+  primaryDirection: DeskPlayDirection;
+  supportMetadata: {
+    alignedWithPrimary: boolean;
+    candidateRelationship: 'aligned' | 'counter_htf_test' | 'mixed' | 'waiting_for_5m_candidate' | 'data_limited';
+    sourceTimeframes: Array<'15M' | '60M' | '120M' | '240M'>;
+    summary: string;
+  };
+  inventory: {
+    zones: DeskTopDownFvgInventoryZone[];
+    longStackCount: number;
+    shortStackCount: number;
+  };
+  activeBattlefield: {
+    zone: DeskTopDownFvgInventoryZone | null;
+    lineInSand: number | null;
+    state: DeskTopDownFvgBattlefieldState;
+    instruction: string;
+  };
+  acceptanceRejection: {
+    latestCompleted5mTime: string | null;
+    latestCompleted5mClose: number | null;
+    state: DeskTopDownFvgBattlefieldState;
+    proof: string;
+  };
+  nextReactionZone: DeskTopDownFvgInventoryZone | null;
+  extensionZone: DeskTopDownFvgInventoryZone | null;
+  rankingSupport: {
+    applies: boolean;
+    direction: Exclude<DeskPlayDirection, 'WAIT'> | null;
+    reason: string;
+  };
+  ticketBuilder: {
+    primaryLine: number | null;
+    nextHtfReaction: string | null;
+    extensionCondition: string;
+    failureScenario: string;
+  };
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesBridgeBehavior: false;
+    createsNewModel: false;
+  };
+}
+
 export interface DeskHtfFvgChildExecutionZone {
   sourceOfTruth: 'scanner_htf_fvg_child_execution_zone';
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
@@ -1000,6 +1074,7 @@ export interface PrimaryDeskPlay {
   htfFvgMicroMssProof?: DeskHtfFvgMicroMssProof | null;
   htfFvgParentReactionWatch?: DeskHtfFvgParentReactionWatch | null;
   htfFvgCascade?: DeskHtfFvgCascade | null;
+  topDownFvgDecisionLadder?: DeskTopDownFvgDecisionLadder | null;
   freshReentryWatch?: DeskFreshReentryWatch | null;
   freshReentryCandidates?: DeskFreshReentryCandidateSet | null;
   htfObjectiveLadder: DeskHtfObjectiveLadder;
@@ -3126,6 +3201,16 @@ function buildDeskTicket(args: {
     : args.htfContextStatus === 'partial'
       ? `HTF context partial/${htfReliability}; treat as caution and management context only.`
       : `HTF context sufficient/${htfReliability}; 5M remains execution authority.`;
+  const topDownFvgTicket = play.topDownFvgDecisionLadder;
+  const topDownFvgStory = topDownFvgTicket
+    ? [
+        topDownFvgTicket.supportMetadata.summary,
+        topDownFvgTicket.ticketBuilder.nextHtfReaction
+          ? `Next HTF reaction: ${topDownFvgTicket.ticketBuilder.nextHtfReaction}.`
+          : null,
+        topDownFvgTicket.ticketBuilder.extensionCondition,
+      ].filter(Boolean).join(' ')
+    : null;
   const state = freshReentryCandidate ? 'ACTIVE_REVIEW' : freshReentryWatch ? 'TRIGGER_PENDING' : deskTicketStateFrom({
     marketMode: args.marketMode,
     visibilityMetadata: args.visibilityMetadata,
@@ -3144,7 +3229,7 @@ function buildDeskTicket(args: {
     invalidation: stop,
     invalidationText,
     htfStatus: args.htfContextStatus,
-    htfStory,
+    htfStory: topDownFvgStory ? `${htfStory} ${topDownFvgStory}` : htfStory,
     oppositeScenario: deskTicketOppositeScenario({ primaryDirection, primaryDeskPlay: play }),
     sourceCandidateKey: freshReentryCandidate?.candidateKey || canonicalSelectedCandidate?.candidateKey || levelSource?.candidateKey || null,
     humanReviewOnly: true,
@@ -3849,6 +3934,17 @@ function htfParentZoneFromReactionMemory(
   };
 }
 
+function htfParentZoneFromReactionMemoryForDirection(
+  memory: HtfFvgReactionMemory | null | undefined,
+  direction: 'LONG' | 'SHORT' | null,
+  currentPrice?: number | null,
+): DeskHtfFvgParentZone | null {
+  const zone = htfParentZoneFromReactionMemory(memory, currentPrice);
+  if (!zone) return null;
+  if (direction && zone.direction !== direction) return null;
+  return zone;
+}
+
 function htfFvgParentZonesFromChartContext(args: {
   chartContext?: Partial<ChartContext> | null;
   direction?: 'LONG' | 'SHORT' | null;
@@ -3935,7 +4031,9 @@ function buildHtfFvgCascade(args: {
         currentPrice: args.currentPrice,
       })
     : null;
-  const memoryParentZone = tacticalParentZone ? null : htfParentZoneFromReactionMemory(args.htfFvgReactionMemory, args.currentPrice);
+  const memoryParentZone = tacticalParentZone
+    ? null
+    : htfParentZoneFromReactionMemoryForDirection(args.htfFvgReactionMemory, requestedDirection, args.currentPrice);
   const chartParentZone = tacticalParentZone || memoryParentZone ? null : selectActiveHtfFvgParentZone({
     chartContext: args.chartContext,
     direction: requestedDirection,
@@ -4004,6 +4102,270 @@ function buildHtfFvgCascade(args: {
       changesCanExecute: false,
       changesEntryStopTargets: false,
       changesRiskRules: false,
+      createsNewModel: false,
+    },
+  };
+}
+
+function topDownFvgInventoryZoneFromMemoryZone(
+  zone: HtfFvgReactionMemory['parentZones'][number],
+  currentPrice?: number | null,
+): DeskTopDownFvgInventoryZone | null {
+  if (zone.direction !== 'LONG' && zone.direction !== 'SHORT') return null;
+  if (!htfFvgParentZoneIsUsable(zone)) return null;
+  return {
+    sourceOfTruth: 'scanner_htf_fvg_parent_zone',
+    direction: zone.direction,
+    timeframe: zone.timeframe,
+    lower: zone.lower,
+    upper: zone.upper,
+    midpoint: zone.midpoint,
+    label: `${zone.timeframe} ${zone.direction === 'LONG' ? 'bullish' : 'bearish'} FVG decision zone`,
+    state: activeTacticalZoneState({
+      direction: zone.direction,
+      lower: zone.lower,
+      upper: zone.upper,
+      currentPrice,
+    }),
+    evidence: zone.evidence.join(' '),
+    lifecycleState: zone.lifecycle.state,
+    latestReactionState: zone.latestReaction?.state || zone.state || null,
+    latestReactionClose: numericOrNull(zone.latestReaction?.close),
+  };
+}
+
+function topDownFvgLineForZone(zone: DeskTopDownFvgInventoryZone | null): number | null {
+  if (!zone) return null;
+  return zone.direction === 'LONG' ? zone.lower : zone.upper;
+}
+
+function topDownFvgBiasFromInventory(zones: DeskTopDownFvgInventoryZone[]): DeskTopDownFvgBias {
+  if (!zones.length) return 'NONE';
+  const longZones = zones.filter((zone) => zone.direction === 'LONG');
+  const shortZones = zones.filter((zone) => zone.direction === 'SHORT');
+  if (longZones.length >= 2 && shortZones.length === 0) return 'LONG_FVG_STACK';
+  if (shortZones.length >= 2 && longZones.length === 0) return 'SHORT_FVG_STACK';
+  if (longZones.length >= 2 && longZones.length >= shortZones.length + 2) return 'LONG_FVG_STACK';
+  if (shortZones.length >= 2 && shortZones.length >= longZones.length + 2) return 'SHORT_FVG_STACK';
+  return 'MIXED';
+}
+
+function latestTopDownFvgFiveMinuteCandle(chartContext?: Partial<ChartContext> | null): FreshReentryFiveMinuteCandle | null {
+  return latestFreshReentryCandle(freshReentryFiveMinuteCandles(chartContext));
+}
+
+function topDownFvgBattlefieldState(
+  zone: DeskTopDownFvgInventoryZone | null,
+  latest5m: FreshReentryFiveMinuteCandle | null,
+): DeskTopDownFvgBattlefieldState {
+  if (!zone || !latest5m) return 'no_proof';
+  const high = numericOrNull(latest5m.high);
+  const low = numericOrNull(latest5m.low);
+  const close = numericOrNull(latest5m.close);
+  if (close === null) return 'no_proof';
+  if (close >= zone.lower && close <= zone.upper) return 'inside_zone';
+  if (zone.direction === 'LONG') {
+    if (close < zone.lower) return 'accepted_below';
+    if (low !== null && low < zone.lower && close > zone.upper) return 'swept_below_reclaimed';
+    return 'holding_support';
+  }
+  if (close > zone.upper) return 'accepted_above';
+  if (high !== null && high > zone.upper && close < zone.lower) return 'swept_above_rejected';
+  return 'holding_resistance';
+}
+
+function topDownFvgSelectActiveBattlefield(args: {
+  primaryDirection: DeskPlayDirection;
+  zones: DeskTopDownFvgInventoryZone[];
+  htfFvgCascade: DeskHtfFvgCascade | null;
+  currentPrice?: number | null;
+}): DeskTopDownFvgInventoryZone | null {
+  const primary = args.primaryDirection === 'LONG' || args.primaryDirection === 'SHORT' ? args.primaryDirection : null;
+  const cascadeParent = args.htfFvgCascade?.parentZone;
+  if (cascadeParent && (!primary || cascadeParent.direction === primary)) {
+    return args.zones.find((zone) =>
+      zone.direction === cascadeParent.direction &&
+      zone.timeframe === cascadeParent.timeframe &&
+      zone.lower === cascadeParent.lower &&
+      zone.upper === cascadeParent.upper
+    ) || {
+      ...cascadeParent,
+      label: cascadeParent.label,
+      lifecycleState: null,
+      latestReactionState: null,
+      latestReactionClose: null,
+    };
+  }
+  const currentPrice = numericOrNull(args.currentPrice);
+  const sameDirection = primary ? args.zones.filter((zone) => zone.direction === primary) : args.zones;
+  return sameDirection
+    .sort((a, b) => (
+      priceDistanceFromZone(a, currentPrice) - priceDistanceFromZone(b, currentPrice) ||
+      htfFvgTimeframePriority(a.timeframe) - htfFvgTimeframePriority(b.timeframe)
+    ))[0] || null;
+}
+
+function topDownFvgSelectNextReactionZone(args: {
+  primaryDirection: DeskPlayDirection;
+  zones: DeskTopDownFvgInventoryZone[];
+  activeZone: DeskTopDownFvgInventoryZone | null;
+  currentPrice?: number | null;
+}): DeskTopDownFvgInventoryZone | null {
+  const direction = args.primaryDirection === 'LONG' || args.primaryDirection === 'SHORT' ? args.primaryDirection : null;
+  if (!direction) return null;
+  const currentPrice = numericOrNull(args.currentPrice);
+  const opposite = direction === 'LONG' ? 'SHORT' : 'LONG';
+  const candidates = args.zones
+    .filter((zone) => zone.direction === opposite)
+    .filter((zone) => {
+      if (currentPrice === null) return true;
+      return direction === 'LONG' ? zone.lower >= currentPrice : zone.upper <= currentPrice;
+    });
+  return candidates
+    .sort((a, b) => priceDistanceFromZone(a, currentPrice) - priceDistanceFromZone(b, currentPrice))[0] || null;
+}
+
+function topDownFvgSelectExtensionZone(args: {
+  primaryDirection: DeskPlayDirection;
+  zones: DeskTopDownFvgInventoryZone[];
+  nextReactionZone: DeskTopDownFvgInventoryZone | null;
+  currentPrice?: number | null;
+}): DeskTopDownFvgInventoryZone | null {
+  const direction = args.primaryDirection === 'LONG' || args.primaryDirection === 'SHORT' ? args.primaryDirection : null;
+  const next = args.nextReactionZone;
+  if (!direction || !next) return null;
+  const oppositeZones = args.zones.filter((zone) => zone.direction === next.direction && zone !== next);
+  return oppositeZones
+    .filter((zone) => direction === 'LONG' ? zone.lower > next.upper : zone.upper < next.lower)
+    .sort((a, b) => direction === 'LONG' ? a.lower - b.lower : b.upper - a.upper)[0] || null;
+}
+
+function topDownFvgFormatZone(zone: DeskTopDownFvgInventoryZone | null): string | null {
+  if (!zone) return null;
+  return `${zone.timeframe} ${zone.direction === 'LONG' ? 'bullish' : 'bearish'} FVG ${zone.lower.toFixed(2)}-${zone.upper.toFixed(2)}`;
+}
+
+function buildTopDownFvgDecisionLadder(args: {
+  primaryDirection: DeskPlayDirection;
+  primaryLifecycleItem: ScannerCandidateLifecycleTraceItem | null;
+  htfFvgReactionMemory: HtfFvgReactionMemory | null;
+  htfFvgCascade: DeskHtfFvgCascade | null;
+  chartContext?: Partial<ChartContext> | null;
+  currentPrice?: number | null;
+}): DeskTopDownFvgDecisionLadder | null {
+  const zones = (args.htfFvgReactionMemory?.parentZones || [])
+    .map((zone) => topDownFvgInventoryZoneFromMemoryZone(zone, args.currentPrice))
+    .filter((zone): zone is DeskTopDownFvgInventoryZone => Boolean(zone));
+  if (!zones.length) return null;
+  const bias = topDownFvgBiasFromInventory(zones);
+  const primaryDirection = args.primaryDirection;
+  const activeZone = topDownFvgSelectActiveBattlefield({
+    primaryDirection,
+    zones,
+    htfFvgCascade: args.htfFvgCascade,
+    currentPrice: args.currentPrice,
+  });
+  const latest5m = latestTopDownFvgFiveMinuteCandle(args.chartContext);
+  const battlefieldState = topDownFvgBattlefieldState(activeZone, latest5m);
+  const nextReactionZone = topDownFvgSelectNextReactionZone({
+    primaryDirection,
+    zones,
+    activeZone,
+    currentPrice: args.currentPrice,
+  });
+  const extensionZone = topDownFvgSelectExtensionZone({
+    primaryDirection,
+    zones,
+    nextReactionZone,
+    currentPrice: args.currentPrice,
+  });
+  const primaryIsDirectional = primaryDirection === 'LONG' || primaryDirection === 'SHORT';
+  const alignedWithPrimary = primaryDirection === 'LONG'
+    ? bias === 'LONG_FVG_STACK'
+    : primaryDirection === 'SHORT'
+    ? bias === 'SHORT_FVG_STACK'
+    : false;
+  const sourceTimeframes = Array.from(new Set(
+    zones
+      .filter((zone) => primaryIsDirectional ? zone.direction === primaryDirection : true)
+      .map((zone) => zone.timeframe)
+  )).sort((a, b) => htfFvgTimeframePriority(a) - htfFvgTimeframePriority(b));
+  const candidateRelationship = bias === 'DATA_LIMITED'
+    ? 'data_limited'
+    : !args.primaryLifecycleItem
+    ? 'waiting_for_5m_candidate'
+    : alignedWithPrimary
+    ? 'aligned'
+    : bias === 'MIXED'
+    ? 'mixed'
+    : 'counter_htf_test';
+  const line = topDownFvgLineForZone(activeZone);
+  const nextText = topDownFvgFormatZone(nextReactionZone);
+  const extensionText = topDownFvgFormatZone(extensionZone);
+  const latestClose = numericOrNull(latest5m?.close);
+  const latestTime = latest5m ? freshReentryCandleTime(latest5m) : null;
+  const directionWord = primaryDirection === 'LONG' ? 'above' : primaryDirection === 'SHORT' ? 'below' : 'through';
+  const oppositeWord = primaryDirection === 'LONG' ? 'below' : primaryDirection === 'SHORT' ? 'above' : 'through';
+  const instruction = activeZone
+    ? `${topDownFvgFormatZone(activeZone)} is the active battlefield; completed 5M acceptance ${directionWord} the active line supports the primary path, while failure ${oppositeWord} it routes to the next HTF reaction zone.`
+    : 'No active FVG battlefield selected; wait for completed 5M proof.';
+  return {
+    sourceOfTruth: 'scanner_top_down_fvg_decision_ladder',
+    modelName: 'TopDownFvgDecisionLadder',
+    bias,
+    primaryDirection,
+    supportMetadata: {
+      alignedWithPrimary,
+      candidateRelationship,
+      sourceTimeframes,
+      summary: `${bias.replace(/_/g, ' ')}; ${primaryIsDirectional ? `${primaryDirection} candidate is ${candidateRelationship}.` : 'No directional 5M candidate is primary.'}`,
+    },
+    inventory: {
+      zones,
+      longStackCount: zones.filter((zone) => zone.direction === 'LONG').length,
+      shortStackCount: zones.filter((zone) => zone.direction === 'SHORT').length,
+    },
+    activeBattlefield: {
+      zone: activeZone,
+      lineInSand: line,
+      state: battlefieldState,
+      instruction,
+    },
+    acceptanceRejection: {
+      latestCompleted5mTime: latestTime,
+      latestCompleted5mClose: latestClose,
+      state: battlefieldState,
+      proof: activeZone && latestClose !== null
+        ? `Latest completed 5M close ${latestClose.toFixed(2)} classifies ${topDownFvgFormatZone(activeZone)} as ${battlefieldState}.`
+        : 'No completed 5M proof available for the active FVG battlefield.',
+    },
+    nextReactionZone,
+    extensionZone,
+    rankingSupport: {
+      applies: alignedWithPrimary && Boolean(args.primaryLifecycleItem),
+      direction: primaryIsDirectional ? primaryDirection : null,
+      reason: alignedWithPrimary
+        ? 'Same-direction top-down FVG stack supports ranking the existing 5M candidate higher; execution gates remain unchanged.'
+        : 'Top-down FVG stack does not align cleanly with the primary 5M candidate; treat as caution or failure-test context.',
+    },
+    ticketBuilder: {
+      primaryLine: line,
+      nextHtfReaction: nextText,
+      extensionCondition: extensionText
+        ? `Extension only if completed 5M accepts through ${nextText}; next zone ${extensionText}.`
+        : nextText
+        ? `Extension only if completed 5M accepts through ${nextText}.`
+        : 'No extension zone mapped; manage at app targets and the active reaction zone.',
+      failureScenario: activeZone
+        ? `If ${topDownFvgFormatZone(activeZone)} rejects/holds against the primary side, stand down and map the opposite failure scenario from completed 5M proof.`
+        : 'No active FVG failure scenario is mapped.',
+    },
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
       createsNewModel: false,
     },
   };
@@ -4402,6 +4764,82 @@ function htfFvgMemoryRoutableDirection(
   return direction;
 }
 
+function lifecycleItemHasFiveMinuteExecutionContext(item: ScannerCandidateLifecycleTraceItem | null | undefined): boolean {
+  if (!item || (item.direction !== 'LONG' && item.direction !== 'SHORT')) return false;
+  if (item.tacticalZone?.sourceTimeframe === '5M') return true;
+  const text = [
+    item.scenarioLabel,
+    item.nextTrigger,
+    item.requiredTrigger,
+    item.lineInSandReason,
+    item.invalidation,
+    ...item.missingEvidence,
+    ...item.missingLevels,
+  ].filter(Boolean).join(' ');
+  const hasFiveMinuteProof = /5m|five[-\s]?minute/i.test(text);
+  const hasExecutionAction = /mss|fvg|imbalance|close[-\s]?through|close through|retest|hold|reclaim|reject|rejection|protected/i.test(text);
+  return hasFiveMinuteProof && hasExecutionAction && (lineForLifecycleItem(item) !== null || item.hasFullPlanLevels);
+}
+
+function htfFvgParentZoneIsUsable(zone: HtfFvgReactionMemory['parentZones'][number]): boolean {
+  if (zone.state === 'accepted_through') return false;
+  return zone.lifecycle.state !== 'accepted_through' &&
+    zone.lifecycle.state !== 'inverted' &&
+    zone.lifecycle.state !== 'data_limited';
+}
+
+function htfFvgParentStackSupportScore(
+  direction: 'LONG' | 'SHORT',
+  item: ScannerCandidateLifecycleTraceItem | null,
+  memory: HtfFvgReactionMemory | null,
+): number {
+  if (!item || item.direction !== direction) return Number.NEGATIVE_INFINITY;
+  if (lifecycleItemHasCompletedInvalidationProof(item)) return Number.NEGATIVE_INFINITY;
+  if (!lifecycleItemHasFiveMinuteExecutionContext(item)) return Number.NEGATIVE_INFINITY;
+  const parentZones = (memory?.parentZones || [])
+    .filter((zone) => zone.direction === direction)
+    .filter(htfFvgParentZoneIsUsable);
+  if (!parentZones.length) return Number.NEGATIVE_INFINITY;
+  const timeframes = new Set(parentZones.map((zone) => zone.timeframe));
+  let stackScore = 0;
+  for (const zone of parentZones) {
+    const timeframeScore = zone.timeframe === '240M'
+      ? 8
+      : zone.timeframe === '120M'
+      ? 6
+      : zone.timeframe === '60M'
+      ? 4
+      : 2;
+    const stateScore = zone.lifecycle.state === 'rejected' || zone.state === 'rejected'
+      ? 3
+      : zone.lifecycle.state === 'active_retested' || zone.lifecycle.state === 'partially_mitigated' || zone.state === 'retested' || zone.state === 'inside_zone'
+      ? 2
+      : 1;
+    stackScore += timeframeScore + stateScore;
+  }
+  const breadthScore = Math.max(0, timeframes.size - 1) * 3;
+  const lifecycleScore = Math.max(0, lifecycleItemScore(item) / 10);
+  return stackScore + breadthScore + lifecycleScore;
+}
+
+function htfFvgTopDownConfluencePrimaryDirection(
+  trace: ScannerCandidateLifecycleTrace,
+  memory: HtfFvgReactionMemory | null,
+): Exclude<DeskPlayDirection, 'WAIT'> | null {
+  if (!memory?.parentZones?.length) return null;
+  const longScore = htfFvgParentStackSupportScore('LONG', trace.bestLongPlan, memory);
+  const shortScore = htfFvgParentStackSupportScore('SHORT', trace.bestShortPlan, memory);
+  const minimumScore = 12;
+  const minimumSeparation = 3;
+  const longQualified = Number.isFinite(longScore) && longScore >= minimumScore;
+  const shortQualified = Number.isFinite(shortScore) && shortScore >= minimumScore;
+  if (longQualified && !shortQualified) return 'LONG';
+  if (shortQualified && !longQualified) return 'SHORT';
+  if (!longQualified && !shortQualified) return null;
+  if (Math.abs(longScore - shortScore) < minimumSeparation) return null;
+  return longScore > shortScore ? 'LONG' : 'SHORT';
+}
+
 function htfFvgReactionLineInSand(memory: HtfFvgReactionMemory | null): number | null {
   const active = memory?.activeReaction;
   if (!active) return null;
@@ -4440,6 +4878,8 @@ function selectPrimaryDeskPlayDirection(
     return protectedDirection;
   }
 
+  const htfFvgConfluenceDirection = htfFvgTopDownConfluencePrimaryDirection(trace, htfFvgReactionMemory || null);
+  if (htfFvgConfluenceDirection) return htfFvgConfluenceDirection;
   const htfFvgMicroMssDirection = htfFvgMicroMssPrimaryDirection(trace);
   if (htfFvgMicroMssDirection) return htfFvgMicroMssDirection;
   const htfFvgDirection = htfFvgMemoryRoutableDirection(trace, htfFvgReactionMemory || null);
@@ -5309,6 +5749,14 @@ function buildPrimaryDeskPlay(args: {
     memory: htfFvgReactionMemory,
     routing: htfFvgReactionRouting,
   });
+  const topDownFvgDecisionLadder = buildTopDownFvgDecisionLadder({
+    primaryDirection,
+    primaryLifecycleItem,
+    htfFvgReactionMemory,
+    htfFvgCascade,
+    chartContext,
+    currentPrice: args.currentPrice,
+  });
   const htfFvgParentReactionWatch = buildHtfFvgParentReactionWatch({
     routing: htfFvgReactionRouting,
     memory: htfFvgReactionMemory,
@@ -5408,6 +5856,7 @@ function buildPrimaryDeskPlay(args: {
     htfFvgMicroMssProof,
     htfFvgParentReactionWatch,
     htfFvgCascade,
+    topDownFvgDecisionLadder,
     freshReentryWatch,
     freshReentryCandidates,
     htfObjectiveLadder,
