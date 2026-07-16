@@ -21,6 +21,7 @@ interface ScannerDiscordFamilyAuditOptions {
   auditDir: string;
   outDir: string;
   since: string | null;
+  currentRiskSince: string | null;
   json: boolean;
 }
 
@@ -45,10 +46,13 @@ export interface ScannerDiscordFamilySummary {
   kind: ScannerDiscordFamily;
   session: string;
   count: number;
+  currentRiskCount: number;
+  historicalPreCadenceFixCount: number;
   firstPostedAt: string | null;
   lastPostedAt: string | null;
   minSpacingMinutes: number | null;
   burstCountUnderFiveMinutes: number;
+  currentRiskBurstCountUnderFiveMinutes: number;
   uniqueCadenceKeys: number;
 }
 
@@ -60,6 +64,7 @@ export interface ScannerDiscordFamilyAuditReport {
   auditDir: string;
   outDir: string;
   since: string | null;
+  currentRiskSince: string | null;
   receiptCount: number;
   summaries: ScannerDiscordFamilySummary[];
   rows: ScannerDiscordFamilyReceiptRow[];
@@ -79,6 +84,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const DEFAULT_OUT_DIR = path.join(__dirname, 'diagnostic-reports');
+const DEFAULT_CURRENT_RISK_SINCE = '2026-07-16T02:49:52.000Z';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -110,6 +116,7 @@ export function parseScannerDiscordFamilyAuditArgs(args = process.argv.slice(2))
     auditDir: readFlag(args, '--audit-dir') || DEFAULT_AUDIT_DIR,
     outDir: readFlag(args, '--out-dir') || DEFAULT_OUT_DIR,
     since: readFlag(args, '--since'),
+    currentRiskSince: readFlag(args, '--current-risk-since') || DEFAULT_CURRENT_RISK_SINCE,
     json: hasFlag(args, '--json'),
   };
 }
@@ -215,7 +222,7 @@ function receiptRow(fileName: string, value: unknown): ScannerDiscordFamilyRecei
   };
 }
 
-function summarize(rows: ScannerDiscordFamilyReceiptRow[]): ScannerDiscordFamilySummary[] {
+function summarize(rows: ScannerDiscordFamilyReceiptRow[], currentRiskSinceMs: number | null): ScannerDiscordFamilySummary[] {
   const groups = new Map<string, ScannerDiscordFamilyReceiptRow[]>();
   for (const row of rows) {
     const groupKey = `${row.kind}|${row.session || 'unknown'}`;
@@ -228,14 +235,23 @@ function summarize(rows: ScannerDiscordFamilyReceiptRow[]): ScannerDiscordFamily
       const spacings = sorted.slice(1)
         .map((row, index) => (parseMs(row.postedAt) - parseMs(sorted[index].postedAt)) / 60_000)
         .filter((value) => Number.isFinite(value) && value >= 0);
+      const currentRiskRows = currentRiskSinceMs === null
+        ? sorted
+        : sorted.filter((row) => parseMs(row.postedAt) >= currentRiskSinceMs);
+      const currentRiskSpacings = currentRiskRows.slice(1)
+        .map((row, index) => (parseMs(row.postedAt) - parseMs(currentRiskRows[index].postedAt)) / 60_000)
+        .filter((value) => Number.isFinite(value) && value >= 0);
       return {
         kind,
         session,
         count: sorted.length,
+        currentRiskCount: currentRiskRows.length,
+        historicalPreCadenceFixCount: sorted.length - currentRiskRows.length,
         firstPostedAt: sorted[0]?.postedAt || null,
         lastPostedAt: sorted[sorted.length - 1]?.postedAt || null,
         minSpacingMinutes: spacings.length ? Math.min(...spacings) : null,
         burstCountUnderFiveMinutes: spacings.filter((value) => value < 5).length,
+        currentRiskBurstCountUnderFiveMinutes: currentRiskSpacings.filter((value) => value < 5).length,
         uniqueCadenceKeys: new Set(sorted.map((row) => row.cadenceKey)).size,
       };
     })
@@ -246,15 +262,19 @@ function findingsFor(summaries: ScannerDiscordFamilySummary[], rows: ScannerDisc
   const findings: string[] = [];
   const deskPlayCount = summaries
     .filter((summary) => summary.kind === 'desk_play')
-    .reduce((sum, summary) => sum + summary.count, 0);
+    .reduce((sum, summary) => sum + summary.currentRiskCount, 0);
   const reversalWatchCount = summaries
     .filter((summary) => summary.kind === 'reversal_watch')
-    .reduce((sum, summary) => sum + summary.count, 0);
-  const bursty = summaries.filter((summary) => summary.burstCountUnderFiveMinutes > 0);
-  if (deskPlayCount > 0) findings.push(`${deskPlayCount} Desk Play receipt(s) found. This is the current-desk-map family most likely to create perceived flooding.`);
+    .reduce((sum, summary) => sum + summary.currentRiskCount, 0);
+  const historicalPreCadenceFixCount = summaries.reduce((sum, summary) => sum + summary.historicalPreCadenceFixCount, 0);
+  const bursty = summaries.filter((summary) => summary.currentRiskBurstCountUnderFiveMinutes > 0);
+  if (historicalPreCadenceFixCount > 0) {
+    findings.push(`${historicalPreCadenceFixCount} pre-cadence-fix historical receipt(s) retained for evidence and excluded from current flooding risk findings.`);
+  }
+  if (deskPlayCount > 0) findings.push(`${deskPlayCount} current-risk Desk Play receipt(s) found. This is the current-desk-map family most likely to create perceived flooding.`);
   if (reversalWatchCount > 0) findings.push(`${reversalWatchCount} Reversal Watch receipt(s) found. Verify these remain watch-only and do not look like primary executable trade calls.`);
   for (const summary of bursty) {
-    findings.push(`${summary.kind}/${summary.session} had ${summary.burstCountUnderFiveMinutes} under-five-minute spacing interval(s); Phase 3 should inspect whether cadence should consolidate those posts.`);
+    findings.push(`${summary.kind}/${summary.session} had ${summary.currentRiskBurstCountUnderFiveMinutes} current-risk under-five-minute spacing interval(s); Phase 3 should inspect whether cadence should consolidate those posts.`);
   }
   const missingMessageId = rows.filter((row) => !row.messageIdPresent).length;
   if (missingMessageId > 0) findings.push(`${missingMessageId} receipt row(s) lacked a Discord message id; receipt persistence should be reviewed.`);
@@ -278,11 +298,12 @@ function markdownFor(report: Omit<ScannerDiscordFamilyAuditReport, 'markdown'>):
     '',
     'Read-only receipt-family audit. This report does not post Discord, change scanner state, change Discord cadence, approve execution, or change trading logic.',
     ...(report.since ? ['', `Since filter: ${report.since}`] : []),
+    ...(report.currentRiskSince ? ['', `Current-risk baseline: ${report.currentRiskSince}. Older receipts remain listed as historical evidence but are excluded from current flooding risk findings.`] : []),
     '',
     '## Summary By Family',
-    '| Kind | Session | Count | First | Last | Min spacing min | <5m bursts | Unique cadence keys |',
-    '| --- | --- | ---: | --- | --- | ---: | ---: | ---: |',
-    ...report.summaries.map((summary) => `| ${summary.kind} | ${summary.session} | ${summary.count} | ${formatTime(summary.firstPostedAt)} | ${formatTime(summary.lastPostedAt)} | ${formatSpacing(summary.minSpacingMinutes)} | ${summary.burstCountUnderFiveMinutes} | ${summary.uniqueCadenceKeys} |`),
+    '| Kind | Session | Count | Current risk | Historical pre-fix | First | Last | Min spacing min | All <5m bursts | Current <5m bursts | Unique cadence keys |',
+    '| --- | --- | ---: | ---: | ---: | --- | --- | ---: | ---: | ---: | ---: |',
+    ...report.summaries.map((summary) => `| ${summary.kind} | ${summary.session} | ${summary.count} | ${summary.currentRiskCount} | ${summary.historicalPreCadenceFixCount} | ${formatTime(summary.firstPostedAt)} | ${formatTime(summary.lastPostedAt)} | ${formatSpacing(summary.minSpacingMinutes)} | ${summary.burstCountUnderFiveMinutes} | ${summary.currentRiskBurstCountUnderFiveMinutes} | ${summary.uniqueCadenceKeys} |`),
     '',
     '## Findings',
     ...report.findings.map((finding) => `- ${finding}`),
@@ -306,6 +327,7 @@ function markdownFor(report: Omit<ScannerDiscordFamilyAuditReport, 'markdown'>):
 export async function buildScannerDiscordFamilyAuditReport(options: ScannerDiscordFamilyAuditOptions): Promise<ScannerDiscordFamilyAuditReport> {
   const rows: ScannerDiscordFamilyReceiptRow[] = [];
   const sinceMs = validSinceMs(options.since);
+  const currentRiskSinceMs = validSinceMs(options.currentRiskSince);
   if (existsSync(options.auditDir)) {
     const entries = await fs.readdir(options.auditDir, { withFileTypes: true });
     for (const entry of entries) {
@@ -320,7 +342,7 @@ export async function buildScannerDiscordFamilyAuditReport(options: ScannerDisco
     }
   }
   rows.sort((a, b) => parseMs(a.postedAt) - parseMs(b.postedAt));
-  const summaries = summarize(rows);
+  const summaries = summarize(rows, currentRiskSinceMs);
   const reportWithoutMarkdown: Omit<ScannerDiscordFamilyAuditReport, 'markdown'> = {
     reportType: 'scanner_discord_family_phase2_audit',
     generatedAt: new Date().toISOString(),
@@ -329,6 +351,7 @@ export async function buildScannerDiscordFamilyAuditReport(options: ScannerDisco
     auditDir: options.auditDir,
     outDir: options.outDir,
     since: options.since,
+    currentRiskSince: options.currentRiskSince,
     receiptCount: rows.length,
     summaries,
     rows,
@@ -358,7 +381,7 @@ async function main() {
   await fs.writeFile(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
   await fs.writeFile(mdPath, report.markdown);
   if (options.json) {
-    process.stdout.write(`${JSON.stringify({ jsonPath, mdPath, since: report.since, receiptCount: report.receiptCount, summaries: report.summaries, findings: report.findings }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ jsonPath, mdPath, since: report.since, currentRiskSince: report.currentRiskSince, receiptCount: report.receiptCount, summaries: report.summaries, findings: report.findings }, null, 2)}\n`);
   } else {
     console.log(`Scanner Discord family Phase 2 audit written: ${mdPath}`);
     console.log(`Receipts reviewed: ${report.receiptCount}`);

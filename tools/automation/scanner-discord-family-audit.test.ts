@@ -60,6 +60,7 @@ const report = await buildScannerDiscordFamilyAuditReport({
   auditDir,
   outDir: path.join(tmp, 'out'),
   since: null,
+  currentRiskSince: null,
   json: false,
 });
 
@@ -72,7 +73,10 @@ assert.equal(report.receiptCount, 3);
 const deskPlay = report.summaries.find((summary) => summary.kind === 'desk_play');
 assert.ok(deskPlay);
 assert.equal(deskPlay.count, 2);
+assert.equal(deskPlay.currentRiskCount, 2);
+assert.equal(deskPlay.historicalPreCadenceFixCount, 0);
 assert.equal(deskPlay.burstCountUnderFiveMinutes, 1);
+assert.equal(deskPlay.currentRiskBurstCountUnderFiveMinutes, 1);
 assert.equal(deskPlay.minSpacingMinutes, 2);
 assert.ok(report.findings.some((finding) => finding.includes('Desk Play')));
 assert.ok(report.findings.some((finding) => finding.includes('under-five-minute')));
@@ -86,6 +90,7 @@ const sinceReport = await buildScannerDiscordFamilyAuditReport({
   auditDir,
   outDir: path.join(tmp, 'out-since'),
   since: '2026-06-19T16:05:00.000Z',
+  currentRiskSince: null,
   json: false,
 });
 
@@ -95,5 +100,26 @@ assert.equal(sinceReport.rows[0].kind, 'reversal_watch');
 assert.equal(sinceReport.authority.changesDiscordCadence, false);
 assert.match(sinceReport.markdown, /Since filter: 2026-06-19T16:05:00.000Z/);
 assert.equal(sinceReport.findings.some((finding) => finding.includes('under-five-minute')), false);
+
+const baselineReport = await buildScannerDiscordFamilyAuditReport({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  auditDir,
+  outDir: path.join(tmp, 'out-baseline'),
+  since: null,
+  currentRiskSince: '2026-06-19T16:05:00.000Z',
+  json: false,
+});
+
+const baselineDeskPlay = baselineReport.summaries.find((summary) => summary.kind === 'desk_play');
+assert.ok(baselineDeskPlay);
+assert.equal(baselineDeskPlay.count, 2);
+assert.equal(baselineDeskPlay.currentRiskCount, 0);
+assert.equal(baselineDeskPlay.historicalPreCadenceFixCount, 2);
+assert.equal(baselineDeskPlay.burstCountUnderFiveMinutes, 1);
+assert.equal(baselineDeskPlay.currentRiskBurstCountUnderFiveMinutes, 0);
+assert.ok(baselineReport.findings.some((finding) => finding.includes('pre-cadence-fix historical receipt')));
+assert.equal(baselineReport.findings.some((finding) => finding.includes('current-risk under-five-minute')), false);
+assert.match(baselineReport.markdown, /Current-risk baseline: 2026-06-19T16:05:00.000Z/);
 
 fs.rmSync(tmp, { recursive: true, force: true });
