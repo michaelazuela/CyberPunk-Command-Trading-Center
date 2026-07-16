@@ -2320,16 +2320,6 @@ function completedFiveMinuteMssCloseConfirmed(chartContext: ChartContext, direct
   );
 }
 
-type HtfMssFreshEntryEvidence = {
-  confirmed: boolean;
-  source:
-    | 'completed_5m_retest_rejection'
-    | 'completed_5m_continuation_close'
-    | 'missing_completed_5m_candles'
-    | 'no_completed_5m_retest_or_continuation';
-  reason: string;
-};
-
 type IntradayMicroTriggerPlan = {
   source: 'fvg_retest_rejection' | 'mss_close_through_retest';
   confirmed: boolean;
@@ -2791,77 +2781,6 @@ function isAfterReferenceCandle(
   const referenceTime = Date.parse(String(reference.timestamp || ''));
   if (Number.isFinite(candleTime) && Number.isFinite(referenceTime)) return candleTime > referenceTime;
   return false;
-}
-
-function htfMssFreshEntryEvidence(
-  chartContext: ChartContext,
-  direction: Direction,
-  decisionLevel: number | null,
-  referenceCandle: { candleIndex?: number | null; timestamp?: string | null } | null,
-): HtfMssFreshEntryEvidence {
-  if (direction !== 'LONG' && direction !== 'SHORT' || decisionLevel === null) {
-    return {
-      confirmed: false,
-      source: 'no_completed_5m_retest_or_continuation',
-      reason: 'Fresh entry cannot be confirmed without a direction and MSS decision level.',
-    };
-  }
-
-  const candles = readableCompletedFiveMinuteCandles(chartContext)
-    .filter((candle) => isAfterReferenceCandle(candle, referenceCandle));
-  if (!candles.length) {
-    return {
-      confirmed: false,
-      source: 'missing_completed_5m_candles',
-      reason: 'Fresh entry not confirmed: no completed 5M candles after the MSS trigger were available to verify retest/rejection or continuation close.',
-    };
-  }
-
-  const tolerance = TRADE_RULES.targetModel.tickSize;
-  const retestRejection = candles.find((candle) => {
-    const high = parsePrice(candle.high);
-    const low = parsePrice(candle.low);
-    const close = parsePrice(candle.close);
-    if (high === null || low === null || close === null) return false;
-    if (direction === 'SHORT') {
-      return high >= decisionLevel - tolerance && close <= decisionLevel && (candle.direction === 'bearish' || candle.isRejection || candle.isExpansion);
-    }
-    return low <= decisionLevel + tolerance && close >= decisionLevel && (candle.direction === 'bullish' || candle.isRejection || candle.isExpansion);
-  });
-  if (retestRejection) {
-    return {
-      confirmed: true,
-      source: 'completed_5m_retest_rejection',
-      reason: direction === 'SHORT'
-        ? `Completed 5M retest/rejection held below the short decision level ${decisionLevel}.`
-        : `Completed 5M retest/rejection held above the long decision level ${decisionLevel}.`,
-    };
-  }
-
-  const continuationClose = candles.find((candle) => {
-    const close = parsePrice(candle.close);
-    if (close === null) return false;
-    return direction === 'SHORT'
-      ? close <= decisionLevel - tolerance && (candle.direction === 'bearish' || candle.isExpansion)
-      : close >= decisionLevel + tolerance && (candle.direction === 'bullish' || candle.isExpansion);
-  });
-  if (continuationClose) {
-    return {
-      confirmed: true,
-      source: 'completed_5m_continuation_close',
-      reason: direction === 'SHORT'
-        ? `New completed 5M bearish continuation close confirmed below the short decision level ${decisionLevel}.`
-        : `New completed 5M bullish continuation close confirmed above the long decision level ${decisionLevel}.`,
-    };
-  }
-
-  return {
-    confirmed: false,
-    source: 'no_completed_5m_retest_or_continuation',
-    reason: direction === 'SHORT'
-      ? `Fresh entry not confirmed: completed 5M candles did not retest/reject below ${decisionLevel} or print a new bearish continuation close.`
-      : `Fresh entry not confirmed: completed 5M candles did not retest/reject above ${decisionLevel} or print a new bullish continuation close.`,
-  };
 }
 
 function mssHoldCandidateState(structurallyComplete: boolean): TradingPlanCandidateState {
@@ -3448,7 +3367,6 @@ function fvgRetestRejectionPlan(
     if (direction === 'SHORT') return close < lower && (candle.direction === 'bearish' || candle.isRejection || candle.isExpansion);
     return close > upper && (candle.direction === 'bullish' || candle.isRejection || candle.isExpansion);
   });
-
   if (!rejection) {
     return {
       source: 'fvg_retest_rejection',
@@ -4182,22 +4100,26 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
 
   if (!inWindow || !fifteenDisplacement || !hasMss || !hasCompletedMssClose) return null;
 
-  const mssClose = parsePrice(fiveDisplacement?.close) ?? parsePrice(chartContext.proposedEntry);
-  const entry = parsePrice(chartContext.proposedEntry) ?? mssClose;
-  const protectedMssStop = protectedFiveMinuteMssStopResult(chartContext, direction);
+  const reentryPlan = fiveMinuteMssCloseThroughRetestPlan(chartContext, direction);
+  const mssClose = reentryPlan.decisionLevel ?? parsePrice(fiveDisplacement?.close) ?? parsePrice(chartContext.proposedEntry);
+  const entry = reentryPlan.confirmed ? reentryPlan.entry : parsePrice(chartContext.proposedEntry) ?? mssClose;
+  const fallbackProtectedMssStop = protectedFiveMinuteMssStopResult(chartContext, direction);
+  const protectedMssStop = {
+    stop: reentryPlan.stop ?? fallbackProtectedMssStop.stop,
+    reason: reentryPlan.stopBlocker ?? fallbackProtectedMssStop.reason,
+  };
   const stop = protectedMssStop.stop;
   const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close) ?? entry;
   const target = liquidityTargetForContinuation(chartContext, direction, entry, currentPrice);
   const roomRatio = remainingPathRatio(direction, mssClose, currentPrice, target?.price ?? null);
   const roomPercent = remainingPathPercentLabel(roomRatio);
   const enoughRoom = roomRatio === null ? false : roomRatio >= 0.6;
-  const freshEntryEvidence = htfMssFreshEntryEvidence(chartContext, direction, mssClose, fiveDisplacement);
   const currentOnCorrectSide = mssClose !== null && currentPrice !== null
     ? direction === 'SHORT'
       ? currentPrice <= mssClose
       : currentPrice >= mssClose
     : false;
-  const freshEntry = freshEntryEvidence.confirmed && currentOnCorrectSide;
+  const freshEntry = reentryPlan.confirmed && currentOnCorrectSide;
   const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
     (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
   const targets = computedTargets(direction, entry, stop);
@@ -4227,8 +4149,8 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
     ...(!htfAligned ? ['Full HTF context must explicitly align with direction; NEUTRAL/UNKNOWN no longer counts as higher-timeframe support.'] : []),
     ...(!target ? ['External liquidity target'] : []),
     ...(!enoughRoom ? ['At least 60% of the path to primary liquidity remains'] : []),
-    ...(!freshEntryEvidence.confirmed ? [freshEntryEvidence.reason] : []),
-    ...(freshEntryEvidence.confirmed && !currentOnCorrectSide ? ['Current price is not holding the correct side of the MSS decision level'] : []),
+    ...(!reentryPlan.confirmed ? [reentryPlan.reason] : []),
+    ...(reentryPlan.confirmed && !currentOnCorrectSide ? ['Current price is not holding the correct side of the MSS decision level'] : []),
     ...(entry === null ? ['Defined 5M entry'] : []),
     ...(protectedMssStop.reason ? [protectedMssStop.reason] : []),
     ...(stop === null ? ['Protected 5M structure stop'] : []),
@@ -4269,12 +4191,13 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
       ...(fiveDisplacement ? [`${dirLabel} 5M displacement confirmed`] : []),
       ...(hasFvg ? ['5M FVG / imbalance supports continuation'] : []),
       ...(protectedMssStop.stop !== null ? [`Protected 5M MSS swing stop: ${protectedMssStop.stop}. Stop is tied to the protected 5M swing, not the MSS close.`] : []),
+      reentryPlan.reason,
       'MSS_HOLD_CONFIRMED: completed 5M close confirmed; not a live-wick trigger.',
       'MSS hold trigger uses completed 5M close, not live wick.',
       ...(target ? [`External liquidity target: ${target.label} ${target.price}`] : []),
       ...(roomPercent ? [`Remaining liquidity path: ${roomPercent} to primary target; minimum required 60%.`] : []),
       ...(enoughRoom ? ['At least 60% of the path to primary liquidity remains'] : []),
-      ...(freshEntry ? [freshEntryEvidence.reason] : []),
+      ...(freshEntry ? ['Retest-required re-entry confirmed: completed 5M retest/rejection supplied the fresh entry after the original close-through.'] : []),
       `Confidence score: ${score}/100`,
       'canExecute means structurally complete and ready for human review, not broker execution approval.',
       ...(riskNote ? [riskNote] : []),
@@ -4319,18 +4242,21 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
 
   if (!inWindow || !fifteenDisplacement || !hasFvg) return null;
 
-  const triggerClose = parsePrice(fiveDisplacement?.close) ?? parsePrice(chartContext.proposedEntry);
-  const entry = parsePrice(chartContext.proposedEntry) ?? triggerClose;
-  const stop = parsePrice(chartContext.proposedStop);
+  const fvg = directionalFvgZone(chartContext, direction);
+  const reentryPlan = fvgRetestRejectionPlan(chartContext, direction, fvg);
+  const triggerClose = reentryPlan.decisionLevel ?? parsePrice(fiveDisplacement?.close) ?? parsePrice(chartContext.proposedEntry);
+  const entry = reentryPlan.confirmed ? reentryPlan.entry : parsePrice(chartContext.proposedEntry) ?? triggerClose;
+  const stop = reentryPlan.confirmed ? reentryPlan.stop ?? parsePrice(chartContext.proposedStop) : parsePrice(chartContext.proposedStop);
   const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close) ?? entry;
   const target = liquidityTargetForContinuation(chartContext, direction, entry, currentPrice);
   const roomRatio = remainingPathRatio(direction, triggerClose, currentPrice, target?.price ?? null);
   const enoughRoom = roomRatio === null ? false : roomRatio >= 0.6;
-  const freshEntry = triggerClose !== null && currentPrice !== null
+  const currentOnCorrectSide = triggerClose !== null && currentPrice !== null
     ? direction === 'SHORT'
-      ? entry !== null && entry <= triggerClose && currentPrice <= triggerClose
-      : entry !== null && entry >= triggerClose && currentPrice >= triggerClose
+      ? currentPrice <= triggerClose
+      : currentPrice >= triggerClose
     : false;
+  const freshEntry = reentryPlan.confirmed && currentOnCorrectSide;
   const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
     (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
   const targets = computedTargets(direction, entry, stop);
@@ -4358,7 +4284,8 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
     ...(!htfAligned ? ['Full HTF context must explicitly align with direction; NEUTRAL/UNKNOWN no longer counts as higher-timeframe support.'] : []),
     ...(!target ? ['External liquidity target'] : []),
     ...(!enoughRoom ? ['At least 60% of the path to primary liquidity remains'] : []),
-    ...(!freshEntry ? [hasCompletedMssClose ? mssHoldNoFreshEntryMissingEvidence() : 'Entry at or beyond the 5M displacement close-through/retest trigger without chasing'] : []),
+    ...(!reentryPlan.confirmed ? [reentryPlan.reason] : []),
+    ...(reentryPlan.confirmed && !currentOnCorrectSide ? ['Current price is not holding the correct side of the FVG re-entry decision level'] : []),
     ...(entry === null ? ['Defined 5M entry'] : []),
     ...(stop === null ? ['Protected 5M structure stop'] : []),
     ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
@@ -4401,6 +4328,7 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
       ...htfGate.evidence,
       ...(fiveDisplacement ? [`${dirLabel} 5M displacement confirmed`] : []),
       '5M FVG / imbalance supports continuation',
+      reentryPlan.reason,
       ...(hasCompletedMssClose
         ? ['MSS_HOLD_CONFIRMED: completed 5M close confirmed; MSS is confidence support only for this FVG model']
         : hasMss
@@ -4422,7 +4350,7 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
       ? `Structurally complete ${dirLabel} HTF displacement + FVG continuation plan. Human final decision required.${riskLabel}`
       : hasCompletedMssClose
       ? 'MSS_HOLD_TRIGGER_PENDING / NO FRESH ENTRY. Do not chase. Wait for a fresh completed 5M close-through/retest plan with protected stop, app targets, and enough remaining path to real liquidity.'
-      : 'Do not chase. Wait for a clean 5M displacement/FVG continuation trigger with protected stop, app targets, and enough remaining path to real liquidity.',
+      : 'Do not chase. Wait for a completed 5M FVG retest/rejection re-entry plan with protected stop, app targets, and enough remaining path to real liquidity.',
     reducedRiskPlan: null,
   };
 }

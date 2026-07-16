@@ -614,9 +614,9 @@ function htfDisplacementFvgContinuationContext(direction: 'LONG' | 'SHORT' = 'SH
     evidence: bullish ? '5M bullish displacement/FVG continuation.' : '5M bearish displacement/FVG continuation.',
   };
   return structuredContext({
-    chartTimestamp: bullish ? '2026-06-02T10:05:00-04:00' : '2026-06-03T11:25:00-04:00',
+    chartTimestamp: bullish ? '2026-06-02T10:10:00-04:00' : '2026-06-03T11:35:00-04:00',
     keyLevels: {
-      currentPrice: entry,
+      currentPrice: bullish ? 7604.25 : 7583,
       activeSwingLow: bullish ? 7599 : 7574.75,
       activeSwingHigh: bullish ? 7620 : 7590,
       overnightHigh: bullish ? 7632.75 : 7614.75,
@@ -658,9 +658,22 @@ function htfDisplacementFvgContinuationContext(direction: 'LONG' | 'SHORT' = 'SH
       direction,
       lower: bullish ? 7600.5 : 7584,
       upper: bullish ? 7603.5 : 7589,
+      formedCandleIndex: 2,
+      formedAt: fiveMinute.timestamp,
       impulseQualified: true,
       confidence: 'High',
     }],
+    candles: bullish ? [
+      { index: 0, timestamp: '2026-06-02T09:55:00-04:00', open: 7600.5, high: 7602, low: 7600, close: 7601.5, direction: 'bullish', confidence: 'High' },
+      { index: 1, timestamp: '2026-06-02T10:00:00-04:00', open: 7601.5, high: 7603, low: 7600.75, close: 7602.25, direction: 'bullish', confidence: 'High' },
+      { index: 2, timestamp: '2026-06-02T10:05:00-04:00', open: fiveMinute.open, high: fiveMinute.high, low: fiveMinute.low, close: fiveMinute.close, direction: 'bullish', isExpansion: true, confidence: 'High' },
+      { index: 3, timestamp: '2026-06-02T10:10:00-04:00', open: 7604.25, high: 7605.25, low: 7602, close: 7604.25, direction: 'bullish', isRejection: true, confidence: 'High' },
+    ] : [
+      { index: 0, timestamp: '2026-06-03T11:15:00-04:00', open: 7587.25, high: 7589.75, low: 7587, close: 7588.75, direction: 'bullish', confidence: 'High' },
+      { index: 1, timestamp: '2026-06-03T11:20:00-04:00', open: 7588.75, high: 7588.75, low: 7586.75, close: 7587.25, direction: 'bearish', confidence: 'High' },
+      { index: 2, timestamp: '2026-06-03T11:25:00-04:00', open: fiveMinute.open, high: fiveMinute.high, low: fiveMinute.low, close: fiveMinute.close, direction: 'bearish', isExpansion: true, confidence: 'High' },
+      { index: 3, timestamp: '2026-06-03T11:35:00-04:00', open: 7581.25, high: 7585.25, low: 7580.75, close: 7583, direction: 'bearish', isRejection: true, confidence: 'High' },
+    ],
     displacementCandles: [fiveMinute],
     targetObjectives: [{
       label: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity',
@@ -1137,10 +1150,10 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.opportunitySelection?.bestExecutableCandidate?.pathway, 'htf_displacement_fvg_continuation');
     assert.equal(result.opportunitySelection?.bestExecutableCandidate?.riskAdvisoryStatus, 'RISK_ABOVE_STANDARD_LIMIT');
     assert.equal(result.finalTradePlan.setupType, SetupType.HtfDisplacementFvgContinuation);
-    assert.equal(result.finalTradePlan.entry, 7582.75);
+    assert.equal(result.finalTradePlan.entry, 7583);
     assert.equal(result.finalTradePlan.stop, 7590);
-    assert.equal(result.finalTradePlan.target1, 7572);
-    assert.equal(result.finalTradePlan.target2, 7568.25);
+    assert.equal(result.finalTradePlan.target1, 7572.5);
+    assert.equal(result.finalTradePlan.target2, 7569);
   }],
 
   ['15b3. Complete failed-plan reversal short takes final selection authority instead of staying NO TRADE', () => {

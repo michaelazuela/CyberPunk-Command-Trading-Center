@@ -3439,12 +3439,12 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.direction, 'LONG');
     assert.equal(candidate.candidateState, 'MSS_HOLD_CONFIRMED');
     assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
-    assert.equal(candidate.entry, 7603.25);
+    assert.equal(candidate.entry, 7604.25);
     assert.equal(candidate.stop, 7599);
-    assert.equal(candidate.target1, 7609.75);
-    assert.equal(candidate.target2, 7611.75);
-    assert.equal(candidate.riskAdvisoryStatus, 'RISK_WITHIN_STANDARD_LIMIT');
-    assert.equal(candidate.riskPolicy, 'STANDARD_RISK');
+    assert.equal(candidate.target1, 7612.25);
+    assert.equal(candidate.target2, 7614.75);
+    assert.equal(candidate.riskAdvisoryStatus, 'RISK_ABOVE_STANDARD_LIMIT');
+    assert.equal(candidate.riskPolicy, 'STRUCTURAL_RISK_ACKNOWLEDGED');
     assert.ok((candidate.modelConfidenceScore ?? 0) >= 88);
     assert.ok(candidate.evidence.some((item) => item.includes('Confidence score')));
     assert.ok(candidate.evidence.some((item) => item.includes('canExecute means structurally complete')));
@@ -3462,10 +3462,10 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.direction, 'SHORT');
     assert.equal(candidate.candidateState, 'MSS_HOLD_CONFIRMED');
     assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
-    assert.equal(candidate.entry, 7582.75);
+    assert.equal(candidate.entry, 7581.25);
     assert.equal(candidate.stop, 7590);
-    assert.equal(candidate.target1, 7572);
-    assert.equal(candidate.target2, 7568.25);
+    assert.equal(candidate.target1, 7568.25);
+    assert.equal(candidate.target2, 7563.75);
     assert.equal(candidate.riskAdvisoryStatus, 'RISK_ABOVE_STANDARD_LIMIT');
     assert.equal(candidate.riskPolicy, 'STRUCTURAL_RISK_ACKNOWLEDGED');
     assert.ok(candidate.evidence.some((item) => item.includes('Risk exceeds standard limit. Human final decision required.')));
@@ -3483,12 +3483,12 @@ const tests: Array<[string, () => void]> = [
     const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
 
     assert.ok(candidate);
-    assert.equal(candidate.candidateState, 'MSS_HOLD_TRIGGER_PENDING');
+    assert.equal(candidate.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
     assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
     assert.equal(candidate.stop, null);
     assert.equal(candidate.target1, null);
     assert.equal(candidate.target2, null);
-    assert.ok(candidate.missingEvidence.some((item) => item.includes('timestamp does not align')));
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('Protected 5M retest swing stop blocked')));
     assert.ok(!candidate.evidence.some((item) => item.includes('Protected 5M MSS swing stop: 7599')));
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
   }],
@@ -3694,11 +3694,11 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
     assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
     assert.equal(candidate.blockReason, NoTradeReason.EntryTriggerPending);
-    assert.ok(candidate.missingEvidence.some((item) => item.includes('no completed 5M candles after the MSS trigger')));
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('MSS evidence candle or decision close could not be aligned')));
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
   }],
 
-  ['HTF displacement FVG continuation creates the June 3 short candidate without requiring MSS', () => {
+  ['HTF displacement FVG continuation stays conditional without completed 5M FVG retest re-entry', () => {
     const base = htfDisplacementContinuationContext('SHORT');
     const noMssFiveMinute = (base.multiTimeframeContext?.fiveMinute.displacementCandles || []).map((candle) => ({
       ...candle,
@@ -3738,18 +3738,54 @@ const tests: Array<[string, () => void]> = [
     assert.ok(candidate);
     assert.equal(candidate.pathway, 'htf_displacement_fvg_continuation');
     assert.equal(candidate.direction, 'SHORT');
-    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.candidateState, 'QUALIFIED_CONDITIONAL');
     assert.equal(candidate.entry, 7582.75);
     assert.equal(candidate.stop, 7590);
     assert.equal(candidate.target1, 7572);
     assert.equal(candidate.target2, 7568.25);
     assert.equal(candidate.riskAdvisoryStatus, 'RISK_ABOVE_STANDARD_LIMIT');
     assert.ok(candidate.evidence.some((item) => item.includes('5M MSS not confirmed; not invented or required')));
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('wait for a completed 5M candle to retest the bearish FVG')));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementFvgContinuation);
+  }],
+
+  ['HTF displacement FVG continuation creates a short candidate after completed 5M FVG retest re-entry with aligned MSS', () => {
+    const base = htfDisplacementContinuationContext('SHORT');
+    const context = htfDisplacementContinuationContext('SHORT', {
+      keyLevels: {
+        ...base.keyLevels,
+        currentPrice: 7583,
+      },
+      candles: [
+        ...(base.candles || []),
+        { index: 5, timestamp: '2026-06-03T11:35:00-04:00', open: 7581.25, high: 7585.25, low: 7580.75, close: 7583, direction: 'bearish', isRejection: true, confidence: 'High' },
+      ],
+      fvgZones: (base.fvgZones || []).map((zone) => ({
+        ...zone,
+        formedCandleIndex: 3,
+        formedAt: '2026-06-03T11:25:00-04:00',
+      })),
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.pathway, 'htf_displacement_fvg_continuation');
+    assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.entry, 7583);
+    assert.equal(candidate.stop, 7590);
+    assert.equal(candidate.target1, 7572.5);
+    assert.equal(candidate.target2, 7569);
+    assert.equal(candidate.riskAdvisoryStatus, 'RISK_ABOVE_STANDARD_LIMIT');
+    assert.ok(candidate.evidence.some((item) => item.includes('Completed 5M bearish FVG retest/rejection confirmed')));
     assert.ok(candidate.evidence.some((item) => item.includes('Risk exceeds standard limit. Human final decision required.')));
     assert.ok((candidate.modelConfidenceScore ?? 0) >= 80);
   }],
 
-  ['HTF displacement FVG continuation creates a symmetric long candidate', () => {
+  ['HTF displacement FVG continuation stays conditional for a symmetric long without completed retest re-entry', () => {
     const base = htfDisplacementContinuationContext('LONG');
     const noMssFiveMinute = (base.multiTimeframeContext?.fiveMinute.displacementCandles || []).map((candle) => ({
       ...candle,
@@ -3789,16 +3825,52 @@ const tests: Array<[string, () => void]> = [
     assert.ok(candidate);
     assert.equal(candidate.pathway, 'htf_displacement_fvg_continuation');
     assert.equal(candidate.direction, 'LONG');
-    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.candidateState, 'QUALIFIED_CONDITIONAL');
     assert.equal(candidate.entry, 7603.25);
     assert.equal(candidate.stop, 7599);
     assert.equal(candidate.target1, 7609.75);
     assert.equal(candidate.target2, 7611.75);
     assert.equal(candidate.riskAdvisoryStatus, 'RISK_WITHIN_STANDARD_LIMIT');
     assert.ok(candidate.evidence.some((item) => item.includes('5M MSS not confirmed; not invented or required')));
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('wait for a completed 5M candle to retest the bullish FVG')));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementFvgContinuation);
   }],
 
-  ['HTF displacement FVG continuation does not require a separate 5M displacement candle', () => {
+  ['HTF displacement FVG continuation creates a symmetric long candidate after completed 5M FVG retest re-entry with aligned MSS', () => {
+    const base = htfDisplacementContinuationContext('LONG');
+    const context = htfDisplacementContinuationContext('LONG', {
+      keyLevels: {
+        ...base.keyLevels,
+        currentPrice: 7604,
+      },
+      candles: [
+        ...(base.candles || []),
+        { index: 5, timestamp: '2026-06-02T10:10:00-04:00', open: 7604.25, high: 7605.25, low: 7602, close: 7604, direction: 'bullish', isRejection: true, confidence: 'High' },
+      ],
+      fvgZones: (base.fvgZones || []).map((zone) => ({
+        ...zone,
+        formedCandleIndex: 3,
+        formedAt: '2026-06-02T10:00:00-04:00',
+      })),
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.pathway, 'htf_displacement_fvg_continuation');
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.entry, 7604.25);
+    assert.equal(candidate.stop, 7599);
+    assert.equal(candidate.target1, 7612.25);
+    assert.equal(candidate.target2, 7614.75);
+    assert.equal(candidate.riskAdvisoryStatus, 'RISK_ABOVE_STANDARD_LIMIT');
+    assert.ok(candidate.evidence.some((item) => item.includes('Completed 5M bullish FVG retest/rejection confirmed')));
+  }],
+
+  ['HTF displacement FVG continuation still requires completed FVG retest even without a separate 5M displacement candle', () => {
     const base = htfDisplacementContinuationContext('SHORT');
     const context = htfDisplacementContinuationContext('SHORT', {
       setupReadyFacts: {
@@ -3833,23 +3905,26 @@ const tests: Array<[string, () => void]> = [
     assert.ok(candidate);
     assert.equal(candidate.pathway, 'htf_displacement_fvg_continuation');
     assert.equal(candidate.direction, 'SHORT');
-    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
     assert.ok(candidate.evidence.some((item) => item.includes('bearish 15M displacement confirmed')));
     assert.ok(candidate.evidence.some((item) => item.includes('5M FVG / imbalance supports continuation')));
     assert.equal(candidate.evidence.some((item) => item === 'bearish 5M displacement confirmed'), false);
     assert.ok(candidate.evidence.some((item) => item.includes('5M MSS not confirmed; not invented or required')));
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('wait for a completed 5M candle to retest the bearish FVG')));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementFvgContinuation);
     assert.ok((candidate.modelConfidenceScore ?? 0) >= 70);
   }],
 
-  ['HTF displacement FVG continuation records confirmed MSS as confidence support only', () => {
+  ['HTF displacement FVG continuation records confirmed MSS as support but still waits for FVG retest re-entry', () => {
     const context = htfDisplacementContinuationContext('SHORT');
     const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
     const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
 
     assert.ok(candidate);
-    assert.equal(candidate.candidateState, 'MSS_HOLD_CONFIRMED');
-    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.candidateState, 'MSS_HOLD_TRIGGER_PENDING');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
     assert.ok(candidate.evidence.some((item) => item.includes('MSS_HOLD_CONFIRMED: completed 5M close confirmed')));
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('wait for a completed 5M candle to retest the bearish FVG')));
     assert.ok((candidate.modelConfidenceScore ?? 0) > 92);
   }],
 

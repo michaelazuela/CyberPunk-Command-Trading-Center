@@ -2,6 +2,21 @@
 
 ## Latest Change
 
+Date: 2026-07-16
+Task: Install retest-required re-entry rule for HTF displacement continuations.
+Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, src/lib/tradeDecisionPipeline.test.ts, docs/PROJECT_STATUS.md.
+Reason: Formal replay/master-desk audit showed missed/no-chase continuation opportunities should not be promoted from stale first-break levels. The scanner now requires fresh completed 5M re-entry proof before HTF displacement MSS/FVG continuation promotion.
+Tests run: `npx tsx src/lib/setupScanner.test.ts`; `npx tsx src/lib/tradeDecisionPipeline.test.ts`; `npx tsc --noEmit --pretty false`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run test`; `npm run lint`; `npm run build`.
+Result: Passed. HTF displacement MSS continuation now rebuilds entry from the completed 5M close-through/retest plan and uses retest proof before promotion. HTF displacement FVG continuation now requires a completed 5M FVG retest/rejection re-entry plan; confirmed MSS can support confidence but does not replace the FVG retest proof.
+Trading logic changed: Yes. Limited to HTF displacement continuation candidate promotion and fresh re-entry proof. Existing canExecute boundaries, bridge behavior, Discord send behavior, Supabase schema, and automated execution behavior are unchanged.
+Bridge impact: None.
+Journal/RAG impact: Future scanner artifacts may show stricter conditional/missing-evidence reasons for stale HTF displacement continuation candidates.
+Supabase impact: No schema migration.
+Known risks: Existing historical audit artifacts are not rewritten. FVG re-entry proof requires FVG formation metadata; zones without formed candle/time remain conditional instead of inventing a retest.
+Next recommended action: Rerun targeted replay research for the previously positive missed/no-chase cases to measure impact before broadening this rule to other model families.
+
+## Previous Change
+
 Date: 2026-07-15
 Task: Install TopDownFvgDecisionLadder support model.
 Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, docs/PROJECT_STATUS.md.
