@@ -166,6 +166,10 @@ function selectedLabel(selected: Record<string, unknown>): string {
   return `${direction} ${setupType} (${status})`;
 }
 
+function isDuplicateSuppressionText(value: string): boolean {
+  return /duplicate|dedupe|durable\s+supabase\s+ledger|durable\s+ledger|already\s+sent|existing\s+discord\/campaign\s+record/i.test(value);
+}
+
 function auditFlags(args: {
   currentRuleExpectedDiscordPost: boolean;
   canExecute: boolean | null;
@@ -181,8 +185,8 @@ function auditFlags(args: {
 }): string[] {
   const flags: string[] = [];
   const text = `${args.currentRuleReason} ${args.staleReason || ''} ${args.visibilityMode}`;
-  const staleOrNoChase = /stale|no chase|already|T1 was already reached/i.test(text);
-  const duplicateSuppressed = /duplicate|dedupe/i.test(text);
+  const duplicateSuppressed = isDuplicateSuppressionText(text);
+  const staleOrNoChase = !duplicateSuppressed && /stale|no chase|already|T1 was already reached/i.test(text);
   if (args.currentRuleExpectedDiscordPost) flags.push('current_rules_expect_post');
   if (args.canExecute === false) flags.push('canExecute_false');
   if (/POST_REVIEW|POST_WATCH|review|watch/i.test(args.visibilityMode)) flags.push('review_or_watch');
@@ -250,8 +254,9 @@ function rowFromEvent(args: {
   const activeCampaignDirection = stringValue(activeCampaign.direction);
   const htfFvgReactionRoutingStatus = stringValue(htfFvgReactionRouting.status);
   const htfFvgReactionRoutingDirection = stringValue(htfFvgReactionRouting.direction);
-  const currentRuleExpectedDiscordPost = discord.shouldSend === true;
   const currentRuleReason = stringValue(discord.sendOrSuppressReason, 'reason unavailable');
+  const duplicateSuppressed = isDuplicateSuppressionText(currentRuleReason);
+  const currentRuleExpectedDiscordPost = discord.shouldSend === true && !duplicateSuppressed;
   const visibilityMode = stringValue(visibility.visibilityMode, 'N/A');
   const staleReason = typeof args.event.staleReason === 'string' && args.event.staleReason.trim()
     ? args.event.staleReason
