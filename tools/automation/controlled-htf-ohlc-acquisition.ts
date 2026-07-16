@@ -38,6 +38,7 @@ interface CliOptions {
   outDir: string;
   chunkDays: number;
   lookbackDays: number;
+  rolloverAware: boolean;
   json: boolean;
 }
 
@@ -50,6 +51,7 @@ interface LoadedTimeframe {
   cacheBars: number;
   bridgeBars: number;
   bridgeRequests: number;
+  contractLegs: string[];
   failures: string[];
   verification: MarketDataWindowVerification;
 }
@@ -88,6 +90,8 @@ export interface ControlledHtfOhlcAcquisitionReport {
     dataLimitedTimeframes: Timeframe[];
     liveSupabaseReadAttempted: boolean;
     liveBridgeReadAttempted: boolean;
+    rolloverAware: boolean;
+    contractLegs: string[];
   };
   coverage: Array<{
     timeframe: Timeframe;
@@ -97,6 +101,7 @@ export interface ControlledHtfOhlcAcquisitionReport {
     cacheBars: number;
     bridgeBars: number;
     bridgeRequests: number;
+    contractLegs: string[];
     rangeStart: string | null;
     rangeEnd: string | null;
     sufficient: boolean;
@@ -136,6 +141,10 @@ function readFlag(args: string[], flag: string): string | null {
   return args.find((arg) => arg.startsWith(prefix))?.slice(prefix.length) || null;
 }
 
+function hasFlag(args: string[], flag: string): boolean {
+  return args.includes(flag);
+}
+
 function assertDate(value: string, flag: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`${flag} must use YYYY-MM-DD.`);
   return value;
@@ -161,6 +170,7 @@ export function parseControlledHtfOhlcAcquisitionArgs(args = process.argv.slice(
     outDir: readFlag(args, '--out-dir') || DEFAULT_OUT_DIR,
     chunkDays: Math.max(1, Math.trunc(Number(readFlag(args, '--chunk-days') || 7))),
     lookbackDays: Math.max(1, Math.trunc(Number(readFlag(args, '--lookback-days') || 30))),
+    rolloverAware: hasFlag(args, '--rollover-aware'),
     json: args.includes('--json'),
   };
 }
@@ -188,6 +198,84 @@ function requestFromDate(startDate: string, lookbackDays: number): string {
 
 function requestToDate(endDate: string): string {
   return `${endDate}T23:59:59${easternOffsetFor(endDate)}`;
+}
+
+function rootSymbol(value: string): string {
+  const match = String(value || '').trim().toUpperCase().match(/^(MES|MNQ|ES|NQ)\b/);
+  return match?.[1] || 'MES';
+}
+
+function contractMonth(value: string): { root: string; month: number; year: number } | null {
+  const match = String(value || '').trim().toUpperCase().match(/^(MES|MNQ|ES|NQ)\s+(\d{1,2})-(\d{2})$/);
+  if (!match) return null;
+  return { root: match[1], month: Number(match[2]), year: 2000 + Number(match[3]) };
+}
+
+function thirdFriday(year: number, month: number): Date {
+  const first = new Date(Date.UTC(year, month - 1, 1));
+  const daysToFriday = (5 - first.getUTCDay() + 7) % 7;
+  return new Date(Date.UTC(year, month - 1, 1 + daysToFriday + 14));
+}
+
+function rolloverDate(year: number, month: number): string {
+  const expiration = thirdFriday(year, month);
+  const rollover = new Date(Date.UTC(expiration.getUTCFullYear(), expiration.getUTCMonth(), expiration.getUTCDate() - 8));
+  return rollover.toISOString().slice(0, 10);
+}
+
+function previousQuarter(month: number, year: number): { month: number; year: number } {
+  const months = [3, 6, 9, 12];
+  const index = months.indexOf(month);
+  if (index > 0) return { month: months[index - 1], year };
+  return { month: 12, year: year - 1 };
+}
+
+function nextQuarter(month: number, year: number): { month: number; year: number } {
+  const months = [3, 6, 9, 12];
+  const index = months.indexOf(month);
+  if (index >= 0 && index < months.length - 1) return { month: months[index + 1], year };
+  return { month: 3, year: year + 1 };
+}
+
+function contractName(root: string, month: number, year: number): string {
+  return `${root} ${String(month).padStart(2, '0')}-${String(year).slice(-2)}`;
+}
+
+function frontMonthForDate(dateText: string): { month: number; year: number } {
+  const asOf = new Date(`${dateText}T12:00:00Z`);
+  const year = asOf.getUTCFullYear();
+  for (const month of [3, 6, 9, 12]) {
+    if (dateText < rolloverDate(year, month)) return { month, year };
+  }
+  return { month: 3, year: year + 1 };
+}
+
+function contractLegsForRange(options: CliOptions): Array<{ bridgeInstrument: string; fromDate: string; toDate: string }> {
+  const rangeFrom = addDays(options.startDate, -options.lookbackDays);
+  const rangeTo = options.endDate;
+  if (!options.rolloverAware) {
+    return [{ bridgeInstrument: options.bridgeInstrument, fromDate: rangeFrom, toDate: rangeTo }];
+  }
+  const root = rootSymbol(options.bridgeInstrument || options.instrument);
+  const first = contractMonth(options.bridgeInstrument)?.root === root
+    ? contractMonth(options.bridgeInstrument)
+    : frontMonthForDate(rangeFrom);
+  let current = first || frontMonthForDate(rangeFrom);
+  const legs: Array<{ bridgeInstrument: string; fromDate: string; toDate: string }> = [];
+  while (true) {
+    const prev = previousQuarter(current.month, current.year);
+    const currentStart = rolloverDate(prev.year, prev.month);
+    const currentEndExclusive = rolloverDate(current.year, current.month);
+    const fromDate = currentStart > rangeFrom ? currentStart : rangeFrom;
+    const toDate = addDays(currentEndExclusive, -1) < rangeTo ? addDays(currentEndExclusive, -1) : rangeTo;
+    if (fromDate <= toDate) {
+      legs.push({ bridgeInstrument: contractName(root, current.month, current.year), fromDate, toDate });
+    }
+    if (currentEndExclusive > rangeTo) break;
+    current = nextQuarter(current.month, current.year);
+    if (legs.length > 8) break;
+  }
+  return legs.length ? legs : [{ bridgeInstrument: options.bridgeInstrument, fromDate: rangeFrom, toDate: rangeTo }];
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -271,6 +359,7 @@ async function loadTimeframe(args: {
   localBars: NinjaBridgeBar[];
   requestedFrom: string;
   requestedTo: string;
+  contractLegs: Array<{ bridgeInstrument: string; fromDate: string; toDate: string }>;
   deps: Required<AcquisitionDeps>;
 }): Promise<LoadedTimeframe> {
   const failures: string[] = [];
@@ -279,40 +368,53 @@ async function loadTimeframe(args: {
   const config = wantsMarketBars ? args.deps.loadConfig() : null;
   if (wantsMarketBars && !config) failures.push('market_bars read skipped: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or DISCORD_RAG_USER_ID is missing.');
 
-  const cacheBars = config
-    ? await args.deps.fetchCached({
-      instrument: args.options.bridgeInstrument,
-      timeframe: args.timeframe.key,
-      from: args.requestedFrom,
-      to: args.requestedTo,
-      config,
-      limit: 25000,
-    }).catch((error) => {
-      failures.push(`market_bars ${args.timeframe.key}: ${error instanceof Error ? error.message : String(error)}`);
-      return [] as NinjaBridgeBar[];
-    })
-    : [];
+  const cacheChunks: NinjaBridgeBar[][] = [];
+  if (config) {
+    for (const leg of args.contractLegs) {
+      const from = `${leg.fromDate}T00:00:00${easternOffsetFor(leg.fromDate)}`;
+      const to = `${leg.toDate}T23:59:59${easternOffsetFor(leg.toDate)}`;
+      cacheChunks.push(await args.deps.fetchCached({
+        instrument: leg.bridgeInstrument,
+        timeframe: args.timeframe.key,
+        from,
+        to,
+        config,
+        limit: 25000,
+      }).catch((error) => {
+        failures.push(`market_bars ${leg.bridgeInstrument} ${args.timeframe.key}: ${error instanceof Error ? error.message : String(error)}`);
+        return [] as NinjaBridgeBar[];
+      }));
+    }
+  }
+  const cacheBars = mergeMarketDataBars(cacheChunks.flat(), []);
 
-  const bridge = wantsBridge
-    ? await fetchBridgeSegmented({
-      bridgeUrl: args.options.bridgeUrl,
-      bridgeInstrument: args.options.bridgeInstrument,
-      timeframe: args.timeframe.bridge,
-      fromDate: addDays(args.options.startDate, -args.options.lookbackDays),
-      toDate: args.options.endDate,
-      toTimestamp: args.requestedTo,
-      chunkDays: args.options.chunkDays,
-      fetchHistorical: args.deps.fetchHistorical,
-    })
-    : { bars: [], requests: 0, failures: [] };
+  const bridgeChunks: NinjaBridgeBar[][] = [];
+  let bridgeRequests = 0;
+  if (wantsBridge) {
+    for (const leg of args.contractLegs) {
+      const bridge = await fetchBridgeSegmented({
+        bridgeUrl: args.options.bridgeUrl,
+        bridgeInstrument: leg.bridgeInstrument,
+        timeframe: args.timeframe.bridge,
+        fromDate: leg.fromDate,
+        toDate: leg.toDate,
+        toTimestamp: `${leg.toDate}T23:59:59${easternOffsetFor(leg.toDate)}`,
+        chunkDays: args.options.chunkDays,
+        fetchHistorical: args.deps.fetchHistorical,
+      });
+      bridgeChunks.push(bridge.bars);
+      bridgeRequests += bridge.requests;
+      failures.push(...bridge.failures);
+    }
+  }
+  const bridgeBars = mergeMarketDataBars(bridgeChunks.flat(), []);
 
-  failures.push(...bridge.failures);
   const sourceBars = args.options.source === 'bridge'
-    ? mergeMarketDataBars(bridge.bars, args.localBars)
+    ? mergeMarketDataBars(bridgeBars, args.localBars)
     : args.options.source === 'market-bars'
       ? mergeMarketDataBars(cacheBars, args.localBars)
       : args.options.source === 'market-bars-then-bridge'
-        ? mergeMarketDataBars(bridge.bars, mergeMarketDataBars(cacheBars, args.localBars))
+        ? mergeMarketDataBars(bridgeBars, mergeMarketDataBars(cacheBars, args.localBars))
         : mergeMarketDataBars(args.localBars, []);
 
   const verification = verifyMarketDataWindow({
@@ -322,10 +424,10 @@ async function loadTimeframe(args: {
     requestedTo: args.requestedTo,
     requiredLookbackDays: args.options.lookbackDays,
     minimumBars: args.timeframe.minimumBars,
-    source: marketDataSourceFromCounts(cacheBars.length + args.localBars.length, bridge.bars.length),
+    source: marketDataSourceFromCounts(cacheBars.length + args.localBars.length, bridgeBars.length),
     cacheBars: cacheBars.length + args.localBars.length,
-    bridgeRepairBars: bridge.bars.length,
-    bridgeInstrument: args.options.bridgeInstrument,
+    bridgeRepairBars: bridgeBars.length,
+    bridgeInstrument: args.contractLegs.map((leg) => leg.bridgeInstrument).join(', '),
   });
 
   return {
@@ -335,8 +437,9 @@ async function loadTimeframe(args: {
     bars: mergeMarketDataBars(sourceBars, []),
     localBars: args.localBars.length,
     cacheBars: cacheBars.length,
-    bridgeBars: bridge.bars.length,
-    bridgeRequests: bridge.requests,
+    bridgeBars: bridgeBars.length,
+    bridgeRequests,
+    contractLegs: args.contractLegs.map((leg) => `${leg.bridgeInstrument}:${leg.fromDate}->${leg.toDate}`),
     failures,
     verification,
   };
@@ -415,6 +518,7 @@ export async function buildControlledHtfOhlcAcquisitionReport(
   const local = loadLocalBars(options.inputJson);
   const requestedFrom = requestFromDate(options.startDate, options.lookbackDays);
   const requestedTo = requestToDate(options.endDate);
+  const contractLegs = contractLegsForRange(options);
   const loaded: LoadedTimeframe[] = [];
   for (const timeframe of TIMEFRAMES) {
     loaded.push(await loadTimeframe({
@@ -423,6 +527,7 @@ export async function buildControlledHtfOhlcAcquisitionReport(
       localBars: local[timeframe.key],
       requestedFrom,
       requestedTo,
+      contractLegs,
       deps: resolvedDeps,
     }));
   }
@@ -464,6 +569,8 @@ export async function buildControlledHtfOhlcAcquisitionReport(
       dataLimitedTimeframes: loaded.filter((item) => !item.verification.sufficient).map((item) => item.timeframe),
       liveSupabaseReadAttempted: baseReport.authority.readsLiveSupabase,
       liveBridgeReadAttempted: baseReport.authority.readsLiveBridge,
+      rolloverAware: options.rolloverAware,
+      contractLegs: [...new Set(loaded.flatMap((item) => item.contractLegs))],
     },
     coverage: loaded.map((item) => ({
       timeframe: item.timeframe,
@@ -473,6 +580,7 @@ export async function buildControlledHtfOhlcAcquisitionReport(
       cacheBars: item.cacheBars,
       bridgeBars: item.bridgeBars,
       bridgeRequests: item.bridgeRequests,
+      contractLegs: item.contractLegs,
       rangeStart: item.verification.rangeStart,
       rangeEnd: item.verification.rangeEnd,
       sufficient: item.verification.sufficient,
