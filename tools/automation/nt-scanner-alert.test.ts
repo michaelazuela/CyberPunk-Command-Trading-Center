@@ -28,6 +28,7 @@ import {
   latestSentScannerTradeAlertDelivery,
   applyScannerCompletedFiveMinuteZoneFailureSuppression,
   applyScannerHardDuplicateAlertSuppression,
+  applyScannerNearDuplicateTradeAlertCadenceSuppression,
   evaluatePreMarketDataReadinessBackfillGate,
   findMissedExecutableScannerDeliveries,
   cleanupExpiredScannerDiscordMessages,
@@ -1088,6 +1089,75 @@ assert.match(june29DuplicateDelivery.reason, /same_candidate_lifecycle_refresh_s
 assert.match(june29DuplicateDelivery.reason, /priorPlanVersionId=MORNING-20260629-144350/);
 assert.match(june29DuplicateDelivery.reason, /priorDiscordMessageId=first-message/);
 assert.match(june29DuplicateDelivery.reason, /High-confidence conditional bypass cannot override durable duplicate suppression/);
+
+const july15LunchNearDuplicateCandidate = {
+  ...june29MissedShortCandidate,
+  setupType: SetupType.IntradayMssMicroContinuation,
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  entry: 7608,
+  stop: 7620,
+  target1: 7590,
+  target2: 7584,
+  decisionQualityScore: 86,
+} as SetupCandidate;
+const july15LunchPriorTradeAlertDelivery: ScannerAlertDeliveryRecord = {
+  alertKey: '2026-07-15|MES|lunch|SHORT|IntradayMssMicroContinuation|7609.5|Conditional',
+  planVersionId: 'LUNCH-20260715-194627',
+  instrument: 'MES',
+  tradeDate: '2026-07-15',
+  session: 'lunch',
+  state: 'Conditional',
+  confidence: 86,
+  candidate: {
+    setupType: 'IntradayMssMicroContinuation',
+    direction: 'SHORT',
+    entry: 7609.5,
+    stop: 7620.25,
+    target1: 7593.5,
+    target2: 7588,
+    activeTimeframeMssRuleset: null,
+    activeCampaign: null,
+  },
+  deliveryStatus: 'sent',
+  webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+  httpStatus: 200,
+  discordMessageId: 'lunch-first-message',
+  error: null,
+  attemptedAt: '2026-07-15T19:46:27.000Z',
+  sentAt: '2026-07-15T19:46:31.000Z',
+  auditLogPath: 'scanner-lunch-2026-07-15-MES-LUNCH-20260715-194627.json',
+  stale: false,
+  retryEligible: false,
+};
+const july15LunchNearDuplicateSuppression = applyScannerNearDuplicateTradeAlertCadenceSuppression({
+  alertDecision: { shouldSend: true, reason: 'High-quality conditional review map qualified for Discord.' },
+  alertKey: '2026-07-15|MES|lunch|SHORT|IntradayMssMicroContinuation|7608|Conditional',
+  candidate: july15LunchNearDuplicateCandidate,
+  state: 'Conditional',
+  priorActiveDelivery: july15LunchPriorTradeAlertDelivery,
+  planVersionId: 'LUNCH-20260715-194745',
+  now: '2026-07-15T19:47:51.000Z',
+});
+assert.equal(july15LunchNearDuplicateSuppression.shouldSend, false);
+assert.match(july15LunchNearDuplicateSuppression.reason, /near_duplicate_trade_alert_cadence_suppressed/);
+assert.match(july15LunchNearDuplicateSuppression.reason, /same_family_nearby_entry_refresh_suppressed/);
+assert.match(july15LunchNearDuplicateSuppression.reason, /entryDrift=1\.50/);
+
+const july15LunchDistinctAlertAllowed = applyScannerNearDuplicateTradeAlertCadenceSuppression({
+  alertDecision: { shouldSend: true, reason: 'High-quality conditional review map qualified for Discord.' },
+  alertKey: '2026-07-15|MES|lunch|SHORT|IntradayMssMicroContinuation|7604|Conditional',
+  candidate: { ...july15LunchNearDuplicateCandidate, entry: 7604 } as SetupCandidate,
+  state: 'Conditional',
+  priorActiveDelivery: {
+    ...july15LunchPriorTradeAlertDelivery,
+    sentAt: '2026-07-15T19:47:00.000Z',
+  },
+  planVersionId: 'LUNCH-20260715-194845',
+  now: '2026-07-15T19:48:00.000Z',
+});
+assert.equal(july15LunchDistinctAlertAllowed.shouldSend, true);
 
 const june29SweepMssFvgRetraceCandidate = {
   ...june29MissedShortCandidate,

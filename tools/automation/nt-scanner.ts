@@ -560,6 +560,8 @@ const SCANNER_HISTORY_MIN_BARS: Record<MarketBarTimeframe, number> = {
 };
 const SCANNER_WEBHOOK_ENV_KEYS = ['QUANT_DESK_SCANNER_WEBHOOK_URL', 'SCANNER_DISCORD_WEBHOOK_URL', 'DISCORD_WEBHOOK_URL'] as const;
 const SCANNER_OPERATIONAL_WEBHOOK_ENV_KEYS = ['SUPERVISOR_DISCORD_WEBHOOK_URL', 'QUANT_DESK_HEALTH_WEBHOOK_URL'] as const;
+const SCANNER_NEAR_DUPLICATE_TRADE_ALERT_WINDOW_MS = 5 * 60 * 1000;
+const SCANNER_NEAR_DUPLICATE_TRADE_ALERT_ENTRY_DRIFT_POINTS = 2;
 
 type ScannerWebhookEnvKey = typeof SCANNER_WEBHOOK_ENV_KEYS[number];
 type ScannerOperationalWebhookEnvKey = typeof SCANNER_OPERATIONAL_WEBHOOK_ENV_KEYS[number];
@@ -9085,6 +9087,52 @@ export function applyScannerHardDuplicateAlertSuppression(args: {
   };
 }
 
+export function applyScannerNearDuplicateTradeAlertCadenceSuppression(args: {
+  alertDecision: ScannerAlertDecision;
+  alertKey: string;
+  candidate?: SetupCandidate | null;
+  state: ScannerState;
+  priorActiveDelivery?: ScannerAlertDeliveryRecord | null;
+  planVersionId: string;
+  now?: string | null;
+}): ScannerAlertDecision {
+  if (!args.alertDecision.shouldSend || !args.priorActiveDelivery || !args.candidate) return args.alertDecision;
+  const candidateDirection = args.candidate.direction === 'LONG' || args.candidate.direction === 'SHORT'
+    ? args.candidate.direction
+    : null;
+  const prior = args.priorActiveDelivery;
+  if (!candidateDirection || prior.candidate.direction !== candidateDirection) return args.alertDecision;
+  if (prior.candidate.setupType !== args.candidate.setupType) return args.alertDecision;
+  if (prior.state !== args.state) return args.alertDecision;
+  const priorSentAt = Date.parse(prior.sentAt || prior.attemptedAt || '');
+  const currentAt = Date.parse(args.now || new Date().toISOString());
+  if (!Number.isFinite(priorSentAt) || !Number.isFinite(currentAt)) return args.alertDecision;
+  const elapsedMs = currentAt - priorSentAt;
+  if (elapsedMs < 0 || elapsedMs > SCANNER_NEAR_DUPLICATE_TRADE_ALERT_WINDOW_MS) return args.alertDecision;
+  const currentEntry = isFiniteTradePrice(args.candidate.entry) ? args.candidate.entry : null;
+  const priorEntry = isFiniteTradePrice(prior.candidate.entry) ? prior.candidate.entry : null;
+  if (currentEntry === null || priorEntry === null) return args.alertDecision;
+  const entryDrift = Math.abs(currentEntry - priorEntry);
+  if (entryDrift > SCANNER_NEAR_DUPLICATE_TRADE_ALERT_ENTRY_DRIFT_POINTS) return args.alertDecision;
+  const elapsedMinutes = elapsedMs / 60_000;
+  return {
+    shouldSend: false,
+    reason: [
+      args.alertDecision.reason,
+      'near_duplicate_trade_alert_cadence_suppressed',
+      'same_family_nearby_entry_refresh_suppressed',
+      `alertKey=${args.alertKey}`,
+      `priorAlertKey=${prior.alertKey}`,
+      `priorPlanVersionId=${prior.planVersionId}`,
+      `priorDiscordMessageId=${prior.discordMessageId || 'unknown'}`,
+      `currentPlanVersionId=${args.planVersionId}`,
+      `elapsedMinutes=${elapsedMinutes.toFixed(2)}`,
+      `entryDrift=${entryDrift.toFixed(2)}`,
+      'Same direction/model/state trade alert posted recently with nearby entry; keep this refresh local to avoid Discord report churn.',
+    ].join(' | '),
+  };
+}
+
 export function applyScannerCompletedFiveMinuteZoneFailureSuppression(args: {
   alertDecision: ScannerAlertDecision;
   deskState: DeskState;
@@ -10397,8 +10445,16 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     previousDelivery,
     planVersionId,
   });
-  const finalGuardedAlertDecision = applyScannerCompletedFiveMinuteZoneFailureSuppression({
+  const cadenceGuardedAlertDecision = applyScannerNearDuplicateTradeAlertCadenceSuppression({
     alertDecision: duplicateGuardedAlertDecision,
+    alertKey,
+    candidate,
+    state: stateForAlert,
+    priorActiveDelivery,
+    planVersionId,
+  });
+  const finalGuardedAlertDecision = applyScannerCompletedFiveMinuteZoneFailureSuppression({
+    alertDecision: cadenceGuardedAlertDecision,
     deskState,
     candidate,
     completed5m,
