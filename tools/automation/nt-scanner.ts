@@ -5789,6 +5789,31 @@ export function shouldSendScannerMorningHtfDeskMap(args: {
   return !args.sent[scannerMorningHtfDeskMapKey({ tradeDate: args.tradeDate, instrument: args.instrument, session: args.session })];
 }
 
+export function scannerHtfDeskMapDataStatusLabel(deskState: DeskState): string {
+  const htfStatus = deskState.htfContextStatus || 'unknown';
+  const dataStatus = deskState.dataQualityStatus || 'unknown';
+  if (htfStatus === 'sufficient') {
+    if (dataStatus === 'ok' || String(dataStatus) === 'ready' || String(dataStatus) === 'sufficient') return 'HTF sufficient';
+    if (dataStatus === 'partial') return 'HTF sufficient / data partial outside map';
+    if (dataStatus === 'data_limited') return 'HTF data-limited';
+  }
+  return `HTF ${htfStatus} / data ${dataStatus}`;
+}
+
+export function scannerHtfDeskMapDeferReasonForCanonicalPlan(
+  publishDecision: DeskPublishDecision | null | undefined,
+): string | null {
+  if (!publishDecision?.shouldPost || !publishDecision.hasCompletePlan) return null;
+  if (
+    publishDecision.action !== 'POST_PLAN' &&
+    publishDecision.action !== 'POST_REVIEW' &&
+    publishDecision.action !== 'POST_CONDITIONAL'
+  ) {
+    return null;
+  }
+  return 'HTF map deferred because the scanner-owned DeskPublishDecision has a complete public ticket; publish the canonical ticket instead of a map-only artifact.';
+}
+
 function scannerEndOfDayMarketRecapKey(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -7768,11 +7793,12 @@ export function buildScannerMorningHtfDeskMapPayload(args: {
   const shortReadiness = play.shortBias.tradeReadiness?.status || 'review';
   const htfStatus = args.deskState.htfContextStatus || 'unknown';
   const dataQuality = args.deskState.dataQualityStatus || 'unknown';
+  const dataStatusLabel = scannerHtfDeskMapDataStatusLabel(args.deskState);
   const primaryReason = displayDirection === 'WAIT'
     ? 'No single primary side is active. Wait for completed 5M proof and clean map alignment.'
     : `${displayDirection} is the current desk map side, but execution still requires app-owned 5M trigger, stop, risk, target room, model, session, and canExecute gates.`;
   const tacticalMeaning = [
-    `Macro read: ${htfStatus === 'sufficient' ? 'HTF context is sufficient for map reading.' : `HTF context status is ${htfStatus}; treat as context only if data-limited.`}`,
+    `Macro read: ${htfStatus === 'sufficient' ? `HTF context is sufficient for map reading${dataQuality === 'partial' ? '; separate data-quality status is partial, so this remains map-only.' : '.'}` : `HTF context status is ${htfStatus}; treat as context only if data-limited.`}`,
     `Long: ${longReadiness}.`,
     `Short: ${shortReadiness}.`,
     `Execution: no Discord map approves a trade; 5M remains execution authority.`,
@@ -7816,7 +7842,7 @@ export function buildScannerMorningHtfDeskMapPayload(args: {
           inline: false,
         },
       ],
-      footer: { text: `Quant Desk • ${sessionLabel} HTF map only • Data ${dataQuality} • Not execution approval` },
+      footer: { text: `Quant Desk • ${sessionLabel} HTF map only • ${dataStatusLabel} • Not execution approval` },
       timestamp: new Date().toISOString(),
     }],
   };
@@ -10704,7 +10730,11 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     webhookConfigured: Boolean(resolveScannerDiscordWebhookUrl().url),
   });
 
-  if (window.allowsDiscordAlert && shouldSendScannerMorningHtfDeskMap({
+  const htfDeskMapDeferReason = scannerHtfDeskMapDeferReasonForCanonicalPlan(deskPublishDecision);
+  if (htfDeskMapDeferReason) {
+    console.log(`[scanner] ${window.label} HTF Desk Map deferred: ${compactScannerLogText(htfDeskMapDeferReason, 180)}`);
+  }
+  if (!htfDeskMapDeferReason && window.allowsDiscordAlert && shouldSendScannerMorningHtfDeskMap({
     tradeDate,
     instrument: config.instrument,
     session,

@@ -72,6 +72,8 @@ import {
   shouldSuppressActiveCampaignScannerAlert,
   buildScannerReversalWatchLines,
   buildScannerMorningHtfDeskMapPayload,
+  scannerHtfDeskMapDataStatusLabel,
+  scannerHtfDeskMapDeferReasonForCanonicalPlan,
   buildScannerLiveDiscordSendBoundaryReport,
   buildScannerLiveHoldNoticePayload,
   buildScannerCounterStructureConditional,
@@ -2530,6 +2532,7 @@ const morningMapPayload = buildScannerMorningHtfDeskMapPayload({
   currentPrice: 7563.75,
 });
 const morningMapText = flattenDiscordPayloadText(morningMapPayload);
+assert.equal(scannerHtfDeskMapDataStatusLabel(morningHtfDeskMapState), 'HTF sufficient');
 assert.match(morningMapPayload.content || '', /MES Morning HTF Desk Map - 2026-06-19/);
 assert.match(morningMapText, /MES Morning High Timeframe Desk Map - 2026-06-19/);
 assert.match(morningMapText, /Primary: 🛑 WAIT/);
@@ -2537,8 +2540,70 @@ assert.match(morningMapText, /Key battle area: 7561.75-7566.50/);
 assert.match(morningMapText, /🐻 4H: BEAR/);
 assert.match(morningMapText, /🐂 2H: BULL/);
 assert.match(morningMapText, /⚖️ 15M: RANGE/);
+assert.match(morningMapText, /HTF map only • HTF sufficient • Not execution approval/);
+assert.doesNotMatch(morningMapText, /Data partial • Not execution approval/);
 assert.match(morningMapText, /5M remains execution authority/);
 assert.equal(morningMapPayload.components, undefined);
+const partialDataHtfMapPayload = buildScannerMorningHtfDeskMapPayload({
+  tradeDate: '2026-07-16',
+  instrument: 'MES',
+  session: 'morning',
+  deskState: { ...morningHtfDeskMapState, dataQualityStatus: 'partial' } as any,
+  completed5m: morningMapCompleted5m,
+  currentPrice: 7595.25,
+});
+const partialDataHtfMapText = flattenDiscordPayloadText(partialDataHtfMapPayload);
+assert.equal(
+  scannerHtfDeskMapDataStatusLabel({ ...morningHtfDeskMapState, dataQualityStatus: 'partial' } as any),
+  'HTF sufficient / data partial outside map',
+);
+assert.match(partialDataHtfMapText, /HTF map only • HTF sufficient \/ data partial outside map • Not execution approval/);
+assert.match(partialDataHtfMapText, /separate data-quality status is partial, so this remains map-only/);
+assert.doesNotMatch(partialDataHtfMapText, /Data partial • Not execution approval/);
+const completeCanonicalPublishDecision = {
+  sourceOfTruth: 'scanner_desk_publish_decision',
+  action: 'POST_PLAN',
+  discordAction: 'post_plan',
+  shouldPost: true,
+  reason: 'fixture canonical ticket',
+  displaySource: 'selected_candidate',
+  candidateKey: 'fixture-short',
+  direction: 'SHORT',
+  setupType: SetupType.TurtleSoup,
+  lineInSand: 7595.5,
+  triggerCondition: 'completed 5M close below 7595.50',
+  entry: 7595.5,
+  stop: 7598,
+  t1: 7591.75,
+  t2: 7590.5,
+  invalidation: 7598,
+  invalidationText: 'Invalid above 7598.00',
+  hasCompletePlan: true,
+  humanReviewOnly: true,
+  canExecute: false,
+  noChaseState: false,
+  htfContextStatus: 'sufficient',
+  dataQualityStatus: 'partial',
+  discordReason: 'fixture canonical ticket',
+  managementWarnings: [],
+  driftBlocker: null,
+  approvalBoundary: {
+    changesTradeApprovals: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesRiskRules: false,
+    changesBridgeBehavior: false,
+  },
+} satisfies DeskPublishDecision;
+assert.match(
+  scannerHtfDeskMapDeferReasonForCanonicalPlan(completeCanonicalPublishDecision) || '',
+  /complete public ticket/,
+);
+assert.equal(scannerHtfDeskMapDeferReasonForCanonicalPlan({
+  ...completeCanonicalPublishDecision,
+  action: 'POST_WATCH',
+  hasCompletePlan: false,
+}), null);
 const eveningMapPayload = buildScannerMorningHtfDeskMapPayload({
   tradeDate: '2026-06-19',
   instrument: 'MES',
