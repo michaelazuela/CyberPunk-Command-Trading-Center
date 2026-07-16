@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Start clean unified trading-model candidate book contract cleanup.
+Files changed: src/lib/unifiedDeskCandidateBook.ts, src/lib/unifiedDeskCandidateBook.test.ts, tools/automation/unified-desk-candidate-book-diagnostic.ts, tools/automation/unified-desk-candidate-book-diagnostic.test.ts, docs/PROJECT_STATUS.md.
+Reason: The desk is moving away from Gemini/advisory-centered language and away from treating `canExecute` as the center of the trade idea lifecycle. This phase keeps the existing audit-only candidate book but adds explicit trading-model states and internal-only confidence-source metadata so every model can be ranked together without using Gemini/advisory narrative as scoring evidence.
+Tests run: `npx tsx src/lib/unifiedDeskCandidateBook.test.ts`; `npx tsx tools/automation/unified-desk-candidate-book-diagnostic.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-desk-candidate-book-diagnostic.ts --input-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --out-dir tools/automation/diagnostic-reports --json`; `git diff --check`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Focused tests, typecheck, diagnostic run, guards, lint, build, and full test suite passed. The candidate book now exposes `tradingModelState` values (`execution_ready`, `review_ticket`, `ranked_candidate`, `blocked_missing_5m_proof`, `blocked_missing_plan_geometry`, `blocked_no_fill`, `blocked`, `no_trade`), records `confidenceSource`, and marks `advisoryScoringExcluded=true`. The scoring policy now states confidence comes from app-owned internal trading-model evidence, excludes Gemini/advisory narrative, and treats `canExecute` as a compatibility final execution flag only. The June 1-July 2 read-only diagnostic audited 383 snapshots with zero findings: execution_ready 1, review_ticket 39, ranked_candidate 107, blocked_missing_5m_proof 230, blocked_missing_plan_geometry 6, blocked_no_fill 0. Report paths: `tools/automation/diagnostic-reports/unified-desk-candidate-book-diagnostic-1784244918394.json` and `.md`.
+Trading logic changed: No. This phase is audit/contract metadata only. It does not change setup definitions, live ranking, scanner behavior, entry, stop, target, risk, invalidation, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None.
+Journal/RAG impact: None. This phase does not read or write RAG/outcome records.
+Supabase impact: None.
+Known risks: The real diagnostic still shows broad SweepMssFvgRetrace review-ticket over-promotion risk in historical snapshots. The candidate book must remain audit-only until a ranking-quality pass overlays replay/RAG outcomes and proves model selection quality.
+Next recommended action: Keep live wiring off. Add a read-only outcome/RAG overlay to the unified trading-model candidate diagnostic, then use it to penalize no-fill/stop-prone model states and identify which review tickets deserve scanner visibility.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Reinvestigate no-chase artifact dates after rollover-aware HTF loading.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: After installing rollover-aware scanner HTF history loading, the desk needed to re-check the previously date/contract-sensitive no-chase artifact set from June 17, June 25, and June 26 with one active-contract-anchored source.

@@ -46,8 +46,12 @@ const executableBook = buildUnifiedDeskCandidateBook({
 });
 
 assert.equal(executableBook.primaryDeskIdea?.state, 'executable');
+assert.equal(executableBook.primaryDeskIdea?.tradingModelState, 'execution_ready');
 assert.equal(executableBook.primaryDeskIdea?.canExecute, true);
 assert.equal(executableBook.primaryDeskIdea?.humanReviewOnly, false);
+assert.equal(executableBook.primaryDeskIdea?.advisoryScoringExcluded, true);
+assert.equal(executableBook.scoringPolicy.excludesGeminiAdvisory, true);
+assert.equal(executableBook.scoringPolicy.canExecuteRole, 'compatibility_final_execution_flag_only');
 assert.equal(executableBook.approvalBoundary.changesCanExecute, false);
 assert.equal(executableBook.approvalBoundary.postsDiscord, false);
 assert.equal(executableBook.approvalBoundary.writesSupabase, false);
@@ -77,7 +81,9 @@ const rankedBook = buildUnifiedDeskCandidateBook({
 
 assert.equal(rankedBook.primaryDeskIdea?.candidateKey, 'IntradayMssMicroContinuation|review|LONG|100.00|1');
 assert.equal(rankedBook.primaryDeskIdea?.state, 'human_review');
+assert.equal(rankedBook.primaryDeskIdea?.tradingModelState, 'review_ticket');
 assert.equal(rankedBook.candidates[1].state, 'no_chase');
+assert.equal(rankedBook.candidates[1].tradingModelState, 'ranked_candidate');
 assert.equal(rankedBook.candidates[1].nextProofRequired[0], 'Wait for a fresh completed 5M retest/re-entry proof or next setup.');
 assert.equal(rankedBook.primaryDeskIdea?.canExecute, false);
 
@@ -136,5 +142,43 @@ assert.equal(blockedBook.primaryDeskIdea?.state, 'blocked');
 assert.equal(blockedBook.primaryDeskIdea?.setupType, SetupType.SweepMssFvgRetrace);
 assert.ok(blockedBook.primaryDeskIdea?.blockers.includes('Actual entry-to-stop risk exceeds the configured max risk.'));
 assert.equal(blockedBook.notes.some((note) => note.includes('automatic execution approval')), true);
+assert.equal(blockedBook.notes.some((note) => note.includes('Gemini/advisory narrative is excluded')), true);
+
+const missingPlanGeometry = candidate({
+  setupType: SetupType.IntradayMssMicroContinuation,
+  scenarioLabel: 'missing-plan',
+  entry: null,
+  stop: null,
+  target1: null,
+  target2: null,
+  modelConfidenceScore: null,
+  decisionQualityScore: 87,
+  rankScore: 99,
+  confidence: 'Low',
+  evidence: ['Completed 5M proof with 15M context support.'],
+});
+const missingPlanBook = buildUnifiedDeskCandidateBook({
+  sessionType: 'morning',
+  candidates: [missingPlanGeometry],
+});
+assert.equal(missingPlanBook.primaryDeskIdea?.tradingModelState, 'blocked_missing_plan_geometry');
+assert.equal(missingPlanBook.primaryDeskIdea?.confidenceScore, 87);
+assert.equal(missingPlanBook.primaryDeskIdea?.confidenceSource, 'decision_quality_score');
+assert.equal(missingPlanBook.tradingModelStateCounts.blocked_missing_plan_geometry, 1);
+
+const missingProof = candidate({
+  scenarioLabel: 'missing-proof',
+  modelConfidenceScore: null,
+  decisionQualityScore: undefined,
+  rankScore: 72,
+  evidence: ['15M context support only.'],
+  requiredTrigger: 'Waiting for trigger.',
+});
+const missingProofBook = buildUnifiedDeskCandidateBook({
+  sessionType: 'morning',
+  candidates: [missingProof],
+});
+assert.equal(missingProofBook.primaryDeskIdea?.tradingModelState, 'blocked_missing_5m_proof');
+assert.equal(missingProofBook.primaryDeskIdea?.confidenceSource, 'rank_score');
 
 console.log('Unified Desk Candidate Book audit contract verified.');

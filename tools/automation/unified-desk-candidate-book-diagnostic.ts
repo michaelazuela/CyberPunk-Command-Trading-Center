@@ -5,6 +5,7 @@ import {
   buildUnifiedDeskCandidateBook,
   buildUnifiedDeskCandidateKey,
   type UnifiedDeskCandidateBookItem,
+  type UnifiedTradingModelCandidateState,
 } from '../../src/lib/unifiedDeskCandidateBook';
 import type { SetupCandidate } from '../../src/types';
 
@@ -39,6 +40,7 @@ export interface UnifiedDeskCandidateDiagnosticRow {
   currentCanExecute: boolean;
   unifiedPrimaryKey: string | null;
   unifiedPrimaryState: UnifiedDeskCandidateBookItem['state'] | null;
+  unifiedPrimaryTradingModelState: UnifiedTradingModelCandidateState | null;
   unifiedPrimaryScore: number | null;
   comparison: SelectionComparison;
   recommendation: string;
@@ -70,6 +72,7 @@ export interface UnifiedDeskCandidateDiagnosticReport {
     humanReviewPrimaryCount: number;
     noChasePrimaryCount: number;
     blockedPrimaryCount: number;
+    tradingModelStateCounts: Record<UnifiedTradingModelCandidateState, number>;
     findingsCount: number;
   };
   rows: UnifiedDeskCandidateDiagnosticRow[];
@@ -224,6 +227,7 @@ function analyzeSnapshot(snapshot: UnifiedDeskCandidateDiagnosticSnapshot): {
     currentCanExecute: Boolean(snapshot.currentCanExecute),
     unifiedPrimaryKey: primary?.candidateKey || null,
     unifiedPrimaryState: primary?.state || null,
+    unifiedPrimaryTradingModelState: primary?.tradingModelState || null,
     unifiedPrimaryScore: primary?.score || null,
     comparison,
   };
@@ -248,11 +252,12 @@ function buildMarkdown(report: Omit<UnifiedDeskCandidateDiagnosticReport, 'markd
     `- Human-review primaries: ${report.summary.humanReviewPrimaryCount}.`,
     `- No-chase primaries: ${report.summary.noChasePrimaryCount}.`,
     `- Blocked primaries: ${report.summary.blockedPrimaryCount}.`,
+    `- Trading model states: ${Object.entries(report.summary.tradingModelStateCounts).map(([state, count]) => `${state}=${count}`).join(', ')}.`,
     '',
     '## Rows',
-    '| Snapshot | Session | Current | Unified Primary | State | Comparison | Recommendation |',
-    '|---|---|---|---|---|---|---|',
-    ...report.rows.map((row) => `| ${row.snapshotId} | ${row.sessionType} | ${row.currentSelectedKey || '-'} | ${row.unifiedPrimaryKey || '-'} | ${row.unifiedPrimaryState || '-'} | ${row.comparison} | ${row.recommendation} |`),
+    '| Snapshot | Session | Current | Unified Primary | State | Trading Model State | Comparison | Recommendation |',
+    '|---|---|---|---|---|---|---|---|',
+    ...report.rows.map((row) => `| ${row.snapshotId} | ${row.sessionType} | ${row.currentSelectedKey || '-'} | ${row.unifiedPrimaryKey || '-'} | ${row.unifiedPrimaryState || '-'} | ${row.unifiedPrimaryTradingModelState || '-'} | ${row.comparison} | ${row.recommendation} |`),
   ];
   if (report.findings.length) {
     lines.push('', '## Findings');
@@ -270,6 +275,19 @@ export function buildUnifiedDeskCandidateDiagnosticReport(
   const analyzed = snapshots.map(analyzeSnapshot);
   const rows = analyzed.map((item) => item.row);
   const findings = analyzed.flatMap((item) => item.findings);
+  const tradingModelStateCounts: Record<UnifiedTradingModelCandidateState, number> = {
+    execution_ready: 0,
+    review_ticket: 0,
+    ranked_candidate: 0,
+    blocked_missing_5m_proof: 0,
+    blocked_missing_plan_geometry: 0,
+    blocked_no_fill: 0,
+    blocked: 0,
+    no_trade: 0,
+  };
+  for (const row of rows) {
+    if (row.unifiedPrimaryTradingModelState) tradingModelStateCounts[row.unifiedPrimaryTradingModelState] += 1;
+  }
   const reportWithoutMarkdown = {
     reportType: 'unified_desk_candidate_book_diagnostic' as const,
     generatedAt,
@@ -284,6 +302,7 @@ export function buildUnifiedDeskCandidateDiagnosticReport(
       humanReviewPrimaryCount: rows.filter((row) => row.unifiedPrimaryState === 'human_review').length,
       noChasePrimaryCount: rows.filter((row) => row.unifiedPrimaryState === 'no_chase').length,
       blockedPrimaryCount: rows.filter((row) => row.unifiedPrimaryState === 'blocked').length,
+      tradingModelStateCounts,
       findingsCount: findings.length,
     },
     rows,

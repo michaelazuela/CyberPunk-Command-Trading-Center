@@ -112,6 +112,8 @@ assert.equal(report.summary.samePrimaryCount, 1);
 assert.equal(report.summary.unifiedDifferentPrimaryCount, 1);
 assert.equal(report.summary.currentMissingCount, 1);
 assert.equal(report.summary.executableCurrentSelectionsPreserved, 1);
+assert.equal(report.summary.tradingModelStateCounts.execution_ready, 1);
+assert.equal(report.summary.tradingModelStateCounts.review_ticket, 2);
 assert.equal(report.summary.findingsCount, 0);
 
 const sameRow = report.rows.find((row) => row.snapshotId === 'same-executable');
@@ -120,13 +122,16 @@ const missingRow = report.rows.find((row) => row.snapshotId === 'missing-current
 
 assert.equal(sameRow?.currentSelectedState, 'executable');
 assert.equal(sameRow?.unifiedPrimaryState, 'executable');
+assert.equal(sameRow?.unifiedPrimaryTradingModelState, 'execution_ready');
 assert.equal(sameRow?.comparison, 'same_primary');
 assert.equal(improvedRow?.comparison, 'unified_promotes_different');
 assert.equal(improvedRow?.unifiedPrimaryState, 'human_review');
+assert.equal(improvedRow?.unifiedPrimaryTradingModelState, 'review_ticket');
 assert.match(improvedRow?.recommendation || '', /possible human-review improvement/);
 assert.equal(missingRow?.comparison, 'current_missing');
 assert.match(report.markdown, /does not post Discord/);
 assert.match(report.markdown, /Unified different primary: 1/);
+assert.match(report.markdown, /Trading model states:/);
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'unified-desk-candidate-diagnostic-'));
 const inputPath = path.join(root, 'snapshots.json');
@@ -167,5 +172,6 @@ const directoryReport = buildUnifiedDeskCandidateDiagnosticReport(directorySnaps
 assert.equal(directoryReport.summary.snapshotsAudited, 1);
 assert.equal(directoryReport.summary.samePrimaryCount, 1);
 assert.equal(directoryReport.rows[0].sessionType, 'evening');
+assert.equal(directoryReport.rows[0].unifiedPrimaryTradingModelState, 'review_ticket');
 
 console.log('unified desk candidate-book diagnostic verified.');

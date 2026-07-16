@@ -8,6 +8,16 @@ export type UnifiedDeskCandidateState =
   | 'blocked'
   | 'no_trade';
 
+export type UnifiedTradingModelCandidateState =
+  | 'execution_ready'
+  | 'review_ticket'
+  | 'ranked_candidate'
+  | 'blocked_missing_5m_proof'
+  | 'blocked_missing_plan_geometry'
+  | 'blocked_no_fill'
+  | 'blocked'
+  | 'no_trade';
+
 export type UnifiedDeskCandidateFamily =
   | 'strict_primary'
   | 'htf_displacement_continuation'
@@ -30,9 +40,11 @@ export interface UnifiedDeskCandidateBookItem {
   family: UnifiedDeskCandidateFamily;
   direction: SetupCandidate['direction'];
   state: UnifiedDeskCandidateState;
+  tradingModelState: UnifiedTradingModelCandidateState;
   rank: number;
   score: number;
   confidenceScore: number;
+  confidenceSource: 'model_confidence_score' | 'decision_quality_score' | 'rank_score' | 'priority' | 'neutral_fallback';
   freshnessScore: number;
   htfScore: number;
   fiveMinuteProofScore: number;
@@ -47,6 +59,7 @@ export interface UnifiedDeskCandidateBookItem {
   riskPoints: number | null;
   htfSupport: 'supporting' | 'conflicting' | 'neutral' | 'data_limited';
   fiveMinuteProofStatus: 'confirmed' | 'partial' | 'missing';
+  advisoryScoringExcluded: true;
   blockers: string[];
   nextProofRequired: string[];
   sourceCandidate: SetupCandidate;
@@ -58,6 +71,13 @@ export interface UnifiedDeskCandidateBook {
   primaryDeskIdea: UnifiedDeskCandidateBookItem | null;
   candidates: UnifiedDeskCandidateBookItem[];
   stateCounts: Record<UnifiedDeskCandidateState, number>;
+  tradingModelStateCounts: Record<UnifiedTradingModelCandidateState, number>;
+  scoringPolicy: {
+    sourceOfConfidence: 'internal_trading_model_evidence';
+    excludesGeminiAdvisory: true;
+    excludesAdvisoryNarrative: true;
+    canExecuteRole: 'compatibility_final_execution_flag_only';
+  };
   approvalBoundary: {
     auditOnly: true;
     changesTradeApprovals: false;
@@ -84,11 +104,23 @@ function finitePrice(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
 }
 
-function confidenceLabelScore(candidate: SetupCandidate): number {
-  if (typeof candidate.modelConfidenceScore === 'number') return candidate.modelConfidenceScore;
-  if (candidate.confidence === 'High') return 85;
-  if (candidate.confidence === 'Medium') return 65;
-  return 40;
+function internalConfidenceScore(candidate: SetupCandidate): {
+  score: number;
+  source: UnifiedDeskCandidateBookItem['confidenceSource'];
+} {
+  if (typeof candidate.modelConfidenceScore === 'number') {
+    return { score: candidate.modelConfidenceScore, source: 'model_confidence_score' };
+  }
+  if (typeof candidate.decisionQualityScore === 'number') {
+    return { score: candidate.decisionQualityScore, source: 'decision_quality_score' };
+  }
+  if (typeof candidate.rankScore === 'number') {
+    return { score: candidate.rankScore, source: 'rank_score' };
+  }
+  if (typeof candidate.priority === 'number') {
+    return { score: candidate.priority, source: 'priority' };
+  }
+  return { score: 50, source: 'neutral_fallback' };
 }
 
 function bounded(value: number, min = 0, max = 100): number {
@@ -166,6 +198,10 @@ function isNoChase(candidate: SetupCandidate): boolean {
   return /no chase|do not chase|missed|already reached|past T1|closer to T1|preferred entry was missed/i.test(candidateText(candidate));
 }
 
+function isNoFillOrUnresolved(candidate: SetupCandidate): boolean {
+  return /no[-_ ]fill|filled open|unresolved fill|unresolved/i.test(candidateText(candidate));
+}
+
 function htfSupport(candidate: SetupCandidate): UnifiedDeskCandidateBookItem['htfSupport'] {
   const text = candidateText(candidate);
   if (/data[-_ ]limited|insufficient htf|HTF context insufficient/i.test(text)) return 'data_limited';
@@ -225,6 +261,21 @@ function stateForCandidate(args: {
   if (hasFullPlanLevels(candidate)) return 'human_review';
   if (candidate.executionStatus === ExecutionStatus.Conditional || candidate.executionStatus === ExecutionStatus.Executable) return 'watch';
   return args.blockers.length ? 'blocked' : 'watch';
+}
+
+function tradingModelStateForCandidate(args: {
+  candidate: SetupCandidate;
+  state: UnifiedDeskCandidateState;
+  fiveMinute: UnifiedDeskCandidateBookItem['fiveMinuteProofStatus'];
+}): UnifiedTradingModelCandidateState {
+  if (args.state === 'no_trade') return 'no_trade';
+  if (args.state === 'executable') return 'execution_ready';
+  if (isNoFillOrUnresolved(args.candidate)) return 'blocked_no_fill';
+  if (!hasFullPlanLevels(args.candidate)) return 'blocked_missing_plan_geometry';
+  if (args.fiveMinute === 'missing') return 'blocked_missing_5m_proof';
+  if (args.state === 'human_review') return 'review_ticket';
+  if (args.state === 'watch' || args.state === 'no_chase') return 'ranked_candidate';
+  return 'blocked';
 }
 
 function scoreForCandidate(args: {
@@ -295,16 +346,20 @@ export function buildUnifiedDeskCandidateBook(input: UnifiedDeskCandidateBookInp
     const state = stateForCandidate({ candidate, canExecute, blockers, afterLunchBlocker });
     const htf = htfSupport(candidate);
     const fiveMinute = fiveMinuteProofStatus(candidate);
-    const confidenceScore = bounded(confidenceLabelScore(candidate));
+    const confidence = internalConfidenceScore(candidate);
+    const confidenceScore = bounded(confidence.score);
     const scores = scoreForCandidate({ candidate, state, confidenceScore, htf, fiveMinute });
+    const tradingModelState = tradingModelStateForCandidate({ candidate, state, fiveMinute });
     return {
       candidateKey: key,
       setupType: candidate.setupType,
       family: familyForSetup(candidate.setupType),
       direction: candidate.direction,
       state,
+      tradingModelState,
       rank: 0,
       confidenceScore,
+      confidenceSource: confidence.source,
       canExecute,
       humanReviewOnly: !canExecute,
       entry: finitePrice(candidate.entry),
@@ -314,6 +369,7 @@ export function buildUnifiedDeskCandidateBook(input: UnifiedDeskCandidateBookInp
       riskPoints: typeof candidate.riskPoints === 'number' ? candidate.riskPoints : null,
       htfSupport: htf,
       fiveMinuteProofStatus: fiveMinute,
+      advisoryScoringExcluded: true,
       blockers,
       nextProofRequired: nextProofRequired(candidate, state),
       sourceCandidate: candidate,
@@ -335,17 +391,36 @@ export function buildUnifiedDeskCandidateBook(input: UnifiedDeskCandidateBookInp
     no_trade: 0,
   };
   for (const item of candidates) stateCounts[item.state] += 1;
+  const tradingModelStateCounts: Record<UnifiedTradingModelCandidateState, number> = {
+    execution_ready: 0,
+    review_ticket: 0,
+    ranked_candidate: 0,
+    blocked_missing_5m_proof: 0,
+    blocked_missing_plan_geometry: 0,
+    blocked_no_fill: 0,
+    blocked: 0,
+    no_trade: 0,
+  };
+  for (const item of candidates) tradingModelStateCounts[item.tradingModelState] += 1;
 
   return {
     sourceOfTruth: 'unified_desk_candidate_book_audit',
     primaryDeskIdea: candidates[0] || null,
     candidates,
     stateCounts,
+    tradingModelStateCounts,
+    scoringPolicy: {
+      sourceOfConfidence: 'internal_trading_model_evidence',
+      excludesGeminiAdvisory: true,
+      excludesAdvisoryNarrative: true,
+      canExecuteRole: 'compatibility_final_execution_flag_only',
+    },
     approvalBoundary,
     notes: [
       'Unified Desk Candidate Book is audit-only in this phase.',
       'The highest-ranked idea is the primary desk read, not automatic execution approval.',
-      'canExecute remains an internal deterministic gate and is never created by this book.',
+      'Trading model confidence is scored from app-owned internal model evidence; Gemini/advisory narrative is excluded.',
+      'canExecute is preserved only as a compatibility final execution flag and is never created by this book.',
       'Discord, Supabase, bridge behavior, entry, stop, target, risk, and trading rules are unchanged.',
     ],
   };
