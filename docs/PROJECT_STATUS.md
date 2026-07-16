@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add audit-only Unified Desk Candidate Book contract.
+Files changed: src/lib/unifiedDeskCandidateBook.ts, src/lib/unifiedDeskCandidateBook.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Planning review identified that `canExecute` should remain the final internal gate, while all scanner ideas need one ranked audit book before any live visibility or publish behavior changes. The new builder ranks existing candidates into executable, human_review, watch, no_chase, blocked, or no_trade states while preserving model families, blockers, HTF support/conflict, 5M proof status, risk/target context, and explicit no-side-effect boundaries.
+Tests run: `npx tsx src/lib/unifiedDeskCandidateBook.test.ts`; `npx tsc --noEmit --pretty false`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `git diff --check`; `npm run test`; `npm run lint`; `npm run build`.
+Result: Passed. `git diff --check` reported only existing line-ending normalization warnings for touched files. The full test suite exited 0; existing Discord payload duplicate-label warnings were emitted by tests but did not fail the suite.
+Trading logic changed: No. This is an audit-only contract and focused test. It does not change setup detection, ranking used by live scanner behavior, canExecute, Discord posting, bridge reads, Supabase schema/writes, entry/stop/T1/T2 math, risk gates, or automated execution behavior.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: No schema migration and no Supabase reads/writes.
+Known risks: The book is not wired into scanner/Discord behavior yet; it proves the ranking contract only. A later phase should replay real scanner cycles through the book before any live behavior change.
+Next recommended action: Add a read-only diagnostic runner that compares current scanner selection versus the unified book on replay artifacts before considering scanner wiring.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Install retest-required re-entry rule for HTF displacement continuations.
 Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, src/lib/tradeDecisionPipeline.test.ts, docs/PROJECT_STATUS.md.
 Reason: Formal replay/master-desk audit showed missed/no-chase continuation opportunities should not be promoted from stale first-break levels. The scanner now requires fresh completed 5M re-entry proof before HTF displacement MSS/FVG continuation promotion.
