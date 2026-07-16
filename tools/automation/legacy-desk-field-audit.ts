@@ -167,7 +167,10 @@ function isScannerProducer(relativePath: string): boolean {
 function isTypeOrHelperSignature(relativeFile: string, snippet: string): boolean {
   if (!/^tools\/automation\/discord-alert-format\.ts$/i.test(relativeFile)) return false;
   return /^primaryDeskPlay\?:/.test(snippet) ||
+    /^type CompactPrimaryDeskPlay = /.test(snippet) ||
     /^best(Long|Short)Plan\?:/.test(snippet) ||
+    /^const play = deskState\?\.primaryDeskPlay;/.test(snippet) ||
+    /^const direct = side === 'LONG' \? deskState\?\.bestLongPlan/.test(snippet) ||
     /^play\??: /.test(snippet) ||
     /^row: /.test(snippet) ||
     /^member: /.test(snippet) ||

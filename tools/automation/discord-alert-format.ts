@@ -771,6 +771,15 @@ function appTargetLevels(candidate: SetupCandidate, _normalized: CompactNormaliz
   };
 }
 
+type CompactPrimaryDeskPlay = NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>;
+
+function primaryDeskPlayFromDeskState(
+  deskState: CompactDeskStateForDiscord | null | undefined,
+): CompactPrimaryDeskPlay | null {
+  const play = deskState?.primaryDeskPlay;
+  return play || null;
+}
+
 export interface CanonicalTraderTicketLevels {
   entry: number;
   stop: number;
@@ -817,7 +826,7 @@ function directionFromDeskState(
   deskState?: CompactDeskStateForDiscord | null,
 ): 'LONG' | 'SHORT' | 'WAIT' {
   if (candidate?.direction === 'LONG' || candidate?.direction === 'SHORT') return candidate.direction;
-  const playDirection = deskState?.primaryDeskPlay?.direction;
+  const playDirection = primaryDeskPlayFromDeskState(deskState)?.direction;
   return playDirection === 'LONG' || playDirection === 'SHORT' ? playDirection : 'WAIT';
 }
 
@@ -827,7 +836,7 @@ function canonicalLineInSand(args: {
   deskState?: CompactDeskStateForDiscord | null;
 }): number | null {
   if (args.direction === 'LONG' || args.direction === 'SHORT') {
-    const play = args.deskState?.primaryDeskPlay;
+    const play = primaryDeskPlayFromDeskState(args.deskState);
     if (play) {
       const playLine = deskPlayLineForDirection(play, args.direction);
       if (isFinitePrice(playLine)) return playLine;
@@ -868,7 +877,7 @@ export function buildCanonicalTraderTicket(args: {
   const normalized = args.normalized || {};
   const direction = directionFromDeskState(candidate, args.deskState || null);
   const lineInSand = canonicalLineInSand({ direction, candidate, deskState: args.deskState || null });
-  const setupLabel = candidate?.setupType || args.deskState?.primaryDeskPlay?.title || 'DeskState';
+  const setupLabel = candidate?.setupType || primaryDeskPlayFromDeskState(args.deskState)?.title || 'DeskState';
   if (args.suppressLevels) {
     return {
       direction,
@@ -1002,7 +1011,7 @@ function compactTargetLadderLines(candidate: SetupCandidate, normalized: Compact
 }
 
 function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): string[] {
-  const play = args.deskState?.primaryDeskPlay;
+  const play = primaryDeskPlayFromDeskState(args.deskState);
   const transition = play?.levelTransition;
   const reaction = transition?.targetReactionLevel
     ? {
@@ -1045,7 +1054,7 @@ function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate:
 }
 
 function scannerHtfCautionLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): string[] {
-  const deskWarning = args.deskState?.primaryDeskPlay?.countertrendWarning;
+  const deskWarning = primaryDeskPlayFromDeskState(args.deskState)?.countertrendWarning;
   const reactionArea = typeof candidate.activeRuleset?.htfLineInSand?.lineInSand === 'number' &&
     Number.isFinite(candidate.activeRuleset.htfLineInSand.lineInSand)
     ? `the HTF/session reaction line ${priceLine(candidate.activeRuleset.htfLineInSand.lineInSand)}`
@@ -1264,7 +1273,7 @@ function htfFvgReactionCandidateLines(candidate: SetupCandidate): string[] {
 
 function htfFvgMicroMssProofCandidateLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): string[] {
   if (candidate.setupType !== SetupType.IntradayMssMicroContinuation) return [];
-  const proof = args.deskState?.primaryDeskPlay?.htfFvgMicroMssProof;
+  const proof = primaryDeskPlayFromDeskState(args.deskState)?.htfFvgMicroMssProof;
   if (!proof || proof.direction !== candidate.direction) return [];
   const htf = proof.htfFvgProof;
   const trigger = proof.fiveMinuteTriggerProof;
@@ -1492,7 +1501,7 @@ function shouldRenderDeskPlay(args: CompactDiscordSummaryArgs): boolean {
   if (args.deskState?.deskTicket?.sourceOfTruth === 'scanner_single_active_desk_ticket' && !getEffectiveCanExecute(args.normalized)) {
     return true;
   }
-  const play = args.deskState?.primaryDeskPlay;
+  const play = primaryDeskPlayFromDeskState(args.deskState);
   if (!play?.discordEligible || getEffectiveCanExecute(args.normalized)) return false;
   if (/-DESK-PLAY(?:-|$)/.test(args.planVersionId)) return true;
   if (play.direction === 'WAIT') return true;
@@ -1824,7 +1833,7 @@ function deskPlayIsNoChaseReview(
 }
 
 function deskPlayHeadlineLabel(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string {
-  const play = args.deskState?.primaryDeskPlay;
+  const play = primaryDeskPlayFromDeskState(args.deskState);
   if ((direction === 'LONG' || direction === 'SHORT') || !play || (play.direction !== 'LONG' && play.direction !== 'SHORT')) {
     return deskPlayPrimaryLabel(play, direction);
   }
@@ -1844,13 +1853,14 @@ function deskPlayHeadlineLabel(args: CompactDiscordSummaryArgs, direction: 'LONG
 }
 
 function deskPlayCompletedFiveMinuteLabel(args: CompactDiscordSummaryArgs): string | null {
+  const play = primaryDeskPlayFromDeskState(args.deskState);
   const candidates = [
     args.planVersionId,
-    args.deskState?.primaryDeskPlay?.freshReentryCandidates?.bestCandidate?.requiredTrigger,
-    args.deskState?.primaryDeskPlay?.freshReentryCandidates?.bestCandidate?.nextAction,
-    args.deskState?.primaryDeskPlay?.freshReentryWatch?.requiredProof,
-    args.deskState?.primaryDeskPlay?.freshReentryWatch?.nextStep,
-    args.deskState?.primaryDeskPlay?.nextTrigger,
+    play?.freshReentryCandidates?.bestCandidate?.requiredTrigger,
+    play?.freshReentryCandidates?.bestCandidate?.nextAction,
+    play?.freshReentryWatch?.requiredProof,
+    play?.freshReentryWatch?.nextStep,
+    play?.nextTrigger,
     args.deskState?.nextTrigger,
   ].filter((value): value is string => typeof value === 'string' && value.length > 0);
   for (const value of candidates) {
@@ -1863,7 +1873,7 @@ function deskPlayCompletedFiveMinuteLabel(args: CompactDiscordSummaryArgs): stri
 }
 
 function deskPlaySnapshotLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT', line: number | null): string[] {
-  const play = args.deskState?.primaryDeskPlay;
+  const play = primaryDeskPlayFromDeskState(args.deskState);
   if (!play) return [];
   const displayDirection = direction === 'LONG' || direction === 'SHORT'
     ? direction
@@ -2173,8 +2183,9 @@ function candidateLeftActiveTacticalZone(args: CompactDiscordSummaryArgs, candid
   if (!candidate || candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return false;
   const direction = candidate.direction;
   const candidateZone = candidate.tacticalZone?.direction === direction ? candidate.tacticalZone : null;
-  const deskZone = args.deskState?.primaryDeskPlay?.activeTacticalZone?.direction === direction
-    ? args.deskState.primaryDeskPlay.activeTacticalZone
+  const play = primaryDeskPlayFromDeskState(args.deskState);
+  const deskZone = play?.activeTacticalZone?.direction === direction
+    ? play.activeTacticalZone
     : null;
   const activeZone = candidateZone || deskZone;
   const lower = isFinitePrice(activeZone?.lower) ? activeZone.lower : null;
@@ -2200,8 +2211,9 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     args.deskState?.htfContextStatus === 'insufficient';
   const referenceOnly = dataLimitedIssue && status !== 'EXECUTABLE';
   const candidateZone = candidate.tacticalZone?.direction === direction ? candidate.tacticalZone : null;
-  const deskZone = args.deskState?.primaryDeskPlay?.activeTacticalZone?.direction === direction
-    ? args.deskState.primaryDeskPlay.activeTacticalZone
+  const play = primaryDeskPlayFromDeskState(args.deskState);
+  const deskZone = play?.activeTacticalZone?.direction === direction
+    ? play.activeTacticalZone
     : null;
   const activeZone = candidateZone || deskZone;
   const activeZoneLower = isFinitePrice(activeZone?.lower) ? activeZone.lower : null;
@@ -2215,7 +2227,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
         : { state: 'inside' as const, distance: 0 }
     : null;
   const counterStructureLines = counterStructureConditionalLines({
-    play: args.deskState?.primaryDeskPlay,
+    play,
     direction,
     activeZoneLower,
     activeZoneUpper,
@@ -3087,7 +3099,7 @@ function deskPlayBattlePlanLines(args: {
 function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
   const ticketLines = deskTicketCurrentPlanLines(args);
   if (ticketLines.length) return ticketLines;
-  const play = args.deskState?.primaryDeskPlay;
+  const play = primaryDeskPlayFromDeskState(args.deskState);
   if (!play) {
     return [
       `${args.instrument} Current Desk Plan`,
@@ -3442,7 +3454,7 @@ function deskTicketOppositeDisplayLines(args: {
 }
 
 function deskPlayHasCompletePlanningLevels(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): boolean {
-  const play = args.deskState?.primaryDeskPlay;
+  const play = primaryDeskPlayFromDeskState(args.deskState);
   if (!play) return false;
   const line = deskPlayLineForDirection(play, direction);
   const arming = deskPlaySideArmingState({
@@ -3456,7 +3468,7 @@ function deskPlayHasCompletePlanningLevels(args: CompactDiscordSummaryArgs, dire
 }
 
 function deskPlayHeadlineDirection(args: CompactDiscordSummaryArgs): 'LONG' | 'SHORT' | 'WAIT' {
-  const play = args.deskState?.primaryDeskPlay;
+  const play = primaryDeskPlayFromDeskState(args.deskState);
   if (!play) return 'WAIT';
   if (play.direction !== 'LONG' && play.direction !== 'SHORT') {
     const promotedCandidate = args.deskState?.discordAction === 'post_conditional'
@@ -3491,7 +3503,7 @@ function deskPlayPrimaryLabel(
 }
 
 function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
-  const play = args.deskState?.primaryDeskPlay;
+  const play = primaryDeskPlayFromDeskState(args.deskState);
   const sessionLabel = sessionShortLabel(args.session);
   const ticketDirection = args.deskState?.deskTicket?.primaryDirection;
   const direction = ticketDirection === 'LONG' || ticketDirection === 'SHORT' || ticketDirection === 'WAIT'
@@ -3541,7 +3553,7 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
 }
 
 function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
-  const play = args.deskState?.primaryDeskPlay;
+  const play = primaryDeskPlayFromDeskState(args.deskState);
   const ticket = args.deskState?.deskTicket?.sourceOfTruth === 'scanner_single_active_desk_ticket'
     ? args.deskState.deskTicket
     : null;
@@ -3722,7 +3734,7 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
 }
 
 function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
-  const play = args.deskState?.primaryDeskPlay;
+  const play = primaryDeskPlayFromDeskState(args.deskState);
   const candidate = args.candidates[0] || null;
   const candidateDirection = candidate?.direction === 'LONG' || candidate?.direction === 'SHORT' ? candidate.direction : null;
   const playDirection = play?.direction === 'LONG' || play?.direction === 'SHORT' ? play.direction : null;
