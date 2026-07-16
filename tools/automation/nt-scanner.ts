@@ -4202,6 +4202,54 @@ export function candidateForDeskPlayContextChart(
   };
 }
 
+export function candidateForDeskPublishDecisionChart(
+  publishDecision: DeskPublishDecision | null | undefined,
+  fallback?: SetupCandidate | null,
+): SetupCandidate | null {
+  if (
+    !publishDecision?.shouldPost ||
+    !publishDecision.hasCompletePlan ||
+    (publishDecision.direction !== 'LONG' && publishDecision.direction !== 'SHORT') ||
+    !isFiniteTradePrice(publishDecision.entry) ||
+    !isFiniteTradePrice(publishDecision.stop) ||
+    !isFiniteTradePrice(publishDecision.t1) ||
+    !isFiniteTradePrice(publishDecision.t2)
+  ) {
+    return null;
+  }
+  const riskPoints = Math.abs(roundToTradeTick(publishDecision.entry) - roundToTradeTick(publishDecision.stop));
+  return {
+    ...(fallback || {}),
+    setupType: publishDecision.setupType || fallback?.setupType || SetupType.NoSetup,
+    scenarioLabel: fallback?.scenarioLabel || `${publishDecision.direction} Canonical Desk Ticket`,
+    direction: publishDecision.direction,
+    detectedStatus: fallback?.detectedStatus || SetupCandidateStatus.Conditional,
+    confidence: fallback?.confidence || 'High',
+    priority: fallback?.priority ?? 0,
+    entry: roundToTradeTick(publishDecision.entry),
+    stop: roundToTradeTick(publishDecision.stop),
+    target1: roundToTradeTick(publishDecision.t1),
+    target2: roundToTradeTick(publishDecision.t2),
+    riskPoints,
+    invalidation: publishDecision.invalidationText || fallback?.invalidation || null,
+    decisionQualityScore: fallback?.decisionQualityScore ?? null,
+    decisionQualityScorecard: fallback?.decisionQualityScorecard || [],
+    decisionQualityRecommendation: publishDecision.discordReason || fallback?.decisionQualityRecommendation || null,
+    rankScore: fallback?.rankScore ?? null,
+    evidence: [
+      ...(fallback?.evidence || []),
+      'Display-only chart candidate rebuilt from scanner-owned DeskPublishDecision.',
+    ],
+    missingEvidence: fallback?.missingEvidence || [],
+    missingLevels: [],
+    executionStatus: fallback?.executionStatus || ExecutionStatus.Conditional,
+    blockReason: fallback?.blockReason ?? NoTradeReason.EntryTriggerPending,
+    requiredTrigger: publishDecision.triggerCondition || fallback?.requiredTrigger || null,
+    nextAction: publishDecision.triggerCondition || fallback?.nextAction || null,
+    reducedRiskPlan: fallback?.reducedRiskPlan || null,
+  } as SetupCandidate;
+}
+
 export function scannerSniperTriggerWatchMetadata(args: {
   deskState?: DeskState | null;
   normalized: ReturnType<typeof buildAppTradePlan>;
@@ -7379,6 +7427,8 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
         roundNullableTradePrice(candidate.target2) === roundNullableTradePrice(args.publishDecision?.t2)
       ) || null
     : null;
+  const canonicalChartCandidate = publishCandidate ||
+    candidateForDeskPublishDecisionChart(args.publishDecision, args.candidate || null);
   const publishDeskState = args.publishDecision?.shouldPost && args.publishDecision.direction !== 'WAIT'
     ? {
         ...args.deskState,
@@ -7417,10 +7467,10 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
     : args.deskState;
   const deskState = withScannerReviewMapPresentation({
     deskState: publishDeskState,
-    candidate: publishCandidate || candidateForDeskPlayContextChart(publishDeskState, args.normalized, args.currentPrice, args.candidate),
+    candidate: canonicalChartCandidate || candidateForDeskPlayContextChart(publishDeskState, args.normalized, args.currentPrice, args.candidate),
     normalized: args.normalized,
   });
-  const contextCandidate = publishCandidate || candidateForDeskPlayContextChart(deskState, args.normalized, args.currentPrice, args.candidate);
+  const contextCandidate = canonicalChartCandidate || candidateForDeskPlayContextChart(deskState, args.normalized, args.currentPrice, args.candidate);
   const play = deskState.primaryDeskPlay;
   const canonicalChartLine = args.publishDecision?.shouldPost && args.publishDecision.direction !== 'WAIT';
   const chartContextLine = args.publishDecision?.shouldPost && args.publishDecision.direction !== 'WAIT'

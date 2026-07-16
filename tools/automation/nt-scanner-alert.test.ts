@@ -48,6 +48,7 @@ import {
   recordActiveCampaignScannerAlertSuppressed,
   releaseDurableActiveCampaignScannerAlertClaim,
   candidateForDeskPlayContextChart,
+  candidateForDeskPublishDecisionChart,
   candidateForNormalizedVisualAuthority,
   prepareLiveScannerDeskPlayAlertArtifacts,
   prepareLiveScannerDiscordAlertArtifacts,
@@ -7187,6 +7188,17 @@ try {
       changesBridgeBehavior: false,
     },
   };
+  const nullLevelCanonicalChartCandidate = candidateForDeskPublishDecisionChart(canonicalDeskPublishDecision, {
+    ...deskPlayCandidate,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+  });
+  assert.equal(nullLevelCanonicalChartCandidate?.entry, 5324.25);
+  assert.equal(nullLevelCanonicalChartCandidate?.stop, 5319.25);
+  assert.equal(nullLevelCanonicalChartCandidate?.target1, 5331.75);
+  assert.equal(nullLevelCanonicalChartCandidate?.target2, 5334.25);
   const canonicalLineDeskPlayResult = await prepareLiveScannerDeskPlayAlertArtifacts({
     session: 'lunch',
     tradeDate: '2026-05-26',
@@ -7235,8 +7247,7 @@ try {
   const canonicalLineDeskPlayText = flattenDiscordPayloadText(canonicalLineDeskPlayResult.payload);
   assert.ok(canonicalLineDeskPlayText.includes('5324.25'));
   assert.ok(!canonicalLineDeskPlayText.includes('5310'));
-  await assert.rejects(
-    prepareLiveScannerDeskPlayAlertArtifacts({
+  const canonicalOverrideResult = await prepareLiveScannerDeskPlayAlertArtifacts({
       session: 'lunch',
       tradeDate: '2026-05-26',
       config: { instrument: 'MES' },
@@ -7263,9 +7274,9 @@ try {
       },
       decisionTapePath: path.join(auditDir, 'desk-play-mismatch-decision-tape.json'),
       outputDir,
-    }),
-    /DeskPublishDecision artifact agreement failed:.*T1/i,
-  );
+  });
+  const canonicalOverrideText = flattenDiscordPayloadText(canonicalOverrideResult.payload);
+  assert.ok(canonicalOverrideText.includes('T1: 5332.00'));
   const staleMigratedShortDeskPlayState: typeof deskPlayState = {
     ...deskPlayState,
     htfContextStatus: 'sufficient',
