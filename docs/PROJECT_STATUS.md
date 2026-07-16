@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add read-only Unified Desk Candidate Book diagnostic runner.
+Files changed: src/lib/unifiedDeskCandidateBook.ts, tools/automation/unified-desk-candidate-book-diagnostic.ts, tools/automation/unified-desk-candidate-book-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The audit-only candidate book needed a replay-safe comparator before live wiring. The new diagnostic accepts scanner/replay snapshots, maps the existing selected candidate and existing canExecute state into the unified book, compares current selection versus the unified primary desk idea, and reports whether the unified book agrees, promotes a different human-review idea, preserves no-chase, or has no candidate. It is local/read-only and writes only optional local diagnostic JSON/Markdown output when run from the CLI.
+Tests run: `npx tsx src/lib/unifiedDeskCandidateBook.test.ts`; `npx tsx tools/automation/unified-desk-candidate-book-diagnostic.test.ts`; `npx tsc --noEmit --pretty false`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run test`; `npm run lint`; `npm run build`.
+Result: Passed. Full test suite exited 0. Existing research/Discord dry-run test logging and duplicate Invalid label warnings remain non-failing test output.
+Trading logic changed: No. This is a read-only diagnostic runner and key export. It does not change setup detection, live scanner ranking, canExecute creation, Discord posting, bridge reads, Supabase schema/writes, entry/stop/T1/T2 math, risk gates, or automated execution behavior.
+Bridge impact: None. The runner does not read live bridge data.
+Journal/RAG impact: None. The runner does not write RAG/journal records.
+Supabase impact: No schema migration and no Supabase reads/writes.
+Known risks: The runner has synthetic replay-style test coverage and a generic JSON input contract; it has not yet been fed the full June 1-July 2 replay artifact set. Its output is diagnostic only and should not be wired into scanner behavior until real replay comparisons are reviewed.
+Next recommended action: Feed the June 1-July 2 morning/lunch/evening scanner artifacts into the diagnostic runner, summarize same-primary versus unified-different-primary cases, and only then decide whether a scanner-visible human-review wiring phase is justified.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add audit-only Unified Desk Candidate Book contract.
 Files changed: src/lib/unifiedDeskCandidateBook.ts, src/lib/unifiedDeskCandidateBook.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Planning review identified that `canExecute` should remain the final internal gate, while all scanner ideas need one ranked audit book before any live visibility or publish behavior changes. The new builder ranks existing candidates into executable, human_review, watch, no_chase, blocked, or no_trade states while preserving model families, blockers, HTF support/conflict, 5M proof status, risk/target context, and explicit no-side-effect boundaries.

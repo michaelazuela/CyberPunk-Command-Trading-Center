@@ -1,0 +1,138 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { ExecutionStatus, SetupCandidateStatus, SetupType, type SetupCandidate } from '../../src/types';
+import {
+  buildUnifiedDeskCandidateDiagnosticReport,
+  loadUnifiedDeskCandidateDiagnosticSnapshots,
+  writeUnifiedDeskCandidateDiagnosticReport,
+  type UnifiedDeskCandidateDiagnosticSnapshot,
+} from './unified-desk-candidate-book-diagnostic';
+
+function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
+  return {
+    setupType: SetupType.IntradayMssMicroContinuation,
+    scenarioLabel: 'fixture',
+    direction: 'LONG',
+    detectedStatus: SetupCandidateStatus.Conditional,
+    confidence: 'Medium',
+    priority: 80,
+    entry: 100,
+    stop: 96,
+    target1: 106,
+    target2: 108,
+    riskPoints: 4,
+    evidence: ['Completed 5M proof with 15M context support.'],
+    missingEvidence: [],
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: null,
+    requiredTrigger: 'Wait for completed 5M retest proof.',
+    nextAction: 'Human review only.',
+    reducedRiskPlan: null,
+    ...overrides,
+  };
+}
+
+const executable = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'strict',
+  confidence: 'High',
+  priority: 99,
+  modelConfidenceScore: 92,
+  executionStatus: ExecutionStatus.Executable,
+  nextAction: 'Existing deterministic gates passed.',
+});
+
+const noChase = candidate({
+  setupType: SetupType.OpeningDriveFvgContinuation,
+  scenarioLabel: 'late',
+  confidence: 'High',
+  priority: 100,
+  modelConfidenceScore: 100,
+  decisionQualityScore: 100,
+  requiredTrigger: 'Preferred entry was missed. Do not chase.',
+  nextAction: 'No chase. Wait for fresh completed 5M re-entry proof.',
+});
+
+const humanReview = candidate({
+  setupType: SetupType.HtfDisplacementFvgContinuation,
+  scenarioLabel: 'fresh-retest',
+  priority: 85,
+  modelConfidenceScore: 82,
+  requiredTrigger: 'Completed 5M FVG retest/rejection proof is present for human review.',
+  nextAction: 'Human-review ticket only; canExecute remains internal.',
+});
+
+const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
+  {
+    snapshotId: 'same-executable',
+    tradeDate: '2026-07-01',
+    sessionType: 'morning',
+    completedBarTime: '2026-07-01T10:00:00',
+    candidates: [executable],
+    currentSelectedCandidateIndex: 0,
+    currentCanExecute: true,
+  },
+  {
+    snapshotId: 'unified-improves-no-chase',
+    tradeDate: '2026-07-01',
+    sessionType: 'morning',
+    completedBarTime: '2026-07-01T10:30:00',
+    candidates: [noChase, humanReview],
+    currentSelectedCandidateIndex: 0,
+    currentCanExecute: false,
+  },
+  {
+    snapshotId: 'missing-current-selection',
+    tradeDate: '2026-07-01',
+    sessionType: 'lunch',
+    completedBarTime: '2026-07-01T13:05:00',
+    candidates: [humanReview],
+    currentCanExecute: false,
+  },
+];
+
+const report = buildUnifiedDeskCandidateDiagnosticReport(snapshots, '2026-07-16T00:00:00.000Z');
+
+assert.equal(report.reportType, 'unified_desk_candidate_book_diagnostic');
+assert.equal(report.authority.readOnly, true);
+assert.equal(report.authority.postsDiscord, false);
+assert.equal(report.authority.writesSupabase, false);
+assert.equal(report.authority.readsLiveBridge, false);
+assert.equal(report.authority.changesScannerBehavior, false);
+assert.equal(report.authority.changesTradingLogic, false);
+assert.equal(report.authority.changesCanExecute, false);
+assert.equal(report.authority.changesEntryStopTargets, false);
+assert.equal(report.authority.changesRiskRules, false);
+assert.equal(report.summary.snapshotsAudited, 3);
+assert.equal(report.summary.samePrimaryCount, 1);
+assert.equal(report.summary.unifiedDifferentPrimaryCount, 1);
+assert.equal(report.summary.currentMissingCount, 1);
+assert.equal(report.summary.executableCurrentSelectionsPreserved, 1);
+assert.equal(report.summary.findingsCount, 0);
+
+const sameRow = report.rows.find((row) => row.snapshotId === 'same-executable');
+const improvedRow = report.rows.find((row) => row.snapshotId === 'unified-improves-no-chase');
+const missingRow = report.rows.find((row) => row.snapshotId === 'missing-current-selection');
+
+assert.equal(sameRow?.currentSelectedState, 'executable');
+assert.equal(sameRow?.unifiedPrimaryState, 'executable');
+assert.equal(sameRow?.comparison, 'same_primary');
+assert.equal(improvedRow?.comparison, 'unified_promotes_different');
+assert.equal(improvedRow?.unifiedPrimaryState, 'human_review');
+assert.match(improvedRow?.recommendation || '', /possible human-review improvement/);
+assert.equal(missingRow?.comparison, 'current_missing');
+assert.match(report.markdown, /does not post Discord/);
+assert.match(report.markdown, /Unified different primary: 1/);
+
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'unified-desk-candidate-diagnostic-'));
+const inputPath = path.join(root, 'snapshots.json');
+fs.writeFileSync(inputPath, `${JSON.stringify({ snapshots }, null, 2)}\n`, 'utf8');
+assert.equal(loadUnifiedDeskCandidateDiagnosticSnapshots(inputPath).length, 3);
+
+const paths = writeUnifiedDeskCandidateDiagnosticReport(report, root);
+assert.equal(fs.existsSync(paths.jsonPath), true);
+assert.equal(fs.existsSync(paths.markdownPath), true);
+
+console.log('unified desk candidate-book diagnostic verified.');

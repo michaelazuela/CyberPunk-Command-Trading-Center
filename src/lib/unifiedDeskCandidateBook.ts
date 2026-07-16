@@ -95,7 +95,7 @@ function bounded(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function candidateKey(candidate: SetupCandidate, index: number): string {
+export function buildUnifiedDeskCandidateKey(candidate: SetupCandidate, index: number): string {
   const line = finitePrice(candidate.activeRuleset?.htfLineInSand?.lineInSand) ?? finitePrice(candidate.entry);
   return [
     candidate.setupType,
@@ -288,7 +288,7 @@ export function buildUnifiedDeskCandidateBook(input: UnifiedDeskCandidateBookInp
   };
 
   const candidates = input.candidates.map((candidate, index) => {
-    const key = candidateKey(candidate, index);
+    const key = buildUnifiedDeskCandidateKey(candidate, index);
     const canExecute = Boolean(input.canExecuteByCandidateKey?.[key]);
     const afterLunchBlocker = afterLunchWindowBlocker(input, candidate);
     const blockers = aggregateBlockers(candidate, afterLunchBlocker);
