@@ -91,7 +91,7 @@ const FIELD_RULES: FieldRule[] = [
   },
   {
     field: 'legacy plan levels',
-    pattern: /\bplan\.(entry|stop|t1|t2)\b/,
+    pattern: /\b(?:event|audit|record|scannerEvent)\.plan\.(entry|stop|t1|t2)\b/,
     reason: 'Legacy normalized plan levels from audit records; public replay should prefer canonical scanner-owned fields.',
   },
 ];
@@ -157,10 +157,24 @@ function isTestOrAudit(relativePath: string): boolean {
 }
 
 function isPublicConsumer(relativePath: string): boolean {
-  return /^tools\/automation\/(discord-alert-format|discord-scheduler|chart-markup-renderer|nt-scanner)\.ts$/i.test(relativePath);
+  return /^tools\/automation\/(discord-alert-format|discord-scheduler|chart-markup-renderer)\.ts$/i.test(relativePath);
 }
 
-function classifyFinding(field: string, relativeFile: string): Omit<LegacyDeskFieldFinding, 'field' | 'file' | 'line' | 'snippet' | 'reason'> {
+function isScannerProducer(relativePath: string): boolean {
+  return /^tools\/automation\/nt-scanner\.ts$/i.test(relativePath);
+}
+
+function isTypeOrHelperSignature(relativeFile: string, snippet: string): boolean {
+  if (!/^tools\/automation\/discord-alert-format\.ts$/i.test(relativeFile)) return false;
+  return /^primaryDeskPlay\?:/.test(snippet) ||
+    /^best(Long|Short)Plan\?:/.test(snippet) ||
+    /^play\??: /.test(snippet) ||
+    /^row: /.test(snippet) ||
+    /^member: /.test(snippet) ||
+    /^function deskPlay/.test(snippet);
+}
+
+function classifyFinding(field: string, relativeFile: string, snippet = ''): Omit<LegacyDeskFieldFinding, 'field' | 'file' | 'line' | 'snippet' | 'reason'> {
   if (field === 'deskPublishDecision' || field === 'deskTicket') {
     return {
       classification: 'keep_canonical',
@@ -173,10 +187,22 @@ function classifyFinding(field: string, relativeFile: string): Omit<LegacyDeskFi
       cleanupAction: 'Archive or regenerate generated artifacts; do not use them as current execution truth.',
     };
   }
+  if (isTypeOrHelperSignature(relativeFile, snippet)) {
+    return {
+      classification: 'keep_current_support',
+      cleanupAction: 'Keep as formatter support typing/helper signature; runtime authority must still come from DeskTicket/DeskPublishDecision.',
+    };
+  }
   if (isPublicConsumer(relativeFile) && (field === 'primaryDeskPlay' || field === 'bestLongPlan/bestShortPlan' || field === 'legacy plan levels')) {
     return {
       classification: 'blocked_still_used',
       cleanupAction: 'Do not delete yet. First route this consumer through DeskTicket/DeskPublishDecision and prove formatter/chart agreement.',
+    };
+  }
+  if (isScannerProducer(relativeFile) && (field === 'primaryDeskPlay' || field === 'bestLongPlan/bestShortPlan')) {
+    return {
+      classification: 'keep_current_support',
+      cleanupAction: 'Keep as scanner-owned producer/support state; DeskPublishDecision agreement tests must prevent it from outranking the canonical ticket.',
     };
   }
   if (isTestOrAudit(relativeFile) || field === 'setupCandidateStatus' || field === 'legacy plan levels') {
@@ -254,7 +280,7 @@ function scanFile(rootDir: string, filePath: string): LegacyDeskFieldFinding[] {
         line: index + 1,
         snippet: line.trim().slice(0, 220),
         reason: rule.reason,
-        ...classifyFinding(rule.field, relativeFile),
+        ...classifyFinding(rule.field, relativeFile, line.trim()),
       });
     }
   }
