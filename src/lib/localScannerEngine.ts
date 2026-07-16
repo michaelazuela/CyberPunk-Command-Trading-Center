@@ -2942,15 +2942,31 @@ function finiteDeskTicketPrice(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+function directionallyValidPlanLevels(args: {
+  direction: unknown;
+  entry: unknown;
+  stop: unknown;
+  target1: unknown;
+  target2: unknown;
+}): boolean {
+  const entry = finiteDeskTicketPrice(args.entry);
+  const stop = finiteDeskTicketPrice(args.stop);
+  const target1 = finiteDeskTicketPrice(args.target1);
+  const target2 = finiteDeskTicketPrice(args.target2);
+  if (entry === null || stop === null || target1 === null || target2 === null) return false;
+  if (args.direction === 'LONG') return stop < entry && target1 > entry && target2 > target1;
+  if (args.direction === 'SHORT') return stop > entry && target1 < entry && target2 < target1;
+  return false;
+}
+
 function lifecycleItemHasCompletePublishLevels(item: ScannerCandidateLifecycleTraceItem | null | undefined): item is ScannerCandidateLifecycleTraceItem {
-  return Boolean(
-    item &&
-    (item.direction === 'LONG' || item.direction === 'SHORT') &&
-    finiteDeskTicketPrice(item.entry) !== null &&
-    finiteDeskTicketPrice(item.stop) !== null &&
-    finiteDeskTicketPrice(item.target1) !== null &&
-    finiteDeskTicketPrice(item.target2) !== null
-  );
+  return Boolean(item && directionallyValidPlanLevels({
+    direction: item.direction,
+    entry: item.entry,
+    stop: item.stop,
+    target1: item.target1,
+    target2: item.target2,
+  }));
 }
 
 function lifecycleItemPublishableVisibility(item: ScannerCandidateLifecycleTraceItem | null | undefined): boolean {
@@ -2966,14 +2982,13 @@ function lifecycleItemPublishableVisibility(item: ScannerCandidateLifecycleTrace
 }
 
 function deskTicketHasCompletePublishLevels(ticket: DeskTicket | null | undefined): boolean {
-  return Boolean(
-    ticket &&
-    (ticket.primaryDirection === 'LONG' || ticket.primaryDirection === 'SHORT') &&
-    finiteDeskTicketPrice(ticket.entry) !== null &&
-    finiteDeskTicketPrice(ticket.stop) !== null &&
-    finiteDeskTicketPrice(ticket.t1) !== null &&
-    finiteDeskTicketPrice(ticket.t2) !== null
-  );
+  return Boolean(ticket && directionallyValidPlanLevels({
+    direction: ticket.primaryDirection,
+    entry: ticket.entry,
+    stop: ticket.stop,
+    target1: ticket.t1,
+    target2: ticket.t2,
+  }));
 }
 
 function deskTicketStateFrom(args: {
@@ -3063,6 +3078,9 @@ function buildDeskTicket(args: {
     args.primaryDeskPlay.freshReentryWatch.direction === primaryDirection
     ? args.primaryDeskPlay.freshReentryWatch
     : null;
+  const canonicalSelectedCandidate = selectedForPrimaryDirection && lifecycleItemHasCompletePublishLevels(selectedForPrimaryDirection)
+    ? selectedForPrimaryDirection
+    : null;
   const levelSource = primaryLifecycleCandidate ?? selectedForPrimaryDirection;
   const candidateSource = candidateForPrimaryDirection;
 
@@ -3072,18 +3090,24 @@ function buildDeskTicket(args: {
     finiteDeskTicketPrice(candidateSource?.activeRuleset?.htfLineInSand?.lineInSand) ??
     finiteDeskTicketPrice(primaryDirection === 'LONG' ? play.longAbove : primaryDirection === 'SHORT' ? play.shortBelow : play.lineInSand);
   const entry = finiteDeskTicketPrice(freshReentryCandidate?.entry) ??
+    finiteDeskTicketPrice(canonicalSelectedCandidate?.entry) ??
     lineInSand ??
     finiteDeskTicketPrice(levelSource?.entry) ??
     finiteDeskTicketPrice(candidateSource?.entry);
   const stop = freshReentryWatch && !freshReentryCandidate
     ? null
     : finiteDeskTicketPrice(freshReentryCandidate?.stop) ??
+      finiteDeskTicketPrice(canonicalSelectedCandidate?.stop) ??
       finiteDeskTicketPrice(levelSource?.stop) ??
       finiteDeskTicketPrice(candidateSource?.stop);
   const targetDirection = primaryDirection === 'LONG' || primaryDirection === 'SHORT' ? primaryDirection : null;
   const computedTargets = targetsFromEntryStop(targetDirection, entry, stop);
-  const t1 = finiteDeskTicketPrice(freshReentryCandidate?.target1) ?? finiteDeskTicketPrice(computedTargets.target1);
-  const t2 = finiteDeskTicketPrice(freshReentryCandidate?.target2) ?? finiteDeskTicketPrice(computedTargets.target2);
+  const t1 = finiteDeskTicketPrice(freshReentryCandidate?.target1) ??
+    finiteDeskTicketPrice(canonicalSelectedCandidate?.target1) ??
+    finiteDeskTicketPrice(computedTargets.target1);
+  const t2 = finiteDeskTicketPrice(freshReentryCandidate?.target2) ??
+    finiteDeskTicketPrice(canonicalSelectedCandidate?.target2) ??
+    finiteDeskTicketPrice(computedTargets.target2);
   const invalidationText = freshReentryCandidate?.invalidation ||
     (freshReentryWatch ? 'Invalidation requires fresh protected 5M structure proof.' : null) ||
     levelSource?.invalidation ||
@@ -3115,7 +3139,7 @@ function buildDeskTicket(args: {
     htfStatus: args.htfContextStatus,
     htfStory,
     oppositeScenario: deskTicketOppositeScenario({ primaryDirection, primaryDeskPlay: play }),
-    sourceCandidateKey: freshReentryCandidate?.candidateKey || levelSource?.candidateKey || null,
+    sourceCandidateKey: freshReentryCandidate?.candidateKey || canonicalSelectedCandidate?.candidateKey || levelSource?.candidateKey || null,
     humanReviewOnly: true,
     noAutomatedOrders: true,
     displayBoundary: 'trader_facing_ticket_only_can_execute_internal',

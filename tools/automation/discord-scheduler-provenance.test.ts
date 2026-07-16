@@ -167,6 +167,23 @@ const lines = provenanceLines(allowed).join('\n');
 assert.ok(lines.includes('Source: post-facto scheduler replay summary.'));
 assert.ok(lines.includes('Live source: MORNING-20260602-140348'));
 
+const blockedPostFactoTradePlan = await evaluateSchedulerReplayProvenance({
+  auditDir,
+  tradeDate: '2026-06-03',
+  instrument: 'MES',
+  session: 'morning',
+  normalizedPlan: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    noTradeReason: null,
+  },
+  candidateCount: 1,
+  allowPostFactoSummary: true,
+});
+assert.equal(blockedPostFactoTradePlan.status, 'blocked_post_facto_trade_plan_not_canonical');
+assert.ok(blockedPostFactoTradePlan.note.includes('Use --repost-scanner-audit'));
+assert.ok(blockedPostFactoTradePlan.note.includes('scanner-owned DeskPublishDecision'));
+
 const clear = await evaluateSchedulerReplayProvenance({
   auditDir,
   tradeDate: '2026-06-03',

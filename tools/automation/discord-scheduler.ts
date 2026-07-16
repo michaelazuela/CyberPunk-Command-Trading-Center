@@ -1543,6 +1543,7 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
     instrument: config.instrument,
     session: job,
     normalizedPlan: normalized,
+    candidateCount: candidates.length,
     allowPostFactoSummary,
   });
   const traderConfirmedRagRecords = await loadTraderConfirmedRagRecordsForSession({
@@ -1561,8 +1562,9 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
       ].join(' '),
     );
   }
-  if (provenance.status === 'blocked_contradicts_live_executable') {
-    throw new Error(`${provenance.note} Matching live audit(s): ${provenance.liveExecutableAudits.map((audit) => audit.planVersionId || audit.auditFile).join(', ')}`);
+  if (provenance.status === 'blocked_contradicts_live_executable' || provenance.status === 'blocked_post_facto_trade_plan_not_canonical') {
+    const matchingAudits = provenance.liveExecutableAudits.map((audit) => audit.planVersionId || audit.auditFile).join(', ');
+    throw new Error(matchingAudits ? `${provenance.note} Matching live audit(s): ${matchingAudits}` : provenance.note);
   }
   if (dryRun) {
     console.log('Discord alert RAG pending save skipped: --dry-run is read-only and does not write Supabase/RAG.');

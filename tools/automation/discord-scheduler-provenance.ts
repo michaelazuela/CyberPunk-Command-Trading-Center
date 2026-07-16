@@ -4,7 +4,11 @@ import { TradeDecisionStatus, type SetupCandidate } from '../../src/types';
 import { DISCORD_TRADE_PLAN_VISUAL_CONTRACT } from './discord-visual-contract';
 
 export type SchedulerReplayProvenanceMode = 'live_scanner_audit' | 'post_facto_scheduler_replay';
-export type SchedulerReplayProvenanceStatus = 'clear' | 'blocked_contradicts_live_executable' | 'allowed_post_facto';
+export type SchedulerReplayProvenanceStatus =
+  | 'clear'
+  | 'blocked_contradicts_live_executable'
+  | 'blocked_post_facto_trade_plan_not_canonical'
+  | 'allowed_post_facto';
 
 export interface ExecutableScannerAuditSummary {
   auditFile: string;
@@ -152,6 +156,7 @@ export async function evaluateSchedulerReplayProvenance(args: {
   instrument: string;
   session: string;
   normalizedPlan: { canExecute?: boolean; decisionStatus?: string; noTradeReason?: string | null };
+  candidateCount?: number;
   allowPostFactoSummary: boolean;
 }): Promise<SchedulerReplayProvenanceResult> {
   const liveExecutableAudits = await loadExecutableScannerAuditSummaries({
@@ -163,6 +168,17 @@ export async function evaluateSchedulerReplayProvenance(args: {
   const schedulerSaysNoTrade = args.normalizedPlan.canExecute !== true
     && (args.normalizedPlan.decisionStatus === TradeDecisionStatus.NoTrade || Boolean(args.normalizedPlan.noTradeReason));
   const contradictsLiveExecutable = schedulerSaysNoTrade && liveExecutableAudits.length > 0;
+  const sessionCanCarryTradePlan = args.session === 'morning' || args.session === 'lunch';
+  const hasPostFactoTradeCandidate = sessionCanCarryTradePlan && (args.candidateCount || 0) > 0;
+
+  if (hasPostFactoTradeCandidate) {
+    return {
+      mode: 'post_facto_scheduler_replay',
+      status: 'blocked_post_facto_trade_plan_not_canonical',
+      liveExecutableAudits,
+      note: 'Manual scheduler replay blocked: post-facto morning/lunch trade-plan cards may not rebuild side, line, entry, stop, or targets. Use --repost-scanner-audit with an exact scanner-owned DeskPublishDecision/audit record, or run the live scanner path.',
+    };
+  }
 
   if (contradictsLiveExecutable && !args.allowPostFactoSummary) {
     return {

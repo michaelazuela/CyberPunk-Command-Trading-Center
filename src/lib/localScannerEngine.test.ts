@@ -432,6 +432,13 @@ const july15DeskState = buildDeskState({
   currentPrice: 7608,
   canExecute: false,
 });
+assert.equal(july15DeskState.deskTicket.primaryDirection, 'SHORT');
+assert.equal(july15DeskState.deskTicket.lineInSand, 7618.75);
+assert.equal(july15DeskState.deskTicket.entry, 7608);
+assert.equal(july15DeskState.deskTicket.stop, 7626.5);
+assert.equal(july15DeskState.deskTicket.t1, 7607.25);
+assert.equal(july15DeskState.deskTicket.t2, 7603.25);
+assert.equal(july15DeskState.deskTicket.sourceCandidateKey, july15DeskState.selectedCandidate?.candidateKey);
 const july15PublishDecision = buildDeskPublishDecision({
   deskState: july15DeskState,
   currentPrice: 7608,
