@@ -111,8 +111,10 @@ const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
 const bars = [
   { time: '2026-06-10T10:05:00', open: 100.25, high: 101.5, low: 100, close: 101.25 },
   { time: '2026-06-10T10:10:00', open: 101.25, high: 101.5, low: 100.75, close: 101.25 },
+  { time: '2026-06-10T10:15:00', open: 101.25, high: 108.25, low: 99.75, close: 108 },
   { time: '2026-06-11T10:05:00', open: 100, high: 100.5, low: 99.25, close: 99.5 },
   { time: '2026-06-12T12:45:00', open: 99.25, high: 99.5, low: 98.25, close: 98.75 },
+  { time: '2026-06-12T12:50:00', open: 98.75, high: 100.25, low: 91.75, close: 92 },
   { time: '2026-06-13T10:05:00', open: 105.5, high: 106.5, low: 105.25, close: 106.25 },
 ];
 
@@ -147,6 +149,12 @@ assert.equal(report.summary.afterLunchProofFound, 1);
 assert.equal(report.summary.reviewableFullPlan, 2);
 assert.equal(report.summary.proofOnlyMissingPlanFields, 1);
 assert.equal(report.summary.notReviewableNoOhlcProof, 1);
+assert.equal(report.summary.replayedFullPlanCases, 2);
+assert.equal(report.summary.replayWins, 2);
+assert.equal(report.summary.replayLosses, 0);
+assert.equal(report.summary.replayNoFill, 0);
+assert.equal(report.summary.replayAmbiguous, 0);
+assert.equal(report.summary.replayGrossOneMes, 80);
 assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.TurtleSoup), false);
 
 const intradayProof = report.cases.find((item) => item.caseId === '2026-06-10|morning|IntradayMssMicroContinuation|LONG');
@@ -160,14 +168,20 @@ assert.equal(intradayProof?.proofStatus, 'ohlc_proof_found');
 assert.equal(intradayProof?.proofType, 'completed_5m_close_through');
 assert.equal(intradayProof?.proofBarTime, '2026-06-10T10:05:00');
 assert.equal(intradayProof?.reviewClassification, 'reviewable_full_plan');
+assert.equal(intradayProof?.replayOutcome, 'T2_HIT');
+assert.equal(intradayProof?.replayOneMesGross, 40);
 assert.equal(intradayBlocked?.proofStatus, 'no_local_ohlc_proof');
 assert.equal(intradayBlocked?.reviewClassification, 'not_reviewable_no_ohlc_proof');
+assert.equal(intradayBlocked?.replayOutcome, 'NOT_REPLAYED');
 assert.equal(afterLunchProof?.proofStatus, 'ohlc_proof_found');
 assert.equal(afterLunchProof?.proofBarTime, '2026-06-12T12:45:00');
 assert.equal(afterLunchProof?.reviewClassification, 'reviewable_full_plan');
+assert.equal(afterLunchProof?.replayOutcome, 'T2_HIT');
+assert.equal(afterLunchProof?.replayOneMesGross, 40);
 assert.equal(proofOnly?.proofStatus, 'ohlc_proof_found');
 assert.equal(proofOnly?.reviewClassification, 'proof_only_missing_plan_fields');
 assert.deepEqual(proofOnly?.reviewBlockers, ['missing stop']);
+assert.equal(proofOnly?.replayOutcome, 'NOT_REPLAYED');
 assert.match(report.markdown, /No-Chase OHLC Proof Extractor/);
 assert.match(report.markdown, /reviewable_full_plan/);
 assert.match(report.recommendations.join(' '), /research-only/);

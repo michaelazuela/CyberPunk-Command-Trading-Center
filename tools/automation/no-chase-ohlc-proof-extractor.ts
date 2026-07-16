@@ -8,6 +8,7 @@ import { loadUnifiedDeskCandidateDiagnosticSnapshotsFromDir, type UnifiedDeskCan
 type ReplaySession = 'morning' | 'lunch' | 'evening' | 'replay_morning' | 'replay_lunch' | 'replay_evening';
 type ProofSetup = SetupType.IntradayMssMicroContinuation | SetupType.AfterLunchDriveFvgContinuation;
 type Timeframe = '5m' | '15m' | '60m' | '120m' | '240m';
+type ReplayOutcome = 'T2_HIT' | 'T1_THEN_STOP' | 'T1_HIT_OPEN_RUNNER' | 'STOP_HIT' | 'NO_FILL' | 'FILLED_OPEN' | 'AMBIGUOUS' | 'NOT_REPLAYED';
 
 interface OhlcBar {
   time: string;
@@ -50,6 +51,11 @@ export interface NoChaseOhlcProofCase {
   proofBar: OhlcBar | null;
   reviewClassification: 'reviewable_full_plan' | 'proof_only_missing_plan_fields' | 'not_reviewable_no_ohlc_proof';
   reviewBlockers: string[];
+  replayOutcome: ReplayOutcome;
+  replayFillTime: string | null;
+  replayOutcomeTime: string | null;
+  replayPoints: number;
+  replayOneMesGross: number;
   blocker: string | null;
   recommendation: string;
 }
@@ -95,6 +101,12 @@ export interface NoChaseOhlcProofExtractorReport {
     reviewableFullPlan: number;
     proofOnlyMissingPlanFields: number;
     notReviewableNoOhlcProof: number;
+    replayedFullPlanCases: number;
+    replayWins: number;
+    replayLosses: number;
+    replayNoFill: number;
+    replayAmbiguous: number;
+    replayGrossOneMes: number;
     fiveMinuteBarsLoaded: number;
     fiveMinuteSource: 'local_market_bars_json' | 'scanner_decision_tape_completed_5m' | 'missing';
   };
@@ -112,6 +124,8 @@ const TARGET_SETUPS: ProofSetup[] = [
   SetupType.AfterLunchDriveFvgContinuation,
 ];
 const TIMEFRAMES: Timeframe[] = ['5m', '15m', '60m', '120m', '240m'];
+const MES_DOLLARS_PER_POINT = 5;
+const TRADE_TICK = 0.25;
 const SESSIONS: ReplaySession[] = ['morning', 'lunch', 'evening'];
 const SESSION_WINDOWS: Record<ReplaySession, { start: number; end: number }> = {
   morning: { start: 9 * 60 + 15, end: 12 * 60 },
@@ -136,6 +150,10 @@ function asRecord(value: unknown): Record<string, unknown> {
 function finiteNumber(value: unknown): number | null {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function normalizeTime(value: unknown): string | null {
@@ -328,6 +346,69 @@ function findProof(args: {
   return { proofType: null, proofBarTime: null, proofBar: null };
 }
 
+function replayOutcomeForCase(args: {
+  item: Pick<NoChaseOhlcProofCase, 'reviewClassification' | 'direction' | 'entry' | 'stop' | 'target1' | 'target2' | 'proofBarTime' | 'proofBar'>;
+  bars: OhlcBar[];
+}): Pick<NoChaseOhlcProofCase, 'replayOutcome' | 'replayFillTime' | 'replayOutcomeTime' | 'replayPoints' | 'replayOneMesGross'> {
+  const item = args.item;
+  if (
+    item.reviewClassification !== 'reviewable_full_plan' ||
+    item.entry === null ||
+    item.stop === null ||
+    item.target1 === null ||
+    item.target2 === null ||
+    !item.proofBarTime
+  ) {
+    return { replayOutcome: 'NOT_REPLAYED', replayFillTime: null, replayOutcomeTime: null, replayPoints: 0, replayOneMesGross: 0 };
+  }
+  const startIndex = args.bars.findIndex((bar) => bar.time === item.proofBarTime);
+  const futureBars = args.bars.slice(Math.max(0, startIndex + 1));
+  const proofClose = item.proofBar?.close ?? null;
+  let filled = proofClose !== null && Math.abs(proofClose - item.entry) <= TRADE_TICK;
+  let fillTime = filled ? item.proofBarTime : null;
+  let t1Hit = false;
+  let t1Time: string | null = null;
+  for (const bar of futureBars) {
+    if (!filled) {
+      if (bar.low <= item.entry && bar.high >= item.entry) {
+        filled = true;
+        fillTime = bar.time;
+      } else {
+        continue;
+      }
+    }
+    const stopHit = item.direction === 'LONG' ? bar.low <= item.stop : bar.high >= item.stop;
+    const t1Touched = item.direction === 'LONG' ? bar.high >= item.target1 : bar.low <= item.target1;
+    const t2Touched = item.direction === 'LONG' ? bar.high >= item.target2 : bar.low <= item.target2;
+    if (stopHit && (t1Touched || t2Touched)) {
+      return { replayOutcome: 'AMBIGUOUS', replayFillTime: fillTime, replayOutcomeTime: bar.time, replayPoints: 0, replayOneMesGross: 0 };
+    }
+    if (t2Touched) {
+      const points = Math.abs(item.target2 - item.entry);
+      return { replayOutcome: 'T2_HIT', replayFillTime: fillTime, replayOutcomeTime: bar.time, replayPoints: points, replayOneMesGross: roundCurrency(points * MES_DOLLARS_PER_POINT) };
+    }
+    if (t1Touched) {
+      t1Hit = true;
+      t1Time = t1Time || bar.time;
+    }
+    if (stopHit) {
+      if (t1Hit) {
+        const points = Math.abs(item.target1 - item.entry);
+        return { replayOutcome: 'T1_THEN_STOP', replayFillTime: fillTime, replayOutcomeTime: bar.time, replayPoints: points, replayOneMesGross: roundCurrency(points * MES_DOLLARS_PER_POINT) };
+      }
+      const points = -Math.abs(item.entry - item.stop);
+      return { replayOutcome: 'STOP_HIT', replayFillTime: fillTime, replayOutcomeTime: bar.time, replayPoints: points, replayOneMesGross: roundCurrency(points * MES_DOLLARS_PER_POINT) };
+    }
+  }
+  if (t1Hit) {
+    const points = Math.abs(item.target1 - item.entry);
+    return { replayOutcome: 'T1_HIT_OPEN_RUNNER', replayFillTime: fillTime, replayOutcomeTime: t1Time, replayPoints: points, replayOneMesGross: roundCurrency(points * MES_DOLLARS_PER_POINT) };
+  }
+  return filled
+    ? { replayOutcome: 'FILLED_OPEN', replayFillTime: fillTime, replayOutcomeTime: null, replayPoints: 0, replayOneMesGross: 0 }
+    : { replayOutcome: 'NO_FILL', replayFillTime: null, replayOutcomeTime: null, replayPoints: 0, replayOneMesGross: 0 };
+}
+
 function planFieldBlockers(item: Pick<NoChaseOhlcProofCase, 'direction' | 'entry' | 'stop' | 'target1' | 'target2'>): string[] {
   const blockers: string[] = [];
   if (item.entry === null) blockers.push('missing entry');
@@ -407,6 +488,19 @@ function buildCase(args: {
     target2: first.item.target2,
   };
   const review = reviewClassificationFor(reviewInput);
+  const replay = replayOutcomeForCase({
+    item: {
+      reviewClassification: review.reviewClassification,
+      direction: first.direction,
+      entry: first.item.entry,
+      stop: first.item.stop,
+      target1: first.item.target1,
+      target2: first.item.target2,
+      proofBarTime: proof.proofBarTime,
+      proofBar: proof.proofBar,
+    },
+    bars: futureBars,
+  });
   const base = {
     caseId: observationKey(first),
     tradeDate: first.tradeDate,
@@ -427,6 +521,7 @@ function buildCase(args: {
     proofBarTime: proof.proofBarTime,
     proofBar: proof.proofBar,
     ...review,
+    ...replay,
     blocker: proofStatus === 'ohlc_proof_found' ? null : recommendationFor({ proofStatus, proofType: null, reviewClassification: review.reviewClassification }),
   };
   return { ...base, recommendation: recommendationFor(base) };
@@ -447,6 +542,9 @@ function buildRecommendations(report: Omit<NoChaseOhlcProofExtractorReport, 'rec
   }
   if (report.summary.fiveMinuteSource === 'scanner_decision_tape_completed_5m') {
     lines.push('Decision-tape OHLC is 5M-only; a stronger follow-up can use canonical market_bars JSON with HTF frames, still read-only.');
+  }
+  if (report.summary.replayedFullPlanCases > 0) {
+    lines.push('Use replay P/L as research triage only; it excludes commissions/slippage and does not validate live execution approval.');
   }
   return lines;
 }
@@ -469,12 +567,14 @@ function buildMarkdown(report: Omit<NoChaseOhlcProofExtractorReport, 'markdown'>
     `- Reviewable full-plan cases: ${report.summary.reviewableFullPlan}.`,
     `- Proof-only missing-plan cases: ${report.summary.proofOnlyMissingPlanFields}.`,
     `- Not reviewable / no OHLC proof: ${report.summary.notReviewableNoOhlcProof}.`,
+    `- Replayed full-plan cases: ${report.summary.replayedFullPlanCases}; wins/losses/no-fill/ambiguous: ${report.summary.replayWins}/${report.summary.replayLosses}/${report.summary.replayNoFill}/${report.summary.replayAmbiguous}.`,
+    `- Replayed one-MES gross P/L: $${report.summary.replayGrossOneMes.toFixed(2)}.`,
     `- 5M bars loaded: ${report.summary.fiveMinuteBarsLoaded} from ${report.summary.fiveMinuteSource}.`,
     '',
     '## Cases',
-    '| Date | Session | Setup | Side | Ref | Future Bars | Status | Review Class | Review Blockers | Proof Time | Recommendation |',
-    '|---|---|---|---|---:|---:|---|---|---|---|---|',
-    ...report.cases.map((item) => `| ${item.tradeDate} | ${item.sessionType} | ${item.setupType} | ${item.direction} | ${item.referenceLevel ?? '-'} | ${item.futureBarsChecked} | ${item.proofStatus} | ${item.reviewClassification} | ${item.reviewBlockers.join('; ') || '-'} | ${item.proofBarTime || '-'} | ${item.recommendation} |`),
+    '| Date | Session | Setup | Side | Ref | Status | Review Class | Proof Time | Replay Outcome | Replay P/L | Recommendation |',
+    '|---|---|---|---|---:|---|---|---|---|---:|---|',
+    ...report.cases.map((item) => `| ${item.tradeDate} | ${item.sessionType} | ${item.setupType} | ${item.direction} | ${item.referenceLevel ?? '-'} | ${item.proofStatus} | ${item.reviewClassification} | ${item.proofBarTime || '-'} | ${item.replayOutcome}${item.replayOutcomeTime ? ` @ ${item.replayOutcomeTime}` : ''} | $${item.replayOneMesGross.toFixed(2)} | ${item.recommendation} |`),
     '',
     '## Recommendations',
     ...report.recommendations.map((item) => `- ${item}`),
@@ -543,6 +643,14 @@ export function buildNoChaseOhlcProofExtractorReport(args: {
       reviewableFullPlan: cases.filter((item) => item.reviewClassification === 'reviewable_full_plan').length,
       proofOnlyMissingPlanFields: cases.filter((item) => item.reviewClassification === 'proof_only_missing_plan_fields').length,
       notReviewableNoOhlcProof: cases.filter((item) => item.reviewClassification === 'not_reviewable_no_ohlc_proof').length,
+      replayedFullPlanCases: cases.filter((item) => item.reviewClassification === 'reviewable_full_plan').length,
+      replayWins: cases.filter((item) => item.reviewClassification === 'reviewable_full_plan' && /T1|T2/.test(item.replayOutcome)).length,
+      replayLosses: cases.filter((item) => item.reviewClassification === 'reviewable_full_plan' && item.replayOutcome === 'STOP_HIT').length,
+      replayNoFill: cases.filter((item) => item.reviewClassification === 'reviewable_full_plan' && item.replayOutcome === 'NO_FILL').length,
+      replayAmbiguous: cases.filter((item) => item.reviewClassification === 'reviewable_full_plan' && item.replayOutcome === 'AMBIGUOUS').length,
+      replayGrossOneMes: roundCurrency(cases
+        .filter((item) => item.reviewClassification === 'reviewable_full_plan')
+        .reduce((sum, item) => sum + item.replayOneMesGross, 0)),
       fiveMinuteBarsLoaded: args.bars.length,
       fiveMinuteSource: args.fiveMinuteSource || (args.bars.length ? 'local_market_bars_json' : 'missing'),
     },

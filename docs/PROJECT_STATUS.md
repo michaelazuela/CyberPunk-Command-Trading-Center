@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Replay reviewable no-chase full-plan cases from completed 5M OHLC.
+Files changed: tools/automation/no-chase-ohlc-proof-extractor.ts, tools/automation/no-chase-ohlc-proof-extractor.test.ts, docs/PROJECT_STATUS.md.
+Reason: The prior classifier found 10 no-chase cases with completed 5M proof and valid entry/stop/T1/T2 fields. This phase adds read-only outcome replay for those full-plan cases only, so the desk can decide whether scanner artifact rebuild work is justified before touching live behavior.
+Tests run: `npx tsx tools/automation/no-chase-ohlc-proof-extractor.test.ts`; `npx tsx tools/automation/no-chase-proof-audit.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/no-chase-ohlc-proof-extractor.ts --audit-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --out-dir tools/automation/diagnostic-reports --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `git diff --check`; `npm run test`; `npm run lint`; `npm run build`.
+Result: Focused tests and typecheck passed. The real replay again loaded 383 snapshots and 1,919 saved completed 5M bars, with 29 target no-chase cases, 24 local OHLC proof cases, 10 reviewable full-plan cases, 14 proof-only missing-plan cases, and 5 no-proof blocked cases. The 10 replayed full-plan cases produced 3 wins, 1 loss, 4 no-fills, 0 ambiguous outcomes, 2 filled-open/unresolved cases, and +$173.75 gross one-MES before commissions/slippage. By setup: AfterLunchDriveFvgContinuation was 3 cases for +$112.50 gross; IntradayMssMicroContinuation was 7 cases for +$61.25 gross. Report paths: `tools/automation/diagnostic-reports/no-chase-ohlc-proof-extractor-1784236957510.json` and `.md`.
+Trading logic changed: No. This is read-only outcome replay inside the diagnostic extractor. It does not run setupScanner, change setup detection, live scanner ranking, canExecute creation, Discord posting, bridge reads, Supabase schema/writes, entry/stop/T1/T2 math, risk gates, or automated execution behavior.
+Bridge impact: None. The runner reads saved local decision-tape 5M bars unless a local market-bars JSON is explicitly provided.
+Journal/RAG impact: None. The runner does not write RAG/journal records.
+Supabase impact: No schema migration and no Supabase reads/writes.
+Known risks: Replay P/L is research triage only. It uses completed 5M bars from saved decision-tape data, excludes commissions/slippage, does not reload 30-day HTF context, and treats unresolved filled cases as $0 rather than inventing an exit. No-fill cases remain blocked. Proof-only missing-plan cases remain blocked because they lack full deterministic plan fields.
+Next recommended action: Add a small read-only scanner artifact rebuild candidate pack for only IntradayMssMicroContinuation and AfterLunchDriveFvgContinuation full-plan no-chase cases, then compare rebuilt artifacts against these replay outcomes before any live scanner, Discord, or canExecute behavior change.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Classify OHLC proof-found no-chase cases by full-plan readiness.
 Files changed: tools/automation/no-chase-ohlc-proof-extractor.ts, tools/automation/no-chase-ohlc-proof-extractor.test.ts, docs/PROJECT_STATUS.md.
 Reason: The OHLC extractor found 24 local completed-5M proof cases, but some no-chase artifacts lacked entry/stop/T1/T2. This phase adds a conservative read-only classifier so proof does not get confused with a reviewable ticket.
