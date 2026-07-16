@@ -9,7 +9,9 @@ import {
 } from '../../src/lib/ninjaTraderBridge';
 import {
   fetchCachedMarketBars,
+  filterBarsToRequestedTimeframe,
   loadMarketDataConfig,
+  marketBarMinuteOfDay,
   normalizeCandleTimeEt,
   type MarketBarTimeframe,
   type MarketDataConfig,
@@ -312,6 +314,46 @@ function loadLocalBars(inputJson: string | null): Record<Timeframe, NinjaBridgeB
   return output;
 }
 
+function filterCanonicalTimeframeBars(
+  bars: NinjaBridgeBar[],
+  timeframe: Timeframe,
+  sourceLabel: string,
+  failures: string[],
+  enforceDominantCadence = true,
+): NinjaBridgeBar[] {
+  const merged = mergeMarketDataBars(bars, []);
+  const timeframeFiltered = filterBarsToRequestedTimeframe(merged, timeframe);
+  const filtered = enforceDominantCadence
+    ? selectDominantHtfCadence(timeframeFiltered, timeframe)
+    : timeframeFiltered;
+  const quarantined = merged.length - filtered.length;
+  if (quarantined > 0) {
+    failures.push(`${sourceLabel} ${timeframe}: quarantined ${quarantined} wrong-timeframe bar(s) before canonical research output.`);
+  }
+  return mergeMarketDataBars(filtered, []);
+}
+
+function selectDominantHtfCadence(bars: NinjaBridgeBar[], timeframe: Timeframe): NinjaBridgeBar[] {
+  if (timeframe !== '120m' && timeframe !== '240m') return bars;
+  const expectedMinutes = timeframe === '120m' ? 120 : 240;
+  const phaseCounts = new Map<number, number>();
+  for (const bar of bars) {
+    const minute = marketBarMinuteOfDay(bar.time);
+    if (minute === null) continue;
+    if (minute === 13 * 60 || minute === 17 * 60) continue;
+    const phase = minute % expectedMinutes;
+    phaseCounts.set(phase, (phaseCounts.get(phase) || 0) + 1);
+  }
+  const dominantPhase = [...phaseCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  if (dominantPhase === undefined) return bars;
+  return bars.filter((bar) => {
+    const minute = marketBarMinuteOfDay(bar.time);
+    if (minute === null) return false;
+    if (minute === 13 * 60 || minute === 17 * 60) return true;
+    return minute % expectedMinutes === dominantPhase;
+  });
+}
+
 async function fetchBridgeSegmented(args: {
   bridgeUrl: string;
   bridgeInstrument: string;
@@ -373,7 +415,7 @@ async function loadTimeframe(args: {
     for (const leg of args.contractLegs) {
       const from = `${leg.fromDate}T00:00:00${easternOffsetFor(leg.fromDate)}`;
       const to = `${leg.toDate}T23:59:59${easternOffsetFor(leg.toDate)}`;
-      cacheChunks.push(await args.deps.fetchCached({
+      const cached = await args.deps.fetchCached({
         instrument: leg.bridgeInstrument,
         timeframe: args.timeframe.key,
         from,
@@ -383,10 +425,16 @@ async function loadTimeframe(args: {
       }).catch((error) => {
         failures.push(`market_bars ${leg.bridgeInstrument} ${args.timeframe.key}: ${error instanceof Error ? error.message : String(error)}`);
         return [] as NinjaBridgeBar[];
-      }));
+      });
+      cacheChunks.push(filterCanonicalTimeframeBars(
+        cached,
+        args.timeframe.key,
+        `market_bars ${leg.bridgeInstrument}`,
+        failures,
+      ));
     }
   }
-  const cacheBars = mergeMarketDataBars(cacheChunks.flat(), []);
+  const cacheBars = filterCanonicalTimeframeBars(cacheChunks.flat(), args.timeframe.key, 'market_bars', failures, false);
 
   const bridgeChunks: NinjaBridgeBar[][] = [];
   let bridgeRequests = 0;
@@ -402,20 +450,27 @@ async function loadTimeframe(args: {
         chunkDays: args.options.chunkDays,
         fetchHistorical: args.deps.fetchHistorical,
       });
-      bridgeChunks.push(bridge.bars);
+      bridgeChunks.push(filterCanonicalTimeframeBars(
+        bridge.bars,
+        args.timeframe.key,
+        `bridge ${leg.bridgeInstrument}`,
+        failures,
+      ));
       bridgeRequests += bridge.requests;
       failures.push(...bridge.failures);
     }
   }
-  const bridgeBars = mergeMarketDataBars(bridgeChunks.flat(), []);
+  const bridgeBars = filterCanonicalTimeframeBars(bridgeChunks.flat(), args.timeframe.key, 'bridge', failures, false);
+  const localBars = filterCanonicalTimeframeBars(args.localBars, args.timeframe.key, 'local-json', failures);
 
-  const sourceBars = args.options.source === 'bridge'
-    ? mergeMarketDataBars(bridgeBars, args.localBars)
+  const mergedSourceBars = args.options.source === 'bridge'
+    ? mergeMarketDataBars(bridgeBars, localBars)
     : args.options.source === 'market-bars'
-      ? mergeMarketDataBars(cacheBars, args.localBars)
+      ? mergeMarketDataBars(cacheBars, localBars)
       : args.options.source === 'market-bars-then-bridge'
-        ? mergeMarketDataBars(bridgeBars, mergeMarketDataBars(cacheBars, args.localBars))
-        : mergeMarketDataBars(args.localBars, []);
+        ? mergeMarketDataBars(bridgeBars, mergeMarketDataBars(cacheBars, localBars))
+        : mergeMarketDataBars(localBars, []);
+  const sourceBars = filterCanonicalTimeframeBars(mergedSourceBars, args.timeframe.key, 'canonical', failures, false);
 
   const verification = verifyMarketDataWindow({
     bars: sourceBars,
@@ -424,8 +479,8 @@ async function loadTimeframe(args: {
     requestedTo: args.requestedTo,
     requiredLookbackDays: args.options.lookbackDays,
     minimumBars: args.timeframe.minimumBars,
-    source: marketDataSourceFromCounts(cacheBars.length + args.localBars.length, bridgeBars.length),
-    cacheBars: cacheBars.length + args.localBars.length,
+    source: marketDataSourceFromCounts(cacheBars.length + localBars.length, bridgeBars.length),
+    cacheBars: cacheBars.length + localBars.length,
     bridgeRepairBars: bridgeBars.length,
     bridgeInstrument: args.contractLegs.map((leg) => leg.bridgeInstrument).join(', '),
   });
@@ -435,7 +490,7 @@ async function loadTimeframe(args: {
     requestedFrom: args.requestedFrom,
     requestedTo: args.requestedTo,
     bars: mergeMarketDataBars(sourceBars, []),
-    localBars: args.localBars.length,
+    localBars: localBars.length,
     cacheBars: cacheBars.length,
     bridgeBars: bridgeBars.length,
     bridgeRequests,

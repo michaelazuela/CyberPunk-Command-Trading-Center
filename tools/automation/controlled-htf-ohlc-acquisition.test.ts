@@ -145,6 +145,48 @@ assert.equal(new Set(rolloverCalls.map((call) => call.instrument)).has('MES 06-2
 assert.equal(new Set(rolloverCalls.map((call) => call.instrument)).has('MES 09-26'), true);
 assert.equal(rolloverReport.coverage.every((row) => row.contractLegs.length === 2), true);
 
+const dirtyCacheReport = await buildControlledHtfOhlcAcquisitionReport({
+  startDate: '2026-06-01',
+  endDate: '2026-06-01',
+  instrument: 'MES',
+  bridgeInstrument: 'MES 09-26',
+  bridgeUrl: 'http://127.0.0.1:8765',
+  source: 'market-bars',
+  inputJson: null,
+  outDir,
+  chunkDays: 60,
+  lookbackDays: 1,
+  rolloverAware: false,
+  json: true,
+}, '2026-07-16T00:00:00.000Z', {
+  loadConfig: () => ({
+    userId: '00000000-0000-0000-0000-000000000001',
+    supabaseUrl: 'https://example.supabase.co',
+    serviceRoleKey: 'service-role-for-test',
+  }),
+  fetchCached: async ({ timeframe }) => timeframe === '120m'
+    ? [
+      bar('2026-05-31T00:00:00', 100),
+      bar('2026-05-31T01:00:00', 101),
+      ...Array.from({ length: 24 }, (_, index) => {
+        const time = new Date(Date.parse('2026-05-31T02:00:00Z') + index * 120 * 60_000).toISOString().slice(0, 19);
+        return bar(time, 102 + index);
+      }),
+    ]
+    : [],
+  fetchHistorical: async (request) => ({
+    ok: true,
+    instrument: request.instrument || 'MES',
+    timeframe: request.timeframe || '5m',
+    count: 0,
+    bars: [],
+  }),
+});
+const dirtyTwoHour = dirtyCacheReport.coverage.find((row) => row.timeframe === '120m');
+assert.equal(dirtyTwoHour?.sufficient, true);
+assert.equal(dirtyTwoHour?.barsLoaded, 25);
+assert.ok(dirtyTwoHour?.failures.some((failure) => failure.includes('quarantined 1 wrong-timeframe bar')));
+
 assert.throws(
   () => parseControlledHtfOhlcAcquisitionArgs(['--source', 'bad']),
   /--source must be local-json/,
