@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Simulate read-only no-chase human-review artifact rebuilds.
+Files changed: tools/automation/no-chase-artifact-rebuild-simulation.ts, tools/automation/no-chase-artifact-rebuild-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The rebuild pack isolated 3 positive no-chase rows. This phase proves those rows can be reconstructed into complete local human-review artifacts while preserving `canExecute=false`, no Discord posting, no scanner execution, and no live system side effects.
+Tests run: `npx tsx tools/automation/no-chase-artifact-rebuild-simulation.test.ts`; `npx tsx tools/automation/no-chase-artifact-rebuild-pack.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/no-chase-artifact-rebuild-simulation.ts --rebuild-pack tools/automation/diagnostic-reports/no-chase-artifact-rebuild-pack-1784240574825.json --out-dir tools/automation/diagnostic-reports --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `git diff --check`; `npm run test`; `npm run lint`; `npm run build`.
+Result: Focused tests and typecheck passed. The simulation consumed the 10-row rebuild pack and created exactly 3 `human_review_rebuilt` artifacts: 2026-06-17 lunch AfterLunchDriveFvgContinuation SHORT (+$112.50), 2026-06-25 morning IntradayMssMicroContinuation SHORT (+$107.50), and 2026-06-26 lunch IntradayMssMicroContinuation SHORT (+$50.00). All 3 artifacts have complete entry/stop/T1/T2 fields, preserved completed-5M proof metadata, `canExecute=false`, and `publishDiscord=false`. Seven rows were rejected from simulation because they were hold/filter or exclude rows. Simulated artifact gross one-MES replay P/L: +$270.00 before commissions/slippage. Report paths: `tools/automation/diagnostic-reports/no-chase-artifact-rebuild-simulation-1784241406765.json` and `.md`.
+Trading logic changed: No. This is a read-only local simulation. It does not run setupScanner, change setup detection, live scanner ranking, canExecute creation, Discord posting, bridge reads, Supabase schema/writes, entry/stop/T1/T2 math, risk gates, or automated execution behavior.
+Bridge impact: None. The runner reads a local diagnostic JSON report only.
+Journal/RAG impact: None. The runner does not write RAG/journal records.
+Supabase impact: No schema migration and no Supabase reads/writes.
+Known risks: The artifacts are not live tickets and do not validate live execution. P/L excludes commissions/slippage, uses prior saved completed 5M decision-tape research, and does not reload 30-day HTF context.
+Next recommended action: Run a read-only HTF/context sufficiency check for only these 3 rebuilt artifacts before considering any scanner-visible human-review wiring.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Build read-only no-chase artifact rebuild candidate pack.
 Files changed: tools/automation/no-chase-artifact-rebuild-pack.ts, tools/automation/no-chase-artifact-rebuild-pack.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The replay phase showed 10 full-plan no-chase cases with +$173.75 gross one-MES, but not all rows deserve rebuild promotion. This phase creates a local research-only pack that separates positive replay rows from no-fill, unresolved, stopped, and ambiguous rows before any scanner-visible work.
