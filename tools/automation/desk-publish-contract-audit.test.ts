@@ -53,7 +53,7 @@ write(root, 'tools/automation/discord-scheduler.ts', [
 ].join('\n'));
 write(root, 'tools/automation/nt-scanner-alert.test.ts', [
   'SCANNER-DESK-PLAY-CANONICAL-LINE-FIXTURE',
-  'DeskPublishDecision artifact agreement failed',
+  'SCANNER-DESK-PLAY-MISMATCH-FIXTURE',
   'Canonical DeskPublishDecision held this Desk Play local.',
 ].join('\n'));
 

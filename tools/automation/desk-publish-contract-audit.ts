@@ -130,7 +130,7 @@ const DEFAULT_CHECKS: ContractCheck[] = [
     file: 'tools/automation/nt-scanner-alert.test.ts',
     required: [
       'SCANNER-DESK-PLAY-CANONICAL-LINE-FIXTURE',
-      'DeskPublishDecision artifact agreement failed',
+      'SCANNER-DESK-PLAY-MISMATCH-FIXTURE',
       'Canonical DeskPublishDecision held this Desk Play local.',
     ],
     note: 'Regression coverage proves canonical holds, mismatches, and stale chart-line leaks are caught.',
