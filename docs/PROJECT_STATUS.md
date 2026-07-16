@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Reinvestigate no-chase artifact dates after rollover-aware HTF loading.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: After installing rollover-aware scanner HTF history loading, the desk needed to re-check the previously date/contract-sensitive no-chase artifact set from June 17, June 25, and June 26 with one active-contract-anchored source.
+Tests run: `npx tsx tools/automation/controlled-htf-ohlc-acquisition.ts --start-date 2026-06-17 --end-date 2026-06-26 --instrument MES --bridge-instrument "MES 09-26" --source bridge --rollover-aware --lookback-days 30 --chunk-days 7 --out-dir tools/automation/diagnostic-reports --json`; `npx tsx tools/automation/no-chase-htf-context-sufficiency.ts --simulation-report tools/automation/diagnostic-reports/no-chase-artifact-rebuild-simulation-1784241406765.json --htf-coverage-report tools/automation/diagnostic-reports/controlled-htf-ohlc-acquisition-MES-2026-06-17-to-2026-06-26-1784243443308.json --out-dir tools/automation/diagnostic-reports --json`; `git diff --check`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Investigation commands, guards, lint, and build passed. The combined rollover-aware source anchored on active `MES 09-26` loaded both legs: `MES 06-26:2026-05-18->2026-06-10` and `MES 09-26:2026-06-11->2026-06-26`. Loaded bars: 5M 8042, 15M 2682, 60M 672, 120M 352, 240M 176, with zero bridge failures. Artifact-specific sufficiency now marks all 3 rebuilt artifacts sufficient: 2026-06-17 lunch AfterLunchDriveFvgContinuation SHORT through 2026-06-17 14:05, 2026-06-25 morning IntradayMssMicroContinuation SHORT through 2026-06-25 09:35, and 2026-06-26 lunch IntradayMssMicroContinuation SHORT through 2026-06-26 12:20. `canExecute=false`, `publishDiscord=false`, and HTF promotion evidence allowed `0` remain unchanged. Replay gross one-MES values remain +$112.50, +$107.50, and +$50.00 respectively, +$270.00 total before costs. Report paths: `tools/automation/diagnostic-reports/controlled-htf-ohlc-acquisition-MES-2026-06-17-to-2026-06-26-1784243443308.json` and `tools/automation/diagnostic-reports/no-chase-htf-context-sufficiency-1784243449880.json`.
+Trading logic changed: No. This is read-only reinvestigation using local diagnostics plus read-only historical NinjaTrader bridge data. It does not change setup definitions, ranking, entry, stop, target, risk, invalidation, session gates, Discord publish rules, or canExecute logic.
+Bridge impact: Read-only historical NinjaTrader bridge reads occurred. No bridge behavior changed and no repair writes were performed.
+Journal/RAG impact: None.
+Supabase impact: None. The acquisition used `--source bridge`, so there were no Supabase reads or writes.
+Known risks: The full-day acquisition report still marks 5M/15M/60M/120M data-limited when asking through Friday 2026-06-26 23:59 ET because loaded futures bars end at the 17:00 ET close. The artifact-specific sufficiency check is the correct proof for these rows because each artifact only requires coverage through its completed 5M proof bar.
+Next recommended action: Keep scanner-visible wiring off until the three sufficient-context human-review-only artifacts are manually reviewed together. If approved, the next narrow implementation should create scanner-visible review tickets only, still with `canExecute=false` and no Discord live posting until separately approved.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Install rollover-aware scanner HTF history leg loading.
 Files changed: tools/automation/bridge-instrument-resolver.ts, tools/automation/bridge-instrument-resolver.test.ts, tools/automation/controlled-htf-ohlc-acquisition.ts, tools/automation/controlled-htf-ohlc-acquisition.test.ts, tools/automation/nt-scanner.ts, docs/PROJECT_STATUS.md.
 Reason: A 30-day HTF preload anchored on the new active contract can miss pre-rollover history. The scanner and research tooling need one shared contract-leg policy so rollover windows load the prior front-month leg up to rollover and the new front-month leg after rollover, without rewriting old bars under the new contract.
