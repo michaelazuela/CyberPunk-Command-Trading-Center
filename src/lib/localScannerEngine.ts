@@ -4520,7 +4520,7 @@ function buildHtfFvgReactionRouting(args: {
   if (!item?.hasFullPlanLevels) {
     return {
       sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
-      direction: 'WAIT',
+      direction,
       status: 'missing_complete_lifecycle_plan',
       lineInSand,
       lineLabel,
@@ -4744,6 +4744,53 @@ function buildFreshReentryWatch(args: {
   };
 }
 
+function buildFreshReentryTimingCandidateInput(args: {
+  primaryDirection: DeskPlayDirection;
+  activeTacticalLine: DeskActiveTacticalLine;
+  htfFvgReactionRouting: DeskHtfFvgReactionRouting;
+  htfFvgCascade: DeskHtfFvgCascade | null;
+}): DeskFreshReentryWatch | null {
+  const direction = args.htfFvgReactionRouting.direction;
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  if (
+    args.htfFvgReactionRouting.status !== 'routed_active_reaction' &&
+    args.htfFvgReactionRouting.status !== 'missing_complete_lifecycle_plan'
+  ) return null;
+  if (args.htfFvgReactionRouting.status === 'routed_active_reaction' && direction !== args.primaryDirection) return null;
+  const lineInSand = numericOrNull(args.activeTacticalLine.activeLine) ??
+    numericOrNull(args.htfFvgReactionRouting.lineInSand);
+  if (lineInSand === null) return null;
+  const directionWord = direction === 'LONG' ? 'above' : 'below';
+  const requiredProof = `Completed 5M close/hold ${directionWord} ${lineInSand.toFixed(2)} with fresh protected 5M structure.`;
+  return {
+    sourceOfTruth: 'scanner_fresh_tactical_reentry_watch',
+    eligible: true,
+    direction,
+    lineInSand,
+    requiredProof,
+    reason: args.htfFvgReactionRouting.status === 'missing_complete_lifecycle_plan'
+      ? 'Active HTF parent FVG reaction has child confirmation; completed 5M line acceptance may build the missing deterministic re-entry package before the selected lifecycle flips stale/no-chase.'
+      : 'Active HTF parent FVG reaction is routed; completed 5M line acceptance may build a fresh deterministic re-entry package before the old entry becomes missed/no-chase.',
+    staleEntryReason: null,
+    oldEntry: null,
+    oldStop: null,
+    oldTarget1: null,
+    oldTarget2: null,
+    parentZone: direction === args.primaryDirection ? args.htfFvgCascade?.parentZone || null : null,
+    childZone: direction === args.primaryDirection ? args.htfFvgCascade?.childExecutionZone || null : null,
+    nextStep: 'Build the complete entry/stop/T1/T2 package from completed 5M line acceptance. If complete and not no-chase, this may become the trader-facing review plan.',
+    levelsStatus: 'pending_fresh_structure',
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesRanking: false,
+      createsNewModel: false,
+    },
+  };
+}
+
 type FreshReentryFiveMinuteCandle = NonNullable<ChartContext['candles']>[number];
 
 function freshReentryFiveMinuteCandles(chartContext?: Partial<ChartContext> | null): FreshReentryFiveMinuteCandle[] {
@@ -4897,8 +4944,12 @@ function buildFreshReentryCandidateSet(args: {
   const currentPrice = numericOrNull(args.currentPrice) ?? latestClose;
   const fiveMinuteAcceptance = lineInSand !== null && candleAcceptedLine(direction, latest, lineInSand);
   const instrumentSupported = !args.chartContext?.instrument || TRADE_RULES.instruments.includes(args.chartContext.instrument);
+  const htfReactionRoutingCanSeedReentry =
+    args.htfFvgReactionRouting.status === 'routed_active_reaction' ||
+    args.htfFvgReactionRouting.status === 'missing_complete_lifecycle_plan';
   const baseBlockers = [
-    args.htfFvgReactionRouting.status === 'routed_active_reaction' ? null : 'Active HTF FVG reaction routing is not active.',
+    htfReactionRoutingCanSeedReentry ? null : 'Active HTF FVG reaction routing is not active.',
+    args.htfFvgReactionRouting.direction === direction ? null : 'HTF FVG reaction direction does not match the fresh re-entry direction.',
     lineInSand === null ? 'Fresh re-entry line in the sand is missing.' : null,
     fiveMinuteAcceptance ? null : 'Latest completed 5M candle has not accepted the fresh re-entry line.',
     instrumentSupported ? null : 'Instrument is outside configured trade-rule instruments.',
@@ -4923,11 +4974,23 @@ function buildFreshReentryCandidateSet(args: {
         const blockers = [
           riskPoints === null || target1 === null || target2 === null ? 'Entry, stop, target, or risk math is invalid.' : null,
           riskPoints !== null && riskPoints > TRADE_RULES.maxRiskPoints ? `Risk ${riskPoints.toFixed(2)} exceeds max ${TRADE_RULES.maxRiskPoints.toFixed(2)}.` : null,
+          currentPrice !== null && target1 !== null && (
+            direction === 'LONG' ? currentPrice >= target1 : currentPrice <= target1
+          )
+            ? `No chase: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${target1.toFixed(2)}.`
+            : null,
         ].filter((value): value is string => Boolean(value));
         if (riskPoints === null || target1 === null || target2 === null) return null;
         const distanceFromCurrent = currentPrice === null ? null : Math.abs(currentPrice - entry);
         const riskWithinMax = riskPoints <= TRADE_RULES.maxRiskPoints;
-        const status: DeskFreshReentryCandidateStatus = riskWithinMax ? 'ready_for_owner_review' : 'blocked_risk_too_wide';
+        const targetAlreadyReached = currentPrice !== null && (
+          direction === 'LONG' ? currentPrice >= target1 : currentPrice <= target1
+        );
+        const status: DeskFreshReentryCandidateStatus = targetAlreadyReached
+          ? 'blocked_invalid_levels'
+          : riskWithinMax
+          ? 'ready_for_owner_review'
+          : 'blocked_risk_too_wide';
         const sourceBonus = seed.source === 'active_line_retest' ? 30 : seed.source === 'child_zone_boundary' ? 20 : 10;
         const rankScore = Math.max(1, Math.round(100 + sourceBonus - riskPoints - (distanceFromCurrent ?? 0) * 0.25));
         const candidateKey = [
@@ -5261,10 +5324,19 @@ function buildPrimaryDeskPlay(args: {
     htfFvgCascade,
     visibilityMetadata: args.visibilityMetadata,
   });
-  const freshReentryCandidates = buildFreshReentryCandidateSet({
-    freshReentryWatch,
+  const freshReentryTimingCandidateInput = freshReentryWatch || buildFreshReentryTimingCandidateInput({
+    primaryDirection,
+    activeTacticalLine,
     htfFvgReactionRouting,
     htfFvgCascade,
+  });
+  const freshReentryCandidateCascade = freshReentryTimingCandidateInput?.direction === primaryDirection
+    ? htfFvgCascade
+    : null;
+  const freshReentryCandidates = buildFreshReentryCandidateSet({
+    freshReentryWatch: freshReentryTimingCandidateInput,
+    htfFvgReactionRouting,
+    htfFvgCascade: freshReentryCandidateCascade,
     chartContext,
     currentPrice: args.currentPrice,
     activeScannerWindow: Boolean(args.visibilityMetadata.authority.activeModel),

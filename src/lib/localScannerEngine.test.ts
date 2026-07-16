@@ -2540,6 +2540,61 @@ assert.equal(freshReentryPhase3DeskState.deskTicket.stop, 7600);
 assert.equal(freshReentryPhase3DeskState.deskTicket.t1, 7590);
 assert.equal(freshReentryPhase3DeskState.deskTicket.t2, 7588);
 assert.equal(freshReentryPhase3DeskState.deskTicket.sourceCandidateKey, phase3CandidateSet?.bestCandidate?.candidateKey);
+
+const freshReentryTimingFixVisibility = classifyScannerVisibility({
+  state: 'TriggerPending',
+  candidate: routedHtfReactionCandidate,
+  window: noonLunchPmWindow,
+  alertDecision: { shouldSend: false, reason: 'Waiting for completed 5M proof.' },
+  canExecute: false,
+});
+const freshReentryTimingFixChartContext = JSON.parse(JSON.stringify(routedHtfReactionChartContext)) as Partial<ChartContext>;
+if (freshReentryTimingFixChartContext.multiTimeframeContext?.fiveMinute) {
+  freshReentryTimingFixChartContext.multiTimeframeContext.fiveMinute.candles = [
+    { index: 0, timestamp: '2026-06-23T12:00:00.0000000', open: 7598, high: 7599.75, low: 7594, close: 7597, direction: 'bearish', confidence: 'High' },
+    { index: 1, timestamp: '2026-06-23T12:05:00.0000000', open: 7597, high: 7598.25, low: 7589, close: 7592, direction: 'bearish', confidence: 'High' },
+    { index: 2, timestamp: '2026-06-23T12:10:00.0000000', open: 7592, high: 7604, low: 7591.5, close: 7602, direction: 'bullish', confidence: 'High' },
+  ];
+}
+const freshReentryTimingFixDeskState = buildDeskState({
+  state: 'TriggerPending',
+  candidate: routedHtfReactionCandidate,
+  visibilityMetadata: freshReentryTimingFixVisibility,
+  candidateLifecycleTrace: buildCandidateLifecycleTrace({
+    candidates: [routedHtfReactionCandidate],
+    selectedCandidate: routedHtfReactionCandidate,
+    state: 'TriggerPending',
+    window: noonLunchPmWindow,
+    alertDecision: { shouldSend: false, reason: 'Waiting for completed 5M proof.' },
+    canExecute: false,
+  }),
+  currentPrice: 7592,
+  canExecute: false,
+  chartContext: freshReentryTimingFixChartContext,
+  asOfCompleted5mTime: '2026-06-23T12:05:00.0000000',
+});
+const timingFixCandidateSet = freshReentryTimingFixDeskState.primaryDeskPlay.freshReentryCandidates;
+assert.equal(freshReentryTimingFixDeskState.primaryDeskPlay.freshReentryWatch, null);
+assert.equal(timingFixCandidateSet?.sourceOfTruth, 'scanner_fresh_tactical_reentry_candidate_builder');
+assert.equal(timingFixCandidateSet?.inputs.hasFreshReentryWatch, true);
+assert.equal(timingFixCandidateSet?.inputs.fiveMinuteAcceptance, true);
+assert.equal(timingFixCandidateSet?.inputs.latestFiveMinuteTimestamp, '2026-06-23T12:05:00.0000000');
+assert.equal(timingFixCandidateSet?.bestCandidate?.source, 'active_line_retest');
+assert.equal(timingFixCandidateSet?.bestCandidate?.entry, 7596);
+assert.equal(timingFixCandidateSet?.bestCandidate?.stop, 7600);
+assert.equal(timingFixCandidateSet?.bestCandidate?.target1, 7590);
+assert.equal(timingFixCandidateSet?.bestCandidate?.target2, 7588);
+assert.equal(timingFixCandidateSet?.bestCandidate?.status, 'ready_for_owner_review');
+assert.equal(timingFixCandidateSet?.approvalBoundary.changesCanExecute, false);
+assert.equal(timingFixCandidateSet?.approvalBoundary.changesTradeApprovals, false);
+assert.equal(freshReentryTimingFixDeskState.canExecute, false);
+assert.equal(freshReentryTimingFixDeskState.deskTicket.state, 'ACTIVE_REVIEW');
+assert.equal(freshReentryTimingFixDeskState.deskTicket.primaryDirection, 'SHORT');
+assert.equal(freshReentryTimingFixDeskState.deskTicket.entry, 7596);
+assert.equal(freshReentryTimingFixDeskState.deskTicket.stop, 7600);
+assert.equal(freshReentryTimingFixDeskState.deskTicket.t1, 7590);
+assert.equal(freshReentryTimingFixDeskState.deskTicket.t2, 7588);
+
 const phase3Comparison = compareFreshReentryPhase3Behavior([missedHtfReactionDeskState, freshReentryPhase3DeskState]);
 assert.equal(phase3Comparison.oldWatchOnlyCycles, 2);
 assert.equal(phase3Comparison.newCandidateCycles, 1);
