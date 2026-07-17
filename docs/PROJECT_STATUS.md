@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add TurtleSoup review-note wording probe.
+Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-wording-probe.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-wording-probe.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The blocked-row drilldown found missing_full_plan_levels clusters where TurtleSoup should stay visible but receive review-only caution language. This phase drafts research-only wording and proves it does not suppress tickets, change ranking, change canExecute, or alter entry/stop/target/risk behavior.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-wording-probe.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-turtlesoup-review-note-wording-probe -- --json.
+Result: Passed. Real local wording probe read 6 clusters, selected 4 missing_full_plan_levels review-note candidate clusters, and produced 4 wording rows. Suppress-ticket rows: 0. Ranking-change rows: 0. canExecute-change rows: 0. Entry/stop/target-change rows: 0. Live promotion allowed rows: 0. Recommended action: keep_research_only_wording_candidate.
+Trading logic changed: No. This is a read-only local wording probe. It does not install review-note wording, suppress tickets, change ranking, change canExecute, remove TurtleSoup, run setupScanner, post Discord, read/write Supabase, read the live bridge, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local diagnostic output only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The wording is still research-only. A separate approved user-facing wording phase is required before it appears anywhere scanner-visible or Discord-visible.
+Next recommended action: Build a research-only wording placement simulation that shows exactly where this TurtleSoup caution would appear in held-local preview output while preserving ticket visibility and ordering.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add TurtleSoup blocked-row reason drilldown.
 Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-blocked-reason-drilldown.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-blocked-reason-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The same-slate rank simulation rejected a TurtleSoup rank penalty, but blocked protected-stop rows still need an explanation path. This phase isolates weak blocked-row reasons and drafts research-only review-note wording without suppressing TurtleSoup.
