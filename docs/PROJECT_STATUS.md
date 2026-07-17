@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add read-only replay package outcome diagnostic for the 24 held-local package rows.
+Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-replay-package-outcome.ts, tools/automation/unified-positive-held-local-preview-replay-package-outcome.test.ts.
+Reason: The replay package proved all 24 selected held-local rows had local completed-5M tape coverage. This phase calculates conservative research-only one-MES outcomes from those local bars before source/proof validation or rank-overlay expansion.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-replay-package-outcome.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-replay-package-outcome -- --json.
+Result: Passed. The real outcome pass read 24 package rows, resolved 21 rows, left 3 unresolved, found 0 blocked rows, found 2 no-fill rows, 9 stopped-before-T1 rows, 12 T1-and-T2 rows, 1 no-target-or-stop row, and gross resolved one-MES P/L of +$777.52. Model P/L: AfterLunchDriveFvgContinuation +$270.01; HtfDisplacementMssContinuation +$133.75; IntradayMssMicroContinuation -$75.00; OpeningDriveFvgContinuation +$27.51; SweepMssFvgRetrace +$465.00; TurtleSoup -$43.75. Live promotion allowed rows remained 0.
+Trading logic changed: No. This is a read-only local completed-5M outcome diagnostic. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads local scanner decision tape JSON only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Outcomes are conservative research labels from completed 5M tape only. No-fill and no-target/stop rows remain unresolved and should not be treated as wins or losses without a separate research decision.
+Next recommended action: Validate source/proof timing against the new 24-row outcome set, especially filtering IntradayMssMicroContinuation and TurtleSoup losers without weakening AfterLunchDriveFvgContinuation, SweepMssFvgRetrace, or HTF displacement proof rules.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add read-only replay package builder for the 24 held-local triage selections.
 Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-replay-package.ts, tools/automation/unified-positive-held-local-preview-replay-package.test.ts.
 Reason: The intake triage selected 24 rows for the next replay/outcome step. This phase packages those rows with local scanner decision tape paths, completed 5M tape coverage, proof time, entry/stop/T1/T2, and R math before any outcome calculation or rank overlay expansion.
