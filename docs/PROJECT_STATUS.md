@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add structured snapshot no-lookahead classifier for held-local reviewed candidates.
+Files changed: tools/automation/unified-positive-held-local-preview-structured-snapshot-classifier.ts, tools/automation/unified-positive-held-local-preview-structured-snapshot-classifier.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Structured snapshot mining found a strong TurtleSoup protected-stop / blocked-state split, so this phase validates those proof-time structured fields through a separate conservative classifier before any scanner-visible behavior is considered.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-structured-snapshot-classifier.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-structured-snapshot-classifier -- --json.
+Result: Passed. Real local report evaluated 204 rows and 68 structured snapshot classifiers. Accepted classifiers: 6. Rejected classifiers: 62. Top accepted classifier: TurtleSoup_modelCandidateExecutionStatus_Conditional. Live promotion allowed rows: 0. Accepted classifiers were TurtleSoup-only: Conditional kept 42/20/17 for +$2566.25 while rejected bucket was 5/41/28 for -$1355; protectedStopEvidence=false kept 40/18/17 for +$2417.50 while rejected bucket was 7/43/28 for -$1206.25.
+Trading logic changed: No. This is a read-only local no-lookahead classifier over prior structured snapshot miner output. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local diagnostic output only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Accepted classifiers are research candidates only. They are not live filters, do not suppress tickets, and do not promote execution.
+Next recommended action: Run a broader replay validation that compares TurtleSoup Conditional/protected-stop-clean rows against the blocked protected-stop bucket before considering any scanner-visible rank/filter change.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add structured proof-time snapshot miner for held-local reviewed candidates.
 Files changed: tools/automation/unified-positive-held-local-preview-structured-snapshot-miner.ts, tools/automation/unified-positive-held-local-preview-structured-snapshot-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The no-lookahead classifier found no installable coarse text/filter signal, so this phase mines richer proof-time scanner objects: selected-vs-reviewed model match, model candidate scores, missing evidence counts, HTF timeframe states, scorecard statuses, and history coverage.
