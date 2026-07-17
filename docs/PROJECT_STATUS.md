@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add held-local preview source/proof filter validation.
+Files changed: tools/automation/unified-positive-held-local-preview-source-proof-filter.ts, tools/automation/unified-positive-held-local-preview-source-proof-filter.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The filter-difference audit identified scanner-owned held-local artifacts plus completed 5M retest/re-entry proof as the likely separator. This phase validates that filter against the current research set before any ranking overlay or live behavior is considered.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-source-proof-filter.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-source-proof-filter -- --json`.
+Result: Focused source/proof filter test, typecheck, and real diagnostic run passed. The real diagnostic evaluated 13 rows: accepted 4/4 reviewed held-local winners and rejected 9/9 broad formal losing rows. Accepted one-MES P/L was +$505; rejected one-MES P/L was -$755. Leak-through losing rows: 0. False-rejected reviewed winning rows: 0. The report recommended 0 model removals, 0 broadening changes, 0 `canExecute` changes, and 0 live-promotion rows. Latest source/proof report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-source-proof-filter-1784302331047.json`.
+Trading logic changed: No. This is local-only filter validation research. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, model availability, `canExecute`, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: The validation proves the current reviewed research set only. It still does not approve live scanner promotion or executable behavior.
+Next recommended action: Add a research-only rank overlay that uses this validated source/proof tag to separate high-quality reviewed candidates from broad non-strict candidates, still without touching live behavior, Discord posting, Supabase writes, or `canExecute`.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add held-local preview filter-difference audit.
 Files changed: tools/automation/unified-positive-held-local-preview-filter-difference.ts, tools/automation/unified-positive-held-local-preview-filter-difference.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The desk needed to isolate the actual separator between reviewed held-local TurtleSoup/SweepMssFvgRetrace winners and the broad losing non-strict bucket before any model removal, broadening, or `canExecute` decision.
