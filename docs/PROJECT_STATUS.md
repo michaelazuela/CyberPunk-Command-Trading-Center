@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add TurtleSoup blocked-row reason drilldown.
+Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-blocked-reason-drilldown.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-blocked-reason-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The same-slate rank simulation rejected a TurtleSoup rank penalty, but blocked protected-stop rows still need an explanation path. This phase isolates weak blocked-row reasons and drafts research-only review-note wording without suppressing TurtleSoup.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-blocked-reason-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-turtlesoup-blocked-reason-drilldown -- --json.
+Result: Passed. Real local drilldown read 153 package rows and 78 blocked protected-stop rows: 7 winners, 43 losses, 28 unresolved, -$1206.25 one-MES. It found 6 clusters and 4 review-note candidate clusters. All clusters were missing_full_plan_levels. Review-note candidates: morning LONG 22 rows, 1/17/4, -$648.75; morning SHORT 21 rows, 1/15/5, -$486.25; lunch LONG 11 rows, 0/7/4, -$396.25; evening LONG 5 rows, 0/2/3, -$36.25. Non-note clusters stayed visible: evening SHORT +$92.50 and lunch SHORT +$268.75. Recommended action: draft_review_note_wording_only.
+Trading logic changed: No. This is a read-only local drilldown. It does not install review-note wording, a rank penalty, hard block, remove TurtleSoup, run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, change ranking, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local diagnostic output only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The note wording is still research-only and must be tested against user-facing alert language before scanner-visible use. Non-note clusters contain positive P/L and must not be suppressed.
+Next recommended action: Build a research-only TurtleSoup review-note wording probe for missing_full_plan_levels clusters only, with explicit proof that it does not suppress tickets or alter ranking.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add TurtleSoup same-slate rank simulation.
 Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-rank-simulation.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-rank-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Rank-penalty validation showed blocked protected-stop TurtleSoup was net negative but still contained winners. This phase tested a hypothetical same-date/session rank penalty in research-only mode before any scanner-visible behavior change.
