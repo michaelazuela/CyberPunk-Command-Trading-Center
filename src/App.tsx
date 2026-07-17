@@ -8,6 +8,7 @@ import TradeLog from './components/TradeLog';
 import Settings from './components/Settings';
 import AdminDashboard from './components/AdminDashboard';
 import SessionLab from './components/SessionLab';
+import HeldLocalPreviewPanel, { isHeldLocalPreviewFlagEnabled } from './components/HeldLocalPreviewPanel';
 import { embedPendingRecords } from './lib/rag';
 
 import { subscribeToTrades, addTrade as addSupabaseTrade, testSupabaseConnection } from './lib/supabaseTradeService';
@@ -41,7 +42,8 @@ function loadSavedAppState(): AppState {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'admin' | 'workflow' | 'archive' | 'settings'>('admin');
+  const heldLocalPreviewEnabled = typeof window !== 'undefined' && isHeldLocalPreviewFlagEnabled(window.location);
+  const [activeTab, setActiveTab] = useState<'admin' | 'workflow' | 'archive' | 'settings' | 'heldLocalPreview'>('admin');
   const [user, setUser] = useState<any>(null);
   const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -239,6 +241,9 @@ export default function App() {
             <TopNavItem label="RAG Admin" active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} />
             <TopNavItem label="Trading Workflow" active={activeTab === 'workflow'} onClick={() => setActiveTab('workflow')} />
             <TopNavItem label="Trade Archive" active={activeTab === 'archive'} onClick={() => setActiveTab('archive')} />
+            {heldLocalPreviewEnabled && (
+              <TopNavItem label="Held-Local Preview" active={activeTab === 'heldLocalPreview'} onClick={() => setActiveTab('heldLocalPreview')} />
+            )}
             <TopNavItem label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
           </nav>
         </div>
@@ -311,6 +316,11 @@ export default function App() {
           <div className={activeTab === 'archive' ? 'block' : 'hidden'}>
             <TradeLog trades={displayTrades} onAddTrade={addTrade} />
           </div>
+          {heldLocalPreviewEnabled && (
+            <div className={activeTab === 'heldLocalPreview' ? 'block' : 'hidden'}>
+              <HeldLocalPreviewPanel />
+            </div>
+          )}
           <div className={activeTab === 'settings' ? 'block' : 'hidden'}>
             <Settings session={appState.currentSession} onUpdate={updateSession} />
           </div>

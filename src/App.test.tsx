@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import App from './App';
+import { HELD_LOCAL_PREVIEW_STORAGE_KEY } from './components/HeldLocalPreviewPanel';
 
 function createSupabaseQueryResult(data: unknown[] = []) {
   const result = { data, error: null, count: 0 };
@@ -85,5 +86,73 @@ describe('App route shell', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'RAG Admin' }));
     await waitFor(() => expect(screen.getByRole('heading', { name: 'RAG Admin' })).toBeTruthy());
+  });
+
+  it('shows the held-local preview tab only behind the local query flag and signoff index payload', async () => {
+    window.history.pushState({}, '', '/?heldLocalPreview=1');
+    localStorage.setItem(HELD_LOCAL_PREVIEW_STORAGE_KEY, JSON.stringify({
+      reportType: 'unified_positive_held_local_preview_ui_index',
+      status: 'pass',
+      authority: {
+        readOnly: true,
+        localOnly: true,
+        researchOnly: true,
+        postsDiscord: false,
+        writesSupabase: false,
+        readsLiveSupabase: false,
+        readsLiveBridge: false,
+        runsSetupScanner: false,
+        changesScannerBehavior: false,
+        changesTradingLogic: false,
+        changesCanExecute: false,
+        changesEntryStopTargets: false,
+        changesRiskRules: false,
+        changesBridgeBehavior: false,
+        changesDiscordPosting: false,
+        changesAppRuntime: false,
+      },
+      summary: {
+        signoffRowsLoaded: 1,
+        previewItemsReady: 1,
+        blockedItems: 0,
+        postableFalseItems: 1,
+        shouldPostFalseItems: 1,
+        canExecuteFalseItems: 1,
+        publishDiscordFalseItems: 1,
+        shouldDispatchFalseItems: 1,
+        writesSupabaseFalseItems: 1,
+      },
+      output: {
+        htmlPath: 'preview.html',
+      },
+      items: [{
+        ticketId: '2026-06-16-morning-TurtleSoup-LONG',
+        sourceSnapshotId: 'scanner-local-preview',
+        setupType: 'TurtleSoup',
+        direction: 'LONG',
+        pngPath: 'C:/preview/card.png',
+        imageSrc: 'file:///C:/preview/card.png',
+        previewStatus: 'preview_ready',
+        postable: false,
+        publishDiscord: false,
+        shouldPost: false,
+        canExecute: false,
+        shouldDispatch: false,
+        writesSupabase: false,
+        blockers: [],
+      }],
+    }));
+
+    render(<App />);
+
+    const previewTab = screen.getByRole('button', { name: 'Held-Local Preview' });
+    expect(previewTab).toBeTruthy();
+
+    fireEvent.click(previewTab);
+    expect(screen.getByRole('heading', { name: 'Held-Local Preview' })).toBeTruthy();
+    expect(screen.getByText('READY')).toBeTruthy();
+    expect(screen.getByAltText('2026-06-16-morning-TurtleSoup-LONG held-local preview')).toBeTruthy();
+    expect(screen.getByText(/No Discord post/)).toBeTruthy();
+    expect(screen.getByText(/No Supabase write/)).toBeTruthy();
   });
 });

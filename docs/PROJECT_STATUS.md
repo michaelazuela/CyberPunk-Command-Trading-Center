@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add hidden held-local local preview tab.
+Files changed: src/App.tsx, src/App.test.tsx, src/components/HeldLocalPreviewPanel.tsx, docs/PROJECT_STATUS.md.
+Reason: The app adapter contract proved a signoff-backed preview index can be accepted safely. This phase wires a hidden local-only tab that appears only on localhost when `?heldLocalPreview=1` is present and displays only a signoff-passing preview index saved in localStorage.
+Tests run: `npx tsc --noEmit --pretty false`; `npx vitest run src/App.test.tsx`.
+Result: Focused typecheck and app route test passed. The default app tabs remain unchanged. The Held-Local Preview tab appears only behind the local query flag, reads only localStorage payload key `held_local_preview_ui_index_report`, renders the preview image from the adapter model, and keeps visible boundary language: Decision Support Only, No automated orders, No Discord post, No Supabase write, No bridge read, Scanner behavior unchanged.
+Trading logic changed: No. This is hidden local-only UI preview wiring. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: The tab is intentionally hidden unless the local query flag is present. Browser display of `file:///` image URLs may depend on local browser security rules when served over HTTP, so this remains a local preview aid rather than a production route.
+Next recommended action: Add a small local loader/preflight helper that copies the latest signoff-passing UI index JSON into the expected localStorage key for manual localhost preview, without adding any service calls.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local local preview app adapter contract.
 Files changed: src/lib/heldLocalPreviewUiAdapter.ts, src/lib/heldLocalPreviewUiAdapter.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The local preview index artifact proved signoff-passing card PNGs can be grouped locally. This phase adds the app-side adapter contract that accepts only a passing local preview index when the preview flag is enabled and the host is local, while keeping every posting/execution/live-read flag false.
