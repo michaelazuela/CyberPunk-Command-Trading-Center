@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Run TurtleSoup replay package, action probe, rank-penalty validation, and same-session rank simulation.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: Structured snapshot validation found six TurtleSoup proof-time state classifiers worth broader replay validation. This phase tested whether blocked/protected-stop TurtleSoup rows should receive a research rank penalty or only a review/research caution.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-replay-package.ts; npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-action-probe.ts; npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-rank-penalty-validation.ts; npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-rank-simulation.ts.
+Result: Passed. TurtleSoup replay package read 153 rows. Conditional/protected-stop-clean rows: 75 rows, 40 winners, 18 losses, 17 unresolved, +$2,417.50, 33 positive day/sessions and 10 negative. Blocked/protected-stop rows: 78 rows, 7 winners, 43 losses, 28 unresolved, -$1,206.25, 7 positive day/sessions and 29 negative. Action probe marked the blocked/protected-stop treatment as a rank-penalty candidate, and rank-penalty validation confirmed it should never be a hard block because 7 affected rows were winners. Same-date/session rank simulation then rejected the rank penalty: 153 rows, 86 slates, 78 penalized rows, only 1 top slate changed, blocked top slates moved from 36 to 35, top-selection P/L worsened from +$2,386.25 to +$2,270.00, delta -$116.25, with 0 false winner demotions. Current evidence supports review/research caution only, not live rank penalty.
+Trading logic changed: No. This was diagnostic-only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The blocked/protected-stop bucket is genuinely weak, especially morning LONG, but the tested rank penalty worsened slate selection. A smarter action needs narrower segmentation before any scanner-visible ranking change.
+Next recommended action: Drill into blocked/protected-stop TurtleSoup by morning LONG versus lunch/evening/SHORT and by missing full plan/protected stop wording, then test a review-note placement only. Do not remove TurtleSoup and do not install a rank penalty yet.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Run richer structural and proof-time snapshot mining for the broad held-local TurtleSoup/Intraday research set.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The prior broad pass rejected simple risk caps and accepted 0 pre-entry adverse-path classifiers. This phase mined richer local proof-time scanner fields to see whether a real separator exists before touching live-facing behavior.
