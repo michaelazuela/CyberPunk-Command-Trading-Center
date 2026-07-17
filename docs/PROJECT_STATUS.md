@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Simulate deduped human-review tickets from fresh-proof positive rows.
+Files changed: tools/automation/unified-positive-review-ticket-rebuild-simulation.ts, tools/automation/unified-positive-review-ticket-rebuild-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh completed 5M proof extractor found 7 eligible TurtleSoup/Sweep positive rows, but repeated same-session snapshots must not become multiple Discord tickets. This phase adds a read-only review-ticket rebuild simulation that dedupes by trade date, session, setup, and direction while preserving the app-owned entry/stop/T1/T2 geometry from the proof-qualified row.
+Tests run: `npx tsx tools/automation/unified-positive-review-ticket-rebuild-simulation.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-review-ticket-rebuild-simulation.ts --fresh-proof-report tools/automation/diagnostic-reports/unified-positive-fresh-5m-proof-extractor-1784250574870.json --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, and real read-only simulation passed. The simulation loaded 10 fresh-proof report rows, found 7 eligible fresh-proof rows, collapsed them into 4 simulated review-only tickets, suppressed 3 duplicate rows, kept 3 rows blocked as not eligible, and found 0 invalid geometry rows. All simulated tickets preserve `canExecute=false`, `publishDiscord=false`, and `reviewOnly=true`. Simulated tickets: 2026-06-16 morning TurtleSoup LONG, 2026-06-24 evening TurtleSoup SHORT, 2026-06-25 evening TurtleSoup SHORT, and 2026-06-26 morning SweepMssFvgRetrace LONG. Report paths: `tools/automation/diagnostic-reports/unified-positive-review-ticket-rebuild-simulation-1784251224514.json` and `.md`.
+Trading logic changed: No. This phase is read-only ticket-shape simulation. It does not change setup definitions, live ranking, scanner behavior, entry, stop, target, risk, invalidation, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: The simulation intentionally dedupes same-session setup/direction groups aggressively to avoid Discord flooding. Before live scanner wiring, the next phase should compare this simulated shape against the existing DeskPublishDecision/DeskTicket contract and decide whether any same-session second entry should remain as a separate review card.
+Next recommended action: Keep live wiring off. Add a contract comparison against the existing scanner-owned DeskTicket/DeskPublishDecision path, proving these 4 simulated review tickets can be represented without changing Discord posting, Supabase schema, canExecute, or automated execution.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Extract fresh completed 5M proof for positive TurtleSoup and Sweep rows.
 Files changed: tools/automation/unified-positive-fresh-5m-proof-extractor.ts, tools/automation/unified-positive-fresh-5m-proof-extractor.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The positive rebuild-readiness audit found 10 positive overlay rows that all remained blocked by stale/no-chase or missing fresh 5M proof. This phase adds a read-only model-specific proof extractor for only TurtleSoup and SweepMssFvgRetrace positives, using completed 5M OHLC after the stale snapshot cutoff.
