@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Audit positive overlay candidates for rebuild readiness.
+Files changed: tools/automation/unified-positive-candidate-rebuild-audit.ts, tools/automation/unified-positive-candidate-rebuild-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The outcome/RAG overlay found 10 positive unified candidates, but scanner visibility must not be wired until the desk proves whether those rows already have fresh 5M proof and deterministic plan geometry. This phase adds a read-only rebuild-readiness audit over positive overlay rows only.
+Tests run: `npx tsx tools/automation/unified-positive-candidate-rebuild-audit.test.ts`; `npx tsx tools/automation/unified-desk-candidate-book-diagnostic.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-candidate-rebuild-audit.ts --unified-diagnostic tools/automation/diagnostic-reports/unified-desk-candidate-book-diagnostic-1784248229399.json --audit-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --out-dir tools/automation/diagnostic-reports --json`; `git diff --check`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Focused tests, typecheck, the real read-only audit, guards, lint, build, and full test suite passed. The audit reviewed 10 positive overlay rows and found 0 eligible review-ticket candidates, 10 needing fresh completed 5M proof, 0 needing plan geometry rebuild, and 0 needing both proof and geometry. The positive rows were 8 TurtleSoup rows and 2 SweepMssFvgRetrace rows. All rows preserved `canExecute=false` and `publishDiscord=false`. Positive overlay gross evidence across matched rows was +$2,592.50 one-MES before costs, but none is scanner-visible yet because every row is stale/no-chase or missing fresh 5M proof. Report paths: `tools/automation/diagnostic-reports/unified-positive-candidate-rebuild-audit-1784249675968.json` and `.md`.
+Trading logic changed: No. This phase is read-only diagnostic classification. It does not change setup definitions, live ranking, scanner behavior, entry, stop, target, risk, invalidation, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None.
+Journal/RAG impact: None. The audit consumed the prior local overlay report only. It did not read or write live Supabase/RAG.
+Supabase impact: None.
+Known risks: Positive overlay rows can repeat across nearby scanner snapshots, so matched gross evidence is triage evidence rather than a trade-count backtest. The classification still proves the useful next bottleneck: fresh completed 5M proof capture, not deterministic geometry rebuild.
+Next recommended action: Keep scanner-visible wiring off. Build a model-specific fresh 5M proof extractor for the 8 TurtleSoup and 2 Sweep positive rows, using completed 5M OHLC only and still preserving `canExecute=false`/no Discord.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add read-only outcome/RAG overlay scoring to the unified trading-model diagnostic.
 Files changed: tools/automation/unified-desk-candidate-book-diagnostic.ts, tools/automation/unified-desk-candidate-book-diagnostic.test.ts, docs/PROJECT_STATUS.md.
 Reason: The unified candidate book found broad review-ticket over-promotion risk, especially SweepMssFvgRetrace. Before scanner-visible wiring, the desk needs a read-only overlay that lets replay/RAG-style outcome evidence penalize stop/no-fill/unresolved-prone model candidates and support only candidates that have clean outcome evidence.
