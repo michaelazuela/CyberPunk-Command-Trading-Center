@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Run research-only source/proof rank overlay on validated held-local filter set.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: Source/proof validation separated reviewed winners from broad losers. This phase ranked the accepted research rows without changing live scanner ranking, canExecute, Discord, Supabase, or trading logic.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-rank-overlay.ts --source-proof-filter <latest source/proof filter> --ohlc-outcome <latest OHLC outcome> --json; npx tsx tools/automation/unified-positive-held-local-preview-rank-overlay-expansion.ts --json.
+Result: Passed. Rank overlay evaluated 13 rows, ranked 4 source/proof accepted reviewed winners, rejected 9 broad non-strict losers, ranked one-MES P/L +$505, rejected one-MES P/L -$755, and allowed 0 live-promotion rows. Top ranked row: 2026-06-26 morning SweepMssFvgRetrace LONG, score 95, +$311.25. Rank 2: 2026-06-25 evening TurtleSoup SHORT, score 92, +$85. Rank 3: 2026-06-24 evening TurtleSoup SHORT, score 83.13, +$65. Rank 4: 2026-06-16 morning TurtleSoup LONG, score 64, +$43.75. Expansion loaded 2 source/proof reports and 2 OHLC outcome reports, removed 13 duplicate rows, found 0 expanded rows beyond the newest artifact, and preserved the same ranking.
+Trading logic changed: No. This was diagnostic-only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None. rlsautotest remains bookmarked for a later Supabase RLS audit phase with no action now.
+Known risks: The overlay has no new unique rows beyond the current selected set, so it should not be generalized yet.
+Next recommended action: Build or run a local-only reviewed-case discovery/intake pass to find additional scanner-owned held-local rows with completed 5M retest/re-entry proof before considering any research ranking expansion.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Validate source/proof filter separating reviewed winners from broad losing bucket.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The prior OHLC outcome/model-decision pass showed TurtleSoup and SweepMssFvgRetrace should not be removed or broadened. This phase compared the positive reviewed subset against the broad negative formal bucket to isolate the actual research filter before any scanner-visible change.
