@@ -1195,6 +1195,40 @@ export interface DeskTicket {
   notes: string[];
 }
 
+export interface HeldLocalReviewTicketInput {
+  ticketId: string;
+  setupType: SetupType;
+  direction: Exclude<DeskPlayDirection, 'WAIT'>;
+  sourceCandidateKey: string;
+  entry: number;
+  stop: number;
+  target1: number;
+  target2: number;
+  proofTime: string;
+  triggerCondition: string;
+  invalidationText: string;
+  htfStory?: string | null;
+  notes?: string[];
+}
+
+export interface HeldLocalReviewTicketArtifact {
+  sourceOfTruth: 'scanner_owned_held_local_review_ticket_adapter';
+  ticketId: string;
+  deskTicket: DeskTicket;
+  deskPublishDecision: DeskPublishDecision;
+  publishDiscord: false;
+  canExecute: false;
+  reviewOnly: true;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesBridgeBehavior: false;
+    changesDiscordPosting: false;
+  };
+}
+
 export interface DeskStateReplayValidation {
   sourceOfTruth: 'scanner_desk_state_replay_validation';
   cycleCount: number;
@@ -6099,6 +6133,93 @@ export function buildDeskPublishDecision(args: {
       changesEntryStopTargets: false,
       changesRiskRules: false,
       changesBridgeBehavior: false,
+    },
+  };
+}
+
+export function buildHeldLocalReviewTicketArtifact(input: HeldLocalReviewTicketInput): HeldLocalReviewTicketArtifact {
+  const deskTicket: DeskTicket = {
+    sourceOfTruth: 'scanner_single_active_desk_ticket',
+    state: 'ACTIVE_REVIEW',
+    primaryDirection: input.direction,
+    lineInSand: input.entry,
+    triggerCondition: input.triggerCondition,
+    entry: input.entry,
+    stop: input.stop,
+    t1: input.target1,
+    t2: input.target2,
+    invalidation: input.stop,
+    invalidationText: input.invalidationText,
+    htfStatus: 'sufficient',
+    htfStory: input.htfStory || 'Held-local review ticket. 5M remains execution authority; HTF/outcome context supports review only.',
+    oppositeScenario: null,
+    sourceCandidateKey: input.sourceCandidateKey,
+    humanReviewOnly: true,
+    noAutomatedOrders: true,
+    displayBoundary: 'trader_facing_ticket_only_can_execute_internal',
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
+    },
+    notes: [
+      `Held-local ${input.setupType} ${input.direction} review ticket from completed 5M proof at ${input.proofTime}.`,
+      'This adapter does not post Discord, approve execution, or change canExecute.',
+      ...(input.notes || []),
+    ],
+  };
+  const deskPublishDecision: DeskPublishDecision = {
+    sourceOfTruth: 'scanner_desk_publish_decision',
+    action: 'POST_REVIEW',
+    discordAction: 'post_review',
+    shouldPost: false,
+    reason: 'Held-local scanner-owned review ticket adapter. Live Discord posting remains disabled until separately approved.',
+    displaySource: 'desk_ticket',
+    candidateKey: input.sourceCandidateKey,
+    direction: input.direction,
+    setupType: input.setupType,
+    lineInSand: deskTicket.lineInSand,
+    triggerCondition: deskTicket.triggerCondition,
+    entry: deskTicket.entry,
+    stop: deskTicket.stop,
+    t1: deskTicket.t1,
+    t2: deskTicket.t2,
+    invalidation: deskTicket.invalidation,
+    invalidationText: deskTicket.invalidationText,
+    hasCompletePlan: true,
+    humanReviewOnly: true,
+    canExecute: false,
+    noChaseState: false,
+    htfContextStatus: deskTicket.htfStatus,
+    dataQualityStatus: 'ok',
+    discordReason: 'Held local. No Discord post.',
+    managementWarnings: ['Held-local review only. No automated orders and no execution approval.'],
+    driftBlocker: null,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
+    },
+  };
+  return {
+    sourceOfTruth: 'scanner_owned_held_local_review_ticket_adapter',
+    ticketId: input.ticketId,
+    deskTicket,
+    deskPublishDecision,
+    publishDiscord: false,
+    canExecute: false,
+    reviewOnly: true,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
+      changesDiscordPosting: false,
     },
   };
 }

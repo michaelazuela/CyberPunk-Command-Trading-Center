@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add scanner-owned held-local review ticket adapter.
+Files changed: src/lib/localScannerEngine.ts, tools/automation/unified-positive-held-local-ticket-adapter.ts, tools/automation/unified-positive-held-local-ticket-adapter.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The contract comparison proved 4 positive review tickets fit the scanner-owned `DeskTicket`/`DeskPublishDecision` contracts. This phase adds a dry-run scanner-owned adapter that emits held-local review ticket artifacts only, keeping `publishDiscord=false`, `shouldPost=false`, and `canExecute=false`.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-ticket-adapter.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-held-local-ticket-adapter.ts --contract-comparison tools/automation/diagnostic-reports/unified-positive-desk-ticket-contract-comparison-1784253451004.json --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, and real read-only adapter run passed. The adapter consumed 4 compatible contract-comparison rows and created 4 scanner-owned held-local artifacts: 2026-06-16 morning TurtleSoup LONG, 2026-06-24 evening TurtleSoup SHORT, 2026-06-25 evening TurtleSoup SHORT, and 2026-06-26 morning SweepMssFvgRetrace LONG. Every artifact has `DeskTicket.state=ACTIVE_REVIEW`, `DeskPublishDecision.shouldPost=false`, `canExecute=false`, and `publishDiscord=false`; 0 rows were blocked. Report paths: `tools/automation/diagnostic-reports/unified-positive-held-local-ticket-adapter-1784254207487.json` and `.md`.
+Trading logic changed: No. This adds an exported dry-run/held-local artifact builder and read-only report. It does not change setup definitions, live ranking, scanner behavior, entry, stop, target, risk, invalidation, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: The adapter is available but not wired into live scanner cycles. A later scanner dry-run replay must prove the adapter can sit beside normal DeskState output without changing the live publish path.
+Next recommended action: Add a scanner dry-run replay that emits these held-local artifacts beside normal DeskState output, then compare normal output versus adapter output and require zero live publish behavior change.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Compare simulated positive review tickets against DeskTicket/DeskPublishDecision contracts.
 Files changed: tools/automation/unified-positive-desk-ticket-contract-comparison.ts, tools/automation/unified-positive-desk-ticket-contract-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The deduped review-ticket simulation produced 4 review-only candidates. Before any scanner-visible wiring, the desk needed proof that those tickets can be represented by the existing scanner-owned `DeskTicket` and `DeskPublishDecision` public contracts without changing Discord posting, Supabase schema, `canExecute`, or execution behavior.
