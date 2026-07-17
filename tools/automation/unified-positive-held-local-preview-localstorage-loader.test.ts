@@ -11,6 +11,10 @@ import {
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'held-local-preview-localstorage-loader-'));
 
 try {
+  fs.writeFileSync(path.join(tempDir, 'card.png'), Buffer.from([
+    0x89, 0x50, 0x4e, 0x47,
+    0x0d, 0x0a, 0x1a, 0x0a,
+  ]));
   const uiIndexReport: HeldLocalPreviewUiIndexReport = {
     reportType: 'unified_positive_held_local_preview_ui_index',
     status: 'pass',
@@ -84,7 +88,9 @@ try {
   assert.equal(report.summary.storageKey, HELD_LOCAL_PREVIEW_STORAGE_KEY);
   assert.equal(report.summary.previewItemsReady, 1);
   assert.equal(report.summary.blockedItems, 0);
+  assert.ok(report.summary.bundleBytes > 0);
   assert.match(report.snippet, new RegExp(`localStorage\\.setItem\\('${HELD_LOCAL_PREVIEW_STORAGE_KEY}'`));
+  assert.match(report.snippet, /data:image\/png;base64/);
   assert.match(report.snippet, /heldLocalPreview=1/);
   assert.doesNotMatch(report.snippet, /shouldPost=true/);
   assert.doesNotMatch(report.snippet, /canExecute=true/);
@@ -93,9 +99,13 @@ try {
   assert.ok(fs.existsSync(paths.jsonPath));
   assert.ok(fs.existsSync(paths.markdownPath));
   assert.ok(fs.existsSync(paths.snippetPath));
+  assert.ok(fs.existsSync(paths.bundlePath));
   const snippet = fs.readFileSync(paths.snippetPath, 'utf8');
   assert.match(snippet, /localStorage\.setItem/);
   assert.match(snippet, /heldLocalPreview=1/);
+  assert.match(snippet, /data:image\/png;base64/);
+  const bundle = JSON.parse(fs.readFileSync(paths.bundlePath, 'utf8')) as HeldLocalPreviewUiIndexReport;
+  assert.match(bundle.items[0].imageSrc, /^data:image\/png;base64,/);
 
   const blockedUiIndex = structuredClone(uiIndexReport);
   blockedUiIndex.status = 'fail';
@@ -108,6 +118,15 @@ try {
   assert.equal(blockedReport.snippet, '');
   assert.ok(blockedReport.blockers.includes('preview index status fail'));
   assert.ok(blockedReport.blockers.includes('preview index has blocked items'));
+
+  const missingPngUiIndex = structuredClone(uiIndexReport);
+  missingPngUiIndex.items[0].pngPath = path.join(tempDir, 'missing.png');
+  const missingPngReport = buildUnifiedPositiveHeldLocalPreviewLocalStorageLoaderReport({
+    uiIndexReport: missingPngUiIndex,
+  }, '2026-07-16T00:05:00.000Z');
+  assert.equal(missingPngReport.status, 'fail');
+  assert.equal(missingPngReport.snippet, '');
+  assert.ok(missingPngReport.blockers.includes('preview-ticket PNG file does not exist'));
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

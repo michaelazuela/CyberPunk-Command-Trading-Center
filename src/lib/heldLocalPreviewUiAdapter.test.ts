@@ -124,6 +124,16 @@ const remoteBlocked = buildHeldLocalPreviewUiModel({
   report: remoteImage,
 });
 assert.equal(remoteBlocked.status, 'blocked');
-assert.ok(remoteBlocked.blockers.includes('held-local-ticket imageSrc is not a local file URL'));
+assert.ok(remoteBlocked.blockers.includes('held-local-ticket imageSrc is not a local file URL or embedded PNG data URL'));
+
+const embeddedImage = structuredClone(report) as HeldLocalPreviewUiIndexReport;
+embeddedImage.items[0].imageSrc = 'data:image/png;base64,iVBORw0KGgo=';
+const embeddedReady = buildHeldLocalPreviewUiModel({
+  enabled: true,
+  localHost: true,
+  report: embeddedImage,
+});
+assert.equal(embeddedReady.status, 'ready');
+assert.equal(embeddedReady.items[0].imageSrc, 'data:image/png;base64,iVBORw0KGgo=');
 
 console.log('held-local preview UI adapter verified.');

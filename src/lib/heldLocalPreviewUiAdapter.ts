@@ -17,6 +17,10 @@ export interface HeldLocalPreviewUiIndexItem {
 
 export const HELD_LOCAL_PREVIEW_STORAGE_KEY = 'held_local_preview_ui_index_report';
 
+export function isAllowedHeldLocalPreviewImageSrc(imageSrc: string): boolean {
+  return imageSrc.startsWith('file:///') || imageSrc.startsWith('data:image/png;base64,');
+}
+
 export interface HeldLocalPreviewUiIndexReport {
   reportType: 'unified_positive_held_local_preview_ui_index';
   status: 'pass' | 'fail';
@@ -154,7 +158,7 @@ export function buildHeldLocalPreviewUiModel(args: {
       item.publishDiscord !== false ? `${item.ticketId} publishDiscord is not false` : null,
       item.shouldDispatch !== false ? `${item.ticketId} shouldDispatch is not false` : null,
       item.writesSupabase !== false ? `${item.ticketId} writesSupabase is not false` : null,
-      !item.imageSrc.startsWith('file:///') ? `${item.ticketId} imageSrc is not a local file URL` : null,
+      !isAllowedHeldLocalPreviewImageSrc(item.imageSrc) ? `${item.ticketId} imageSrc is not a local file URL or embedded PNG data URL` : null,
     ].filter((rowBlocker): rowBlocker is string => Boolean(rowBlocker));
     itemBlockers.push(...rowBlockers);
     if (rowBlockers.length) return [];

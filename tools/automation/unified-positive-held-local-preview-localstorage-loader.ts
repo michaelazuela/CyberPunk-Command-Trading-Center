@@ -34,12 +34,14 @@ export interface UnifiedPositiveHeldLocalPreviewLocalStorageLoaderReport {
   };
   output: {
     snippetPath: string | null;
+    bundlePath: string | null;
   };
   summary: {
     storageKey: string;
     previewItemsReady: number;
     blockedItems: number;
     snippetBytes: number;
+    bundleBytes: number;
   };
   blockers: string[];
   snippet: string;
@@ -97,6 +99,34 @@ function buildSnippet(report: HeldLocalPreviewUiIndexReport): string {
   ].join('\n');
 }
 
+function toEmbeddedPngDataUrl(pngPath: string): string {
+  return `data:image/png;base64,${fs.readFileSync(pngPath).toString('base64')}`;
+}
+
+export function buildEmbeddedHeldLocalPreviewUiIndexReport(
+  report: HeldLocalPreviewUiIndexReport,
+): { report: HeldLocalPreviewUiIndexReport; blockers: string[] } {
+  const blockers: string[] = [];
+  const embeddedReport: HeldLocalPreviewUiIndexReport = {
+    ...report,
+    items: report.items.map((item) => {
+      if (!item.pngPath) {
+        blockers.push(`${item.ticketId} missing PNG path`);
+        return item;
+      }
+      if (!fs.existsSync(item.pngPath)) {
+        blockers.push(`${item.ticketId} PNG file does not exist`);
+        return item;
+      }
+      return {
+        ...item,
+        imageSrc: toEmbeddedPngDataUrl(item.pngPath),
+      };
+    }),
+  };
+  return { report: embeddedReport, blockers };
+}
+
 function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewLocalStorageLoaderReport, 'markdown'>): string {
   return [
     '# Unified Positive Held-Local Preview LocalStorage Loader',
@@ -110,7 +140,9 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewLocalStorageL
     `- Preview items ready: ${report.summary.previewItemsReady}.`,
     `- Blocked items: ${report.summary.blockedItems}.`,
     `- Snippet bytes: ${report.summary.snippetBytes}.`,
+    `- Bundle bytes: ${report.summary.bundleBytes}.`,
     `- Snippet path: ${report.output.snippetPath || '-'}.`,
+    `- Bundle path: ${report.output.bundlePath || '-'}.`,
     '',
     '## Blockers',
     ...(report.blockers.length ? report.blockers.map((blocker) => `- ${blocker}`) : ['- None.']),
@@ -130,11 +162,21 @@ export function buildUnifiedPositiveHeldLocalPreviewLocalStorageLoaderReport(arg
     localHost: true,
     report: args.uiIndexReport,
   });
+  const embedded = args.uiIndexReport ? buildEmbeddedHeldLocalPreviewUiIndexReport(args.uiIndexReport) : null;
+  const embeddedModel = embedded ? buildHeldLocalPreviewUiModel({
+    enabled: true,
+    localHost: true,
+    report: embedded.report,
+  }) : null;
   const blockers = [
     ...model.blockers,
+    ...(embedded?.blockers || []),
+    ...(embeddedModel?.blockers || []),
     args.uiIndexReport?.authority.changesAppRuntime !== false ? 'preview index changesAppRuntime is not false' : null,
   ].filter((item): item is string => Boolean(item));
-  const snippet = blockers.length || !args.uiIndexReport ? '' : buildSnippet(args.uiIndexReport);
+  const bundledReport = embedded?.report || null;
+  const bundlePayload = blockers.length || !bundledReport ? '' : JSON.stringify(bundledReport, null, 2);
+  const snippet = blockers.length || !bundledReport ? '' : buildSnippet(bundledReport);
   const base: Omit<UnifiedPositiveHeldLocalPreviewLocalStorageLoaderReport, 'markdown'> = {
     reportType: 'unified_positive_held_local_preview_localstorage_loader',
     generatedAt,
@@ -145,18 +187,20 @@ export function buildUnifiedPositiveHeldLocalPreviewLocalStorageLoaderReport(arg
     },
     output: {
       snippetPath: args.snippetPath || null,
+      bundlePath: null,
     },
     summary: {
       storageKey: HELD_LOCAL_PREVIEW_STORAGE_KEY,
-      previewItemsReady: model.items.length,
+      previewItemsReady: embeddedModel?.items.length || 0,
       blockedItems: blockers.length ? 1 : 0,
       snippetBytes: Buffer.byteLength(snippet, 'utf8'),
+      bundleBytes: Buffer.byteLength(bundlePayload, 'utf8'),
     },
     blockers,
     snippet,
     recommendations: blockers.length
       ? ['Do not load the held-local app preview until the UI index passes adapter validation.']
-      : ['Paste the snippet into the local browser console on localhost to load the held-local preview tab.'],
+      : ['Import the generated embedded bundle JSON in the hidden localhost preview tab, or paste the generated snippet into the local browser console.'],
   };
   return { ...base, markdown: buildMarkdown(base) };
 }
@@ -164,18 +208,24 @@ export function buildUnifiedPositiveHeldLocalPreviewLocalStorageLoaderReport(arg
 export function writeUnifiedPositiveHeldLocalPreviewLocalStorageLoaderReport(
   report: UnifiedPositiveHeldLocalPreviewLocalStorageLoaderReport,
   outDir = DEFAULT_REPORT_DIR,
-): { jsonPath: string; markdownPath: string; snippetPath: string } {
+): { jsonPath: string; markdownPath: string; snippetPath: string; bundlePath: string } {
   fs.mkdirSync(outDir, { recursive: true });
   const base = `unified-positive-held-local-preview-localstorage-loader-${Date.now()}`;
   const snippetPath = path.join(outDir, `${base}.js`);
-  const finalReport = { ...report, output: { snippetPath } };
+  const bundlePath = path.join(outDir, `${base}.bundle.json`);
+  const finalReport = { ...report, output: { snippetPath, bundlePath } };
   const reportWithMarkdown = { ...finalReport, markdown: buildMarkdown(finalReport) };
   const jsonPath = path.join(outDir, `${base}.json`);
   const markdownPath = path.join(outDir, `${base}.md`);
+  const snippetPayload = reportWithMarkdown.snippet.match(/localStorage\.setItem\('[^']+', '(.+)'\);/)?.[1] || '';
+  const bundlePayload = snippetPayload
+    ? JSON.stringify(JSON.parse(snippetPayload.replace(/\\'/g, "'").replace(/\\\\/g, '\\')), null, 2)
+    : '';
   fs.writeFileSync(snippetPath, `${reportWithMarkdown.snippet}\n`, 'utf8');
+  fs.writeFileSync(bundlePath, bundlePayload ? `${bundlePayload}\n` : '', 'utf8');
   fs.writeFileSync(jsonPath, `${JSON.stringify(reportWithMarkdown, null, 2)}\n`, 'utf8');
   fs.writeFileSync(markdownPath, `${reportWithMarkdown.markdown}\n`, 'utf8');
-  return { jsonPath, markdownPath, snippetPath };
+  return { jsonPath, markdownPath, snippetPath, bundlePath };
 }
 
 export function runUnifiedPositiveHeldLocalPreviewLocalStorageLoaderCli(args = process.argv.slice(2)): void {
@@ -196,6 +246,7 @@ export function runUnifiedPositiveHeldLocalPreviewLocalStorageLoaderCli(args = p
     console.log(`\nReport JSON: ${paths.jsonPath}`);
     console.log(`Report Markdown: ${paths.markdownPath}`);
     console.log(`Loader snippet: ${paths.snippetPath}`);
+    console.log(`Embedded bundle: ${paths.bundlePath}`);
   }
   if (finalReport.status !== 'pass') process.exitCode = 1;
 }

@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add embedded held-local preview import bundle.
+Files changed: src/lib/heldLocalPreviewUiAdapter.ts, src/lib/heldLocalPreviewUiAdapter.test.ts, tools/automation/unified-positive-held-local-preview-localstorage-loader.ts, tools/automation/unified-positive-held-local-preview-localstorage-loader.test.ts, docs/PROJECT_STATUS.md.
+Reason: Runtime inspection proved the hidden tab imported the raw UI index but browser security blocked `file:///` PNG rendering from the localhost app. This phase makes the local loader produce an embedded bundle JSON with PNG data URLs and updates the adapter to accept only local file URLs or embedded PNG data URLs.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-localstorage-loader.test.ts`; `npx tsx src/lib/heldLocalPreviewUiAdapter.test.ts`; `npx tsc --noEmit --pretty false`; real local loader run against latest signoff-passing UI index JSON; Playwright localhost import smoke against the generated embedded bundle.
+Result: Focused loader test, adapter test, typecheck, real embedded bundle generation, and browser import smoke passed. The real bundle run accepted 4 preview-ready items, blocked 0 items, wrote `tools/automation/diagnostic-reports/unified-positive-held-local-preview-localstorage-loader-1784264582758.bundle.json`, and browser smoke confirmed 4 rendered images with natural width 1280.
+Trading logic changed: No. This is local-only preview artifact handling. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: Embedded preview bundles can be large because they include PNG data URLs; keep them as ignored diagnostic artifacts, not committed source.
+Next recommended action: Add a small local preview readiness audit that checks the hidden tab using the latest embedded bundle before any broader read-only review workflow.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local local preview JSON import control.
 Files changed: src/components/HeldLocalPreviewPanel.tsx, src/App.test.tsx, docs/PROJECT_STATUS.md.
 Reason: The localStorage loader proved the app tab can consume a signoff-passing UI index, but a console snippet is clumsy. This phase adds a hidden-tab-only local JSON import control that validates the selected preview index through the same app adapter before storing it in localStorage.
