@@ -2,6 +2,21 @@
 
 ## Latest Change
 
+Date: 2026-07-17
+Task: Add held-local preview auto-review seed for replay research queueing.
+Files changed: tools/automation/unified-positive-held-local-preview-auto-review-seed.ts, tools/automation/unified-positive-held-local-preview-auto-review-seed.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The review handoff correctly stopped at manual review, but the workflow needed a deterministic local reviewer that can queue replay research from already-safe preview artifacts without requiring manual JSON edits. This phase seeds reviewed notes from the checklist when rows are visible, review-only, `canExecute=false`, Discord-disabled, and Supabase-disabled.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-auto-review-seed.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-auto-review-seed -- --json`; `npm run diagnostic:held-local-preview-note-ingest-validator -- --notes <auto-reviewed-notes> --json`; `npm run diagnostic:held-local-preview-review-rollup -- --json`; `npm run diagnostic:held-local-preview-decision-summary -- --json`; `npm run diagnostic:held-local-preview-review-handoff -- --json`.
+Result: Focused auto-review test and typecheck passed. The real auto-review seed generated 4 reviewed rows, all 4 as `candidate_for_later_research`. The validator accepted 4/4 reviewed rows. The rollup reported 4 candidate-for-later-research rows. The decision summary queued 4 rows for read-only replay research with 0 live-promotion rows. The handoff passed with 4 queued replay-research rows, 0 held rows, 0 live-promotion rows, and 0 missing artifacts. Latest handoff report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-review-handoff-1784297645323.json`.
+Trading logic changed: No. This is local-only research queue seeding. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: Rows are queued for replay research only, not scanner-visible behavior. Any model/rule change still requires separate replay evidence and approval.
+Next recommended action: Run the read-only replay research queue for the 4 queued held-local cases and compare whether they remain candidates after replay proof, P/L, and blocker analysis.
+
+## Previous Change
+
 Date: 2026-07-16
 Task: Add held-local preview review handoff manifest.
 Files changed: tools/automation/unified-positive-held-local-preview-review-handoff.ts, tools/automation/unified-positive-held-local-preview-review-handoff.test.ts, package.json, docs/PROJECT_STATUS.md.
