@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add held-local preview research rank overlay and bookmark rlsautotest.
+Files changed: tools/automation/unified-positive-held-local-preview-rank-overlay.ts, tools/automation/unified-positive-held-local-preview-rank-overlay.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The validated source/proof filter separated reviewed winners from broad non-strict losers. This phase adds a research-only ordering layer for accepted rows and records `rlsautotest` as a later Supabase RLS audit candidate without installing it or touching Supabase.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-rank-overlay.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-rank-overlay -- --json`.
+Result: Focused rank-overlay test, typecheck, and real diagnostic run passed. The real diagnostic evaluated 13 rows, ranked 4 source/proof-accepted research rows, rejected 9 broad non-strict rows, and allowed 0 live-promotion rows. Ranked one-MES P/L was +$505; rejected one-MES P/L was -$755. Top ranked research row was `2026-06-26-morning-SweepMssFvgRetrace-LONG` with score 95. `rlsautotest` was bookmarked for a later Supabase RLS audit phase with action-now set to none: no install, no Supabase reads, no Supabase writes, no migrations, and no policy changes. Latest rank-overlay report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-rank-overlay-1784302858812.json`.
+Trading logic changed: No. This is local-only ranking research and a documentation bookmark. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, model availability, `canExecute`, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None. `rlsautotest` is bookmarked for a later RLS audit only; no package install, Supabase read, Supabase write, migration, or policy change occurs.
+Known risks: Rank scores are research ordering only and intentionally not live scanner ranking. The sample remains small and must not be treated as execution approval.
+Next recommended action: Expand the research-only rank overlay across the next reviewed source/proof-positive cases before considering any scanner-visible integration. Keep `rlsautotest` parked for a later Supabase RLS audit phase.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add held-local preview source/proof filter validation.
 Files changed: tools/automation/unified-positive-held-local-preview-source-proof-filter.ts, tools/automation/unified-positive-held-local-preview-source-proof-filter.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The filter-difference audit identified scanner-owned held-local artifacts plus completed 5M retest/re-entry proof as the likely separator. This phase validates that filter against the current research set before any ranking overlay or live behavior is considered.
