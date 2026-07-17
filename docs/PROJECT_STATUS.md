@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add unified positive scanner dry-run replay.
+Files changed: tools/automation/unified-positive-scanner-dry-run-replay.ts, tools/automation/unified-positive-scanner-dry-run-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The held-local adapter created 4 scanner-owned review artifacts. Before scanner-visible wiring, the desk needed proof that these artifacts can be paired beside normal DeskState output while preserving zero live publish behavior change.
+Tests run: `npx tsx tools/automation/unified-positive-scanner-dry-run-replay.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-scanner-dry-run-replay.ts --held-local-adapter tools/automation/diagnostic-reports/unified-positive-held-local-ticket-adapter-1784254207487.json --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, and real read-only dry-run replay passed. The replay loaded 4 adapter rows, paired 4 held-local artifacts beside preserved normal scanner output, found 4 zero-live-publish-behavior-change rows, and found 0 blockers. Normal output and adapter output both remained `shouldPost=false`, `publishDiscord=false`, and `canExecute=false` for all 4 rows. Report paths: `tools/automation/diagnostic-reports/unified-positive-scanner-dry-run-replay-1784254950340.json` and `.md`.
+Trading logic changed: No. This is a read-only diagnostic replay over local artifacts. It does not change setup definitions, live ranking, scanner behavior, entry, stop, target, risk, invalidation, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: The artifacts are still local dry-run evidence only. Scanner-visible UI/Discord/Supabase wiring remains off and would need a separate approval gate.
+Next recommended action: Add an explicit local-only scanner dry-run flag or inspection surface that can show the held-local `ACTIVE_REVIEW` ticket beside normal DeskState output while keeping production Discord/Supabase behavior disabled.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add scanner-owned held-local review ticket adapter.
 Files changed: src/lib/localScannerEngine.ts, tools/automation/unified-positive-held-local-ticket-adapter.ts, tools/automation/unified-positive-held-local-ticket-adapter.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The contract comparison proved 4 positive review tickets fit the scanner-owned `DeskTicket`/`DeskPublishDecision` contracts. This phase adds a dry-run scanner-owned adapter that emits held-local review ticket artifacts only, keeping `publishDiscord=false`, `shouldPost=false`, and `canExecute=false`.
