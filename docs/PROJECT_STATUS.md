@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add broad proof/context enrichment for reviewed-positive held-local rows.
+Files changed: tools/automation/unified-positive-held-local-preview-broad-proof-context-enrichment.ts, tools/automation/unified-positive-held-local-preview-broad-proof-context-enrichment.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Broad setup/session/direction/risk-bucket feature search found no accepted market-feature separator, so the next safe phase enriched the 204 broad rows with proof state, risk quality, occurrences, proof-to-entry timing, completed-5M path MFE/MAE, and issue tags.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-broad-proof-context-enrichment.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-broad-proof-context-enrichment -- --json.
+Result: Passed. Real local report enriched 204 rows, 0 blocked rows, 66 winners, 78 losses, 60 unresolved, gross resolved one-MES P/L +$2,301.25, group summaries 2, live promotion allowed rows 0. TurtleSoup scanner-held-complete: 153 rows, 47 winners, 61 losses, 45 unresolved, +$1,211.25; avg winner/loss MFE R 5.56/2.73 and avg winner/loss MAE R 1.03/4.15. IntradayMssMicroContinuation human-review-ready: 51 rows, 19 winners, 17 losses, 15 unresolved, +$1,090.00; avg winner/loss MFE R 4.71/3.05 and avg winner/loss MAE R 1.74/2.28.
+Trading logic changed: No. This is a read-only local enrichment diagnostic. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local replay diagnostics plus local completed-5M scanner tape JSON.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: MFE/MAE enrichment is post-entry research evidence, not a pre-trade live filter. It can guide the next research package but must not become scanner-visible without a separate pre-entry proof rule.
+Next recommended action: Build a research-only adverse-path classifier that uses only pre-entry/proof-time facts available before entry, then compare it against this MFE/MAE enrichment to avoid leaking future outcome information into live ranking.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add broad held-local feature-search diagnostic for reviewed-positive research rows.
 Files changed: tools/automation/unified-positive-held-local-preview-broad-feature-search.ts, tools/automation/unified-positive-held-local-preview-broad-feature-search.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Simple Intraday/TurtleSoup risk caps failed broad validation, so the desk needed a read-only feature separator search before considering any scanner-visible rank/filter change.
