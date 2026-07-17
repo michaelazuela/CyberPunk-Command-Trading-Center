@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local preview review handoff manifest.
+Files changed: tools/automation/unified-positive-held-local-preview-review-handoff.ts, tools/automation/unified-positive-held-local-preview-review-handoff.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The decision summary proves the current held-local preview cases remain manual-review only. This phase adds a local-only handoff manifest that verifies the complete preview-review artifact chain exists and records the rerun commands after notes are reviewed.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-review-handoff.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-review-handoff -- --json`.
+Result: Focused handoff test, typecheck, and real diagnostic run passed. The real handoff found the embedded preview bundle, readiness audit/screenshot, review checklist, editable notes file, note validation, rollup, and decision summary. It reported 4 decision rows, 4 held for manual review, 0 queued for replay research, 0 live-promotion rows, and 0 missing artifacts. Handoff report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-review-handoff-1784267758694.json`.
+Trading logic changed: No. This is local-only review handoff tooling. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: The handoff intentionally stops at local artifact readiness. Actual replay-research eligibility still requires supported reviewer dispositions in the editable notes file.
+Next recommended action: Review the four hidden-tab preview cases and update the editable notes file, then rerun note validation, review rollup, decision summary, and handoff before any replay-research phase.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local preview decision summary.
 Files changed: tools/automation/unified-positive-held-local-preview-decision-summary.ts, tools/automation/unified-positive-held-local-preview-decision-summary.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The review rollup joins checklist and validated notes but does not decide what happens next. This phase adds a local-only gate that maps supported note dispositions into explicit research-only next steps while refusing live promotion, scanner behavior changes, Discord posts, Supabase writes, or `canExecute` changes.
