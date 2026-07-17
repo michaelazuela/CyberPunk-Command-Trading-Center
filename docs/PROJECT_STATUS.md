@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local local preview text preflight.
+Files changed: tools/automation/unified-positive-held-local-preview-preflight.ts, tools/automation/unified-positive-held-local-preview-preflight.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The local renderer proved four held-local card shapes can render without posting or executing. This phase adds a local text preflight that rejects missing card fields, oversized content/lines/footer, missing boundary language, generic invalidation wording, and forbidden executable/posting signals before any visual image rendering or UI exposure.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-preflight.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-held-local-preview-preflight.ts --renderer tools/automation/diagnostic-reports/unified-positive-held-local-preview-renderer-1784259405922.json --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, and real local preflight run passed. The real run loaded 4 rendered-card rows, passed all 4, failed 0, and found 0 missing-field findings, 0 oversized content findings, 0 oversized line findings, 0 boundary findings, and 0 forbidden signal findings. Report paths: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-preflight-1784259982919.json` and `.md`.
+Trading logic changed: No. This is a local-only text preflight. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: Production Discord/Supabase publishing remains disabled. This is not a visual card artifact and is not wired to UI, Discord, scanner-visible output, or live runtime.
+Next recommended action: Add a local visual artifact render for the held-local preview card behind this preflight, then use Quant Desk visual QA before considering any UI/Discord exposure.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local local preview renderer.
 Files changed: tools/automation/unified-positive-held-local-preview-renderer.ts, tools/automation/unified-positive-held-local-preview-renderer.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The local preview payload builder proved four held-local review payloads can be created with all dispatch/execution flags disabled. This phase adds a local text/card-shape renderer so the desk can inspect the future card wording and required boundaries without creating a visual artifact, posting Discord, writing Supabase, or touching scanner runtime behavior.
