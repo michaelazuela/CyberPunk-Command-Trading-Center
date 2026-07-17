@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add held-local preview rank overlay expansion across local source/proof artifacts.
+Files changed: tools/automation/unified-positive-held-local-preview-rank-overlay-expansion.ts, tools/automation/unified-positive-held-local-preview-rank-overlay-expansion.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The prior rank overlay proved source/proof-positive rows could be ordered locally. This phase adds a multi-report expansion layer that scans all local source/proof and OHLC outcome artifacts, dedupes reviewed rows by row id, and reruns the research-only rank overlay before any scanner-visible behavior is considered.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-rank-overlay-expansion.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-rank-overlay-expansion -- --json`.
+Result: Focused expansion test, typecheck, and real diagnostic run passed. The real diagnostic loaded 1 source/proof report and 1 OHLC outcome report, removed 0 duplicate rows, evaluated 13 unique rows, ranked 4 source/proof-accepted research rows, rejected 9 broad non-strict rows, and allowed 0 live-promotion rows. Ranked one-MES P/L remained +$505; rejected one-MES P/L remained -$755. Top ranked research row remained `2026-06-26-morning-SweepMssFvgRetrace-LONG`. Expanded rows beyond newest report: 0, which means no additional reviewed source/proof-positive artifacts are currently available in the local diagnostic set. Latest expansion report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-rank-overlay-expansion-1784303542939.json`.
+Trading logic changed: No. This is local-only research expansion. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, model availability, `canExecute`, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: The expansion tool is ready for multiple artifacts, but the current local set contains no additional reviewed source/proof-positive rows beyond the latest report. Do not infer broader model readiness from this unchanged sample.
+Next recommended action: Generate or ingest additional reviewed source/proof-positive artifacts, then rerun the expansion before any scanner-visible integration.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add held-local preview research rank overlay and bookmark rlsautotest.
 Files changed: tools/automation/unified-positive-held-local-preview-rank-overlay.ts, tools/automation/unified-positive-held-local-preview-rank-overlay.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The validated source/proof filter separated reviewed winners from broad non-strict losers. This phase adds a research-only ordering layer for accepted rows and records `rlsautotest` as a later Supabase RLS audit candidate without installing it or touching Supabase.
