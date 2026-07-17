@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local local preview UI index artifact.
+Files changed: tools/automation/unified-positive-held-local-preview-ui-index.ts, tools/automation/unified-positive-held-local-preview-ui-index.test.ts, scripts/run-test-suite.cjs, scripts/project-guardrails-check.js, package.json, docs/PROJECT_STATUS.md.
+Reason: The visual signoff contract proved all four held-local preview PNGs were inspected. This phase adds a local preview index artifact that displays only signoff-passing PNGs and preserves every no-post/no-execute boundary before any app runtime or Discord exposure is considered.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-ui-index.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-held-local-preview-ui-index.ts --signoff tools/automation/diagnostic-reports/unified-positive-held-local-preview-visual-signoff-1784261772308.json --out-dir tools/automation/diagnostic-reports --json`; generated HTML content check for title and boundary language; `npm run test`.
+Result: Focused test, typecheck, real local UI index run, generated HTML checks, and full test suite passed. The real run loaded 4 signoff rows, marked 4 preview items ready, blocked 0 items, and preserved `postable=false`, `shouldPost=false`, `canExecute=false`, `publishDiscord=false`, `shouldDispatch=false`, and `writesSupabase=false` for all 4 items. UI index report path: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-ui-index-1784262626611.json`; HTML path: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-ui-index-1784262626611.html`. During verification, Windows rejected the accumulated one-line `npm run test` command as too long, so `scripts/run-test-suite.cjs` now runs the same `test:commands` list sequentially without changing the test set; `scripts/project-guardrails-check.js` now validates critical regression suites across `test` and `test:commands`.
+Trading logic changed: No. This is a local-only preview index artifact. It does not change setup definitions, live ranking, live scanner behavior, app runtime behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: Production Discord/Supabase publishing remains disabled. The preview index is an artifact, not an app route or scanner-visible runtime feature.
+Next recommended action: Add a controlled local-only app preview adapter that can consume this index behind an explicit flag while keeping Discord/Supabase/scanner publish behavior disabled.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local local preview visual QA signoff.
 Files changed: tools/automation/unified-positive-held-local-preview-visual-signoff.ts, tools/automation/unified-positive-held-local-preview-visual-signoff.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The visual renderer produced four local PNG artifacts. This phase adds a separate local signoff contract that records exactly which rendered PNGs were inspected and blocks if a rendered row is not inspected, the PNG is invalid, the inspector note is missing, or any no-post/no-execute boundary flag is not false.

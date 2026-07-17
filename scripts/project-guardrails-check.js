@@ -138,7 +138,7 @@ function checkPackageGuardScripts(pkg) {
     fail('package.json lint must run npm run guard and tsc --noEmit.');
   }
 
-  const test = scripts.test || '';
+  const test = `${scripts.test || ''}\n${scripts['test:commands'] || ''}`;
   for (const requiredTest of [
     'src/lib/tradeDecisionPipeline.test.ts',
     'src/lib/setupScanner.test.ts',
