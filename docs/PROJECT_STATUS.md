@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local preview readiness audit.
+Files changed: tools/automation/unified-positive-held-local-preview-readiness-audit.ts, tools/automation/unified-positive-held-local-preview-readiness-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The embedded preview bundle rendered correctly in a manual browser smoke. This phase makes that proof repeatable with a local-only readiness audit that imports the latest embedded bundle into the hidden localhost tab, counts rendered cards, checks image natural widths, and writes JSON/Markdown/screenshot artifacts.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-readiness-audit.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-readiness-audit -- --json`; screenshot inspection via generated PNG.
+Result: Focused readiness audit test, typecheck, real local readiness audit, and screenshot inspection passed. The real audit loaded 4 expected cards, rendered 4 cards, loaded 4 images, and measured minimum natural width 1280. Readiness report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-readiness-audit-1784265592173.json`; screenshot: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-readiness-audit-1784265587328.png`.
+Trading logic changed: No. This is local-only preview readiness tooling. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: The audit requires a local dev server already reachable at the supplied URL. It does not start or supervise production services.
+Next recommended action: Add a local held-preview review checklist/report that summarizes which held-local cases are visible in the tab and why they remain review-only before any broader workflow is considered.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add embedded held-local preview import bundle.
 Files changed: src/lib/heldLocalPreviewUiAdapter.ts, src/lib/heldLocalPreviewUiAdapter.test.ts, tools/automation/unified-positive-held-local-preview-localstorage-loader.ts, tools/automation/unified-positive-held-local-preview-localstorage-loader.test.ts, docs/PROJECT_STATUS.md.
 Reason: Runtime inspection proved the hidden tab imported the raw UI index but browser security blocked `file:///` PNG rendering from the localhost app. This phase makes the local loader produce an embedded bundle JSON with PNG data URLs and updates the adapter to accept only local file URLs or embedded PNG data URLs.
