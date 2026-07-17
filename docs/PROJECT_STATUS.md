@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add read-only negative-filter probe for the 24-row replay package timing set.
+Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-replay-package-negative-filter-probe.ts, tools/automation/unified-positive-held-local-preview-replay-package-negative-filter-probe.test.ts.
+Reason: The timing validator identified IntradayMssMicroContinuation and TurtleSoup as the two negative model groups. This phase probes simple model-specific pre-trade risk caps without installing any live rule or touching positive model families.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-replay-package-negative-filter-probe.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-replay-package-negative-filter-probe -- --json.
+Result: Passed. The real probe evaluated 24 timing rows and 3 candidate probes. IntradayMssMicroContinuation risk <= 7 kept 1 winner / 0 losses / 0 unresolved for +$67.50 and rejected 0 winners / 3 losses / 0 unresolved for -$142.50. TurtleSoup risk <= 10 kept 1 winner / 0 losses / 1 unresolved for +$110.00 and rejected 0 winners / 2 losses / 0 unresolved for -$153.75. The combined model-specific risk caps kept 2 winners / 0 losses / 1 unresolved for +$177.50 and rejected 0 winners / 5 losses / 0 unresolved for -$296.25. Positive-family rows preserved/affected: 16/0. Live promotion allowed rows remained 0.
+Trading logic changed: No. This is a read-only local negative-filter probe. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads local diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The risk caps are candidate research filters only. They are not broad enough for live ranking, model removal, or execution gating without broader replay validation and false-reject review.
+Next recommended action: Validate the candidate Intraday/TurtleSoup risk caps across a broader historical replay package, reporting false rejects and preserving AfterLunchDriveFvgContinuation, SweepMssFvgRetrace, OpeningDriveFvgContinuation, and HTF displacement evidence.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add read-only source/proof timing validator for the 24-row replay package outcome set.
 Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.ts, tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.test.ts.
 Reason: The outcome pass showed positive gross P/L but mixed model behavior. This phase validates proof-to-entry timing, same-bar entry, stale-entry, MFE/R, MAE/R, full-delivery winners, stopped-before-T1 losses, and unresolved rows before any rank-overlay expansion.
