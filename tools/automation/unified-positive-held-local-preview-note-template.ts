@@ -12,6 +12,7 @@ export interface UnifiedPositiveHeldLocalPreviewNoteTemplateRow {
   direction: string;
   visibleInHiddenTab: boolean;
   reviewOnly: true;
+  systemReviewNotes: string[];
   reviewerNote: '';
   suggestedDisposition: 'unreviewed';
   allowedDispositions: Array<'keep_review_only' | 'needs_more_chart_evidence' | 'reject_preview' | 'candidate_for_later_research'>;
@@ -107,6 +108,7 @@ function rowFromChecklist(row: UnifiedPositiveHeldLocalPreviewReviewChecklistRow
     direction: row.direction,
     visibleInHiddenTab: row.visibleInHiddenTab,
     reviewOnly: true,
+    systemReviewNotes: row.systemReviewNotes,
     reviewerNote: '',
     suggestedDisposition: 'unreviewed',
     allowedDispositions: [
@@ -135,9 +137,9 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewNoteTemplateR
     `- Review-only rows: ${report.summary.reviewOnlyRows}.`,
     '',
     '## Note Rows',
-    '| Ticket | Setup | Side | Disposition | Reviewer Note | Boundary |',
-    '|---|---|---|---|---|---|',
-    ...report.rows.map((row) => `| ${escapeTable(row.ticketId)} | ${escapeTable(row.setupType)} | ${row.direction} | ${row.suggestedDisposition} | ${escapeTable(row.reviewerNote || '<blank>')} | ${escapeTable(row.boundaryReminder)} |`),
+    '| Ticket | Setup | Side | Disposition | System Notes | Reviewer Note | Boundary |',
+    '|---|---|---|---|---|---|---|',
+    ...report.rows.map((row) => `| ${escapeTable(row.ticketId)} | ${escapeTable(row.setupType)} | ${row.direction} | ${row.suggestedDisposition} | ${escapeTable(row.systemReviewNotes.join('; ') || '-')} | ${escapeTable(row.reviewerNote || '<blank>')} | ${escapeTable(row.boundaryReminder)} |`),
     '',
     '## Blockers',
     ...(report.blockers.length ? report.blockers.map((blocker) => `- ${blocker}`) : ['- None.']),

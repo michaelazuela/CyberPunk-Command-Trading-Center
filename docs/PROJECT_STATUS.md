@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Carry held-local payload system notes into review checklist and editable note template.
+Files changed: tools/automation/unified-positive-held-local-preview-review-checklist.ts, tools/automation/unified-positive-held-local-preview-review-checklist.test.ts, tools/automation/unified-positive-held-local-preview-note-template.ts, tools/automation/unified-positive-held-local-preview-note-template.test.ts, tools/automation/unified-positive-held-local-preview-auto-review-seed.test.ts, tools/automation/unified-positive-held-local-preview-review-rollup.test.ts, docs/PROJECT_STATUS.md.
+Reason: The TurtleSoup missing-plan caution reached local preview payloads, but the later review checklist and editable note-template artifacts only carried generic review-only reasons. This phase carries payload notes forward into review artifacts without changing preview rendering, scanner behavior, Discord, Supabase, ranking, or canExecute.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-review-checklist.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-note-template.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-auto-review-seed.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-review-rollup.test.ts; npx tsc --noEmit --pretty false; real local review-checklist and note-template diagnostic chain.
+Result: Passed. Real checklist diagnostic loaded 4 local preview rows, kept all 4 visible/review-only/canExecute=false/postable=false/publishDiscord=false/writesSupabase=false, and carried system review notes into all 4 rows. The TurtleSoup missing-plan caution was present on exactly 3 rows: morning TurtleSoup LONG and both evening TurtleSoup SHORT rows. SweepMssFvgRetrace did not receive the TurtleSoup missing-plan caution. The editable note template produced 4 unreviewed local review rows.
+Trading logic changed: No. This only enriches local review artifacts with already-generated payload notes. It does not change scanner setup logic, ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads prior local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: System notes are local-review artifacts only. They remain non-executable and are not Discord/Supabase visible unless a separate approved gate is installed.
+Next recommended action: Run full verification, commit/push, then continue with a local-only review rollup/decision-summary proof that system notes do not alter dispositions or replay queue decisions.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Expand TurtleSoup missing-plan review-note candidates across all sessions/directions.
 Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-blocked-reason-drilldown.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-blocked-reason-drilldown.test.ts, docs/PROJECT_STATUS.md.
 Reason: Structured session metadata proved the evening SHORT TurtleSoup payloads were not receiving caution notes because the upstream drilldown only marked negative missing_full_plan_levels clusters as review-note candidates. Since this caution is not a rank penalty or rejection, all missing_full_plan_levels clusters should be eligible for research-only review-note wording.

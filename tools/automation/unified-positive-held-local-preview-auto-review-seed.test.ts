@@ -30,6 +30,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
   authority,
   source: {
     bundlePath: 'bundle.json',
+    previewPayloadPath: 'payload.json',
     readinessAuditPath: 'readiness.json',
     readinessScreenshotPath: 'readiness.png',
   },
@@ -41,6 +42,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
     postableFalseRows: 1,
     publishDiscordFalseRows: 1,
     writesSupabaseFalseRows: 1,
+    systemReviewNoteRows: 0,
   },
   rows: [{
     ticketId: 'eligible-ticket',
@@ -55,6 +57,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
     shouldDispatch: false,
     writesSupabase: false,
     reviewOnlyReasons: ['canExecute remains false.'],
+    systemReviewNotes: [],
   }],
   blockers: [],
   recommendations: [],
@@ -68,6 +71,7 @@ const editableTemplate = {
     direction: 'LONG',
     visibleInHiddenTab: true,
     reviewOnly: true,
+    systemReviewNotes: [],
     reviewerNote: '',
     suggestedDisposition: 'unreviewed',
     allowedDispositions: [

@@ -6,6 +6,7 @@ import {
   type HeldLocalPreviewUiIndexReport,
 } from '../../src/lib/heldLocalPreviewUiAdapter';
 import type { UnifiedPositiveHeldLocalPreviewReadinessAuditReport } from './unified-positive-held-local-preview-readiness-audit';
+import type { UnifiedPositiveHeldLocalPreviewPayloadReport } from './unified-positive-held-local-preview-payload';
 
 export interface UnifiedPositiveHeldLocalPreviewReviewChecklistRow {
   ticketId: string;
@@ -20,6 +21,7 @@ export interface UnifiedPositiveHeldLocalPreviewReviewChecklistRow {
   shouldDispatch: false;
   writesSupabase: false;
   reviewOnlyReasons: string[];
+  systemReviewNotes: string[];
 }
 
 export interface UnifiedPositiveHeldLocalPreviewReviewChecklistReport {
@@ -46,6 +48,7 @@ export interface UnifiedPositiveHeldLocalPreviewReviewChecklistReport {
   };
   source: {
     bundlePath: string | null;
+    previewPayloadPath: string | null;
     readinessAuditPath: string | null;
     readinessScreenshotPath: string | null;
   };
@@ -57,6 +60,7 @@ export interface UnifiedPositiveHeldLocalPreviewReviewChecklistReport {
     postableFalseRows: number;
     publishDiscordFalseRows: number;
     writesSupabaseFalseRows: number;
+    systemReviewNoteRows: number;
   };
   rows: UnifiedPositiveHeldLocalPreviewReviewChecklistRow[];
   blockers: string[];
@@ -119,6 +123,7 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewReviewCheckli
     '',
     '## Summary',
     `- Bundle path: ${report.source.bundlePath || '-'}.`,
+    `- Preview payload path: ${report.source.previewPayloadPath || '-'}.`,
     `- Readiness audit path: ${report.source.readinessAuditPath || '-'}.`,
     `- Readiness screenshot path: ${report.source.readinessScreenshotPath || '-'}.`,
     `- Bundle items: ${report.summary.bundleItems}.`,
@@ -128,11 +133,12 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewReviewCheckli
     `- postable=false rows: ${report.summary.postableFalseRows}.`,
     `- publishDiscord=false rows: ${report.summary.publishDiscordFalseRows}.`,
     `- writesSupabase=false rows: ${report.summary.writesSupabaseFalseRows}.`,
+    `- System review-note rows: ${report.summary.systemReviewNoteRows}.`,
     '',
     '## Checklist',
-    '| Ticket | Setup | Side | Visible | Review Only Reasons |',
-    '|---|---|---|---|---|',
-    ...report.rows.map((row) => `| ${escapeTable(row.ticketId)} | ${escapeTable(row.setupType)} | ${row.direction} | ${row.visibleInHiddenTab ? 'yes' : 'no'} | ${escapeTable(row.reviewOnlyReasons.join('; '))} |`),
+    '| Ticket | Setup | Side | Visible | Review Only Reasons | System Review Notes |',
+    '|---|---|---|---|---|---|',
+    ...report.rows.map((row) => `| ${escapeTable(row.ticketId)} | ${escapeTable(row.setupType)} | ${row.direction} | ${row.visibleInHiddenTab ? 'yes' : 'no'} | ${escapeTable(row.reviewOnlyReasons.join('; '))} | ${escapeTable(row.systemReviewNotes.join('; ') || '-')} |`),
     '',
     '## Blockers',
     ...(report.blockers.length ? report.blockers.map((blocker) => `- ${blocker}`) : ['- None.']),
@@ -145,6 +151,8 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewReviewCheckli
 export function buildUnifiedPositiveHeldLocalPreviewReviewChecklistReport(args: {
   bundlePath: string | null;
   bundleReport: HeldLocalPreviewUiIndexReport | null;
+  previewPayloadPath?: string | null;
+  previewPayloadReport?: UnifiedPositiveHeldLocalPreviewPayloadReport | null;
   readinessAuditPath?: string | null;
   readinessAudit?: UnifiedPositiveHeldLocalPreviewReadinessAuditReport | null;
 }, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewReviewChecklistReport {
@@ -154,6 +162,11 @@ export function buildUnifiedPositiveHeldLocalPreviewReviewChecklistReport(args: 
     report: args.bundleReport,
   });
   const readyTicketIds = new Set(model.items.map((item) => item.ticketId));
+  const notesByTicketId = new Map(
+    (args.previewPayloadReport?.rows || [])
+      .filter((row) => row.payload)
+      .map((row) => [row.ticketId, row.payload?.notes || []]),
+  );
   const rows: UnifiedPositiveHeldLocalPreviewReviewChecklistRow[] = (args.bundleReport?.items || []).map((item) => ({
     ticketId: item.ticketId,
     setupType: item.setupType,
@@ -174,11 +187,13 @@ export function buildUnifiedPositiveHeldLocalPreviewReviewChecklistReport(args: 
       'Supabase writing remains disabled.',
       '5M execution authority and deterministic live gates are unchanged.',
     ],
+    systemReviewNotes: notesByTicketId.get(item.ticketId) || [],
   }));
 
   const blockers = [
     !args.bundlePath ? 'missing embedded bundle path' : null,
     ...model.blockers,
+    args.previewPayloadReport && args.previewPayloadReport.status !== 'pass' ? `preview payload status ${args.previewPayloadReport.status}` : null,
     args.readinessAudit && args.readinessAudit.status !== 'pass' ? `readiness audit status ${args.readinessAudit.status}` : null,
     args.readinessAudit && args.readinessAudit.summary.renderedCards !== rows.length ? `readiness rendered cards ${args.readinessAudit.summary.renderedCards} did not match checklist rows ${rows.length}` : null,
     rows.length === 0 ? 'no held-local preview rows found' : null,
@@ -198,6 +213,7 @@ export function buildUnifiedPositiveHeldLocalPreviewReviewChecklistReport(args: 
     authority: authority(),
     source: {
       bundlePath: args.bundlePath,
+      previewPayloadPath: args.previewPayloadPath || null,
       readinessAuditPath: args.readinessAuditPath || null,
       readinessScreenshotPath: args.readinessAudit?.source.screenshotPath || null,
     },
@@ -209,6 +225,7 @@ export function buildUnifiedPositiveHeldLocalPreviewReviewChecklistReport(args: 
       postableFalseRows: rows.filter((row) => row.postable === false).length,
       publishDiscordFalseRows: rows.filter((row) => row.publishDiscord === false).length,
       writesSupabaseFalseRows: rows.filter((row) => row.writesSupabase === false).length,
+      systemReviewNoteRows: rows.filter((row) => row.systemReviewNotes.length > 0).length,
     },
     rows,
     blockers,
@@ -235,9 +252,13 @@ export function writeUnifiedPositiveHeldLocalPreviewReviewChecklistReport(
 export function runUnifiedPositiveHeldLocalPreviewReviewChecklistCli(args = process.argv.slice(2)): void {
   const outDir = readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR;
   const bundlePath = readFlag(args, '--bundle') || latestMatchingFile(outDir, /^unified-positive-held-local-preview-localstorage-loader-\d+\.bundle\.json$/);
+  const previewPayloadPath = readFlag(args, '--preview-payload') || latestMatchingFile(outDir, /^unified-positive-held-local-preview-payload-\d+\.json$/);
   const readinessAuditPath = readFlag(args, '--readiness') || latestMatchingFile(outDir, /^unified-positive-held-local-preview-readiness-audit-\d+\.json$/);
   const bundleReport = bundlePath && fs.existsSync(bundlePath)
     ? JSON.parse(fs.readFileSync(bundlePath, 'utf8')) as HeldLocalPreviewUiIndexReport
+    : null;
+  const previewPayloadReport = previewPayloadPath && fs.existsSync(previewPayloadPath)
+    ? JSON.parse(fs.readFileSync(previewPayloadPath, 'utf8')) as UnifiedPositiveHeldLocalPreviewPayloadReport
     : null;
   const readinessAudit = readinessAuditPath && fs.existsSync(readinessAuditPath)
     ? JSON.parse(fs.readFileSync(readinessAuditPath, 'utf8')) as UnifiedPositiveHeldLocalPreviewReadinessAuditReport
@@ -245,6 +266,8 @@ export function runUnifiedPositiveHeldLocalPreviewReviewChecklistCli(args = proc
   const report = buildUnifiedPositiveHeldLocalPreviewReviewChecklistReport({
     bundlePath,
     bundleReport,
+    previewPayloadPath,
+    previewPayloadReport,
     readinessAuditPath,
     readinessAudit,
   });

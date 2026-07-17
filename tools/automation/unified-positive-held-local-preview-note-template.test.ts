@@ -30,6 +30,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
   authority,
   source: {
     bundlePath: 'bundle.json',
+    previewPayloadPath: 'payload.json',
     readinessAuditPath: 'readiness.json',
     readinessScreenshotPath: 'screenshot.png',
   },
@@ -41,6 +42,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
     postableFalseRows: 1,
     publishDiscordFalseRows: 1,
     writesSupabaseFalseRows: 1,
+    systemReviewNoteRows: 1,
   },
   rows: [{
     ticketId: '2026-06-16-morning-TurtleSoup-LONG',
@@ -55,6 +57,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
     shouldDispatch: false,
     writesSupabase: false,
     reviewOnlyReasons: ['canExecute remains false.'],
+    systemReviewNotes: ['TurtleSoup long remains review-only: this cluster lacks full plan-level proof.'],
   }],
   blockers: [],
   recommendations: [],
@@ -79,11 +82,13 @@ assert.equal(report.summary.checklistRows, 1);
 assert.equal(report.summary.noteRows, 1);
 assert.equal(report.summary.unreviewedRows, 1);
 assert.equal(report.summary.reviewOnlyRows, 1);
+assert.deepEqual(report.rows[0].systemReviewNotes, ['TurtleSoup long remains review-only: this cluster lacks full plan-level proof.']);
 assert.equal(report.rows[0].reviewerNote, '');
 assert.equal(report.rows[0].suggestedDisposition, 'unreviewed');
 assert.ok(report.rows[0].allowedDispositions.includes('candidate_for_later_research'));
 assert.match(report.rows[0].boundaryReminder, /Does not approve execution/);
 assert.match(report.markdown, /local-only note template/);
+assert.match(report.markdown, /lacks full plan-level proof/);
 
 const failedChecklist = structuredClone(checklist);
 failedChecklist.status = 'fail';
