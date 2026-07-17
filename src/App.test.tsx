@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import App from './App';
-import { HELD_LOCAL_PREVIEW_STORAGE_KEY } from './components/HeldLocalPreviewPanel';
+import { HELD_LOCAL_PREVIEW_STORAGE_KEY } from './lib/heldLocalPreviewUiAdapter';
 
 function createSupabaseQueryResult(data: unknown[] = []) {
   const result = { data, error: null, count: 0 };

@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local local preview localStorage loader.
+Files changed: tools/automation/unified-positive-held-local-preview-localstorage-loader.ts, tools/automation/unified-positive-held-local-preview-localstorage-loader.test.ts, src/lib/heldLocalPreviewUiAdapter.ts, src/components/HeldLocalPreviewPanel.tsx, package.json, docs/PROJECT_STATUS.md.
+Reason: The hidden local preview tab needs a safe way to load the latest signoff-passing UI index into a localhost browser session without adding service calls or touching live scanner behavior. This phase adds a local artifact helper that validates the UI index through the app adapter contract and writes a browser-console snippet for the local `held_local_preview_ui_index_report` localStorage key.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-localstorage-loader.test.ts`; `npx tsc --noEmit --pretty false`; `npx vitest run src/App.test.tsx`; real local loader run against latest signoff-passing UI index JSON.
+Result: Focused loader test, typecheck, app route test, and real local loader run passed. The real loader run accepted 4 preview-ready items, blocked 0 items, preserved localStorage key `held_local_preview_ui_index_report`, and wrote snippet artifact `tools/automation/diagnostic-reports/unified-positive-held-local-preview-localstorage-loader-1784263979135.js`.
+Trading logic changed: No. This is local-only preview loader tooling. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: The generated snippet must be pasted only into a localhost app tab; it intentionally does not automate browser state or bypass the hidden `?heldLocalPreview=1` flag.
+Next recommended action: Run the loader against the latest signoff-passing UI index artifact, manually inspect the localhost tab with the generated snippet if needed, then consider a fully local file-picker/import path only if the console-snippet workflow is too clumsy.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add hidden held-local local preview tab.
 Files changed: src/App.tsx, src/App.test.tsx, src/components/HeldLocalPreviewPanel.tsx, docs/PROJECT_STATUS.md.
 Reason: The app adapter contract proved a signoff-backed preview index can be accepted safely. This phase wires a hidden local-only tab that appears only on localhost when `?heldLocalPreview=1` is present and displays only a signoff-passing preview index saved in localStorage.

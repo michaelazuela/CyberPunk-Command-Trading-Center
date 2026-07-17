@@ -15,6 +15,8 @@ export interface HeldLocalPreviewUiIndexItem {
   blockers: string[];
 }
 
+export const HELD_LOCAL_PREVIEW_STORAGE_KEY = 'held_local_preview_ui_index_report';
+
 export interface HeldLocalPreviewUiIndexReport {
   reportType: 'unified_positive_held_local_preview_ui_index';
   status: 'pass' | 'fail';

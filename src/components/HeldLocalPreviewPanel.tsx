@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import {
+  HELD_LOCAL_PREVIEW_STORAGE_KEY,
   buildHeldLocalPreviewUiModel,
   type HeldLocalPreviewUiIndexReport,
 } from '../lib/heldLocalPreviewUiAdapter';
-
-export const HELD_LOCAL_PREVIEW_STORAGE_KEY = 'held_local_preview_ui_index_report';
 
 export function isHeldLocalPreviewLocalHost(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
