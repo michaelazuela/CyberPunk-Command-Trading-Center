@@ -54,6 +54,7 @@ const adapterReport = {
     {
       ticketId: 'fixture-ticket',
       sourceSnapshotId: 'scanner-fixture',
+      session: null,
       setupType: 'SweepMssFvgRetrace',
       direction: 'SHORT',
       adapterStatus: 'held_local_artifact_created',
@@ -105,6 +106,7 @@ const dryRunReplay = {
     {
       ticketId: 'fixture-ticket',
       sourceSnapshotId: 'scanner-fixture',
+      session: null,
       setupType: 'SweepMssFvgRetrace',
       direction: 'SHORT',
       normalDeskOutput: {
@@ -162,6 +164,7 @@ assert.equal(report.summary.heldLocalCanExecuteFalseRows, 1);
 assert.equal(report.summary.normalPublishDiscordFalseRows, 1);
 assert.equal(report.summary.heldLocalPublishDiscordFalseRows, 1);
 assert.equal(report.rows[0].status, 'inspectable_held_local_ticket');
+assert.equal(report.rows[0].session, null);
 assert.equal(report.rows[0].heldLocalTicket?.state, 'ACTIVE_REVIEW');
 assert.equal(report.rows[0].heldLocalTicket?.entry, 100);
 assert.equal(report.rows[0].heldLocalTicket?.stop, 104);

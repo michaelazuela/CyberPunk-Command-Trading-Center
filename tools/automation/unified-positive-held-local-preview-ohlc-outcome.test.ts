@@ -165,6 +165,7 @@ function adapterRow(ticketId: string, triggerCondition: string): UnifiedPositive
   return {
     ticketId,
     sourceSnapshotId: 'scanner',
+    session: ticketId.includes('morning') ? 'morning' : null,
     setupType: 'TurtleSoup',
     direction: 'LONG',
     adapterStatus: 'held_local_artifact_created',

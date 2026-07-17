@@ -43,6 +43,7 @@ const inspectionSurface = {
     {
       ticketId: 'long-ticket',
       sourceSnapshotId: 'scanner-long',
+      session: null,
       setupType: 'TurtleSoup',
       direction: 'LONG',
       status: 'inspectable_held_local_ticket',
@@ -88,6 +89,7 @@ const inspectionSurface = {
     {
       ticketId: 'short-ticket',
       sourceSnapshotId: 'scanner-short',
+      session: null,
       setupType: 'TurtleSoup',
       direction: 'SHORT',
       status: 'inspectable_held_local_ticket',

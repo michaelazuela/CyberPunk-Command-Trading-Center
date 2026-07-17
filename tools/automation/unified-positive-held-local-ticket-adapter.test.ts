@@ -74,8 +74,8 @@ const comparison = {
   },
   rows: [
     {
-      ticketId: 'fixture-ticket',
-      sourceSnapshotId: 'scanner-fixture',
+      ticketId: '2026-07-01-morning-fixture-ticket',
+      sourceSnapshotId: 'scanner-morning-fixture',
       setupType: 'TurtleSoup',
       direction: 'LONG',
       compatibilityStatus: 'compatible_held_local',
@@ -90,8 +90,8 @@ const comparison = {
       notes: ['fixture compatible'],
     },
     {
-      ticketId: 'blocked-ticket',
-      sourceSnapshotId: 'scanner-blocked',
+      ticketId: '2026-07-01-lunch-blocked-ticket',
+      sourceSnapshotId: 'scanner-lunch-blocked',
       setupType: 'TurtleSoup',
       direction: 'LONG',
       compatibilityStatus: 'blocked_contract_gap',
@@ -128,8 +128,10 @@ assert.equal(report.summary.blockedContractGapRows, 1);
 assert.equal(report.summary.shouldPostFalseArtifacts, 1);
 assert.equal(report.summary.canExecuteFalseArtifacts, 1);
 assert.equal(report.summary.publishDiscordFalseArtifacts, 1);
-assert.equal(report.rows.find((row) => row.ticketId === 'fixture-ticket')?.adapterStatus, 'held_local_artifact_created');
-assert.equal(report.rows.find((row) => row.ticketId === 'blocked-ticket')?.adapterStatus, 'blocked_contract_gap');
+assert.equal(report.rows.find((row) => row.ticketId === '2026-07-01-morning-fixture-ticket')?.adapterStatus, 'held_local_artifact_created');
+assert.equal(report.rows.find((row) => row.ticketId === '2026-07-01-morning-fixture-ticket')?.session, 'morning');
+assert.equal(report.rows.find((row) => row.ticketId === '2026-07-01-lunch-blocked-ticket')?.adapterStatus, 'blocked_contract_gap');
+assert.equal(report.rows.find((row) => row.ticketId === '2026-07-01-lunch-blocked-ticket')?.session, 'lunch');
 assert.match(report.markdown, /Held-local artifacts created: 1/);
 
 console.log('unified positive held-local ticket adapter verified.');

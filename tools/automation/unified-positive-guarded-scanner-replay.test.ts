@@ -56,6 +56,7 @@ const adapterReport = {
     {
       ticketId: 'fixture-ticket',
       sourceSnapshotId: 'scanner-fixture',
+      session: null,
       setupType: 'TurtleSoup',
       direction: 'LONG',
       adapterStatus: 'held_local_artifact_created',

@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add structured session metadata to held-local local-preview artifacts.
+Files changed: tools/automation/unified-positive-held-local-ticket-adapter.ts, tools/automation/unified-positive-scanner-dry-run-replay.ts, tools/automation/unified-positive-held-local-inspection-surface.ts, tools/automation/unified-positive-held-local-preview-payload.ts, related focused tests, docs/PROJECT_STATUS.md.
+Reason: The prior preview caution install still depended on ticket/sourceSnapshot text inference to match TurtleSoup review-note placements. This phase carries explicit session metadata through the local adapter, dry-run replay, inspection surface, and preview payload artifacts.
+Tests run: npx tsx tools/automation/unified-positive-held-local-ticket-adapter.test.ts; npx tsx tools/automation/unified-positive-scanner-dry-run-replay.test.ts; npx tsx tools/automation/unified-positive-held-local-inspection-surface.test.ts; npx tsx tools/automation/unified-positive-held-local-wording-guard.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-payload.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-renderer.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-replay-queue.test.ts; npx tsx tools/automation/unified-positive-guarded-scanner-replay.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-ohlc-outcome.test.ts; npx tsc --noEmit --pretty false; real local adapter/guarded inspection/wording/payload/renderer diagnostic chain.
+Result: Passed. The real local diagnostic chain regenerated 4 preview payloads with structured session metadata on every row: morning TurtleSoup LONG, evening TurtleSoup SHORT, evening TurtleSoup SHORT, and morning SweepMssFvgRetrace LONG. Payloads created: 4. Blocked rows: 0. Review-note placements applied: 1. Renderer produced 4 local cards, 0 blocked, 4 shape-pass cards. All 4 remained shouldPost=false, canExecute=false, publishDiscord=false, shouldDispatch=false, and writesSupabase=false.
+Trading logic changed: No. This adds metadata to local diagnostic artifacts only. It does not change scanner setup logic, ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads prior local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Evening SHORT TurtleSoup rows now carry structured session metadata, but they still did not receive caution notes because the current placement simulation artifact has only the morning LONG TurtleSoup placement row. That is an evidence-scope limitation, not a payload plumbing failure.
+Next recommended action: Expand the research-only TurtleSoup review-note placement simulation to include the evening SHORT missing_full_plan_levels clusters, then regenerate the local payload/renderer chain before any scanner-visible work.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Install TurtleSoup caution into local held-local preview payloads.
 Files changed: tools/automation/unified-positive-held-local-preview-payload.ts, tools/automation/unified-positive-held-local-preview-payload.test.ts, tools/automation/unified-positive-held-local-preview-renderer.test.ts, tools/automation/unified-positive-held-local-preview-replay-queue.test.ts, docs/PROJECT_STATUS.md.
 Reason: Placement simulation proved TurtleSoup missing_full_plan_levels caution can live in held-local preview notes without suppressing tickets or changing ordering. This phase wires the optional placement simulation artifact into local preview payload generation only.

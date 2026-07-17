@@ -8,6 +8,7 @@ type DryRunReplayStatus = 'pass' | 'fail';
 export interface UnifiedPositiveScannerDryRunReplayRow {
   ticketId: string;
   sourceSnapshotId: string;
+  session: 'morning' | 'lunch' | 'evening' | null;
   setupType: string;
   direction: string;
   normalDeskOutput: {
@@ -140,6 +141,7 @@ function rowForAdapter(row: UnifiedPositiveHeldLocalTicketAdapterReport['rows'][
   return {
     ticketId: row.ticketId,
     sourceSnapshotId: row.sourceSnapshotId,
+    session: row.session,
     setupType: row.setupType,
     direction: row.direction,
     normalDeskOutput,
@@ -187,9 +189,9 @@ function buildMarkdown(report: Omit<UnifiedPositiveScannerDryRunReplayReport, 'm
     `- Adapter publishDiscord=false rows: ${report.summary.adapterPublishDiscordFalseRows}.`,
     '',
     '## Rows',
-    '| Ticket | Setup | Side | DeskTicket | Normal shouldPost | Adapter shouldPost | Normal canExecute | Adapter canExecute | Adapter publishDiscord | Status | Blockers |',
-    '|---|---|---|---|---|---|---|---|---|---|---|',
-    ...report.rows.map((row) => `| ${row.ticketId} | ${row.setupType} | ${row.direction} | ${row.heldLocalOutput.deskTicketState ?? '-'} | ${row.normalDeskOutput.shouldPost} | ${row.heldLocalOutput.shouldPost ?? '-'} | ${row.normalDeskOutput.canExecute} | ${row.heldLocalOutput.canExecute ?? '-'} | ${row.heldLocalOutput.publishDiscord ?? '-'} | ${row.comparison.zeroLivePublishBehaviorChange ? 'pass' : 'blocked'} | ${row.comparison.blockers.join(', ') || '-'} |`),
+    '| Ticket | Session | Setup | Side | DeskTicket | Normal shouldPost | Adapter shouldPost | Normal canExecute | Adapter canExecute | Adapter publishDiscord | Status | Blockers |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|',
+    ...report.rows.map((row) => `| ${row.ticketId} | ${row.session ?? '-'} | ${row.setupType} | ${row.direction} | ${row.heldLocalOutput.deskTicketState ?? '-'} | ${row.normalDeskOutput.shouldPost} | ${row.heldLocalOutput.shouldPost ?? '-'} | ${row.normalDeskOutput.canExecute} | ${row.heldLocalOutput.canExecute ?? '-'} | ${row.heldLocalOutput.publishDiscord ?? '-'} | ${row.comparison.zeroLivePublishBehaviorChange ? 'pass' : 'blocked'} | ${row.comparison.blockers.join(', ') || '-'} |`),
     '',
     '## Recommendations',
     ...report.recommendations.map((item) => `- ${item}`),

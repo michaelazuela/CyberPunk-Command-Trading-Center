@@ -46,6 +46,7 @@ const previewPayloadReport = {
     {
       ticketId: 'long-ticket',
       sourceSnapshotId: 'scanner-long',
+      session: null,
       setupType: 'TurtleSoup',
       direction: 'LONG',
       status: 'preview_payload_created',
@@ -53,6 +54,7 @@ const previewPayloadReport = {
         sourceOfTruth: 'scanner_owned_held_local_local_preview_payload',
         ticketId: 'long-ticket',
         sourceSnapshotId: 'scanner-long',
+        session: null,
         setupType: 'TurtleSoup',
         direction: 'LONG',
         state: 'ACTIVE_REVIEW',

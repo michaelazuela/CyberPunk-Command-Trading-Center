@@ -104,6 +104,7 @@ const heldLocalAdapter: UnifiedPositiveHeldLocalTicketAdapterReport = {
     {
       ticketId,
       sourceSnapshotId: 'scanner-morning-2026-06-16-MES-MORNING-20260616-140147',
+      session: 'morning',
       setupType: 'TurtleSoup',
       direction: 'LONG',
       adapterStatus: 'held_local_artifact_created',
@@ -211,6 +212,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
     {
       ticketId,
       sourceSnapshotId: 'scanner-morning-2026-06-16-MES-MORNING-20260616-140147',
+      session: 'morning',
       setupType: 'TurtleSoup',
       direction: 'LONG',
       status: 'preview_payload_created',
@@ -218,6 +220,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
         sourceOfTruth: 'scanner_owned_held_local_local_preview_payload',
         ticketId,
         sourceSnapshotId: 'scanner-morning-2026-06-16-MES-MORNING-20260616-140147',
+        session: 'morning',
         setupType: 'TurtleSoup',
         direction: 'LONG',
         state: 'ACTIVE_REVIEW',

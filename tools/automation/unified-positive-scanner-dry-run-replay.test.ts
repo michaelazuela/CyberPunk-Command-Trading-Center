@@ -52,6 +52,7 @@ const adapterReport = {
     {
       ticketId: 'fixture-ticket',
       sourceSnapshotId: 'scanner-fixture',
+      session: null,
       setupType: 'TurtleSoup',
       direction: 'LONG',
       adapterStatus: 'held_local_artifact_created',
@@ -90,6 +91,7 @@ assert.equal(report.summary.adapterCanExecuteFalseRows, 1);
 assert.equal(report.summary.normalPublishDiscordFalseRows, 1);
 assert.equal(report.summary.adapterPublishDiscordFalseRows, 1);
 assert.equal(report.rows[0].normalDeskOutput.sourceOfTruth, 'scanner_desk_state_normal_output_preserved');
+assert.equal(report.rows[0].session, null);
 assert.equal(report.rows[0].normalDeskOutput.shouldPost, false);
 assert.equal(report.rows[0].normalDeskOutput.publishDiscord, false);
 assert.equal(report.rows[0].normalDeskOutput.canExecute, false);

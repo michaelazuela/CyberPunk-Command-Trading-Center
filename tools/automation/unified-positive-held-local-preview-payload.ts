@@ -11,6 +11,7 @@ export interface UnifiedPositiveHeldLocalPreviewPayload {
   sourceOfTruth: 'scanner_owned_held_local_local_preview_payload';
   ticketId: string;
   sourceSnapshotId: string;
+  session: 'morning' | 'lunch' | 'evening' | null;
   setupType: string;
   direction: string;
   state: 'ACTIVE_REVIEW';
@@ -44,6 +45,7 @@ export interface UnifiedPositiveHeldLocalPreviewPayload {
 export interface UnifiedPositiveHeldLocalPreviewPayloadRow {
   ticketId: string;
   sourceSnapshotId: string;
+  session: 'morning' | 'lunch' | 'evening' | null;
   setupType: string;
   direction: string;
   status: 'preview_payload_created' | 'blocked';
@@ -158,6 +160,7 @@ function blockersForRow(args: {
 }
 
 function inferredSession(row: UnifiedPositiveHeldLocalInspectionSurfaceReport['rows'][number]): string | null {
+  if (row.session) return row.session;
   const haystack = `${row.ticketId} ${row.sourceSnapshotId}`.toLowerCase();
   if (haystack.includes('morning')) return 'morning';
   if (haystack.includes('lunch')) return 'lunch';
@@ -199,6 +202,7 @@ function payloadForRow(
     sourceOfTruth: 'scanner_owned_held_local_local_preview_payload',
     ticketId: row.ticketId,
     sourceSnapshotId: row.sourceSnapshotId,
+    session: row.session ?? null,
     setupType: row.setupType,
     direction: row.direction,
     state: 'ACTIVE_REVIEW',
@@ -240,6 +244,7 @@ function rowForInspection(args: {
   return {
     ticketId: args.row.ticketId,
     sourceSnapshotId: args.row.sourceSnapshotId,
+    session: args.row.session ?? null,
     setupType: args.row.setupType,
     direction: args.row.direction,
     status: blockers.length ? 'blocked' : 'preview_payload_created',
@@ -280,11 +285,11 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewPayloadReport
     `- Review-note placement applied payloads: ${report.summary.reviewNotePlacementAppliedPayloads}.`,
     '',
     '## Payloads',
-    '| Ticket | Setup | Side | Status | Entry | Stop | T1 | T2 | shouldPost | canExecute | publishDiscord | shouldDispatch | Blockers |',
-    '|---|---|---|---|---:|---:|---:|---:|---|---|---|---|---|',
+    '| Ticket | Session | Setup | Side | Status | Entry | Stop | T1 | T2 | shouldPost | canExecute | publishDiscord | shouldDispatch | Blockers |',
+    '|---|---|---|---|---|---:|---:|---:|---:|---|---|---|---|---|',
     ...report.rows.map((row) => {
       const payload = row.payload;
-      return `| ${row.ticketId} | ${row.setupType} | ${row.direction} | ${row.status} | ${price(payload?.levels.entry)} | ${price(payload?.levels.stop)} | ${price(payload?.levels.t1)} | ${price(payload?.levels.t2)} | ${payload?.shouldPost ?? '-'} | ${payload?.canExecute ?? '-'} | ${payload?.publishDiscord ?? '-'} | ${payload?.shouldDispatch ?? '-'} | ${escapeTable(row.blockers.join(', ') || '-')} |`;
+      return `| ${row.ticketId} | ${row.session ?? '-'} | ${row.setupType} | ${row.direction} | ${row.status} | ${price(payload?.levels.entry)} | ${price(payload?.levels.stop)} | ${price(payload?.levels.t1)} | ${price(payload?.levels.t2)} | ${payload?.shouldPost ?? '-'} | ${payload?.canExecute ?? '-'} | ${payload?.publishDiscord ?? '-'} | ${payload?.shouldDispatch ?? '-'} | ${escapeTable(row.blockers.join(', ') || '-')} |`;
     }),
     '',
     '## Recommendations',

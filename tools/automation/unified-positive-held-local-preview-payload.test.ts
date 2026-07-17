@@ -50,6 +50,7 @@ const inspectionSurface = {
     {
       ticketId: 'long-ticket',
       sourceSnapshotId: 'scanner-long',
+      session: null,
       setupType: 'TurtleSoup',
       direction: 'LONG',
       status: 'inspectable_held_local_ticket',
@@ -160,7 +161,9 @@ assert.equal(report.summary.publishDiscordFalsePayloads, 1);
 assert.equal(report.summary.shouldDispatchFalsePayloads, 1);
 assert.equal(report.summary.writesSupabaseFalsePayloads, 1);
 assert.equal(report.rows[0].status, 'preview_payload_created');
+assert.equal(report.rows[0].session, null);
 assert.equal(report.rows[0].payload?.sourceOfTruth, 'scanner_owned_held_local_local_preview_payload');
+assert.equal(report.rows[0].payload?.session, null);
 assert.equal(report.rows[0].payload?.state, 'ACTIVE_REVIEW');
 assert.equal(report.rows[0].payload?.publishDiscord, false);
 assert.equal(report.rows[0].payload?.shouldPost, false);
@@ -253,8 +256,7 @@ const placementSimulation = {
 } satisfies UnifiedPositiveHeldLocalPreviewTurtleSoupReviewNotePlacementSimulationReport;
 
 const placementSurface = structuredClone(inspectionSurface) as UnifiedPositiveHeldLocalInspectionSurfaceReport;
-placementSurface.rows[0].ticketId = '2026-06-17-morning-TurtleSoup-LONG';
-placementSurface.rows[0].sourceSnapshotId = 'scanner-morning-local-preview';
+placementSurface.rows[0].session = 'morning';
 const placementReport = buildUnifiedPositiveHeldLocalPreviewPayloadReport({
   inspectionSurface: placementSurface,
   wordingGuard,
@@ -266,6 +268,8 @@ assert.equal(placementReport.status, 'pass');
 assert.equal(placementReport.source.turtleSoupReviewNotePlacementSimulationPath, 'placement.json');
 assert.equal(placementReport.summary.previewPayloadsCreated, 1);
 assert.equal(placementReport.summary.reviewNotePlacementAppliedPayloads, 1);
+assert.equal(placementReport.rows[0].session, 'morning');
+assert.equal(placementReport.rows[0].payload?.session, 'morning');
 assert.equal(placementReport.rows[0].payload?.publishDiscord, false);
 assert.equal(placementReport.rows[0].payload?.shouldPost, false);
 assert.equal(placementReport.rows[0].payload?.canExecute, false);

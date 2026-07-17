@@ -10,6 +10,7 @@ type InspectionStatus = 'pass' | 'fail';
 export interface UnifiedPositiveHeldLocalInspectionRow {
   ticketId: string;
   sourceSnapshotId: string;
+  session: 'morning' | 'lunch' | 'evening' | null;
   setupType: string;
   direction: string;
   status: 'inspectable_held_local_ticket' | 'blocked';
@@ -143,6 +144,7 @@ function rowForAdapter(
   const blockers = [
     dryRunReplay.status !== 'pass' ? `dry-run replay status ${dryRunReplay.status}` : null,
     !replayRow ? 'missing dry-run replay row' : null,
+    replayRow && replayRow.session !== row.session ? 'dry-run replay session metadata mismatch' : null,
     replayRow && !replayRow.comparison.zeroLivePublishBehaviorChange ? 'dry-run replay did not preserve zero live publish behavior change' : null,
     row.adapterStatus !== 'held_local_artifact_created' ? `adapter status ${row.adapterStatus}` : null,
     !artifact ? 'missing held-local artifact' : null,
@@ -157,6 +159,7 @@ function rowForAdapter(
   return {
     ticketId: row.ticketId,
     sourceSnapshotId: row.sourceSnapshotId,
+    session: row.session,
     setupType: row.setupType,
     direction: row.direction,
     status: blockers.length ? 'blocked' : 'inspectable_held_local_ticket',
@@ -230,11 +233,11 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalInspectionSurfaceRep
     `- Held-local publishDiscord=false rows: ${report.summary.heldLocalPublishDiscordFalseRows}.`,
     '',
     '## Tickets',
-    '| Ticket | Setup | Side | Status | Entry | Stop | T1 | T2 | Trigger | Invalidation | Blockers |',
-    '|---|---|---|---|---:|---:|---:|---:|---|---|---|',
+    '| Ticket | Session | Setup | Side | Status | Entry | Stop | T1 | T2 | Trigger | Invalidation | Blockers |',
+    '|---|---|---|---|---|---:|---:|---:|---:|---|---|---|',
     ...report.rows.map((row) => {
       const ticket = row.heldLocalTicket;
-      return `| ${row.ticketId} | ${row.setupType} | ${row.direction} | ${row.status} | ${price(ticket?.entry ?? null)} | ${price(ticket?.stop ?? null)} | ${price(ticket?.t1 ?? null)} | ${price(ticket?.t2 ?? null)} | ${escapeTable(row.deskText?.when || '-')} | ${escapeTable(row.deskText?.invalidation || '-')} | ${escapeTable(row.blockers.join(', ') || '-')} |`;
+      return `| ${row.ticketId} | ${row.session ?? '-'} | ${row.setupType} | ${row.direction} | ${row.status} | ${price(ticket?.entry ?? null)} | ${price(ticket?.stop ?? null)} | ${price(ticket?.t1 ?? null)} | ${price(ticket?.t2 ?? null)} | ${escapeTable(row.deskText?.when || '-')} | ${escapeTable(row.deskText?.invalidation || '-')} | ${escapeTable(row.blockers.join(', ') || '-')} |`;
     }),
     '',
     '## Recommendations',

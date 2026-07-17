@@ -11,6 +11,7 @@ import type { UnifiedPositiveDeskTicketContractComparisonReport } from './unifie
 export interface UnifiedPositiveHeldLocalTicketAdapterRow {
   ticketId: string;
   sourceSnapshotId: string;
+  session: 'morning' | 'lunch' | 'evening' | null;
   setupType: string;
   direction: string;
   adapterStatus: 'held_local_artifact_created' | 'blocked_contract_gap';
@@ -64,11 +65,21 @@ function readFlag(args: string[], flag: string): string | null {
   return args.find((arg) => arg.startsWith(prefix))?.slice(prefix.length) || null;
 }
 
+function inferSession(ticketId: string, sourceSnapshotId: string): UnifiedPositiveHeldLocalTicketAdapterRow['session'] {
+  const haystack = `${ticketId} ${sourceSnapshotId}`.toLowerCase();
+  if (haystack.includes('morning')) return 'morning';
+  if (haystack.includes('lunch')) return 'lunch';
+  if (haystack.includes('evening')) return 'evening';
+  return null;
+}
+
 function rowForComparison(row: UnifiedPositiveDeskTicketContractComparisonReport['rows'][number]): UnifiedPositiveHeldLocalTicketAdapterRow {
+  const session = inferSession(row.ticketId, row.sourceSnapshotId);
   if (row.compatibilityStatus !== 'compatible_held_local') {
     return {
       ticketId: row.ticketId,
       sourceSnapshotId: row.sourceSnapshotId,
+      session,
       setupType: row.setupType,
       direction: row.direction,
       adapterStatus: 'blocked_contract_gap',
@@ -84,6 +95,7 @@ function rowForComparison(row: UnifiedPositiveDeskTicketContractComparisonReport
     return {
       ticketId: row.ticketId,
       sourceSnapshotId: row.sourceSnapshotId,
+      session,
       setupType: row.setupType,
       direction: row.direction,
       adapterStatus: 'blocked_contract_gap',
@@ -95,6 +107,7 @@ function rowForComparison(row: UnifiedPositiveDeskTicketContractComparisonReport
     return {
       ticketId: row.ticketId,
       sourceSnapshotId: row.sourceSnapshotId,
+      session,
       setupType: row.setupType,
       direction: row.direction,
       adapterStatus: 'blocked_contract_gap',
@@ -120,6 +133,7 @@ function rowForComparison(row: UnifiedPositiveDeskTicketContractComparisonReport
   return {
     ticketId: row.ticketId,
     sourceSnapshotId: row.sourceSnapshotId,
+    session,
     setupType: row.setupType,
     direction: row.direction,
     adapterStatus: 'held_local_artifact_created',
@@ -173,9 +187,9 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalTicketAdapterReport,
     `- publishDiscord=false artifacts: ${report.summary.publishDiscordFalseArtifacts}.`,
     '',
     '## Rows',
-    '| Ticket | Setup | Side | Status | shouldPost | canExecute | publishDiscord | Blockers |',
-    '|---|---|---|---|---|---|---|---|',
-    ...report.rows.map((row) => `| ${row.ticketId} | ${row.setupType} | ${row.direction} | ${row.adapterStatus} | ${row.artifact?.deskPublishDecision.shouldPost ?? '-'} | ${row.artifact?.canExecute ?? '-'} | ${row.artifact?.publishDiscord ?? '-'} | ${row.blockers.join(', ') || '-'} |`),
+    '| Ticket | Session | Setup | Side | Status | shouldPost | canExecute | publishDiscord | Blockers |',
+    '|---|---|---|---|---|---|---|---|---|',
+    ...report.rows.map((row) => `| ${row.ticketId} | ${row.session ?? '-'} | ${row.setupType} | ${row.direction} | ${row.adapterStatus} | ${row.artifact?.deskPublishDecision.shouldPost ?? '-'} | ${row.artifact?.canExecute ?? '-'} | ${row.artifact?.publishDiscord ?? '-'} | ${row.blockers.join(', ') || '-'} |`),
     '',
     '## Recommendations',
     ...report.recommendations.map((item) => `- ${item}`),
