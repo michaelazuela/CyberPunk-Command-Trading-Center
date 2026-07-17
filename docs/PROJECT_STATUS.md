@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add held-local preview filter-difference audit.
+Files changed: tools/automation/unified-positive-held-local-preview-filter-difference.ts, tools/automation/unified-positive-held-local-preview-filter-difference.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The desk needed to isolate the actual separator between reviewed held-local TurtleSoup/SweepMssFvgRetrace winners and the broad losing non-strict bucket before any model removal, broadening, or `canExecute` decision.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-filter-difference.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-filter-difference -- --json`.
+Result: Focused filter-difference test, typecheck, and real diagnostic run passed. The real diagnostic compared 9 broad losing non-strict rows against 4 reviewed held-local winners. TurtleSoup broad losers were 7 rows / -$522.50, with 0 completed retest-proof markers; reviewed TurtleSoup winners were 3 rows / +$193.75, with 3 completed 5M retest/re-entry proof markers. SweepMssFvgRetrace broad losers were 2 rows / -$232.50, with 0 completed retest-proof markers; the reviewed Sweep winner was 1 row / +$311.25, with completed 5M retest/re-entry proof. The report recommended 0 model removals, 0 broadening changes, 0 `canExecute` changes, and 2 candidate filter findings. Latest filter report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-filter-difference-1784301565211.json`.
+Trading logic changed: No. This is local-only artifact comparison research. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, model availability, `canExecute`, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: The reviewed winner sample is still small, so this supports a filter-validation phase rather than direct live promotion.
+Next recommended action: Add a narrow source/proof filter validation that requires scanner-owned held-local artifact evidence plus completed 5M retest/re-entry proof before a TurtleSoup or SweepMssFvgRetrace row can enter higher-confidence research ranking. Do not delete either model, broaden either model, or change `canExecute`.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add held-local preview model decision summary.
 Files changed: tools/automation/unified-positive-held-local-preview-model-decision.ts, tools/automation/unified-positive-held-local-preview-model-decision.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The desk needed a surgical answer on whether to remove TurtleSoup or SweepMssFvgRetrace after broad non-strict replay was negative but reviewed held-local OHLC outcomes were positive.
