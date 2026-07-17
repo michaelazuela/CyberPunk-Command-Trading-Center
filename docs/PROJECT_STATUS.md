@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Run local reviewed-case intake, triage, replay package, outcome, and timing pass.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: Rank overlay expansion had no unique rows beyond the selected four. This phase found additional local held-complete candidates, selected a small replay package, and measured completed-5M outcome/timing without changing live behavior.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-artifact-gap.ts --json; npx tsx tools/automation/unified-positive-held-local-preview-reviewed-case-intake.ts --current-trade-date 2026-07-17 --json; npx tsx tools/automation/unified-positive-held-local-preview-intake-triage.ts --intake-report <latest intake> --max-replay-package-rows 24 --max-rows-per-model 4 --json; npx tsx tools/automation/unified-positive-held-local-preview-replay-package.ts --triage-report <latest triage> --json; npx tsx tools/automation/unified-positive-held-local-preview-replay-package-outcome.ts --replay-package <latest package> --json; npx tsx tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.ts --replay-package-outcome <latest package outcome> --json.
+Result: Passed. Artifact gap confirmed the prior 4 tickets are complete through source/proof acceptance with 0 missing stages. Intake scanned 90 decision-tape files and 3,155 events, found 479 historical held-complete candidates, 475 new intake candidates, and 4 already processed. Triage selected 24 replay-package rows across 6 model groups and 3 sessions. Replay package had 24/24 ready rows and 0 blocked. Outcome resolved 21 rows, left 3 unresolved, 0 blocked, with gross resolved one-MES P/L +$777.52. Model P/L: SweepMssFvgRetrace +$465 across 4/4 resolved full-delivery winners; AfterLunchDriveFvgContinuation +$270.01 with 3 winners and 1 stopped-before-T1 loss; HtfDisplacementMssContinuation +$133.75 with 1 winner, 1 loss, 2 unresolved; OpeningDriveFvgContinuation +$27.51 with 2 winners and 2 losses; IntradayMssMicroContinuation -$75 with 1 winner and 3 losses; TurtleSoup -$43.75 with 1 winner, 2 losses, 1 unresolved.
+Trading logic changed: No. This was diagnostic-only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local scanner decision tapes only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The package is selected research data, not live proof. Negative groups need narrower timing/adverse-excursion isolation before any ranking expansion.
+Next recommended action: Run the existing local-only negative-filter/adverse-path diagnostics to isolate why IntradayMssMicroContinuation and TurtleSoup lost, and to confirm whether SweepMssFvgRetrace and AfterLunchDriveFvgContinuation should receive a research-only positive filter tag.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Run research-only source/proof rank overlay on validated held-local filter set.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: Source/proof validation separated reviewed winners from broad losers. This phase ranked the accepted research rows without changing live scanner ranking, canExecute, Discord, Supabase, or trading logic.
