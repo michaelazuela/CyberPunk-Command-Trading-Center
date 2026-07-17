@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local preview decision summary.
+Files changed: tools/automation/unified-positive-held-local-preview-decision-summary.ts, tools/automation/unified-positive-held-local-preview-decision-summary.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The review rollup joins checklist and validated notes but does not decide what happens next. This phase adds a local-only gate that maps supported note dispositions into explicit research-only next steps while refusing live promotion, scanner behavior changes, Discord posts, Supabase writes, or `canExecute` changes.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-decision-summary.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-decision-summary -- --json`.
+Result: Focused decision-summary test, typecheck, and real diagnostic run passed. The real decision summary loaded 4 rollup rows, held 4 for manual review, kept 0 local-only by reviewed disposition, requested 0 chart-evidence rows, excluded 0 rows, queued 0 rows for replay research, and found 0 live-promotion rows. Decision summary report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-decision-summary-1784267449833.json`.
+Trading logic changed: No. This is local-only research triage tooling. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: All current rows remain unreviewed, so the summary correctly queues nothing for replay research until a supported local disposition is recorded.
+Next recommended action: Use the hidden preview and editable note template to review the four held-local cases, then rerun note validation, rollup, and decision summary before any separate replay-research phase.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local preview review rollup.
 Files changed: tools/automation/unified-positive-held-local-preview-review-rollup.ts, tools/automation/unified-positive-held-local-preview-review-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The note validator proved editable review notes validate locally. This phase joins the review checklist and validated notes into one local-only research rollup while restating that the rows cannot promote live behavior, post Discord, write Supabase, or change scanner/execution gates.
