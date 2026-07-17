@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Compare simulated positive review tickets against DeskTicket/DeskPublishDecision contracts.
+Files changed: tools/automation/unified-positive-desk-ticket-contract-comparison.ts, tools/automation/unified-positive-desk-ticket-contract-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The deduped review-ticket simulation produced 4 review-only candidates. Before any scanner-visible wiring, the desk needed proof that those tickets can be represented by the existing scanner-owned `DeskTicket` and `DeskPublishDecision` public contracts without changing Discord posting, Supabase schema, `canExecute`, or execution behavior.
+Tests run: `npx tsx tools/automation/unified-positive-desk-ticket-contract-comparison.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-desk-ticket-contract-comparison.ts --review-ticket-simulation tools/automation/diagnostic-reports/unified-positive-review-ticket-rebuild-simulation-1784251224514.json --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, and real read-only comparison passed. The comparison loaded 4 simulated review tickets and found all 4 compatible with the scanner-owned `DeskTicket` shape and held-local `DeskPublishDecision` shape. All 4 rows remain `ACTIVE_REVIEW`, `shouldPost=false`, `canExecute=false`, and `publishDiscord=false`, with 0 contract blockers. Report paths: `tools/automation/diagnostic-reports/unified-positive-desk-ticket-contract-comparison-1784253451004.json` and `.md`.
+Trading logic changed: No. This phase is read-only contract comparison. It does not change setup definitions, live ranking, scanner behavior, entry, stop, target, risk, invalidation, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: The compatible projection is still an offline adapter, not scanner-owned live wiring. The next phase must install any adapter inside the scanner-owned DeskState/DeskTicket path and keep Discord posting disabled until separately approved.
+Next recommended action: Add a dry-run scanner-owned adapter for these 4 review tickets that emits DeskTicket-compatible held-local artifacts only, still `publishDiscord=false`, before any live Discord or Supabase behavior is touched.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Simulate deduped human-review tickets from fresh-proof positive rows.
 Files changed: tools/automation/unified-positive-review-ticket-rebuild-simulation.ts, tools/automation/unified-positive-review-ticket-rebuild-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fresh completed 5M proof extractor found 7 eligible TurtleSoup/Sweep positive rows, but repeated same-session snapshots must not become multiple Discord tickets. This phase adds a read-only review-ticket rebuild simulation that dedupes by trade date, session, setup, and direction while preserving the app-owned entry/stop/T1/T2 geometry from the proof-qualified row.
