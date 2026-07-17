@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local local preview visual renderer.
+Files changed: tools/automation/unified-positive-held-local-preview-visual.ts, tools/automation/unified-positive-held-local-preview-visual.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The held-local preview text preflight proved four local review cards have safe wording and boundaries. This phase adds a local PNG renderer behind that preflight so the desk can visually inspect the future held-local card artifact while still posting nothing, writing nothing, and changing no live scanner behavior.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-visual.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-held-local-preview-visual.ts --renderer tools/automation/diagnostic-reports/unified-positive-held-local-preview-renderer-1784259405922.json --preflight tools/automation/diagnostic-reports/unified-positive-held-local-preview-preflight-1784259982919.json --out-dir tools/automation/diagnostic-reports --json`; visual QA via rendered PNG inspection.
+Result: Focused test, typecheck, real local visual run, and PNG inspection passed. The real run loaded 4 renderer rows and 4 preflight rows, rendered 4 visual PNGs, blocked 0 rows, and all 4 rows preserved `postable=false`, `shouldPost=false`, `canExecute=false`, `publishDiscord=false`, `shouldDispatch=false`, and `writesSupabase=false`. Visual report path: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-visual-1784260899742.json`. Inspected PNG: `tools/automation/diagnostic-reports/held-local-preview-visuals/held-local-preview-2026-06-16-morning-TurtleSoup-LONG.png`.
+Trading logic changed: No. This is a local-only visual artifact renderer. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: Production Discord/Supabase publishing remains disabled. The visual artifact is not wired to UI, Discord, scanner-visible output, or live runtime.
+Next recommended action: Add a local visual QA signoff contract that records which PNG artifact was inspected before any controlled no-post UI preview or Discord exposure phase.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local local preview text preflight.
 Files changed: tools/automation/unified-positive-held-local-preview-preflight.ts, tools/automation/unified-positive-held-local-preview-preflight.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The local renderer proved four held-local card shapes can render without posting or executing. This phase adds a local text preflight that rejects missing card fields, oversized content/lines/footer, missing boundary language, generic invalidation wording, and forbidden executable/posting signals before any visual image rendering or UI exposure.
