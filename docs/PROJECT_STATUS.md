@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local preview review rollup.
+Files changed: tools/automation/unified-positive-held-local-preview-review-rollup.ts, tools/automation/unified-positive-held-local-preview-review-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The note validator proved editable review notes validate locally. This phase joins the review checklist and validated notes into one local-only research rollup while restating that the rows cannot promote live behavior, post Discord, write Supabase, or change scanner/execution gates.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-review-rollup.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-review-rollup -- --json`.
+Result: Focused rollup test, typecheck, and real diagnostic run passed. The real rollup loaded 4 checklist rows, matched 4 valid note rows, found 0 reviewed rows, 4 unreviewed rows, 4 review-only rows, 0 candidate-for-later-research rows, and 0 rejected rows. Rollup report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-review-rollup-1784267137977.json`.
+Trading logic changed: No. This is local-only research rollup tooling. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: The rollup is review context only; it is not model approval, scanner promotion, or execution evidence by itself.
+Next recommended action: Add a local-only decision-summary gate that converts reviewed rollup dispositions into explicit research-only next steps, still requiring separate replay evidence and approval before any scanner-visible change.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local preview note ingest validator.
 Files changed: tools/automation/unified-positive-held-local-preview-note-ingest-validator.ts, tools/automation/unified-positive-held-local-preview-note-ingest-validator.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The note template creates editable local review notes. This phase adds a local-only validator that reads a filled editable template and rejects unsupported dispositions, missing reviewer notes for reviewed rows, or missing no-execution/no-Discord/no-Supabase boundary reminders before any later research aggregation.
