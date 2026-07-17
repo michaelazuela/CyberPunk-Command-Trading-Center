@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add structured proof-time snapshot miner for held-local reviewed candidates.
+Files changed: tools/automation/unified-positive-held-local-preview-structured-snapshot-miner.ts, tools/automation/unified-positive-held-local-preview-structured-snapshot-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The no-lookahead classifier found no installable coarse text/filter signal, so this phase mines richer proof-time scanner objects: selected-vs-reviewed model match, model candidate scores, missing evidence counts, HTF timeframe states, scorecard statuses, and history coverage.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-structured-snapshot-miner.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-structured-snapshot-miner -- --json.
+Result: Passed. Real local report mined 204 rows with 0 blocked rows and 86 structured feature summaries. All 204 reviewed rows had a model candidate object; 50/204 matched the scanner-selected top candidate. Setup totals: TurtleSoup 153 rows, 47 winners, 61 losses, 45 unresolved, +$1211.25 one-MES; IntradayMssMicroContinuation 51 rows, 19 winners, 17 losses, 15 unresolved, +$1090.00 one-MES. Strongest TurtleSoup contrast: protectedStopEvidence=false kept 75 rows, 40 winners, 18 losses, 17 unresolved, +$2417.50; protectedStopEvidence=true kept 78 rows, 7 winners, 43 losses, 28 unresolved, -$1206.25.
+Trading logic changed: No. This is a read-only local structured snapshot miner. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local structural inventory diagnostics and local scanner decision tapes only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Feature summaries are retrospective research signals only. They must feed a separate no-lookahead classifier before any scanner-visible behavior is considered.
+Next recommended action: Validate the strongest structured snapshot features in a separate no-lookahead classifier, especially TurtleSoup protected-stop / blocked-vs-conditional state and entry-trigger-pending evidence.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add structural no-lookahead classifier over proof-time scanner fields.
 Files changed: tools/automation/unified-positive-held-local-preview-structural-no-lookahead-classifier.ts, tools/automation/unified-positive-held-local-preview-structural-no-lookahead-classifier.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Structural field inventory found proof-time fields worth testing, so this phase ran a no-lookahead classifier while excluding uniform/unknown fields, future path evidence, and fake filters that do not reject any losses.
