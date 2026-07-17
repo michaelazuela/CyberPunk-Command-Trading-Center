@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add structural no-lookahead classifier over proof-time scanner fields.
+Files changed: tools/automation/unified-positive-held-local-preview-structural-no-lookahead-classifier.ts, tools/automation/unified-positive-held-local-preview-structural-no-lookahead-classifier.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Structural field inventory found proof-time fields worth testing, so this phase ran a no-lookahead classifier while excluding uniform/unknown fields, future path evidence, and fake filters that do not reject any losses.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-structural-no-lookahead-classifier.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-structural-no-lookahead-classifier -- --json.
+Result: Passed. Real local report evaluated 204 rows and 65 structural classifiers. Accepted classifiers: 0. Rejected classifiers: 65. Top accepted classifier: none. Live promotion allowed rows: 0.
+Trading logic changed: No. This is a read-only local classifier diagnostic. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local structural inventory diagnostics only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Proof-time text flags are still too coarse to explain adverse-path losses without false-rejecting winners. Do not install a live rank/filter from this phase.
+Next recommended action: Mine deeper structured object fields from the scanner snapshot, especially exact selected candidate state, missing evidence arrays, scorecard component scores, HTF timeframe-state directions/status, FVG zone relationship, and target/obstacle distance buckets.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add proof-time structural field inventory from local scanner decision tapes.
 Files changed: tools/automation/unified-positive-held-local-preview-structural-field-inventory.ts, tools/automation/unified-positive-held-local-preview-structural-field-inventory.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The pre-entry classifier found no accepted separator from coarse fields, so this phase mined richer proof-time structural fields from local scanner decision tapes without using future path evidence.
