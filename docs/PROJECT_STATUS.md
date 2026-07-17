@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Run read-only OHLC outcome and model-decision pass for explicitly queued held-local rows.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The replay queue proof established that only explicit `candidate_for_later_research` rows queue. This phase ran the next local-only OHLC outcome pass and model-decision diagnostic on those queued rows without changing scanner-visible behavior.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-ohlc-outcome.ts --replay-queue <explicit seeded queue> --held-local-adapter <latest adapter> --market-bars-json <latest June 1-July 2 raw OHLC> --json; npx tsx tools/automation/unified-positive-held-local-preview-model-decision.ts --formal-replay <latest formal replay> --ohlc-outcome <latest outcome> --json.
+Result: Passed. OHLC outcome resolved 4/4 queued rows with local completed 5M bars, 0 unresolved, 0 blocked, 0 live-promotion rows, and gross one-MES P/L +$505. TurtleSoup resolved +$193.75 across 3 rows: June 16 morning LONG +$43.75, June 24 evening SHORT +$65.00, June 25 evening SHORT +$85.00. SweepMssFvgRetrace resolved +$311.25 across 1 row: June 26 morning LONG +$311.25. Model-decision diagnostic reviewed TurtleSoup and SweepMssFvgRetrace, recommended 0 removals, 0 broadening, 0 canExecute changes, and marked both as candidate_for_filter_research because the broad non-strict bucket was negative while the explicitly reviewed held-local subset was positive.
+Trading logic changed: No. This was diagnostic-only. It does not change scanner setup logic, ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local OHLC JSON and prior local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The resolved subset is small and selected. The right conclusion is filter research, not live broadening.
+Next recommended action: Install the next narrow local-only filter research pass comparing the positive reviewed subset against the broad negative bucket by proof timing, source/proof state, session, stop distance, MFE/MAE, and completed 5M retest proof.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Prove replay queue seeding requires explicit reviewer disposition.
 Files changed: tools/automation/unified-positive-held-local-preview-replay-queue.ts, tools/automation/unified-positive-held-local-preview-replay-queue.test.ts, tools/automation/unified-positive-held-local-preview-ohlc-outcome.test.ts, docs/PROJECT_STATUS.md.
 Reason: The desk needed proof that held-local caution/system notes cannot queue replay research by themselves. This phase makes replay queue authority explicit: a row queues only when the decision summary carries the reviewer disposition `candidate_for_later_research`.
