@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add proof-time structural field inventory from local scanner decision tapes.
+Files changed: tools/automation/unified-positive-held-local-preview-structural-field-inventory.ts, tools/automation/unified-positive-held-local-preview-structural-field-inventory.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The pre-entry classifier found no accepted separator from coarse fields, so this phase mined richer proof-time structural fields from local scanner decision tapes without using future path evidence.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-structural-field-inventory.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-structural-field-inventory -- --json.
+Result: Passed. Real local report inventoried 204 rows, 0 blocked rows, 72 structural field summaries, live promotion allowed rows 0. The strongest useful fields for the next classifier are proof-time no-chase/entry-trigger/FVG/MSS/retest/blocker text flags, but many HTF sufficiency and visibility fields are uniform or unknown and should not be treated as edge.
+Trading logic changed: No. This is a read-only local inventory diagnostic. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local enrichment diagnostics plus local scanner decision tape JSON only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Text-derived structural flags are research features only. They need a separate no-lookahead classifier before any scanner-visible behavior change.
+Next recommended action: Run a structural no-lookahead classifier using this inventory, excluding uniform/unknown fields and rejecting high false-reject winner candidates.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add pre-entry adverse-path classifier search over enriched held-local rows.
 Files changed: tools/automation/unified-positive-held-local-preview-preentry-adverse-path-classifier.ts, tools/automation/unified-positive-held-local-preview-preentry-adverse-path-classifier.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The proof/context enrichment showed loss rows have worse post-entry MAE, but that is future path evidence. This phase searched only pre-entry/proof-time fields to avoid lookahead bias before considering any scanner-visible rank/filter change.
