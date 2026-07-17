@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add local-only held-local ticket inspection surface.
+Files changed: tools/automation/unified-positive-held-local-inspection-surface.ts, tools/automation/unified-positive-held-local-inspection-surface.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The scanner dry-run replay proved held-local artifacts can sit beside normal output with zero live publish behavior change. This phase adds a local-only inspection surface so the desk can review the actual `ACTIVE_REVIEW` ticket levels, triggers, invalidation text, and safety boundaries without touching Discord, Supabase, bridge, or live scanner behavior.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-inspection-surface.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-held-local-inspection-surface.ts --held-local-adapter tools/automation/diagnostic-reports/unified-positive-held-local-ticket-adapter-1784254207487.json --dry-run-replay tools/automation/diagnostic-reports/unified-positive-scanner-dry-run-replay-1784254950340.json --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, and real local-only inspection run passed. The report joined 4 held-local adapter rows with 4 dry-run replay rows and found 4 inspectable tickets, 0 blocked rows, 4 normal `shouldPost=false` rows, 4 held-local `shouldPost=false` rows, 4 normal `canExecute=false` rows, 4 held-local `canExecute=false` rows, 4 normal `publishDiscord=false` rows, and 4 held-local `publishDiscord=false` rows. Report paths: `tools/automation/diagnostic-reports/unified-positive-held-local-inspection-surface-1784255341673.json` and `.md`.
+Trading logic changed: No. This is a local-only read-only inspection artifact. It does not change setup definitions, live ranking, scanner behavior, entry, stop, target, risk, invalidation, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: The local inspection markdown exposes existing generic invalidation wording (`below/above the protected 5M stop line`) from the held-local artifact text. Because this is not a live trader-facing card, it was left unchanged for this phase; a later wording phase can make side-specific text before any Discord/UI exposure.
+Next recommended action: Add a guarded scanner replay option that writes this local inspection artifact during replay only, still keeping live Discord/Supabase disabled and requiring a separate approval gate before production publish behavior changes.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add unified positive scanner dry-run replay.
 Files changed: tools/automation/unified-positive-scanner-dry-run-replay.ts, tools/automation/unified-positive-scanner-dry-run-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The held-local adapter created 4 scanner-owned review artifacts. Before scanner-visible wiring, the desk needed proof that these artifacts can be paired beside normal DeskState output while preserving zero live publish behavior change.
