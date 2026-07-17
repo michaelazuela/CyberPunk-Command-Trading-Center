@@ -40,6 +40,9 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
     reviewOnlyRows: 5,
     candidateForLaterResearchRows: 1,
     rejectedRows: 1,
+    systemReviewNoteRows: 1,
+    missingPlanCautionRows: 1,
+    systemNoteDrivenDispositionRows: 0,
   },
   rows: [
     {
@@ -49,6 +52,8 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
       visibleInHiddenTab: true,
       noteDisposition: 'unreviewed',
       noteValid: true,
+      systemReviewNotes: ['TurtleSoup long remains review-only: this cluster lacks full plan-level proof.'],
+      systemNotesAffectDisposition: false,
       reviewOnly: true,
       livePromotionAllowed: false,
       boundary: 'Research summary only.',
@@ -60,6 +65,8 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
       visibleInHiddenTab: true,
       noteDisposition: 'keep_review_only',
       noteValid: true,
+      systemReviewNotes: [],
+      systemNotesAffectDisposition: false,
       reviewOnly: true,
       livePromotionAllowed: false,
       boundary: 'Research summary only.',
@@ -71,6 +78,8 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
       visibleInHiddenTab: true,
       noteDisposition: 'needs_more_chart_evidence',
       noteValid: true,
+      systemReviewNotes: [],
+      systemNotesAffectDisposition: false,
       reviewOnly: true,
       livePromotionAllowed: false,
       boundary: 'Research summary only.',
@@ -82,6 +91,8 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
       visibleInHiddenTab: true,
       noteDisposition: 'reject_preview',
       noteValid: true,
+      systemReviewNotes: [],
+      systemNotesAffectDisposition: false,
       reviewOnly: true,
       livePromotionAllowed: false,
       boundary: 'Research summary only.',
@@ -93,6 +104,8 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
       visibleInHiddenTab: true,
       noteDisposition: 'candidate_for_later_research',
       noteValid: true,
+      systemReviewNotes: [],
+      systemNotesAffectDisposition: false,
       reviewOnly: true,
       livePromotionAllowed: false,
       boundary: 'Research summary only.',
@@ -124,7 +137,11 @@ assert.equal(report.summary.requestMoreChartEvidenceRows, 1);
 assert.equal(report.summary.excludedFromResearchQueueRows, 1);
 assert.equal(report.summary.queuedForReplayResearchRows, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
+assert.equal(report.summary.systemReviewNoteRows, 1);
+assert.equal(report.summary.missingPlanCautionRows, 1);
+assert.equal(report.summary.systemNoteDrivenDecisionRows, 0);
 assert.equal(report.rows.find((row) => row.ticketId === 'unreviewed-ticket')?.decisionAction, 'hold_for_manual_review');
+assert.equal(report.rows.find((row) => row.ticketId === 'unreviewed-ticket')?.systemNotesAffectDecision, false);
 assert.equal(report.rows.find((row) => row.ticketId === 'keep-ticket')?.decisionAction, 'keep_local_review_only');
 assert.equal(report.rows.find((row) => row.ticketId === 'evidence-ticket')?.decisionAction, 'request_more_chart_evidence');
 assert.equal(report.rows.find((row) => row.ticketId === 'reject-ticket')?.decisionAction, 'exclude_from_research_queue');

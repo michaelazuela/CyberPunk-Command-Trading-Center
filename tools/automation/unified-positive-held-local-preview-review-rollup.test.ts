@@ -43,7 +43,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
     postableFalseRows: 1,
     publishDiscordFalseRows: 1,
     writesSupabaseFalseRows: 1,
-    systemReviewNoteRows: 0,
+    systemReviewNoteRows: 1,
   },
   rows: [{
     ticketId: 'preview-ticket',
@@ -58,7 +58,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
     shouldDispatch: false,
     writesSupabase: false,
     reviewOnlyReasons: ['canExecute remains false.'],
-    systemReviewNotes: [],
+    systemReviewNotes: ['TurtleSoup long remains review-only: this cluster lacks full plan-level proof.'],
   }],
   blockers: [],
   recommendations: [],
@@ -115,6 +115,11 @@ assert.equal(report.summary.validNoteRows, 1);
 assert.equal(report.summary.reviewedRows, 0);
 assert.equal(report.summary.unreviewedRows, 1);
 assert.equal(report.summary.reviewOnlyRows, 1);
+assert.equal(report.summary.systemReviewNoteRows, 1);
+assert.equal(report.summary.missingPlanCautionRows, 1);
+assert.equal(report.summary.systemNoteDrivenDispositionRows, 0);
+assert.deepEqual(report.rows[0].systemReviewNotes, ['TurtleSoup long remains review-only: this cluster lacks full plan-level proof.']);
+assert.equal(report.rows[0].systemNotesAffectDisposition, false);
 assert.equal(report.rows[0].livePromotionAllowed, false);
 assert.match(report.rows[0].boundary, /No live promotion/);
 assert.match(report.markdown, /local-only review rollup/);

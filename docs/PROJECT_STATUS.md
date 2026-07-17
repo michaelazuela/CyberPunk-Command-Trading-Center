@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Prove held-local system notes do not drive rollup or decision-summary actions.
+Files changed: tools/automation/unified-positive-held-local-preview-review-rollup.ts, tools/automation/unified-positive-held-local-preview-review-rollup.test.ts, tools/automation/unified-positive-held-local-preview-decision-summary.ts, tools/automation/unified-positive-held-local-preview-decision-summary.test.ts, tools/automation/unified-positive-held-local-preview-replay-queue.test.ts, tools/automation/unified-positive-held-local-preview-review-handoff.test.ts, docs/PROJECT_STATUS.md.
+Reason: Payload system notes now flow into review artifacts. This phase makes the later rollup/decision-summary audit explicit: notes can be visible to the reviewer, but they do not choose dispositions, queue replay research, permit live promotion, or alter any executable boundary.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-review-rollup.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-decision-summary.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-replay-queue.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-review-handoff.test.ts; npx tsc --noEmit --pretty false; real local note-validation/rollup/decision-summary/replay-queue diagnostic chain.
+Result: Passed for rollup and decision-summary. Real rollup read 4 checklist rows, 4 valid note rows, 4 unreviewed rows, 4 system-review-note rows, 3 missing-plan caution rows, and 0 system-note-driven disposition rows. Real decision summary produced 4 hold-for-manual-review rows, 0 replay-queued rows, 0 live-promotion rows, 4 system-review-note rows, 3 missing-plan caution rows, and 0 system-note-driven decision rows. Replay queue remained fail because no rows were queued, which is the existing guard behavior and was not loosened.
+Trading logic changed: No. This only adds local diagnostic audit fields proving notes do not affect dispositions or replay queue decisions. It does not change scanner setup logic, ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads prior local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for live behavior. Human review dispositions still require explicit local reviewer input.
+Next recommended action: Run full verification, commit/push, then continue with a narrow local-only replay queue seed only when reviewer disposition explicitly queues rows.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Carry held-local payload system notes into review checklist and editable note template.
 Files changed: tools/automation/unified-positive-held-local-preview-review-checklist.ts, tools/automation/unified-positive-held-local-preview-review-checklist.test.ts, tools/automation/unified-positive-held-local-preview-note-template.ts, tools/automation/unified-positive-held-local-preview-note-template.test.ts, tools/automation/unified-positive-held-local-preview-auto-review-seed.test.ts, tools/automation/unified-positive-held-local-preview-review-rollup.test.ts, docs/PROJECT_STATUS.md.
 Reason: The TurtleSoup missing-plan caution reached local preview payloads, but the later review checklist and editable note-template artifacts only carried generic review-only reasons. This phase carries payload notes forward into review artifacts without changing preview rendering, scanner behavior, Discord, Supabase, ranking, or canExecute.

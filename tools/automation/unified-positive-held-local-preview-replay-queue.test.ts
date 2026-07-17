@@ -42,6 +42,9 @@ const decisionSummary: UnifiedPositiveHeldLocalPreviewDecisionSummaryReport = {
     excludedFromResearchQueueRows: 0,
     queuedForReplayResearchRows: 1,
     livePromotionAllowedRows: 0,
+    systemReviewNoteRows: 1,
+    missingPlanCautionRows: 1,
+    systemNoteDrivenDecisionRows: 0,
   },
   rows: [
     {
@@ -50,6 +53,8 @@ const decisionSummary: UnifiedPositiveHeldLocalPreviewDecisionSummaryReport = {
       direction: 'LONG',
       noteDisposition: 'candidate_for_later_research',
       decisionAction: 'queue_for_replay_research',
+      systemReviewNotes: ['TurtleSoup long remains review-only: this cluster lacks full plan-level proof.'],
+      systemNotesAffectDecision: false,
       researchOnly: true,
       livePromotionAllowed: false,
       nextStep: 'Queue for a separate read-only replay research run.',
@@ -61,6 +66,8 @@ const decisionSummary: UnifiedPositiveHeldLocalPreviewDecisionSummaryReport = {
       direction: 'SHORT',
       noteDisposition: 'unreviewed',
       decisionAction: 'hold_for_manual_review',
+      systemReviewNotes: [],
+      systemNotesAffectDecision: false,
       researchOnly: true,
       livePromotionAllowed: false,
       nextStep: 'Hold for review.',

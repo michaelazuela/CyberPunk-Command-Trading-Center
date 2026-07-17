@@ -43,6 +43,9 @@ export interface UnifiedPositiveHeldLocalPreviewDecisionSummaryReport {
     excludedFromResearchQueueRows: number;
     queuedForReplayResearchRows: number;
     livePromotionAllowedRows: number;
+    systemReviewNoteRows: number;
+    missingPlanCautionRows: number;
+    systemNoteDrivenDecisionRows: 0;
   };
   rows: Array<{
     ticketId: string;
@@ -50,6 +53,8 @@ export interface UnifiedPositiveHeldLocalPreviewDecisionSummaryReport {
     direction: string;
     noteDisposition: string;
     decisionAction: UnifiedPositiveHeldLocalPreviewDecisionAction;
+    systemReviewNotes: string[];
+    systemNotesAffectDecision: false;
     researchOnly: true;
     livePromotionAllowed: false;
     nextStep: string;
@@ -154,6 +159,9 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewDecisionSumma
     `- Excluded from research queue: ${report.summary.excludedFromResearchQueueRows}.`,
     `- Queued for replay research: ${report.summary.queuedForReplayResearchRows}.`,
     `- Live promotion allowed rows: ${report.summary.livePromotionAllowedRows}.`,
+    `- System review-note rows: ${report.summary.systemReviewNoteRows}.`,
+    `- Missing-plan caution rows: ${report.summary.missingPlanCautionRows}.`,
+    `- System-note-driven decision rows: ${report.summary.systemNoteDrivenDecisionRows}.`,
     '',
     '## Rows',
     '| Ticket | Setup | Side | Disposition | Decision Action | Next Step | Boundary |',
@@ -181,6 +189,8 @@ export function buildUnifiedPositiveHeldLocalPreviewDecisionSummaryReport(args: 
       direction: row.direction,
       noteDisposition: row.noteDisposition,
       decisionAction,
+      systemReviewNotes: row.systemReviewNotes,
+      systemNotesAffectDecision: false as const,
       researchOnly: true as const,
       livePromotionAllowed: false as const,
       nextStep: nextStepForAction(decisionAction),
@@ -220,6 +230,9 @@ export function buildUnifiedPositiveHeldLocalPreviewDecisionSummaryReport(args: 
       excludedFromResearchQueueRows: count('exclude_from_research_queue'),
       queuedForReplayResearchRows: count('queue_for_replay_research'),
       livePromotionAllowedRows: rows.filter((row) => row.livePromotionAllowed !== false).length,
+      systemReviewNoteRows: rows.filter((row) => row.systemReviewNotes.length > 0).length,
+      missingPlanCautionRows: rows.filter((row) => row.systemReviewNotes.some((note) => note.includes('lacks full plan-level proof'))).length,
+      systemNoteDrivenDecisionRows: 0,
     },
     rows,
     blockers,

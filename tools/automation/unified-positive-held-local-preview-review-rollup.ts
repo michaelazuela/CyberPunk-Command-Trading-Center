@@ -38,6 +38,9 @@ export interface UnifiedPositiveHeldLocalPreviewReviewRollupReport {
     reviewOnlyRows: number;
     candidateForLaterResearchRows: number;
     rejectedRows: number;
+    systemReviewNoteRows: number;
+    missingPlanCautionRows: number;
+    systemNoteDrivenDispositionRows: 0;
   };
   rows: Array<{
     ticketId: string;
@@ -46,6 +49,8 @@ export interface UnifiedPositiveHeldLocalPreviewReviewRollupReport {
     visibleInHiddenTab: boolean;
     noteDisposition: string;
     noteValid: boolean;
+    systemReviewNotes: string[];
+    systemNotesAffectDisposition: false;
     reviewOnly: true;
     livePromotionAllowed: false;
     boundary: string;
@@ -118,6 +123,9 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewReviewRollupR
     `- Review-only rows: ${report.summary.reviewOnlyRows}.`,
     `- Candidate-for-later-research rows: ${report.summary.candidateForLaterResearchRows}.`,
     `- Rejected rows: ${report.summary.rejectedRows}.`,
+    `- System review-note rows: ${report.summary.systemReviewNoteRows}.`,
+    `- Missing-plan caution rows: ${report.summary.missingPlanCautionRows}.`,
+    `- System-note-driven disposition rows: ${report.summary.systemNoteDrivenDispositionRows}.`,
     '',
     '## Rows',
     '| Ticket | Setup | Side | Visible | Note Disposition | Note Valid | Boundary |',
@@ -148,6 +156,8 @@ export function buildUnifiedPositiveHeldLocalPreviewReviewRollupReport(args: {
       visibleInHiddenTab: row.visibleInHiddenTab,
       noteDisposition: String(note?.suggestedDisposition || 'missing_note_validation'),
       noteValid: note?.valid === true,
+      systemReviewNotes: row.systemReviewNotes,
+      systemNotesAffectDisposition: false as const,
       reviewOnly: true as const,
       livePromotionAllowed: false as const,
       boundary: 'Research summary only. No live promotion, no canExecute change, no Discord post, no Supabase write, no scanner behavior change.',
@@ -185,6 +195,9 @@ export function buildUnifiedPositiveHeldLocalPreviewReviewRollupReport(args: {
       reviewOnlyRows: rows.filter((row) => row.reviewOnly === true).length,
       candidateForLaterResearchRows: rows.filter((row) => row.noteDisposition === 'candidate_for_later_research').length,
       rejectedRows: rows.filter((row) => row.noteDisposition === 'reject_preview').length,
+      systemReviewNoteRows: rows.filter((row) => row.systemReviewNotes.length > 0).length,
+      missingPlanCautionRows: rows.filter((row) => row.systemReviewNotes.some((note) => note.includes('lacks full plan-level proof'))).length,
+      systemNoteDrivenDispositionRows: 0,
     },
     rows,
     blockers,
