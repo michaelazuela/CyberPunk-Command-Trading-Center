@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add read-only source/proof timing validator for the 24-row replay package outcome set.
+Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.ts, tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.test.ts.
+Reason: The outcome pass showed positive gross P/L but mixed model behavior. This phase validates proof-to-entry timing, same-bar entry, stale-entry, MFE/R, MAE/R, full-delivery winners, stopped-before-T1 losses, and unresolved rows before any rank-overlay expansion.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-replay-package-source-proof-timing -- --json.
+Result: Passed. The real timing pass evaluated 24 rows, found 12 full-delivery winners, 9 stopped-before-T1 timing losses, 3 unresolved rows, 0 blocked rows, and gross resolved one-MES P/L of +$777.52. Positive model groups: 4. Negative model groups: 2. SweepMssFvgRetrace was clean in this package: 4 winners, 0 losses, +$465. AfterLunchDriveFvgContinuation stayed positive: 3 winners, 1 loss, +$270.01. IntradayMssMicroContinuation and TurtleSoup were the two negative timing-filter targets.
+Trading logic changed: No. This is a read-only local source/proof timing diagnostic. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads local diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Timing findings are research-only. They identify candidate filter targets but do not approve live ranking, model removal, model broadening, or executable behavior.
+Next recommended action: Build a research-only negative-filter probe for IntradayMssMicroContinuation and TurtleSoup using MAE/R, same-bar entry, and stopped-before-T1 timing, while preserving SweepMssFvgRetrace and AfterLunchDriveFvgContinuation evidence.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add read-only replay package outcome diagnostic for the 24 held-local package rows.
 Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-replay-package-outcome.ts, tools/automation/unified-positive-held-local-preview-replay-package-outcome.test.ts.
 Reason: The replay package proved all 24 selected held-local rows had local completed-5M tape coverage. This phase calculates conservative research-only one-MES outcomes from those local bars before source/proof validation or rank-overlay expansion.
