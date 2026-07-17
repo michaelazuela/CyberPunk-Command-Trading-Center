@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Run TurtleSoup blocked-reason drilldown and research-only review-note placement proof.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The prior same-date/session rank simulation rejected a TurtleSoup rank penalty even though blocked/protected-stop rows were weak. This phase tested the safer path: review-note wording and held-local preview placement only.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-blocked-reason-drilldown.ts; npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-wording-probe.ts; npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-placement-simulation.ts; npm run diagnostic:held-local-preview-payload -- --inspection-surface <latest inspection surface> --wording-guard <latest wording guard> --turtlesoup-review-note-placement-simulation <latest placement simulation> --json; npm run diagnostic:held-local-preview-renderer -- --preview-payload <latest payload> --json.
+Result: Passed. Blocked-reason drilldown read 153 TurtleSoup package rows and 78 blocked/protected-stop rows: 7 winners, 43 losses, 28 unresolved, -$1,206.25. All 6 clusters were `missing_full_plan_levels` and became review-note candidates: morning LONG 1/17/4 -$648.75; morning SHORT 1/15/5 -$486.25; lunch LONG 0/7/4 -$396.25; evening LONG 0/2/3 -$36.25; evening SHORT 2/0/4 +$92.50; lunch SHORT 3/2/8 +$268.75. Wording probe created 6 research-only note rows with 0 ticket suppression, 0 ranking change, 0 canExecute change, and 0 entry/stop/target change. Placement simulation kept all 6 visible and order-preserved with 0 Discord/Supabase/ranking/canExecute/level changes. Local preview payload regeneration loaded 4 rows, created 4 payloads, applied 3 TurtleSoup notes, and kept all 4 shouldPost=false, canExecute=false, publishDiscord=false, shouldDispatch=false, writesSupabase=false. Renderer produced 4 shape-pass cards with the same non-live boundaries.
+Trading logic changed: No. This was diagnostic/local-preview-only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Review-note proof is currently local-preview-only. It improves human review clarity but does not solve live ranking or scanner selection.
+Next recommended action: Use the review-note proof as the safe TurtleSoup action for now. Next research should move back to the positive model families, especially SweepMssFvgRetrace and AfterLunchDriveFvgContinuation, and validate whether their clean source/proof-positive states deserve a research-only rank boost.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Run TurtleSoup replay package, action probe, rank-penalty validation, and same-session rank simulation.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: Structured snapshot validation found six TurtleSoup proof-time state classifiers worth broader replay validation. This phase tested whether blocked/protected-stop TurtleSoup rows should receive a research rank penalty or only a review/research caution.
