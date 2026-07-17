@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local preview review checklist.
+Files changed: tools/automation/unified-positive-held-local-preview-review-checklist.ts, tools/automation/unified-positive-held-local-preview-review-checklist.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The readiness audit proved the hidden preview tab renders the embedded held-local bundle. This phase adds a local-only review checklist that lists the visible held-local cases and restates why each remains human-review only before any broader workflow is considered.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-review-checklist.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-review-checklist -- --json`.
+Result: Focused checklist test, typecheck, and real checklist generation passed. The real checklist loaded 4 bundle items, found 4 visible rows, and confirmed 4/4 rows remain review-only with `canExecute=false`, `postable=false`, `publishDiscord=false`, and `writesSupabase=false`. Checklist report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-review-checklist-1784265977559.json`.
+Trading logic changed: No. This is local-only preview review documentation tooling. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: The checklist summarizes review-only preview artifacts; it is not a model approval, trade ticket, or live scanner promotion.
+Next recommended action: Add optional local human-review note capture for these preview cases as ignored diagnostic JSON, still with no Discord/Supabase/scanner side effects.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local preview readiness audit.
 Files changed: tools/automation/unified-positive-held-local-preview-readiness-audit.ts, tools/automation/unified-positive-held-local-preview-readiness-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The embedded preview bundle rendered correctly in a manual browser smoke. This phase makes that proof repeatable with a local-only readiness audit that imports the latest embedded bundle into the hidden localhost tab, counts rendered cards, checks image natural widths, and writes JSON/Markdown/screenshot artifacts.
