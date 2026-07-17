@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Make held-local invalidation wording side-specific.
+Files changed: src/lib/localScannerEngine.ts, tools/automation/unified-positive-held-local-ticket-adapter.test.ts, tools/automation/unified-positive-held-local-inspection-surface.test.ts, docs/PROJECT_STATUS.md.
+Reason: The local inspection surface exposed generic held-local invalidation text (`below/above the protected 5M stop line`). Before any UI/Discord exposure, the local artifacts need trader-clean side-specific wording while preserving all no-post/no-execute boundaries.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-ticket-adapter.test.ts`; `npx tsx tools/automation/unified-positive-held-local-inspection-surface.test.ts`; `npx tsx tools/automation/unified-positive-guarded-scanner-replay.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-held-local-ticket-adapter.ts --contract-comparison tools/automation/diagnostic-reports/unified-positive-desk-ticket-contract-comparison-1784253451004.json --out-dir tools/automation/diagnostic-reports --json`; `npx tsx tools/automation/unified-positive-guarded-scanner-replay.ts --enable-held-local-inspection --held-local-adapter tools/automation/diagnostic-reports/unified-positive-held-local-ticket-adapter-1784256189869.json --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused tests, typecheck, fresh adapter generation, and guarded replay passed. The regenerated inspection report has 4 inspectable tickets and 0 blockers. LONG tickets now say invalid if price trades below the protected 5M stop line; SHORT tickets say invalid if price trades above the protected 5M stop line. The guarded replay still showed 4 zero-live-publish-behavior-change rows, 4 inspectable tickets, and 0 blocked rows. Report paths: `tools/automation/diagnostic-reports/unified-positive-guarded-scanner-replay-1784256196820.json` and `.md`; inspection path: `tools/automation/diagnostic-reports/unified-positive-held-local-inspection-surface-1784256196818.md`.
+Trading logic changed: No. This only changes held-local local artifact wording. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: Production Discord/Supabase publishing remains disabled. These are still local-only held-local artifacts.
+Next recommended action: Add a final local artifact contract check that fails if any held-local review ticket contains generic invalidation wording or lacks side-specific stop wording before considering any UI/Discord preview surface.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add guarded local scanner replay option for held-local ticket inspection.
 Files changed: tools/automation/unified-positive-guarded-scanner-replay.ts, tools/automation/unified-positive-guarded-scanner-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The inspection surface proved the held-local `ACTIVE_REVIEW` tickets are locally inspectable. This phase adds an explicit guarded replay command that requires `--enable-held-local-inspection`, consumes a local held-local adapter report, and writes the dry-run replay plus local inspection artifacts without entering the live scanner loop.

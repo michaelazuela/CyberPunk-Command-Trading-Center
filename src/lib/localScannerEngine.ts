@@ -6137,7 +6137,16 @@ export function buildDeskPublishDecision(args: {
   };
 }
 
+function heldLocalReviewInvalidationText(input: HeldLocalReviewTicketInput): string {
+  const stop = input.stop.toFixed(2);
+  const sideText = input.direction === 'LONG'
+    ? `Invalid if price trades below the protected 5M stop line at ${stop}.`
+    : `Invalid if price trades above the protected 5M stop line at ${stop}.`;
+  return `${sideText} No automated order authority is granted.`;
+}
+
 export function buildHeldLocalReviewTicketArtifact(input: HeldLocalReviewTicketInput): HeldLocalReviewTicketArtifact {
+  const invalidationText = heldLocalReviewInvalidationText(input);
   const deskTicket: DeskTicket = {
     sourceOfTruth: 'scanner_single_active_desk_ticket',
     state: 'ACTIVE_REVIEW',
@@ -6149,7 +6158,7 @@ export function buildHeldLocalReviewTicketArtifact(input: HeldLocalReviewTicketI
     t1: input.target1,
     t2: input.target2,
     invalidation: input.stop,
-    invalidationText: input.invalidationText,
+    invalidationText,
     htfStatus: 'sufficient',
     htfStory: input.htfStory || 'Held-local review ticket. 5M remains execution authority; HTF/outcome context supports review only.',
     oppositeScenario: null,

@@ -32,11 +32,13 @@ assert.equal(artifact.deskTicket.entry, 100);
 assert.equal(artifact.deskTicket.stop, 96);
 assert.equal(artifact.deskTicket.t1, 106);
 assert.equal(artifact.deskTicket.t2, 108);
+assert.equal(artifact.deskTicket.invalidationText, 'Invalid if price trades below the protected 5M stop line at 96.00. No automated order authority is granted.');
 assert.equal(artifact.deskPublishDecision.sourceOfTruth, 'scanner_desk_publish_decision');
 assert.equal(artifact.deskPublishDecision.shouldPost, false);
 assert.equal(artifact.deskPublishDecision.canExecute, false);
 assert.equal(artifact.deskPublishDecision.hasCompletePlan, true);
 assert.equal(artifact.deskPublishDecision.displaySource, 'desk_ticket');
+assert.equal(artifact.deskPublishDecision.invalidationText, 'Invalid if price trades below the protected 5M stop line at 96.00. No automated order authority is granted.');
 
 const comparison = {
   reportType: 'unified_positive_desk_ticket_contract_comparison',

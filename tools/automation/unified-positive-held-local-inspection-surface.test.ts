@@ -167,9 +167,12 @@ assert.equal(report.rows[0].heldLocalTicket?.entry, 100);
 assert.equal(report.rows[0].heldLocalTicket?.stop, 104);
 assert.equal(report.rows[0].heldLocalTicket?.t1, 94);
 assert.equal(report.rows[0].heldLocalTicket?.t2, 92);
+assert.equal(report.rows[0].heldLocalTicket?.invalidationText, 'Invalid if price trades above the protected 5M stop line at 104.00. No automated order authority is granted.');
 assert.equal(report.rows[0].boundaries.dryRunZeroLivePublishBehaviorChange, true);
 assert.equal(report.rows[0].deskText?.what, 'SweepMssFvgRetrace SHORT held-local ACTIVE_REVIEW ticket.');
+assert.equal(report.rows[0].deskText?.invalidation, 'Invalid if price trades above the protected 5M stop line at 104.00. No automated order authority is granted.');
 assert.match(report.markdown, /Inspectable tickets: 1/);
+assert.match(report.markdown, /Invalid if price trades above the protected 5M stop line at 104.00/);
 
 const failingDryRun = structuredClone(dryRunReplay) as UnifiedPositiveScannerDryRunReplayReport;
 failingDryRun.status = 'fail';
