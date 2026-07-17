@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add held-local preview OHLC outcome replay.
+Files changed: tools/automation/unified-positive-held-local-preview-ohlc-outcome.ts, tools/automation/unified-positive-held-local-preview-ohlc-outcome.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The replay queue proved 4 held-local rows were ready for read-only outcome replay, but P/L was unavailable until a local completed-5M OHLC outcome pass joined proof time, entry, stop, T1/T2, and post-proof bars.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-ohlc-outcome.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-ohlc-outcome -- --json`.
+Result: Focused outcome test, typecheck, and real diagnostic run passed. The real diagnostic resolved 4/4 queued rows from local completed 5M OHLC with 0 blocked rows and 0 live-promotion rows. Gross resolved one-MES P/L was +$505. TurtleSoup resolved +$193.75 across 3 rows. SweepMssFvgRetrace resolved +$311.25 across 1 row. Latest outcome report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-ohlc-outcome-1784299451678.json`.
+Trading logic changed: No. This is local-only research outcome math. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, `canExecute`, or executable approval.
+Bridge impact: None. No live bridge read occurs; the run used existing local raw OHLC source artifacts.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: Outcome math is research-only and uses completed 5M bar high/low replay. It does not prove a model should be promoted live or removed globally without a separate model decision phase.
+Next recommended action: Keep TurtleSoup and SweepMssFvgRetrace in research for now; add a narrow model-decision summary that combines prior negative broad-set evidence with this reviewed-row positive OHLC outcome instead of deleting either model.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add held-local preview replay queue research report.
 Files changed: tools/automation/unified-positive-held-local-preview-replay-queue.ts, tools/automation/unified-positive-held-local-preview-replay-queue.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The decision summary queued 4 reviewed held-local rows for replay research, but the workflow needed a local-only handoff that joins the queue to adapter, preview payload, and guarded replay evidence before any OHLC outcome pass.
