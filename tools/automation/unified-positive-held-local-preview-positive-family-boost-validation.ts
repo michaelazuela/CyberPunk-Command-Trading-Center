@@ -102,7 +102,7 @@ export interface UnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationRep
     topBeforeOneMesPl: number | null;
     topAfterOneMesPl: number | null;
     topSelectionDeltaOneMesPl: number | null;
-    recommendedAction: 'broader_replay_validate_sweep_only' | 'broader_replay_validate_positive_families_separately' | 'reject_boost_for_now';
+    recommendedAction: 'broader_replay_validate_sweep_only' | 'broader_replay_validate_positive_families_separately' | 'reject_combined_boost_validate_segments' | 'reject_boost_for_now';
     livePromotionAllowedRows: 0;
   };
   models: ModelSummary[];
@@ -293,6 +293,7 @@ function buildSimulation(rows: TimingRow[], boostModels: Set<string>): { rows: S
 function recommendedAction(models: ModelSummary[], delta: number | null): UnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationReport['summary']['recommendedAction'] {
   const clean = models.filter((model) => model.decision === 'clean_boost_research_candidate');
   const isolated = models.filter((model) => model.decision === 'isolated_boost_research_candidate');
+  if ((delta ?? 0) < 0 && (clean.length || isolated.length)) return 'reject_combined_boost_validate_segments';
   if (clean.some((model) => model.setupType === 'SweepMssFvgRetrace') && (delta ?? 0) >= 0 && isolated.length === 0) {
     return 'broader_replay_validate_sweep_only';
   }
@@ -400,7 +401,13 @@ export function buildUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidatio
     blockers,
     recommendations: blockers.length
       ? ['Do not use positive-family boost validation until the source/proof timing report is present and passing.']
-      : rec === 'broader_replay_validate_positive_families_separately'
+      : rec === 'reject_combined_boost_validate_segments'
+        ? [
+          'Reject a blanket positive-family boost for now because same-slate top selection worsened.',
+          'Continue with segmented proof filters for SweepMssFvgRetrace and AfterLunchDriveFvgContinuation separately.',
+          'Do not change live ranking, canExecute, Discord, Supabase, or entry/stop/target/risk from this diagnostic.',
+        ]
+        : rec === 'broader_replay_validate_positive_families_separately'
         ? [
           'Validate SweepMssFvgRetrace and AfterLunchDriveFvgContinuation in separate broader replay packages before any scanner-visible boost.',
           'Do not change live ranking, canExecute, Discord, Supabase, or entry/stop/target/risk from this diagnostic.',

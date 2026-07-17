@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Run broad local replay validation for positive-family boost candidates.
+Files changed: tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.ts, docs/PROJECT_STATUS.md.
+Reason: The selected 24-row package made SweepMssFvgRetrace and AfterLunchDriveFvgContinuation look boost-worthy. This phase broadened the replay package using the existing local intake set to test whether a blanket positive-family boost actually improves same-date/session selection.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-intake-triage.ts --max-replay-package-rows 500 --max-rows-per-model 100 --json; npx tsx tools/automation/unified-positive-held-local-preview-replay-package.ts --triage-report <broad triage> --json; npx tsx tools/automation/unified-positive-held-local-preview-replay-package-outcome.ts --replay-package <broad package> --json; npx tsx tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.ts --replay-package-outcome <broad outcome> --json; npm run diagnostic:held-local-preview-positive-family-boost-validation -- --source-proof-timing <broad timing> --json; npx tsx tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.test.ts; npx tsc --noEmit --pretty false.
+Result: Passed. Broad triage selected 373 rows from 479 intake rows with 0 blocked replay rows. Outcome resolved 267 rows, left 106 unresolved, 0 blocked, gross +$9,909.52. Broad model P/L: SweepMssFvgRetrace 100 rows, 68 resolved, 32 unresolved, +$3,837.50; AfterLunchDriveFvgContinuation 29 rows, 27 resolved, 2 unresolved, +$814.44; all model groups were positive in aggregate. The positive-family boost diagnostic read 373 rows and 129 positive-family rows. Sweep became isolated_boost_research_candidate, not clean, with 41 winners, 20 losses, 39 unresolved, +$3,837.50, 17 same-bar losses, 1 stale loss. AfterLunch became isolated_boost_research_candidate with 19 winners, 6 losses, 4 unresolved, +$814.44, 4 same-bar losses. Blanket positive-family boost changed 26 of 85 slates and worsened top-selection P/L from +$3,050.05 to +$2,837.56, delta -$212.49. Recommendation: reject the combined blanket boost and validate narrower segmented proof filters instead.
+Trading logic changed: No. This changes a diagnostic recommendation only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local diagnostic artifacts and scanner decision tapes only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Aggregate model P/L is positive, but blanket model-family boosting can select worse same-session candidates. Any future boost must be segmented by proof state/session/timing, not by model family alone.
+Next recommended action: Do not install a positive-family rank boost. Build a segmented SweepMssFvgRetrace filter first, isolating same-bar losses, unresolved/no-fill rows, session, direction, risk, and proof timing before considering any scanner-visible ranking change.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add and run positive-family boost validation for SweepMssFvgRetrace and AfterLunchDriveFvgContinuation.
 Files changed: tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.ts, tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: TurtleSoup repair work ended with review-note-only action. This phase moved back to positive model families to test whether clean source/proof-positive states justify research-only rank-boost validation before any live ranking change.
