@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local local preview payload builder.
+Files changed: tools/automation/unified-positive-held-local-preview-payload.ts, tools/automation/unified-positive-held-local-preview-payload.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The held-local inspection surface and wording guard proved the tickets are locally inspectable with side-specific invalidation language. This phase adds the next local-only artifact: a preview payload builder that consumes only a passing wording guard plus inspection surface and keeps every dispatch/execution flag disabled.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-payload.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-held-local-preview-payload.ts --inspection-surface tools/automation/diagnostic-reports/unified-positive-held-local-inspection-surface-1784256196818.json --wording-guard tools/automation/diagnostic-reports/unified-positive-held-local-wording-guard-1784257754479.json --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, and real local preview-payload run passed. The real run loaded 4 inspection rows, created 4 preview payloads, blocked 0 rows, and all 4 payloads preserved `shouldPost=false`, `canExecute=false`, `publishDiscord=false`, `shouldDispatch=false`, and `writesSupabase=false`. Report paths: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-payload-1784258759898.json` and `.md`.
+Trading logic changed: No. This is a local-only preview payload artifact. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: Production Discord/Supabase publishing remains disabled. The payload is not wired to UI, Discord, scanner-visible output, or live runtime.
+Next recommended action: Add a local renderer/shape test for these preview payloads so the desk can inspect exactly what a future held-local card would look like while still posting nothing and writing nothing.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local wording contract guard.
 Files changed: tools/automation/unified-positive-held-local-wording-guard.ts, tools/automation/unified-positive-held-local-wording-guard.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After making held-local invalidation wording side-specific, the desk needed a reusable local guard that fails if generic `below/above` wording returns or if LONG/SHORT invalidation text stops matching the protected 5M stop side.
