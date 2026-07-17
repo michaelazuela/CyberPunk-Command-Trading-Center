@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Expand TurtleSoup missing-plan review-note candidates across all sessions/directions.
+Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-blocked-reason-drilldown.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-blocked-reason-drilldown.test.ts, docs/PROJECT_STATUS.md.
+Reason: Structured session metadata proved the evening SHORT TurtleSoup payloads were not receiving caution notes because the upstream drilldown only marked negative missing_full_plan_levels clusters as review-note candidates. Since this caution is not a rank penalty or rejection, all missing_full_plan_levels clusters should be eligible for research-only review-note wording.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-blocked-reason-drilldown.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-wording-probe.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-placement-simulation.test.ts; real local drilldown/wording/placement/payload/renderer diagnostic chain.
+Result: Passed. Real drilldown read 153 TurtleSoup package rows, 78 blocked rows, and produced 6 review-note candidate clusters. Wording probe produced 6 rows. Placement simulation produced 6 held-local preview-note placements with 0 suppress-ticket rows, 0 ranking changes, 0 canExecute changes, 0 entry/stop/target changes, 0 Discord posting changes, and 0 Supabase writes. Real payload diagnostic loaded 4 preview rows and applied review notes to 3 TurtleSoup payloads: morning LONG plus both evening SHORT rows. SweepMssFvgRetrace remained untouched. Renderer produced 4 shape-pass cards with all 4 still shouldPost=false, canExecute=false, publishDiscord=false, shouldDispatch=false, and writesSupabase=false.
+Trading logic changed: No. This changes research-only candidate selection for review-note wording. It does not change scanner setup logic, ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads prior local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This broadens research-only caution coverage for missing full plan levels. It is intentionally not scanner-visible or Discord-visible without a separate approval gate.
+Next recommended action: Run full verification, commit/push, then continue with the next local-only phase: decide whether the same missing-plan caution should be included in the local preview review checklist/handoff artifacts.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add structured session metadata to held-local local-preview artifacts.
 Files changed: tools/automation/unified-positive-held-local-ticket-adapter.ts, tools/automation/unified-positive-scanner-dry-run-replay.ts, tools/automation/unified-positive-held-local-inspection-surface.ts, tools/automation/unified-positive-held-local-preview-payload.ts, related focused tests, docs/PROJECT_STATUS.md.
 Reason: The prior preview caution install still depended on ticket/sourceSnapshot text inference to match TurtleSoup review-note placements. This phase carries explicit session metadata through the local adapter, dry-run replay, inspection surface, and preview payload artifacts.

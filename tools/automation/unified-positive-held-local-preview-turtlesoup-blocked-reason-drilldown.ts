@@ -161,7 +161,7 @@ function buildClusters(rows: PackageRow[]): ReasonCluster[] {
       session,
       direction,
       ...summary,
-      reviewNoteCandidate: summary.losses > summary.winners * 2 && (summary.oneMesPl ?? 0) < 0,
+      reviewNoteCandidate: reason === 'missing_full_plan_levels',
     };
   }).sort((a, b) => Number(b.reviewNoteCandidate) - Number(a.reviewNoteCandidate) || (a.oneMesPl ?? 0) - (b.oneMesPl ?? 0));
 }

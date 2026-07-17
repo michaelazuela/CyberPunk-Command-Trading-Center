@@ -38,6 +38,8 @@ const rows = [
   packageRow('2026-06-17-morning-TurtleSoup-LONG-blocked-loss-2', 'blocked_protected_stop', 'loss', -80),
   packageRow('2026-06-18-morning-TurtleSoup-LONG-blocked-loss-3', 'blocked_protected_stop', 'loss', -70),
   packageRow('2026-06-19-morning-TurtleSoup-LONG-blocked-win-1', 'blocked_protected_stop', 'winner', 40),
+  packageRow('2026-06-19-morning-TurtleSoup-SHORT-blocked-win-1', 'blocked_protected_stop', 'winner', 120),
+  packageRow('2026-06-19-morning-TurtleSoup-SHORT-blocked-win-2', 'blocked_protected_stop', 'winner', 80),
   packageRow('2026-06-20-lunch-TurtleSoup-SHORT-clean-win-1', 'conditional_protected_stop_clean', 'winner', 120),
 ];
 
@@ -82,7 +84,7 @@ const packageReport: UnifiedPositiveHeldLocalPreviewTurtleSoupReplayPackageRepor
     sourceRows: rows.length,
     turtleSoupRows: rows.length,
     conditionalProtectedStopCleanRows: 1,
-    blockedProtectedStopRows: 4,
+    blockedProtectedStopRows: 6,
     otherTurtleSoupStateRows: 0,
     groupSummaries: 3,
     daySessionSummaries: 5,
@@ -124,7 +126,7 @@ const rankSimulationReport = {
     packageRows: rows.length,
     simulatedRows: rows.length,
     slates: 5,
-    penalizedRows: 4,
+    penalizedRows: 6,
     topChangedSlates: 0,
     blockedTopBeforeSlates: 3,
     blockedTopAfterSlates: 3,
@@ -156,14 +158,15 @@ assert.equal(report.status, 'pass');
 assert.equal(report.authority.readOnly, true);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.assumptions.noReviewNoteInstalled, true);
-assert.equal(report.summary.blockedRows, 4);
-assert.equal(report.summary.blockedWinners, 1);
+assert.equal(report.summary.blockedRows, 6);
+assert.equal(report.summary.blockedWinners, 3);
 assert.equal(report.summary.blockedLosses, 3);
-assert.equal(report.summary.blockedOneMesPl, -210);
+assert.equal(report.summary.blockedOneMesPl, -10);
 assert.equal(report.summary.rankPenaltyRejectedByPriorSimulation, true);
-assert.equal(report.summary.reviewNoteCandidateClusters, 1);
+assert.equal(report.summary.reviewNoteCandidateClusters, 2);
 assert.equal(report.summary.recommendedAction, 'draft_review_note_wording_only');
 assert.equal(report.summary.livePromotionAllowedRows, 0);
+assert.equal(report.clusters.find((cluster) => cluster.clusterId === 'missing_full_plan_levels|morning|SHORT')?.reviewNoteCandidate, true);
 assert.match(report.sampleReviewNote ?? '', /TurtleSoup remains valid/);
 assert.match(report.markdown, /Blocked Reason Drilldown/);
 
