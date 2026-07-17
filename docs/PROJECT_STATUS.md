@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add TurtleSoup action probe for rank-penalty versus review-note handling.
+Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-action-probe.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-action-probe.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: TurtleSoup replay packaging isolated a clean positive bucket and a blocked protected-stop negative bucket. This phase tests, in research-only form, whether the blocked protected-stop state is strong enough to advance as a rank-penalty candidate or should stay as a human-review note.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-action-probe.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-turtlesoup-action-probe -- --json.
+Result: Passed. Real local probe read 153 TurtleSoup package rows and evaluated 2 probes. Rank penalty candidates: 2. Review-note-only candidates: 0. Rejected probes: 0. Both probes isolate the same affected blocked protected-stop bucket: 7 winners, 43 losses, 28 unresolved, -$1206.25 one-MES, 7 positive and 29 negative day/session buckets. Preserved clean TurtleSoup bucket: 40 winners, 18 losses, 17 unresolved, +$2417.50 one-MES, 33 positive and 10 negative day/session buckets.
+Trading logic changed: No. This is a read-only local action probe. It does not install a rank penalty, install a review note, remove TurtleSoup, run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, change ranking, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local diagnostic output only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: A rank-penalty candidate still needs replay-expanded validation before any scanner-visible behavior change.
+Next recommended action: Build replay-expanded validation for a blocked-protected-stop TurtleSoup rank penalty only. Do not remove TurtleSoup and do not install scanner-visible rank changes yet.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add TurtleSoup replay package for Conditional/protected-stop-clean versus blocked protected-stop states.
 Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-replay-package.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Structured snapshot validation showed the TurtleSoup problem is not the model itself; losses cluster in blocked/protected-stop states. This phase packages the validated split into a broader replay-ready local report before any rank penalty, review note, or scanner-visible behavior is considered.
