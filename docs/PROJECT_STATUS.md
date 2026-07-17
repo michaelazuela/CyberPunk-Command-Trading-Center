@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add TurtleSoup rank-penalty validation with false-winner visibility.
+Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-rank-penalty-validation.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-rank-penalty-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The action probe showed blocked protected-stop TurtleSoup is strong enough to consider a rank penalty, but the affected bucket still contains winners. This phase validates rank-penalty-only handling and explicitly reports false-reject winners so the desk does not accidentally turn it into a hard block.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-rank-penalty-validation.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-turtlesoup-rank-penalty-validation -- --json.
+Result: Passed. Real local validation read 153 TurtleSoup package rows. Affected blocked protected-stop bucket: 78 rows, 7 winners, 43 losses, 28 unresolved, -$1206.25 one-MES. Preserved conditional/protected-stop-clean bucket: 75 rows, 40 winners, 18 losses, 17 unresolved, +$2417.50 one-MES. False-reject winner rows if hard-blocked: 7. Recommendation: validate_research_rank_penalty_only. Live promotion allowed rows: 0.
+Trading logic changed: No. This is a read-only local validation. It does not install a rank penalty, hard block, review note, remove TurtleSoup, run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, change ranking, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local diagnostic output only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: A future rank penalty must be simulated against scanner ranking before any live behavior change. Hard-blocking is explicitly not supported because the affected bucket has winners.
+Next recommended action: Build a research-only scanner-rank simulation for blocked protected-stop TurtleSoup. Do not install a live rank penalty, hard block, model removal, or scanner-visible behavior change yet.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add TurtleSoup action probe for rank-penalty versus review-note handling.
 Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-action-probe.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-action-probe.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: TurtleSoup replay packaging isolated a clean positive bucket and a blocked protected-stop negative bucket. This phase tests, in research-only form, whether the blocked protected-stop state is strong enough to advance as a rank-penalty candidate or should stay as a human-review note.
