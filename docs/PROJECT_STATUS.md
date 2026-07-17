@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add and run positive-family boost validation for SweepMssFvgRetrace and AfterLunchDriveFvgContinuation.
+Files changed: tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.ts, tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: TurtleSoup repair work ended with review-note-only action. This phase moved back to positive model families to test whether clean source/proof-positive states justify research-only rank-boost validation before any live ranking change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-positive-family-boost-validation.
+Result: Passed. The new diagnostic is local-only/read-only and consumes replay-package source/proof timing. Real run read 24 rows, found 8 positive-family rows and 2 boost candidate models. SweepMssFvgRetrace: 4 rows, 4 winners, 0 losses, 0 unresolved, +$465.00, avg risk 11.5, avg MFE 5.07R, avg MAE 0.73R, clean_boost_research_candidate. AfterLunchDriveFvgContinuation: 4 rows, 3 winners, 1 loss, 0 unresolved, +$270.01, avg risk 10.75, avg MFE 5.5R, avg MAE 0.64R, isolated_boost_research_candidate. Hypothetical model-family boost changed 0 of 19 same-date/session slates and top-selection P/L stayed +$919.39 before and after. Recommendation: validate Sweep and AfterLunch separately in broader replay packages before any scanner-visible boost.
+Trading logic changed: No. This adds a diagnostic only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The selected package is small. Sweep is clean in this package, but AfterLunch still has a loss and should remain isolated. The boost simulation had no slate effect, so this is not live evidence.
+Next recommended action: Build separate broader replay packages for SweepMssFvgRetrace and AfterLunchDriveFvgContinuation, with Sweep first because it has 4/4 winners and no stopped-before-T1 losses in the selected package.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Run TurtleSoup blocked-reason drilldown and research-only review-note placement proof.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The prior same-date/session rank simulation rejected a TurtleSoup rank penalty even though blocked/protected-stop rows were weak. This phase tested the safer path: review-note wording and held-local preview placement only.
