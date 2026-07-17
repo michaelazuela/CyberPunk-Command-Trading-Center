@@ -7,6 +7,7 @@ import {
   buildUnifiedDeskCandidateDiagnosticReport,
   loadUnifiedDeskCandidateDiagnosticSnapshots,
   loadUnifiedDeskCandidateDiagnosticSnapshotsFromDir,
+  loadUnifiedDeskOutcomeOverlayRecords,
   snapshotFromScannerAuditFile,
   writeUnifiedDeskCandidateDiagnosticReport,
   type UnifiedDeskCandidateDiagnosticSnapshot,
@@ -114,6 +115,8 @@ assert.equal(report.summary.currentMissingCount, 1);
 assert.equal(report.summary.executableCurrentSelectionsPreserved, 1);
 assert.equal(report.summary.tradingModelStateCounts.execution_ready, 1);
 assert.equal(report.summary.tradingModelStateCounts.review_ticket, 2);
+assert.equal(report.summary.outcomeOverlayRecordsLoaded, 0);
+assert.equal(report.summary.outcomeOverlayMatchedRows, 0);
 assert.equal(report.summary.findingsCount, 0);
 
 const sameRow = report.rows.find((row) => row.snapshotId === 'same-executable');
@@ -132,11 +135,66 @@ assert.equal(missingRow?.comparison, 'current_missing');
 assert.match(report.markdown, /does not post Discord/);
 assert.match(report.markdown, /Unified different primary: 1/);
 assert.match(report.markdown, /Trading model states:/);
+assert.match(report.markdown, /Outcome\/RAG overlay:/);
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'unified-desk-candidate-diagnostic-'));
 const inputPath = path.join(root, 'snapshots.json');
 fs.writeFileSync(inputPath, `${JSON.stringify({ snapshots }, null, 2)}\n`, 'utf8');
 assert.equal(loadUnifiedDeskCandidateDiagnosticSnapshots(inputPath).length, 3);
+
+const outcomePath = path.join(root, 'outcome-overlay.json');
+fs.writeFileSync(outcomePath, `${JSON.stringify({
+  reportType: 'no_chase_artifact_rebuild_pack',
+  rows: [
+    {
+      tradeDate: '2026-07-01',
+      sessionType: 'morning',
+      setupType: SetupType.HtfDisplacementFvgContinuation,
+      direction: 'LONG',
+      replayOutcome: 'T2_HIT',
+      replayOneMesGross: 125,
+    },
+    {
+      tradeDate: '2026-07-01',
+      sessionType: 'morning',
+      setupType: SetupType.OpeningDriveFvgContinuation,
+      direction: 'LONG',
+      replayOutcome: 'NO_FILL',
+      replayOneMesGross: 0,
+    },
+  ],
+}, null, 2)}\n`, 'utf8');
+const overlayRecords = loadUnifiedDeskOutcomeOverlayRecords([outcomePath]);
+assert.equal(overlayRecords.length, 2);
+
+const overlayReport = buildUnifiedDeskCandidateDiagnosticReport(snapshots, '2026-07-16T00:01:00.000Z', {
+  outcomeOverlayRecords: overlayRecords,
+});
+const overlayImprovedRow = overlayReport.rows.find((row) => row.snapshotId === 'unified-improves-no-chase');
+assert.equal(overlayReport.summary.outcomeOverlayRecordsLoaded, 2);
+assert.equal(overlayReport.summary.outcomeOverlayMatchedRows, 1);
+assert.equal(overlayReport.summary.outcomeOverlayPositiveRows, 1);
+assert.equal(overlayReport.summary.outcomeOverlayNegativeRows, 0);
+assert.equal(overlayImprovedRow?.outcomeOverlay.classification, 'positive');
+assert.ok((overlayImprovedRow?.outcomeOverlayAdjustedScore || 0) > (overlayImprovedRow?.unifiedPrimaryScore || 0));
+assert.match(overlayImprovedRow?.recommendation || '', /supports this review ticket/);
+
+const noFillOverlayReport = buildUnifiedDeskCandidateDiagnosticReport([
+  {
+    snapshotId: 'no-fill-primary',
+    tradeDate: '2026-07-01',
+    sessionType: 'morning',
+    completedBarTime: '2026-07-01T10:35:00',
+    candidates: [noChase],
+    currentSelectedCandidateIndex: 0,
+    currentCanExecute: false,
+  },
+], '2026-07-16T00:02:00.000Z', { outcomeOverlayRecords: overlayRecords });
+assert.equal(noFillOverlayReport.summary.outcomeOverlayNegativeRows, 1);
+assert.equal(noFillOverlayReport.summary.outcomeOverlayNoFillOrUnresolvedRows, 1);
+assert.equal(noFillOverlayReport.rows[0].outcomeOverlay.classification, 'negative');
+assert.ok((noFillOverlayReport.rows[0].outcomeOverlayAdjustedScore || 0) < (noFillOverlayReport.rows[0].unifiedPrimaryScore || 0));
+assert.match(noFillOverlayReport.rows[0].recommendation, /penalizes this primary/);
 
 const paths = writeUnifiedDeskCandidateDiagnosticReport(report, root);
 assert.equal(fs.existsSync(paths.jsonPath), true);

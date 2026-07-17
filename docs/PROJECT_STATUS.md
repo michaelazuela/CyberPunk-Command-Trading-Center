@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add read-only outcome/RAG overlay scoring to the unified trading-model diagnostic.
+Files changed: tools/automation/unified-desk-candidate-book-diagnostic.ts, tools/automation/unified-desk-candidate-book-diagnostic.test.ts, docs/PROJECT_STATUS.md.
+Reason: The unified candidate book found broad review-ticket over-promotion risk, especially SweepMssFvgRetrace. Before scanner-visible wiring, the desk needs a read-only overlay that lets replay/RAG-style outcome evidence penalize stop/no-fill/unresolved-prone model candidates and support only candidates that have clean outcome evidence.
+Tests run: `npx tsx tools/automation/unified-desk-candidate-book-diagnostic.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-desk-candidate-book-diagnostic.ts --input-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --out-dir tools/automation/diagnostic-reports --outcome-json tools/automation/diagnostic-reports/formal-ohlc-master-desk-audit-MES-2026-06-01-to-2026-07-02-1784224784513.json --outcome-json tools/automation/diagnostic-reports/no-chase-artifact-rebuild-pack-1784240574825.json --outcome-json tools/automation/diagnostic-reports/no-chase-artifact-rebuild-simulation-1784241406765.json --json`; `git diff --check`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Focused test, typecheck, real read-only overlay run, guards, lint, build, and full test suite passed. The overlay loaded 607 local outcome/RAG-style records from master-desk replay and no-chase rebuild evidence, matched 317 unified primary rows, produced 10 positive rows, 304 negative rows, and 213 rows with no-fill/unresolved evidence. The trading-model states stayed unchanged: execution_ready 1, review_ticket 39, ranked_candidate 107, blocked_missing_5m_proof 230, blocked_missing_plan_geometry 6. Among the 39 review-ticket primaries, 0 were positively supported by the outcome overlay, 6 were penalized, and 33 remained unproven by this overlay. This keeps live/scanner-visible wiring off. Report paths: `tools/automation/diagnostic-reports/unified-desk-candidate-book-diagnostic-1784248229399.json` and `.md`.
+Trading logic changed: No. This phase is diagnostic/report scoring only. It does not change setup definitions, live ranking, scanner behavior, entry, stop, target, risk, invalidation, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None.
+Journal/RAG impact: Read-only local overlay only. No Supabase/RAG reads or writes occurred. Live Supabase outcome-button data is still not pulled in this phase.
+Supabase impact: None.
+Known risks: The overlay currently matches by trade date, session, setup type, and direction, so repeated snapshots can share the same outcome evidence. That is acceptable for diagnostic penalty/support, but it is not a live scoring rule. Live RAG/Supabase outcome-button ingestion still needs a separate controlled read-only gate before use.
+Next recommended action: Keep scanner-visible wiring off. Add a targeted proof/geometry rebuild phase for the positively supported ranked/blocked candidates, while penalizing Sweep review tickets with no-fill/stop-prone overlay evidence.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Start clean unified trading-model candidate book contract cleanup.
 Files changed: src/lib/unifiedDeskCandidateBook.ts, src/lib/unifiedDeskCandidateBook.test.ts, tools/automation/unified-desk-candidate-book-diagnostic.ts, tools/automation/unified-desk-candidate-book-diagnostic.test.ts, docs/PROJECT_STATUS.md.
 Reason: The desk is moving away from Gemini/advisory-centered language and away from treating `canExecute` as the center of the trade idea lifecycle. This phase keeps the existing audit-only candidate book but adds explicit trading-model states and internal-only confidence-source metadata so every model can be ranked together without using Gemini/advisory narrative as scoring evidence.
