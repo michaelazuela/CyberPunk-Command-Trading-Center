@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local wording contract guard.
+Files changed: tools/automation/unified-positive-held-local-wording-guard.ts, tools/automation/unified-positive-held-local-wording-guard.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After making held-local invalidation wording side-specific, the desk needed a reusable local guard that fails if generic `below/above` wording returns or if LONG/SHORT invalidation text stops matching the protected 5M stop side.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-wording-guard.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-held-local-wording-guard.ts --inspection-surface tools/automation/diagnostic-reports/unified-positive-held-local-inspection-surface-1784256196818.json --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, and real local wording guard passed. The real guard checked 4 held-local inspection rows, passed all 4, found 0 generic invalidation findings, and found 0 missing side-specific findings. Report paths: `tools/automation/diagnostic-reports/unified-positive-held-local-wording-guard-1784257754479.json` and `.md`.
+Trading logic changed: No. This is a local-only wording contract guard. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: Production Discord/Supabase publishing remains disabled. The guard validates local inspection artifacts only.
+Next recommended action: Add a local preview payload builder for held-local `ACTIVE_REVIEW` tickets that consumes only wording-guard-passing inspection artifacts and still emits `publishDiscord=false`, `shouldPost=false`, and `canExecute=false`.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Make held-local invalidation wording side-specific.
 Files changed: src/lib/localScannerEngine.ts, tools/automation/unified-positive-held-local-ticket-adapter.test.ts, tools/automation/unified-positive-held-local-inspection-surface.test.ts, docs/PROJECT_STATUS.md.
 Reason: The local inspection surface exposed generic held-local invalidation text (`below/above the protected 5M stop line`). Before any UI/Discord exposure, the local artifacts need trader-clean side-specific wording while preserving all no-post/no-execute boundaries.
