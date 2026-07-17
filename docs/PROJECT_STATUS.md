@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Install TurtleSoup caution into local held-local preview payloads.
+Files changed: tools/automation/unified-positive-held-local-preview-payload.ts, tools/automation/unified-positive-held-local-preview-payload.test.ts, tools/automation/unified-positive-held-local-preview-renderer.test.ts, tools/automation/unified-positive-held-local-preview-replay-queue.test.ts, docs/PROJECT_STATUS.md.
+Reason: Placement simulation proved TurtleSoup missing_full_plan_levels caution can live in held-local preview notes without suppressing tickets or changing ordering. This phase wires the optional placement simulation artifact into local preview payload generation only.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-payload.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-renderer.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-replay-queue.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-payload -- --inspection-surface <latest> --wording-guard <latest> --turtlesoup-review-note-placement-simulation <latest> --json; npm run diagnostic:held-local-preview-renderer -- --preview-payload <latest> --json.
+Result: Passed. Real local payload diagnostic loaded 4 held-local preview rows, created 4 payloads, blocked 0, and applied 1 TurtleSoup review-note placement by conservative session/direction matching. All 4 payloads remained shouldPost=false, canExecute=false, publishDiscord=false, shouldDispatch=false, and writesSupabase=false. Renderer then produced 4 local cards, 0 blocked, 4 shape-pass cards, and all 4 remained postable=false, shouldPost=false, canExecute=false, publishDiscord=false, shouldDispatch=false, and writesSupabase=false.
+Trading logic changed: No. This only adds optional local preview note placement from a prior local diagnostic artifact. It does not change scanner setup logic, ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads prior local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The matcher is intentionally conservative and only applied 1 of 4 possible note placements in the current local payload set because held-local inspection rows do not carry a structured session field. Broader placement would require adding structured session metadata in a separate safe phase.
+Next recommended action: Add structured session metadata to held-local inspection/payload artifacts in research-only/local preview paths so review-note placement does not depend on ID text inference.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add TurtleSoup review-note placement simulation.
 Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-placement-simulation.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-placement-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The wording probe produced research-only TurtleSoup caution text. This phase simulates placing that text in held-local preview notes and proves ticket visibility and ordering are preserved before any UI-visible change.

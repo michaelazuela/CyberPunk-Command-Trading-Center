@@ -195,7 +195,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
     changesBridgeBehavior: false,
     changesDiscordPosting: false,
   },
-  source: { inspectionSurfacePath: 'inspection.json', wordingGuardPath: 'wording.json' },
+  source: { inspectionSurfacePath: 'inspection.json', wordingGuardPath: 'wording.json', turtleSoupReviewNotePlacementSimulationPath: null },
   summary: {
     inspectionRowsLoaded: 1,
     previewPayloadsCreated: 1,
@@ -205,6 +205,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
     publishDiscordFalsePayloads: 1,
     shouldDispatchFalsePayloads: 1,
     writesSupabaseFalsePayloads: 1,
+    reviewNotePlacementAppliedPayloads: 0,
   },
   rows: [
     {

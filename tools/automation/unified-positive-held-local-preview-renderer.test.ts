@@ -29,6 +29,7 @@ const previewPayloadReport = {
   source: {
     inspectionSurfacePath: 'inspection.json',
     wordingGuardPath: 'wording.json',
+    turtleSoupReviewNotePlacementSimulationPath: null,
   },
   summary: {
     inspectionRowsLoaded: 1,
@@ -39,6 +40,7 @@ const previewPayloadReport = {
     publishDiscordFalsePayloads: 1,
     shouldDispatchFalsePayloads: 1,
     writesSupabaseFalsePayloads: 1,
+    reviewNotePlacementAppliedPayloads: 0,
   },
   rows: [
     {

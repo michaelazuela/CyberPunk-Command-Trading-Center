@@ -3,6 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { UnifiedPositiveHeldLocalInspectionSurfaceReport } from './unified-positive-held-local-inspection-surface';
 import type { UnifiedPositiveHeldLocalWordingGuardReport } from './unified-positive-held-local-wording-guard';
+import type {
+  UnifiedPositiveHeldLocalPreviewTurtleSoupReviewNotePlacementSimulationReport,
+} from './unified-positive-held-local-preview-turtlesoup-review-note-placement-simulation';
 
 export interface UnifiedPositiveHeldLocalPreviewPayload {
   sourceOfTruth: 'scanner_owned_held_local_local_preview_payload';
@@ -72,6 +75,7 @@ export interface UnifiedPositiveHeldLocalPreviewPayloadReport {
   source: {
     inspectionSurfacePath: string | null;
     wordingGuardPath: string | null;
+    turtleSoupReviewNotePlacementSimulationPath: string | null;
   };
   summary: {
     inspectionRowsLoaded: number;
@@ -82,6 +86,7 @@ export interface UnifiedPositiveHeldLocalPreviewPayloadReport {
     publishDiscordFalsePayloads: number;
     shouldDispatchFalsePayloads: number;
     writesSupabaseFalsePayloads: number;
+    reviewNotePlacementAppliedPayloads: number;
   };
   rows: UnifiedPositiveHeldLocalPreviewPayloadRow[];
   recommendations: string[];
@@ -152,9 +157,44 @@ function blockersForRow(args: {
   ].filter((item): item is string => Boolean(item));
 }
 
-function payloadForRow(row: UnifiedPositiveHeldLocalInspectionSurfaceReport['rows'][number]): UnifiedPositiveHeldLocalPreviewPayload {
+function inferredSession(row: UnifiedPositiveHeldLocalInspectionSurfaceReport['rows'][number]): string | null {
+  const haystack = `${row.ticketId} ${row.sourceSnapshotId}`.toLowerCase();
+  if (haystack.includes('morning')) return 'morning';
+  if (haystack.includes('lunch')) return 'lunch';
+  if (haystack.includes('evening')) return 'evening';
+  return null;
+}
+
+function reviewNotePlacementsForRow(
+  row: UnifiedPositiveHeldLocalInspectionSurfaceReport['rows'][number],
+  placementSimulation: UnifiedPositiveHeldLocalPreviewTurtleSoupReviewNotePlacementSimulationReport | null,
+): string[] {
+  if (!placementSimulation || placementSimulation.status !== 'pass' || row.setupType !== 'TurtleSoup') return [];
+  const session = inferredSession(row);
+  if (!session) return [];
+  return placementSimulation.rows
+    .filter((placement) => (
+      placement.placement === 'held_local_preview_notes' &&
+      placement.session === session &&
+      placement.direction === row.direction &&
+      placement.ticketVisibleAfter === true &&
+      placement.suppressesTicket === false &&
+      placement.changesRanking === false &&
+      placement.changesCanExecute === false &&
+      placement.changesEntryStopTargets === false &&
+      placement.changesDiscordPosting === false &&
+      placement.writesSupabase === false
+    ))
+    .map((placement) => placement.proposedNote);
+}
+
+function payloadForRow(
+  row: UnifiedPositiveHeldLocalInspectionSurfaceReport['rows'][number],
+  placementSimulation: UnifiedPositiveHeldLocalPreviewTurtleSoupReviewNotePlacementSimulationReport | null,
+): UnifiedPositiveHeldLocalPreviewPayload {
   const ticket = row.heldLocalTicket;
   if (!ticket || !row.deskText) throw new Error(`Cannot build preview payload for blocked row ${row.ticketId}.`);
+  const reviewNotes = reviewNotePlacementsForRow(row, placementSimulation);
   return {
     sourceOfTruth: 'scanner_owned_held_local_local_preview_payload',
     ticketId: row.ticketId,
@@ -186,7 +226,7 @@ function payloadForRow(row: UnifiedPositiveHeldLocalInspectionSurfaceReport['row
       t2: ticket.t2,
     },
     htfStatus: ticket.htfStatus,
-    notes: ticket.notes,
+    notes: Array.from(new Set([...ticket.notes, ...reviewNotes])),
   };
 }
 
@@ -194,6 +234,7 @@ function rowForInspection(args: {
   row: UnifiedPositiveHeldLocalInspectionSurfaceReport['rows'][number];
   inspectionSurface: UnifiedPositiveHeldLocalInspectionSurfaceReport;
   wordingGuard: UnifiedPositiveHeldLocalWordingGuardReport;
+  placementSimulation: UnifiedPositiveHeldLocalPreviewTurtleSoupReviewNotePlacementSimulationReport | null;
 }): UnifiedPositiveHeldLocalPreviewPayloadRow {
   const blockers = blockersForRow(args);
   return {
@@ -202,7 +243,7 @@ function rowForInspection(args: {
     setupType: args.row.setupType,
     direction: args.row.direction,
     status: blockers.length ? 'blocked' : 'preview_payload_created',
-    payload: blockers.length ? null : payloadForRow(args.row),
+    payload: blockers.length ? null : payloadForRow(args.row, args.placementSimulation),
     blockers,
   };
 }
@@ -236,6 +277,7 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewPayloadReport
     `- publishDiscord=false payloads: ${report.summary.publishDiscordFalsePayloads}.`,
     `- shouldDispatch=false payloads: ${report.summary.shouldDispatchFalsePayloads}.`,
     `- writesSupabase=false payloads: ${report.summary.writesSupabaseFalsePayloads}.`,
+    `- Review-note placement applied payloads: ${report.summary.reviewNotePlacementAppliedPayloads}.`,
     '',
     '## Payloads',
     '| Ticket | Setup | Side | Status | Entry | Stop | T1 | T2 | shouldPost | canExecute | publishDiscord | shouldDispatch | Blockers |',
@@ -254,13 +296,16 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewPayloadReport
 export function buildUnifiedPositiveHeldLocalPreviewPayloadReport(args: {
   inspectionSurface: UnifiedPositiveHeldLocalInspectionSurfaceReport;
   wordingGuard: UnifiedPositiveHeldLocalWordingGuardReport;
+  placementSimulation?: UnifiedPositiveHeldLocalPreviewTurtleSoupReviewNotePlacementSimulationReport | null;
   inspectionSurfacePath?: string | null;
   wordingGuardPath?: string | null;
+  turtleSoupReviewNotePlacementSimulationPath?: string | null;
 }, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewPayloadReport {
   const rows = args.inspectionSurface.rows.map((row) => rowForInspection({
     row,
     inspectionSurface: args.inspectionSurface,
     wordingGuard: args.wordingGuard,
+    placementSimulation: args.placementSimulation || null,
   }));
   const reportBase: Omit<UnifiedPositiveHeldLocalPreviewPayloadReport, 'recommendations' | 'markdown'> = {
     reportType: 'unified_positive_held_local_preview_payload',
@@ -270,6 +315,7 @@ export function buildUnifiedPositiveHeldLocalPreviewPayloadReport(args: {
     source: {
       inspectionSurfacePath: args.inspectionSurfacePath || null,
       wordingGuardPath: args.wordingGuardPath || null,
+      turtleSoupReviewNotePlacementSimulationPath: args.turtleSoupReviewNotePlacementSimulationPath || null,
     },
     summary: {
       inspectionRowsLoaded: args.inspectionSurface.rows.length,
@@ -280,6 +326,7 @@ export function buildUnifiedPositiveHeldLocalPreviewPayloadReport(args: {
       publishDiscordFalsePayloads: rows.filter((row) => row.payload?.publishDiscord === false).length,
       shouldDispatchFalsePayloads: rows.filter((row) => row.payload?.shouldDispatch === false).length,
       writesSupabaseFalsePayloads: rows.filter((row) => row.payload?.writesSupabase === false).length,
+      reviewNotePlacementAppliedPayloads: rows.filter((row) => row.payload?.notes.some((note) => note.includes('lacks full plan-level proof'))).length,
     },
     rows,
   };
@@ -304,16 +351,22 @@ export function writeUnifiedPositiveHeldLocalPreviewPayloadReport(
 export async function runUnifiedPositiveHeldLocalPreviewPayloadCli(args = process.argv.slice(2)): Promise<void> {
   const inspectionSurfacePath = readFlag(args, '--inspection-surface');
   const wordingGuardPath = readFlag(args, '--wording-guard');
+  const turtleSoupReviewNotePlacementSimulationPath = readFlag(args, '--turtlesoup-review-note-placement-simulation');
   if (!inspectionSurfacePath) throw new Error('Missing required --inspection-surface path.');
   if (!wordingGuardPath) throw new Error('Missing required --wording-guard path.');
   const outDir = readFlag(args, '--out-dir') || DEFAULT_OUT_DIR;
   const inspectionSurface = JSON.parse(fs.readFileSync(inspectionSurfacePath, 'utf8')) as UnifiedPositiveHeldLocalInspectionSurfaceReport;
   const wordingGuard = JSON.parse(fs.readFileSync(wordingGuardPath, 'utf8')) as UnifiedPositiveHeldLocalWordingGuardReport;
+  const placementSimulation = turtleSoupReviewNotePlacementSimulationPath
+    ? JSON.parse(fs.readFileSync(turtleSoupReviewNotePlacementSimulationPath, 'utf8')) as UnifiedPositiveHeldLocalPreviewTurtleSoupReviewNotePlacementSimulationReport
+    : null;
   const report = buildUnifiedPositiveHeldLocalPreviewPayloadReport({
     inspectionSurface,
     wordingGuard,
+    placementSimulation,
     inspectionSurfacePath,
     wordingGuardPath,
+    turtleSoupReviewNotePlacementSimulationPath,
   });
   const paths = writeUnifiedPositiveHeldLocalPreviewPayloadReport(report, outDir);
   if (args.includes('--json')) {

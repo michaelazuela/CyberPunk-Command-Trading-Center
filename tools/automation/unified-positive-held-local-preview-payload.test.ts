@@ -5,6 +5,9 @@ import {
   type UnifiedPositiveHeldLocalPreviewPayloadReport,
 } from './unified-positive-held-local-preview-payload';
 import type { UnifiedPositiveHeldLocalWordingGuardReport } from './unified-positive-held-local-wording-guard';
+import type {
+  UnifiedPositiveHeldLocalPreviewTurtleSoupReviewNotePlacementSimulationReport,
+} from './unified-positive-held-local-preview-turtlesoup-review-note-placement-simulation';
 
 const inspectionSurface = {
   reportType: 'unified_positive_held_local_inspection_surface',
@@ -172,6 +175,103 @@ assert.equal(report.rows[0].payload?.levels.stop, 96);
 assert.equal(report.rows[0].payload?.sections.invalidation, 'Invalid if price trades below the protected 5M stop line at 96.00. No automated order authority is granted.');
 assert.match(report.markdown, /Preview payloads created: 1/);
 assert.match(report.markdown, /shouldDispatch=false payloads: 1/);
+assert.equal(report.summary.reviewNotePlacementAppliedPayloads, 0);
+
+const placementSimulation = {
+  reportType: 'unified_positive_held_local_preview_turtlesoup_review_note_placement_simulation',
+  generatedAt: '2026-07-16T00:01:30.000Z',
+  status: 'pass',
+  authority: {
+    readOnly: true,
+    localOnly: true,
+    researchOnly: true,
+    postsDiscord: false,
+    writesSupabase: false,
+    readsLiveSupabase: false,
+    readsLiveBridge: false,
+    runsSetupScanner: false,
+    changesScannerBehavior: false,
+    changesTradingLogic: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesRiskRules: false,
+    changesBridgeBehavior: false,
+    changesDiscordPosting: false,
+    changesAppRuntime: false,
+  },
+  source: {
+    reportDir: 'diagnostic-reports',
+    reviewNoteWordingProbePath: 'wording-probe.json',
+  },
+  assumptions: {
+    placementSimulationIsResearchOnly: true,
+    noPreviewUiChange: true,
+    noReviewNoteInstalled: true,
+    noTicketSuppression: true,
+    noOrderChange: true,
+    noRankChange: true,
+    noCanExecuteChange: true,
+    livePromotionAllowed: false,
+  },
+  summary: {
+    wordingRowsRead: 1,
+    placementRows: 1,
+    visibleBeforeRows: 1,
+    visibleAfterRows: 1,
+    orderPreservedRows: 1,
+    suppressTicketRows: 0,
+    rankingChangeRows: 0,
+    canExecuteChangeRows: 0,
+    entryStopTargetChangeRows: 0,
+    discordPostingChangeRows: 0,
+    supabaseWriteRows: 0,
+    livePromotionAllowedRows: 0,
+    recommendedAction: 'keep_research_only_placement_candidate',
+  },
+  rows: [{
+    clusterId: 'missing_full_plan_levels|morning|LONG',
+    placement: 'held_local_preview_notes',
+    originalOrdinal: 1,
+    simulatedOrdinal: 1,
+    reason: 'missing_full_plan_levels',
+    session: 'morning',
+    direction: 'LONG',
+    proposedNote: 'TurtleSoup long remains review-only: the liquidity-raid idea is visible, but this cluster lacks full plan-level proof. Require fresh completed 5M entry, protected stop, invalidation, and app targets before treating it as actionable.',
+    ticketVisibleBefore: true,
+    ticketVisibleAfter: true,
+    orderPreserved: true,
+    suppressesTicket: false,
+    changesRanking: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesDiscordPosting: false,
+    writesSupabase: false,
+  }],
+  blockers: [],
+  recommendations: [],
+  markdown: '',
+} satisfies UnifiedPositiveHeldLocalPreviewTurtleSoupReviewNotePlacementSimulationReport;
+
+const placementSurface = structuredClone(inspectionSurface) as UnifiedPositiveHeldLocalInspectionSurfaceReport;
+placementSurface.rows[0].ticketId = '2026-06-17-morning-TurtleSoup-LONG';
+placementSurface.rows[0].sourceSnapshotId = 'scanner-morning-local-preview';
+const placementReport = buildUnifiedPositiveHeldLocalPreviewPayloadReport({
+  inspectionSurface: placementSurface,
+  wordingGuard,
+  placementSimulation,
+  turtleSoupReviewNotePlacementSimulationPath: 'placement.json',
+}, '2026-07-16T00:02:30.000Z');
+
+assert.equal(placementReport.status, 'pass');
+assert.equal(placementReport.source.turtleSoupReviewNotePlacementSimulationPath, 'placement.json');
+assert.equal(placementReport.summary.previewPayloadsCreated, 1);
+assert.equal(placementReport.summary.reviewNotePlacementAppliedPayloads, 1);
+assert.equal(placementReport.rows[0].payload?.publishDiscord, false);
+assert.equal(placementReport.rows[0].payload?.shouldPost, false);
+assert.equal(placementReport.rows[0].payload?.canExecute, false);
+assert.equal(placementReport.rows[0].payload?.shouldDispatch, false);
+assert.equal(placementReport.rows[0].payload?.writesSupabase, false);
+assert.ok(placementReport.rows[0].payload?.notes.some((note) => note.includes('lacks full plan-level proof')));
 
 const failingGuard = structuredClone(wordingGuard) as UnifiedPositiveHeldLocalWordingGuardReport;
 failingGuard.status = 'fail';
