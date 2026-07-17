@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add TurtleSoup replay package for Conditional/protected-stop-clean versus blocked protected-stop states.
+Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-replay-package.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Structured snapshot validation showed the TurtleSoup problem is not the model itself; losses cluster in blocked/protected-stop states. This phase packages the validated split into a broader replay-ready local report before any rank penalty, review note, or scanner-visible behavior is considered.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-replay-package.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-turtlesoup-replay-package -- --json.
+Result: Passed. Real local package read 204 source rows and isolated 153 TurtleSoup rows into 75 conditional/protected-stop-clean rows, 78 blocked protected-stop rows, and 0 other TurtleSoup states. Conditional/protected-stop-clean: 40 winners, 18 losses, 17 unresolved, +$2417.50 one-MES, 33 positive and 10 negative day/session buckets. Blocked protected-stop: 7 winners, 43 losses, 28 unresolved, -$1206.25 one-MES, 7 positive and 29 negative day/session buckets. Replay question: candidate_for_broader_replay.
+Trading logic changed: No. This is a read-only local replay-package diagnostic. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, change ranking, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local diagnostic output only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This package is still retrospective and cannot install a live penalty. It only frames the next replay question.
+Next recommended action: Validate whether blocked protected-stop TurtleSoup should become a research-only rank penalty or a human-review note; do not remove TurtleSoup and do not install a live penalty yet.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add structured snapshot validation for accepted TurtleSoup research classifiers.
 Files changed: tools/automation/unified-positive-held-local-preview-structured-snapshot-validation.ts, tools/automation/unified-positive-held-local-preview-structured-snapshot-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The structured classifier accepted TurtleSoup-only proof-time splits. This phase applies accepted research classifiers back over the mined rows and summarizes kept/rejected performance by session/date before any broader replay package or scanner-visible behavior is considered.
