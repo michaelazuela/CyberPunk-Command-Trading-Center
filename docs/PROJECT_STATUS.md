@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add held-local preview replay queue research report.
+Files changed: tools/automation/unified-positive-held-local-preview-replay-queue.ts, tools/automation/unified-positive-held-local-preview-replay-queue.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The decision summary queued 4 reviewed held-local rows for replay research, but the workflow needed a local-only handoff that joins the queue to adapter, preview payload, and guarded replay evidence before any OHLC outcome pass.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-replay-queue.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-replay-queue -- --json`.
+Result: Focused replay-queue test, typecheck, and real diagnostic run passed. The real diagnostic loaded 4 decision rows, queued 4 rows, marked 4 rows ready for read-only outcome replay, found 0 blocked rows, 0 live-promotion rows, and 4 rows with one-MES P/L unavailable because no local OHLC outcome artifact is attached yet. Latest replay queue report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-queue-1784298357000.json`.
+Trading logic changed: No. This is local-only replay queue evidence. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, `canExecute`, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: One-MES P/L is intentionally not inferred from preview artifacts. The next phase needs a separate read-only OHLC outcome runner before model-quality conclusions are made.
+Next recommended action: Add a read-only OHLC outcome pass for these 4 queued rows using durable approved historical bars only; do not broaden model rules or change live behavior.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add held-local preview auto-review seed for replay research queueing.
 Files changed: tools/automation/unified-positive-held-local-preview-auto-review-seed.ts, tools/automation/unified-positive-held-local-preview-auto-review-seed.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The review handoff correctly stopped at manual review, but the workflow needed a deterministic local reviewer that can queue replay research from already-safe preview artifacts without requiring manual JSON edits. This phase seeds reviewed notes from the checklist when rows are visible, review-only, `canExecute=false`, Discord-disabled, and Supabase-disabled.
