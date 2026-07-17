@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local local preview renderer.
+Files changed: tools/automation/unified-positive-held-local-preview-renderer.ts, tools/automation/unified-positive-held-local-preview-renderer.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The local preview payload builder proved four held-local review payloads can be created with all dispatch/execution flags disabled. This phase adds a local text/card-shape renderer so the desk can inspect the future card wording and required boundaries without creating a visual artifact, posting Discord, writing Supabase, or touching scanner runtime behavior.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-renderer.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-held-local-preview-renderer.ts --preview-payload tools/automation/diagnostic-reports/unified-positive-held-local-preview-payload-1784258759898.json --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, and real local renderer run passed. The real run loaded 4 preview-payload rows, rendered 4 local card shapes, blocked 0 rows, and all 4 cards preserved `postable=false`, `shouldPost=false`, `canExecute=false`, `publishDiscord=false`, `shouldDispatch=false`, `writesSupabase=false`, with 4/4 shape-pass cards. Report paths: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-renderer-1784259405922.json` and `.md`.
+Trading logic changed: No. This is a local-only text/card-shape renderer. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: Production Discord/Supabase publishing remains disabled. This is not a visual card artifact and is not wired to UI, Discord, scanner-visible output, or live runtime.
+Next recommended action: Add a local renderer contract/preflight that rejects oversized or missing held-local card text fields before considering visual image rendering or UI exposure.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local local preview payload builder.
 Files changed: tools/automation/unified-positive-held-local-preview-payload.ts, tools/automation/unified-positive-held-local-preview-payload.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The held-local inspection surface and wording guard proved the tickets are locally inspectable with side-specific invalidation language. This phase adds the next local-only artifact: a preview payload builder that consumes only a passing wording guard plus inspection surface and keeps every dispatch/execution flag disabled.
