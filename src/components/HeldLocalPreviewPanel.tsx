@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, type ChangeEvent } from 'react';
 import {
   HELD_LOCAL_PREVIEW_STORAGE_KEY,
   buildHeldLocalPreviewUiModel,
@@ -25,11 +25,36 @@ function readStoredReport(): HeldLocalPreviewUiIndexReport | null {
 }
 
 export default function HeldLocalPreviewPanel() {
+  const [report, setReport] = useState<HeldLocalPreviewUiIndexReport | null>(() => readStoredReport());
+  const [importMessage, setImportMessage] = useState<string | null>(null);
   const model = useMemo(() => buildHeldLocalPreviewUiModel({
     enabled: isHeldLocalPreviewFlagEnabled(window.location),
     localHost: isHeldLocalPreviewLocalHost(window.location.hostname),
-    report: readStoredReport(),
-  }), []);
+    report,
+  }), [report]);
+
+  async function importPreviewIndex(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text()) as HeldLocalPreviewUiIndexReport;
+      const nextModel = buildHeldLocalPreviewUiModel({
+        enabled: true,
+        localHost: isHeldLocalPreviewLocalHost(window.location.hostname),
+        report: parsed,
+      });
+      if (nextModel.status !== 'ready') {
+        setImportMessage(`Import blocked: ${nextModel.blockers.join('; ')}`);
+        return;
+      }
+      localStorage.setItem(HELD_LOCAL_PREVIEW_STORAGE_KEY, JSON.stringify(parsed));
+      setReport(parsed);
+      setImportMessage(`Import ready: ${nextModel.items.length} local preview cards.`);
+    } catch {
+      setImportMessage('Import blocked: invalid JSON preview index.');
+    }
+  }
 
   return (
     <section className="space-y-5">
@@ -44,6 +69,20 @@ export default function HeldLocalPreviewPanel() {
         <div className="qd-badge bg-[var(--b0)] border-[var(--b1)] text-[var(--txt2)]">
           {model.status.toUpperCase()}
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 border border-[var(--b1)] bg-[var(--panel)] p-3">
+        <label className="qd-btn qd-btn-secondary cursor-pointer">
+          Import Local Preview Index JSON
+          <input
+            aria-label="Import local preview index JSON"
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={importPreviewIndex}
+          />
+        </label>
+        {importMessage && <div className="text-[12px] text-[var(--txt2)]">{importMessage}</div>}
       </div>
 
       {model.status !== 'ready' && (

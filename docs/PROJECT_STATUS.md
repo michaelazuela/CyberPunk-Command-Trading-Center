@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local local preview JSON import control.
+Files changed: src/components/HeldLocalPreviewPanel.tsx, src/App.test.tsx, docs/PROJECT_STATUS.md.
+Reason: The localStorage loader proved the app tab can consume a signoff-passing UI index, but a console snippet is clumsy. This phase adds a hidden-tab-only local JSON import control that validates the selected preview index through the same app adapter before storing it in localStorage.
+Tests run: `npx vitest run src/App.test.tsx`; `npx tsc --noEmit --pretty false`.
+Result: Focused app route test and typecheck passed. The hidden Held-Local Preview tab now starts blocked with no local report, imports a selected signoff-style UI index JSON through the same adapter validation, stores only a ready report in localStorage, and renders the preview card without adding any service calls.
+Trading logic changed: No. This is hidden local-only UI import handling. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: The import control is intentionally available only inside the hidden localhost preview tab and accepts only adapter-passing local preview index JSON.
+Next recommended action: Manually inspect the hidden localhost tab with the real latest UI index JSON, then decide whether the held-local preview surface is ready for a broader read-only review workflow.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local local preview localStorage loader.
 Files changed: tools/automation/unified-positive-held-local-preview-localstorage-loader.ts, tools/automation/unified-positive-held-local-preview-localstorage-loader.test.ts, src/lib/heldLocalPreviewUiAdapter.ts, src/components/HeldLocalPreviewPanel.tsx, package.json, docs/PROJECT_STATUS.md.
 Reason: The hidden local preview tab needs a safe way to load the latest signoff-passing UI index into a localhost browser session without adding service calls or touching live scanner behavior. This phase adds a local artifact helper that validates the UI index through the app adapter contract and writes a browser-console snippet for the local `held_local_preview_ui_index_report` localStorage key.

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { HELD_LOCAL_PREVIEW_STORAGE_KEY } from './lib/heldLocalPreviewUiAdapter';
 
@@ -61,6 +61,11 @@ vi.mock('./lib/marketDataStore', () => ({
 }));
 
 describe('App route shell', () => {
+  beforeEach(() => {
+    window.history.pushState({}, '', '/');
+    localStorage.clear();
+  });
+
   it('renders and switches between the active application tabs', async () => {
     render(<App />);
 
@@ -154,5 +159,77 @@ describe('App route shell', () => {
     expect(screen.getByAltText('2026-06-16-morning-TurtleSoup-LONG held-local preview')).toBeTruthy();
     expect(screen.getByText(/No Discord post/)).toBeTruthy();
     expect(screen.getByText(/No Supabase write/)).toBeTruthy();
+  });
+
+  it('imports a signoff-passing held-local preview index JSON from the hidden local tab', async () => {
+    window.history.pushState({}, '', '/?heldLocalPreview=1');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Held-Local Preview' }));
+    expect(screen.getByText('BLOCKED')).toBeTruthy();
+
+    const report = {
+      reportType: 'unified_positive_held_local_preview_ui_index',
+      status: 'pass',
+      authority: {
+        readOnly: true,
+        localOnly: true,
+        researchOnly: true,
+        postsDiscord: false,
+        writesSupabase: false,
+        readsLiveSupabase: false,
+        readsLiveBridge: false,
+        runsSetupScanner: false,
+        changesScannerBehavior: false,
+        changesTradingLogic: false,
+        changesCanExecute: false,
+        changesEntryStopTargets: false,
+        changesRiskRules: false,
+        changesBridgeBehavior: false,
+        changesDiscordPosting: false,
+        changesAppRuntime: false,
+      },
+      summary: {
+        signoffRowsLoaded: 1,
+        previewItemsReady: 1,
+        blockedItems: 0,
+        postableFalseItems: 1,
+        shouldPostFalseItems: 1,
+        canExecuteFalseItems: 1,
+        publishDiscordFalseItems: 1,
+        shouldDispatchFalseItems: 1,
+        writesSupabaseFalseItems: 1,
+      },
+      output: {
+        htmlPath: 'preview.html',
+      },
+      items: [{
+        ticketId: '2026-06-24-evening-TurtleSoup-SHORT',
+        sourceSnapshotId: 'scanner-local-preview',
+        setupType: 'TurtleSoup',
+        direction: 'SHORT',
+        pngPath: 'C:/preview/card-short.png',
+        imageSrc: 'file:///C:/preview/card-short.png',
+        previewStatus: 'preview_ready',
+        postable: false,
+        publishDiscord: false,
+        shouldPost: false,
+        canExecute: false,
+        shouldDispatch: false,
+        writesSupabase: false,
+        blockers: [],
+      }],
+    };
+
+    const file = new File([JSON.stringify(report)], 'preview-index.json', { type: 'application/json' });
+    fireEvent.change(screen.getByLabelText('Import local preview index JSON'), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => expect(screen.getByText('READY')).toBeTruthy());
+    expect(screen.getByText('Import ready: 1 local preview cards.')).toBeTruthy();
+    expect(screen.getByAltText('2026-06-24-evening-TurtleSoup-SHORT held-local preview')).toBeTruthy();
+    expect(localStorage.getItem(HELD_LOCAL_PREVIEW_STORAGE_KEY)).toContain('2026-06-24-evening-TurtleSoup-SHORT');
   });
 });
