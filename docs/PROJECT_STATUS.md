@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local local preview visual QA signoff.
+Files changed: tools/automation/unified-positive-held-local-preview-visual-signoff.ts, tools/automation/unified-positive-held-local-preview-visual-signoff.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The visual renderer produced four local PNG artifacts. This phase adds a separate local signoff contract that records exactly which rendered PNGs were inspected and blocks if a rendered row is not inspected, the PNG is invalid, the inspector note is missing, or any no-post/no-execute boundary flag is not false.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-visual-signoff.test.ts`; `npx tsc --noEmit --pretty false`; visual QA via `view_image` inspection for all four rendered PNGs; `npx tsx tools/automation/unified-positive-held-local-preview-visual-signoff.ts --visual tools/automation/diagnostic-reports/unified-positive-held-local-preview-visual-1784260899742.json --inspected-png <four rendered PNG paths> --inspector Codex --note "view_image inspection passed for all four rendered PNGs: readable levels, no clipping, visible decision-support/no-automation/no-post/no-write footer boundaries." --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, four-image visual inspection, and real local signoff run passed. The real signoff loaded 4 visual rows, recorded 4 inspected PNGs, signed off 4 rows, blocked 0 rows, found 0 unrecognized inspected PNGs, and preserved `postable=false`, `shouldPost=false`, `canExecute=false`, `publishDiscord=false`, `shouldDispatch=false`, and `writesSupabase=false` for all 4 rows. Signoff report path: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-visual-signoff-1784261772308.json`.
+Trading logic changed: No. This is a local-only visual QA signoff contract. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: Production Discord/Supabase publishing remains disabled. The signoff artifact is not wired to UI, Discord, scanner-visible output, or live runtime.
+Next recommended action: Add a controlled no-post UI preview surface that can display only signoff-passing held-local PNGs behind an explicit local flag, still with Discord/Supabase/scanner publish behavior disabled.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local local preview visual renderer.
 Files changed: tools/automation/unified-positive-held-local-preview-visual.ts, tools/automation/unified-positive-held-local-preview-visual.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The held-local preview text preflight proved four local review cards have safe wording and boundaries. This phase adds a local PNG renderer behind that preflight so the desk can visually inspect the future held-local card artifact while still posting nothing, writing nothing, and changing no live scanner behavior.
