@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add pre-entry adverse-path classifier search over enriched held-local rows.
+Files changed: tools/automation/unified-positive-held-local-preview-preentry-adverse-path-classifier.ts, tools/automation/unified-positive-held-local-preview-preentry-adverse-path-classifier.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The proof/context enrichment showed loss rows have worse post-entry MAE, but that is future path evidence. This phase searched only pre-entry/proof-time fields to avoid lookahead bias before considering any scanner-visible rank/filter change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-preentry-adverse-path-classifier.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-preentry-adverse-path-classifier -- --json; git diff --check.
+Result: Passed. Real local report evaluated 204 enriched rows and 120 pre-entry classifiers. Accepted classifiers: 0. Rejected classifiers: 120. Top accepted classifier: none. Live promotion allowed rows: 0.
+Trading logic changed: No. This is a read-only local classifier diagnostic. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local enrichment diagnostics only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Current pre-entry fields are still too coarse to explain the adverse path without false-rejecting winners. Do not install a pre-entry filter from this set.
+Next recommended action: Mine richer pre-entry structural evidence from the local scanner decision tape snapshots, especially named level interaction, FVG/retest state, 5M proof freshness, HTF sufficiency flags, and target-room/obstacle context, then rerun the same no-lookahead classifier.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add broad proof/context enrichment for reviewed-positive held-local rows.
 Files changed: tools/automation/unified-positive-held-local-preview-broad-proof-context-enrichment.ts, tools/automation/unified-positive-held-local-preview-broad-proof-context-enrichment.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Broad setup/session/direction/risk-bucket feature search found no accepted market-feature separator, so the next safe phase enriched the 204 broad rows with proof state, risk quality, occurrences, proof-to-entry timing, completed-5M path MFE/MAE, and issue tags.
