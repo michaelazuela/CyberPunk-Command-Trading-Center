@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add held-local preview artifact-gap diagnostic.
+Files changed: tools/automation/unified-positive-held-local-preview-artifact-gap.ts, tools/automation/unified-positive-held-local-preview-artifact-gap.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The rank-overlay expansion found no additional reviewed source/proof-positive rows beyond the newest report. This phase adds a local-only artifact chain diagnostic to prove whether reviewed tickets are missing decision-summary queueing, replay readiness, OHLC outcome resolution, or source/proof acceptance before any scanner-visible behavior is considered.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-artifact-gap.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-artifact-gap -- --json`.
+Result: Focused artifact-gap test, typecheck, and real diagnostic run passed. The real diagnostic found 4 unique reviewed tickets, 4 decision-summary queued tickets, 4 replay-ready tickets, 4 resolved OHLC outcome tickets, and 4 source/proof-accepted tickets. Missing replay-ready: 0. Missing resolved OHLC outcome: 0. Missing source/proof accepted: 0. Additional reviewed source/proof-positive tickets waiting in local artifacts: 0. Latest artifact-gap report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-artifact-gap-1784304352875.json`.
+Trading logic changed: No. This is local-only artifact coverage research. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, model availability, `canExecute`, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: The local artifact chain is complete for the current four reviewed tickets, but no additional reviewed tickets exist locally. More evidence now requires creating or ingesting new reviewed cases, not reranking the same set.
+Next recommended action: Build the next reviewed-case intake or replay-discovery pass to add new source/proof-positive tickets, then rerun artifact-gap and rank-overlay expansion.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add held-local preview rank overlay expansion across local source/proof artifacts.
 Files changed: tools/automation/unified-positive-held-local-preview-rank-overlay-expansion.ts, tools/automation/unified-positive-held-local-preview-rank-overlay-expansion.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The prior rank overlay proved source/proof-positive rows could be ordered locally. This phase adds a multi-report expansion layer that scans all local source/proof and OHLC outcome artifacts, dedupes reviewed rows by row id, and reruns the research-only rank overlay before any scanner-visible behavior is considered.
