@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add read-only reviewed-case intake / replay-discovery diagnostic for the held-local preview research chain.
+Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-reviewed-case-intake.ts, tools/automation/unified-positive-held-local-preview-reviewed-case-intake.test.ts.
+Reason: The previous four reviewed tickets are fully processed, so the next phase needed a local-only way to discover new historical scanner-owned held candidates instead of looping the same four rows.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-reviewed-case-intake.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-reviewed-case-intake -- --json --current-trade-date 2026-07-17.
+Result: Passed. The real diagnostic scanned 90 historical scanner decision tapes and 3,118 events, recognized 4 already-processed tickets, excluded 352 current-trade-date candidate rows, ignored 1,567 executable rows and 15,026 incomplete-plan rows, and found 475 new historical held-complete candidates for reviewed intake.
+Trading logic changed: No. This is a read-only local artifact diagnostic; it does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The intake is deliberately broad and should not feed ranking directly. The next pass must narrow candidates by model family, proof state, replay outcome, and source quality before any rank-overlay expansion.
+Next recommended action: Add a read-only intake triage pass that groups the 475 candidates by setup/session/proof state and selects a small replay package, starting with OpeningDriveFvgContinuation, AfterLunchDriveFvgContinuation, IntradayMssMicroContinuation, and the existing TurtleSoup/SweepMssFvgRetrace problem families.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add held-local preview artifact-gap diagnostic.
 Files changed: tools/automation/unified-positive-held-local-preview-artifact-gap.ts, tools/automation/unified-positive-held-local-preview-artifact-gap.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The rank-overlay expansion found no additional reviewed source/proof-positive rows beyond the newest report. This phase adds a local-only artifact chain diagnostic to prove whether reviewed tickets are missing decision-summary queueing, replay readiness, OHLC outcome resolution, or source/proof acceptance before any scanner-visible behavior is considered.
