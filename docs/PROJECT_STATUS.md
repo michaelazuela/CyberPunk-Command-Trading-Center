@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local local preview app adapter contract.
+Files changed: src/lib/heldLocalPreviewUiAdapter.ts, src/lib/heldLocalPreviewUiAdapter.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The local preview index artifact proved signoff-passing card PNGs can be grouped locally. This phase adds the app-side adapter contract that accepts only a passing local preview index when the preview flag is enabled and the host is local, while keeping every posting/execution/live-read flag false.
+Tests run: `npx tsx src/lib/heldLocalPreviewUiAdapter.test.ts`; `npx tsc --noEmit --pretty false`.
+Result: Focused test and typecheck passed. The adapter returns `disabled` when the flag is off, blocks non-local hosts, returns `ready` only for a passing signoff-backed index, rejects `canExecute=true`, rejects `changesCanExecute=true`, rejects remote image URLs, and always preserves `postable=false`, `shouldPost=false`, `canExecute=false`, `publishDiscord=false`, `shouldDispatch=false`, `writesSupabase=false`, `readsLiveSupabase=false`, `readsLiveBridge=false`, and `runsSetupScanner=false`.
+Trading logic changed: No. This is a local-only app adapter contract and is not wired to a visible route/tab yet. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: Production Discord/Supabase publishing remains disabled. The adapter is contract-only until a separate explicit local UI wiring phase.
+Next recommended action: Wire a hidden local-only preview tab/component that consumes this adapter only when an explicit local flag and signoff-passing index payload are provided.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local local preview UI index artifact.
 Files changed: tools/automation/unified-positive-held-local-preview-ui-index.ts, tools/automation/unified-positive-held-local-preview-ui-index.test.ts, scripts/run-test-suite.cjs, scripts/project-guardrails-check.js, package.json, docs/PROJECT_STATUS.md.
 Reason: The visual signoff contract proved all four held-local preview PNGs were inspected. This phase adds a local preview index artifact that displays only signoff-passing PNGs and preserves every no-post/no-execute boundary before any app runtime or Discord exposure is considered.
