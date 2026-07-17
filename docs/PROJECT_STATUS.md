@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add broad held-local feature-search diagnostic for reviewed-positive research rows.
+Files changed: tools/automation/unified-positive-held-local-preview-broad-feature-search.ts, tools/automation/unified-positive-held-local-preview-broad-feature-search.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Simple Intraday/TurtleSoup risk caps failed broad validation, so the desk needed a read-only feature separator search before considering any scanner-visible rank/filter change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-broad-feature-search.test.ts; npm run diagnostic:held-local-preview-broad-feature-search -- --json.
+Result: Passed. Real local report evaluated 204 broad validation rows and 67 candidate feature separators. Accepted market-feature candidates: 0. Rejected candidates: 67. Top accepted candidate: none. Live promotion allowed rows: 0.
+Trading logic changed: No. This is a read-only local feature-search diagnostic. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local replay diagnostics only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The broad separator search only has setup/session/direction/risk-bucket/triage labels. It intentionally rejects triage labels as non-market evidence, so the next useful research step must mine richer proof/context fields rather than install a filter.
+Next recommended action: Build a research-only proof/context enrichment pass over the same broad rows to compare fresh 5M proof timing, source/proof family, HTF sufficiency, stop distance, entry-hit timing, and MFE/MAE style path quality before any scanner-visible behavior change.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add broad read-only risk-cap validation for IntradayMssMicroContinuation and TurtleSoup.
 Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-broad-risk-cap-validation.ts, tools/automation/unified-positive-held-local-preview-broad-risk-cap-validation.test.ts.
 Reason: The 24-row negative-filter probe suggested Intraday risk <= 7 and TurtleSoup risk <= 10 might separate losers. This phase broadened that candidate filter across all matching intake-triage rows using local completed-5M scanner tapes before any scanner-visible rank change.
