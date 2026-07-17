@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local preview note ingest validator.
+Files changed: tools/automation/unified-positive-held-local-preview-note-ingest-validator.ts, tools/automation/unified-positive-held-local-preview-note-ingest-validator.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The note template creates editable local review notes. This phase adds a local-only validator that reads a filled editable template and rejects unsupported dispositions, missing reviewer notes for reviewed rows, or missing no-execution/no-Discord/no-Supabase boundary reminders before any later research aggregation.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-note-ingest-validator.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-note-ingest-validator -- --json`.
+Result: Focused validator test, typecheck, and real validator run passed. The real validator loaded 4 editable rows, accepted 4 valid rows, found 0 reviewed rows, 4 unreviewed rows, and 0 rejected rows. Validator report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-note-ingest-validator-1784266720348.json`.
+Trading logic changed: No. This is local-only ignored note validation tooling. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: Validated notes are still local diagnostic material only and do not approve model promotion or execution.
+Next recommended action: Add a local preview review rollup that joins checklist + validated notes into one read-only research summary, still without live side effects.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local preview note template.
 Files changed: tools/automation/unified-positive-held-local-preview-note-template.ts, tools/automation/unified-positive-held-local-preview-note-template.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The review checklist proved the hidden local preview rows are visible and remain review-only. This phase adds an ignored local note-template artifact so a human can write review notes or later research dispositions without changing live behavior.
