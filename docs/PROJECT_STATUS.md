@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Extract fresh completed 5M proof for positive TurtleSoup and Sweep rows.
+Files changed: tools/automation/unified-positive-fresh-5m-proof-extractor.ts, tools/automation/unified-positive-fresh-5m-proof-extractor.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The positive rebuild-readiness audit found 10 positive overlay rows that all remained blocked by stale/no-chase or missing fresh 5M proof. This phase adds a read-only model-specific proof extractor for only TurtleSoup and SweepMssFvgRetrace positives, using completed 5M OHLC after the stale snapshot cutoff.
+Tests run: `npx tsx tools/automation/unified-positive-fresh-5m-proof-extractor.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-fresh-5m-proof-extractor.ts --positive-rebuild-audit tools/automation/diagnostic-reports/unified-positive-candidate-rebuild-audit-1784249675968.json --audit-dir tools/automation/discord-audit --market-bars-json tools/automation/diagnostic-reports/raw-ohlc-source-MES-2026-06-01-to-2026-07-02-1784223007126.json --start-date 2026-06-01 --end-date 2026-07-02 --instrument MES --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, and real read-only extraction passed. The extractor loaded 10 positive rows and 12,119 local completed 5M bars from the raw OHLC source. It found 7 rows with fresh completed 5M retest/re-entry proof, 2 rows invalidated before proof, 1 row reached T1 before proof, 0 rows missing future bars, 0 missing snapshots, and 0 missing plan geometry. Eligible-after-proof rows remain research-only with `canExecute=false` and `publishDiscord=false`. Report paths: `tools/automation/diagnostic-reports/unified-positive-fresh-5m-proof-extractor-1784250574870.json` and `.md`.
+Trading logic changed: No. This phase is read-only proof extraction. It does not change setup definitions, live ranking, scanner behavior, entry, stop, target, risk, invalidation, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. The run used local raw 5M OHLC JSON only, not live bridge reads.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: Positive rows can include repeated nearby scanner snapshots, so the 7 eligible-after-proof rows are not yet deduplicated into unique scanner tickets. The extractor also blocks rows when stop or T1 is touched before proof, which is intentionally conservative for stale/no-chase research.
+Next recommended action: Keep scanner-visible wiring off. Build a read-only review-ticket rebuild simulation for only the 7 eligible-after-fresh-proof rows, dedupe repeated same-session ideas, and prove the resulting ticket text/plan geometry before any live behavior change.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Audit positive overlay candidates for rebuild readiness.
 Files changed: tools/automation/unified-positive-candidate-rebuild-audit.ts, tools/automation/unified-positive-candidate-rebuild-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The outcome/RAG overlay found 10 positive unified candidates, but scanner visibility must not be wired until the desk proves whether those rows already have fresh 5M proof and deterministic plan geometry. This phase adds a read-only rebuild-readiness audit over positive overlay rows only.
