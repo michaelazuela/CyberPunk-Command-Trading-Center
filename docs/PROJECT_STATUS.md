@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add read-only intake triage for the held-local replay-discovery set.
+Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-intake-triage.ts, tools/automation/unified-positive-held-local-preview-intake-triage.test.ts.
+Reason: The reviewed-case intake found 475 new historical held-complete candidates. This phase adds a local-only triage layer to reduce that broad bucket into a small replay package before any outcome validation or rank overlay expansion.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-intake-triage.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-intake-triage -- --json --max-replay-package-rows 24 --max-rows-per-model 4.
+Result: Passed. The real triage read 479 intake rows, kept 4 already-processed rows as references, evaluated 475 new intake candidates across 6 model groups and 8 proof-state groups, selected 24 rows for the next replay package, and held 451 rows for later batches. The selected package is balanced at 4 rows each for IntradayMssMicroContinuation, AfterLunchDriveFvgContinuation, OpeningDriveFvgContinuation, HtfDisplacementMssContinuation, SweepMssFvgRetrace, and TurtleSoup.
+Trading logic changed: No. This is a read-only local artifact triage. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Triage score is research packaging only and must not be treated as live ranking, confidence approval, or execution readiness.
+Next recommended action: Build a read-only replay/outcome package for the 24 selected rows, then run source/proof validation before any rank overlay expansion.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add read-only reviewed-case intake / replay-discovery diagnostic for the held-local preview research chain.
 Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-reviewed-case-intake.ts, tools/automation/unified-positive-held-local-preview-reviewed-case-intake.test.ts.
 Reason: The previous four reviewed tickets are fully processed, so the next phase needed a local-only way to discover new historical scanner-owned held candidates instead of looping the same four rows.
