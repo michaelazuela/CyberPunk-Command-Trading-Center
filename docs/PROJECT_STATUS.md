@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add held-local preview note template.
+Files changed: tools/automation/unified-positive-held-local-preview-note-template.ts, tools/automation/unified-positive-held-local-preview-note-template.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The review checklist proved the hidden local preview rows are visible and remain review-only. This phase adds an ignored local note-template artifact so a human can write review notes or later research dispositions without changing live behavior.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-note-template.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-note-template -- --json`.
+Result: Focused note-template test, typecheck, and real note-template generation passed. The real template loaded 4 checklist rows, wrote 4 note rows, kept all 4 unreviewed, and preserved review-only boundary text. Editable template: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-note-template-1784266350982.editable.json`.
+Trading logic changed: No. This is local-only ignored note-template tooling. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: Notes created from this template are local diagnostic material only; they do not approve model promotion or execution.
+Next recommended action: Add a local note-ingest validator that can read a filled editable template and verify allowed dispositions/boundaries before any later research aggregation.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add held-local preview review checklist.
 Files changed: tools/automation/unified-positive-held-local-preview-review-checklist.ts, tools/automation/unified-positive-held-local-preview-review-checklist.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The readiness audit proved the hidden preview tab renders the embedded held-local bundle. This phase adds a local-only review checklist that lists the visible held-local cases and restates why each remains human-review only before any broader workflow is considered.
