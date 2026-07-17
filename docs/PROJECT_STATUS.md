@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add read-only replay package builder for the 24 held-local triage selections.
+Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-replay-package.ts, tools/automation/unified-positive-held-local-preview-replay-package.test.ts.
+Reason: The intake triage selected 24 rows for the next replay/outcome step. This phase packages those rows with local scanner decision tape paths, completed 5M tape coverage, proof time, entry/stop/T1/T2, and R math before any outcome calculation or rank overlay expansion.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-replay-package.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-replay-package -- --json.
+Result: Passed. The real replay package read 24 selected rows, produced 24 replay package rows, found 24 ready-for-read-only-outcome-replay rows, found 0 blocked rows, preserved 6 model groups and 3 session groups, and allowed 0 live-promotion rows.
+Trading logic changed: No. This is a read-only local replay package. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads local scanner decision tape JSON only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The package does not calculate outcome P/L. It only proves the selected rows have local completed-5M tape coverage and normalized replay inputs.
+Next recommended action: Run a read-only OHLC outcome pass over the 24-row replay package, then validate source/proof before rank overlay expansion.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add read-only intake triage for the held-local replay-discovery set.
 Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-intake-triage.ts, tools/automation/unified-positive-held-local-preview-intake-triage.test.ts.
 Reason: The reviewed-case intake found 475 new historical held-complete candidates. This phase adds a local-only triage layer to reduce that broad bucket into a small replay package before any outcome validation or rank overlay expansion.
