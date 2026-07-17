@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Run negative-filter, broad risk-cap, feature-search, enrichment, and pre-entry classifier diagnostics.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The selected 24-row package suggested risk caps might isolate IntradayMssMicroContinuation and TurtleSoup losses. This phase validated that idea against the broader local intake set before any scanner-visible change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-replay-package-negative-filter-probe.ts --source-proof-timing <latest package timing> --json; npx tsx tools/automation/unified-positive-held-local-preview-broad-risk-cap-validation.ts --intake-triage <latest intake triage> --json; npx tsx tools/automation/unified-positive-held-local-preview-broad-feature-search.ts --broad-risk-cap-validation <latest broad risk-cap validation> --json; npx tsx tools/automation/unified-positive-held-local-preview-broad-proof-context-enrichment.ts --broad-risk-cap-validation <latest broad risk-cap validation> --intake-triage <latest intake triage> --json; npx tsx tools/automation/unified-positive-held-local-preview-preentry-adverse-path-classifier.ts --proof-context-enrichment <latest proof/context enrichment> --json.
+Result: Passed. Selected-package negative-filter probe produced 3 candidate research probes: IntradayMssMicroContinuation risk <=7 kept 1 winner and rejected 3 losses; TurtleSoup risk <=10 kept 1 winner plus 1 unresolved and rejected 2 losses; combined cap kept 2 winners plus 1 unresolved and rejected 5 losses. Broad validation over 204 Intraday/TurtleSoup target rows rejected those simple caps: Intraday risk <=7 evaluated 51 rows, kept 5 winners/5 losses/2 unresolved, rejected 14 winners/12 losses/13 unresolved, false-rejecting 14 winners. TurtleSoup risk <=10 evaluated 153 rows, kept 36 winners/38 losses/27 unresolved, rejected 11 winners/23 losses/18 unresolved, false-rejecting 11 winners. Broad feature search evaluated 67 candidates and accepted 0. Proof/context enrichment passed over 204 rows with 0 blocked. Pre-entry classifier evaluated 120 classifiers and accepted 0.
+Trading logic changed: No. This was diagnostic-only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local scanner decision tapes only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Simple risk caps are tempting from the selected package but do not survive broad validation. They must not be installed as live rules.
+Next recommended action: Do not install simple risk caps. Continue with richer pre-entry structural/proof mining if more improvement is needed; keep SweepMssFvgRetrace and AfterLunchDriveFvgContinuation positive-family evidence separate from Intraday/TurtleSoup repair work.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Run local reviewed-case intake, triage, replay package, outcome, and timing pass.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: Rank overlay expansion had no unique rows beyond the selected four. This phase found additional local held-complete candidates, selected a small replay package, and measured completed-5M outcome/timing without changing live behavior.
