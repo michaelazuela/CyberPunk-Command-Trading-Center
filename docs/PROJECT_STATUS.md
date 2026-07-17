@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Validate source/proof filter separating reviewed winners from broad losing bucket.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The prior OHLC outcome/model-decision pass showed TurtleSoup and SweepMssFvgRetrace should not be removed or broadened. This phase compared the positive reviewed subset against the broad negative formal bucket to isolate the actual research filter before any scanner-visible change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-filter-difference.ts --formal-replay <latest formal replay> --ohlc-outcome <latest outcome> --model-decision <latest model decision> --held-local-adapter <latest adapter> --json; npx tsx tools/automation/unified-positive-held-local-preview-source-proof-filter.ts --formal-replay <latest formal replay> --ohlc-outcome <latest outcome> --held-local-adapter <latest adapter> --filter-difference <latest filter difference> --json.
+Result: Passed. Filter-difference compared 9 formal losing rows against 4 reviewed winning rows and found 2 candidate filter findings. TurtleSoup formal losers: 7 rows, -$522.50, 0 completed-retest proof markers, average risk 14.93 points. TurtleSoup reviewed winners: 3 rows, +$193.75, 3 completed-retest proof markers, average risk 6.33 points. SweepMssFvgRetrace formal losers: 2 rows, -$232.50, 0 completed-retest proof markers, average risk 23.25 points. SweepMssFvgRetrace reviewed winners: 1 row, +$311.25, 1 completed-retest proof marker, average risk 28 points. Source/proof validation evaluated 13 rows, accepted all 4 reviewed winners, rejected all 9 formal losers, accepted +$505, rejected -$755, with 0 losing leak-through and 0 false-rejected winners.
+Trading logic changed: No. This was diagnostic-only. It does not change scanner setup logic, ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The validated filter is still research-only and selected. It supports a ranking/research overlay, not live broadening.
+Next recommended action: Install the next narrow research-only rank overlay that uses the validated scanner-owned held-local artifact plus completed 5M retest/re-entry proof tag, while keeping live behavior, canExecute, Discord, Supabase, and scanner rules unchanged.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Run read-only OHLC outcome and model-decision pass for explicitly queued held-local rows.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The replay queue proof established that only explicit `candidate_for_later_research` rows queue. This phase ran the next local-only OHLC outcome pass and model-decision diagnostic on those queued rows without changing scanner-visible behavior.
