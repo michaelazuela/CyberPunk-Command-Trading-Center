@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add held-local preview model decision summary.
+Files changed: tools/automation/unified-positive-held-local-preview-model-decision.ts, tools/automation/unified-positive-held-local-preview-model-decision.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The desk needed a surgical answer on whether to remove TurtleSoup or SweepMssFvgRetrace after broad non-strict replay was negative but reviewed held-local OHLC outcomes were positive.
+Tests run: `npx tsx tools/automation/unified-positive-held-local-preview-model-decision.test.ts`; `npx tsc --noEmit --pretty false`; `npm run diagnostic:held-local-preview-model-decision -- --json`.
+Result: Focused model-decision test, typecheck, and real diagnostic run passed. The real diagnostic compared formal replay gap analysis against reviewed held-local OHLC outcomes. TurtleSoup prior non-strict evidence was 7 trades / -$217.50, while reviewed held-local evidence was 3 trades / +$193.75. SweepMssFvgRetrace prior non-strict evidence was 2 trades / -$232.50, while reviewed held-local evidence was 1 trade / +$311.25. The report recommended 0 model removals, 0 broadening changes, 0 `canExecute` changes, and 2 candidate filter-research tracks. Latest decision report: `tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-decision-1784300101930.json`.
+Trading logic changed: No. This is local-only model research triage. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation gates, session gates, Discord posting, Supabase behavior, bridge behavior, `canExecute`, model availability, or executable approval.
+Bridge impact: None. No live bridge read occurs.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occur.
+Supabase impact: None.
+Known risks: The reviewed held-local sample is small. The evidence rejects deletion/broadening now, but it does not yet identify the exact production-safe filter.
+Next recommended action: Add a narrow filter-difference audit comparing the losing broad non-strict TurtleSoup/Sweep rows against the winning reviewed held-local rows: proof timing, session, direction, HTF sufficiency, entry timing, stop distance, MFE/MAE, and whether the row came from scanner-owned completed 5M retest proof.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add held-local preview OHLC outcome replay.
 Files changed: tools/automation/unified-positive-held-local-preview-ohlc-outcome.ts, tools/automation/unified-positive-held-local-preview-ohlc-outcome.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The replay queue proved 4 held-local rows were ready for read-only outcome replay, but P/L was unavailable until a local completed-5M OHLC outcome pass joined proof time, entry, stop, T1/T2, and post-proof bars.
