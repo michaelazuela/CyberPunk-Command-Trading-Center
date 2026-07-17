@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add broad read-only risk-cap validation for IntradayMssMicroContinuation and TurtleSoup.
+Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-broad-risk-cap-validation.ts, tools/automation/unified-positive-held-local-preview-broad-risk-cap-validation.test.ts.
+Reason: The 24-row negative-filter probe suggested Intraday risk <= 7 and TurtleSoup risk <= 10 might separate losers. This phase broadened that candidate filter across all matching intake-triage rows using local completed-5M scanner tapes before any scanner-visible rank change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-broad-risk-cap-validation.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-broad-risk-cap-validation -- --json.
+Result: Passed. The real broad validation evaluated 204 target rows, replayed 204 rows, found 0 blocked rows, 66 winners, 78 losses, 60 unresolved rows, and gross resolved one-MES P/L of +$2,301.25. Candidate cap rows: 0. IntradayMssMicroContinuation risk <= 7 evaluated 51 rows, kept 5 winners / 5 losses / 2 unresolved for +$87.50, rejected 14 winners / 12 losses / 13 unresolved for +$1,002.50, and false-rejected 14 winners. TurtleSoup risk <= 10 evaluated 153 rows, kept 36 winners / 38 losses / 27 unresolved for +$1,212.50, rejected 11 winners / 23 losses / 18 unresolved for -$1.25, and false-rejected 11 winners. Live promotion allowed rows remained 0.
+Trading logic changed: No. This is a read-only local broad validation diagnostic. It does not run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads local scanner decision tape JSON only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Simple risk caps failed broad validation because they false-reject too many winners. Do not install those caps as live rules or scanner-visible ranking filters.
+Next recommended action: Run a broader feature-search diagnostic for IntradayMssMicroContinuation and TurtleSoup using proof state, session, direction, risk bucket, same-day timing, and outcome bucket to find a separator with low false-reject winner count.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add read-only negative-filter probe for the 24-row replay package timing set.
 Files changed: package.json, docs/PROJECT_STATUS.md, tools/automation/unified-positive-held-local-preview-replay-package-negative-filter-probe.ts, tools/automation/unified-positive-held-local-preview-replay-package-negative-filter-probe.test.ts.
 Reason: The timing validator identified IntradayMssMicroContinuation and TurtleSoup as the two negative model groups. This phase probes simple model-specific pre-trade risk caps without installing any live rule or touching positive model families.
