@@ -63,6 +63,8 @@ const queue: UnifiedPositiveHeldLocalPreviewReplayQueueReport = {
     grossOneMesPlUnavailableRows: 3,
     grossOneMesPl: null,
     livePromotionAllowedRows: 0,
+    explicitReviewerQueuedRows: 3,
+    systemNoteDrivenQueueRows: 0,
   },
   rows: [
     {
@@ -82,8 +84,11 @@ const queue: UnifiedPositiveHeldLocalPreviewReplayQueueReport = {
       t2R: 2,
       oneMesPlStatus: 'not_available_in_local_artifacts',
       oneMesPl: null,
+      queueSource: 'explicit_reviewer_candidate_for_later_research',
+      systemNotesAffectQueue: false,
       evidence: {
         decisionQueued: true,
+        explicitReviewerDisposition: true,
         adapterArtifactCreated: true,
         guardedReplayPass: true,
         previewPayloadPass: true,
@@ -112,8 +117,11 @@ const queue: UnifiedPositiveHeldLocalPreviewReplayQueueReport = {
       t2R: 2,
       oneMesPlStatus: 'not_available_in_local_artifacts',
       oneMesPl: null,
+      queueSource: 'explicit_reviewer_candidate_for_later_research',
+      systemNotesAffectQueue: false,
       evidence: {
         decisionQueued: true,
+        explicitReviewerDisposition: true,
         adapterArtifactCreated: true,
         guardedReplayPass: true,
         previewPayloadPass: true,
@@ -142,8 +150,11 @@ const queue: UnifiedPositiveHeldLocalPreviewReplayQueueReport = {
       t2R: 2,
       oneMesPlStatus: 'not_available_in_local_artifacts',
       oneMesPl: null,
+      queueSource: 'explicit_reviewer_candidate_for_later_research',
+      systemNotesAffectQueue: false,
       evidence: {
         decisionQueued: true,
+        explicitReviewerDisposition: true,
         adapterArtifactCreated: true,
         guardedReplayPass: true,
         previewPayloadPass: true,

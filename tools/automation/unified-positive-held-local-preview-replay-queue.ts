@@ -25,8 +25,11 @@ export interface UnifiedPositiveHeldLocalPreviewReplayQueueRow {
   t2R: number | null;
   oneMesPlStatus: 'available' | 'not_available_in_local_artifacts';
   oneMesPl: number | null;
+  queueSource: 'explicit_reviewer_candidate_for_later_research';
+  systemNotesAffectQueue: false;
   evidence: {
     decisionQueued: boolean;
+    explicitReviewerDisposition: boolean;
     adapterArtifactCreated: boolean;
     guardedReplayPass: boolean;
     previewPayloadPass: boolean;
@@ -76,6 +79,8 @@ export interface UnifiedPositiveHeldLocalPreviewReplayQueueReport {
     grossOneMesPlUnavailableRows: number;
     grossOneMesPl: number | null;
     livePromotionAllowedRows: number;
+    explicitReviewerQueuedRows: number;
+    systemNoteDrivenQueueRows: 0;
   };
   rows: UnifiedPositiveHeldLocalPreviewReplayQueueRow[];
   blockers: string[];
@@ -208,6 +213,8 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewReplayQueueRe
     `- One-MES P/L unavailable rows: ${report.summary.grossOneMesPlUnavailableRows}.`,
     `- Gross one-MES P/L: ${report.summary.grossOneMesPl ?? 'not available'}.`,
     `- Live promotion allowed rows: ${report.summary.livePromotionAllowedRows}.`,
+    `- Explicit reviewer queued rows: ${report.summary.explicitReviewerQueuedRows}.`,
+    `- System-note-driven queue rows: ${report.summary.systemNoteDrivenQueueRows}.`,
     '',
     '## Rows',
     '| Ticket | Date | Session | Setup | Side | Replay Status | Entry | Stop | T1 | T2 | Risk | T1R | T2R | One-MES P/L | Blockers |',
@@ -265,6 +272,7 @@ export function buildUnifiedPositiveHeldLocalPreviewReplayQueueReport(args: {
     );
     const evidence = {
       decisionQueued: true,
+      explicitReviewerDisposition: decisionRow.noteDisposition === 'candidate_for_later_research',
       adapterArtifactCreated: adapterRow?.adapterStatus === 'held_local_artifact_created' && Boolean(artifact),
       guardedReplayPass,
       previewPayloadPass: args.previewPayloadReport?.status === 'pass' && payloadRow?.status === 'preview_payload_created' && Boolean(payload),
@@ -279,6 +287,7 @@ export function buildUnifiedPositiveHeldLocalPreviewReplayQueueReport(args: {
       evidence.guardedReplayPass ? null : 'guarded scanner replay did not pass',
       evidence.previewPayloadPass ? null : 'preview payload did not pass',
       evidence.zeroLivePublishBehaviorChange ? null : 'zero live publish behavior change proof is missing',
+      evidence.explicitReviewerDisposition ? null : 'explicit candidate_for_later_research reviewer disposition is missing',
       evidence.canExecute === false ? null : 'canExecute=false proof is missing',
       evidence.publishDiscord === false ? null : 'publishDiscord=false proof is missing',
       evidence.shouldPost === false ? null : 'shouldPost=false proof is missing',
@@ -308,6 +317,8 @@ export function buildUnifiedPositiveHeldLocalPreviewReplayQueueReport(args: {
       t2R: levelR({ direction, entry, stop, target: t2 }),
       oneMesPlStatus: oneMesPl === null ? 'not_available_in_local_artifacts' : 'available',
       oneMesPl,
+      queueSource: 'explicit_reviewer_candidate_for_later_research',
+      systemNotesAffectQueue: false,
       evidence,
       blockers,
     };
@@ -351,6 +362,8 @@ export function buildUnifiedPositiveHeldLocalPreviewReplayQueueReport(args: {
       grossOneMesPlUnavailableRows: rows.filter((row) => row.oneMesPlStatus === 'not_available_in_local_artifacts').length,
       grossOneMesPl: grossOneMesPlValues.length ? round(grossOneMesPlValues.reduce((sum, value) => sum + value, 0)) : null,
       livePromotionAllowedRows: args.decisionSummaryReport?.summary.livePromotionAllowedRows || 0,
+      explicitReviewerQueuedRows: rows.filter((row) => row.evidence.explicitReviewerDisposition).length,
+      systemNoteDrivenQueueRows: 0,
     },
     rows,
     blockers: topLevelBlockers,

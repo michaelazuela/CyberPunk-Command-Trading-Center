@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Prove replay queue seeding requires explicit reviewer disposition.
+Files changed: tools/automation/unified-positive-held-local-preview-replay-queue.ts, tools/automation/unified-positive-held-local-preview-replay-queue.test.ts, tools/automation/unified-positive-held-local-preview-ohlc-outcome.test.ts, docs/PROJECT_STATUS.md.
+Reason: The desk needed proof that held-local caution/system notes cannot queue replay research by themselves. This phase makes replay queue authority explicit: a row queues only when the decision summary carries the reviewer disposition `candidate_for_later_research`.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-replay-queue.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-decision-summary.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-ohlc-outcome.test.ts; npx tsc --noEmit --pretty false; real local unreviewed note-validation/rollup/decision-summary/replay-queue chain; real local auto-review-seed/validation/rollup/decision-summary/replay-queue chain.
+Result: Passed. Current unreviewed path: 4 valid rows, 4 unreviewed rows, 4 system-note rows, 3 missing-plan caution rows, 0 queued replay rows, 0 explicit reviewer queued rows, and 0 system-note-driven queue rows. Explicit seed path: 4 candidate-for-later-research rows, 4 queued replay rows, 4 replay-ready rows, 0 blocked rows, 4 explicit reviewer queued rows, and 0 system-note-driven queue rows. Queued rows were 2026-06-16 morning TurtleSoup LONG, 2026-06-24 evening TurtleSoup SHORT, 2026-06-25 evening TurtleSoup SHORT, and 2026-06-26 morning SweepMssFvgRetrace LONG.
+Trading logic changed: No. This only adds local diagnostic proof fields to the replay queue artifact. It does not change scanner setup logic, ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads prior local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: One-MES P/L remains unavailable until the separate OHLC outcome pass runs against the queued rows.
+Next recommended action: Run full verification, commit/push, then continue with the read-only OHLC outcome pass for the four explicitly queued rows.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Prove held-local system notes do not drive rollup or decision-summary actions.
 Files changed: tools/automation/unified-positive-held-local-preview-review-rollup.ts, tools/automation/unified-positive-held-local-preview-review-rollup.test.ts, tools/automation/unified-positive-held-local-preview-decision-summary.ts, tools/automation/unified-positive-held-local-preview-decision-summary.test.ts, tools/automation/unified-positive-held-local-preview-replay-queue.test.ts, tools/automation/unified-positive-held-local-preview-review-handoff.test.ts, docs/PROJECT_STATUS.md.
 Reason: Payload system notes now flow into review artifacts. This phase makes the later rollup/decision-summary audit explicit: notes can be visible to the reviewer, but they do not choose dispositions, queue replay research, permit live promotion, or alter any executable boundary.
