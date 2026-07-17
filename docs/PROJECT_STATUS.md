@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-16
+Task: Add guarded local scanner replay option for held-local ticket inspection.
+Files changed: tools/automation/unified-positive-guarded-scanner-replay.ts, tools/automation/unified-positive-guarded-scanner-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The inspection surface proved the held-local `ACTIVE_REVIEW` tickets are locally inspectable. This phase adds an explicit guarded replay command that requires `--enable-held-local-inspection`, consumes a local held-local adapter report, and writes the dry-run replay plus local inspection artifacts without entering the live scanner loop.
+Tests run: `npx tsx tools/automation/unified-positive-guarded-scanner-replay.test.ts`; `npx tsc --noEmit --pretty false`; `npx tsx tools/automation/unified-positive-guarded-scanner-replay.ts --enable-held-local-inspection --held-local-adapter tools/automation/diagnostic-reports/unified-positive-held-local-ticket-adapter-1784254207487.json --out-dir tools/automation/diagnostic-reports --json`.
+Result: Focused test, typecheck, and real guarded local replay run passed. The real run required the explicit guard flag, loaded the 4 held-local tickets, produced a passing scanner dry-run replay, produced a passing held-local inspection surface, found 4 zero-live-publish-behavior-change rows, 4 inspectable tickets, and 0 blocked rows. Report paths: `tools/automation/diagnostic-reports/unified-positive-guarded-scanner-replay-1784255781038.json` and `.md`.
+Trading logic changed: No. This is a local-only replay command. It does not change setup definitions, live ranking, live scanner behavior, entry, stop, target, risk, invalidation, session gates, Discord posting, Supabase behavior, bridge behavior, or executable approval.
+Bridge impact: None. No live bridge read occurred.
+Journal/RAG impact: None. No live Supabase/RAG reads or writes occurred.
+Supabase impact: None.
+Known risks: Production Discord/Supabase publishing remains disabled. The guarded command still depends on local artifact inputs from the previous diagnostic chain; it is not a live scanner feature.
+Next recommended action: Fix the generic held-local invalidation wording to be side-specific in local artifacts before any UI/Discord exposure, then rerun the guarded replay to confirm the ticket text is trader-facing clean while all no-post/no-execute boundaries remain intact.
+
+## Previous Change
+
+Date: 2026-07-16
 Task: Add local-only held-local ticket inspection surface.
 Files changed: tools/automation/unified-positive-held-local-inspection-surface.ts, tools/automation/unified-positive-held-local-inspection-surface.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The scanner dry-run replay proved held-local artifacts can sit beside normal output with zero live publish behavior change. This phase adds a local-only inspection surface so the desk can review the actual `ACTIVE_REVIEW` ticket levels, triggers, invalidation text, and safety boundaries without touching Discord, Supabase, bridge, or live scanner behavior.
