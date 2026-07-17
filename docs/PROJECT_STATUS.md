@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add TurtleSoup review-note placement simulation.
+Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-placement-simulation.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-placement-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The wording probe produced research-only TurtleSoup caution text. This phase simulates placing that text in held-local preview notes and proves ticket visibility and ordering are preserved before any UI-visible change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-placement-simulation.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-turtlesoup-review-note-placement-simulation -- --json.
+Result: Passed. Real local placement simulation read 4 wording rows and produced 4 held-local preview note placements. Visible before/after: 4/4. Order-preserved rows: 4. Suppress-ticket rows: 0. Ranking-change rows: 0. canExecute-change rows: 0. Entry/stop/target-change rows: 0. Discord-posting-change rows: 0. Supabase-write rows: 0. Live promotion allowed rows: 0. Recommended action: keep_research_only_placement_candidate.
+Trading logic changed: No. This is a read-only local placement simulation. It does not change UI, install review-note wording, suppress tickets, change ranking, change canExecute, remove TurtleSoup, run setupScanner, post Discord, read/write Supabase, read the live bridge, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local diagnostic output only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Placement remains research-only. A separate approved UI wording phase is required before this appears in held-local preview output.
+Next recommended action: If desired, install the caution into held-local preview rendering only behind the existing local preview path, with tests proving no Discord/Supabase/scanner/ranking/canExecute effects.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add TurtleSoup review-note wording probe.
 Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-wording-probe.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-wording-probe.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The blocked-row drilldown found missing_full_plan_levels clusters where TurtleSoup should stay visible but receive review-only caution language. This phase drafts research-only wording and proves it does not suppress tickets, change ranking, change canExecute, or alter entry/stop/target/risk behavior.
