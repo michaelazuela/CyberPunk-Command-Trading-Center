@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Run richer structural and proof-time snapshot mining for the broad held-local TurtleSoup/Intraday research set.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The prior broad pass rejected simple risk caps and accepted 0 pre-entry adverse-path classifiers. This phase mined richer local proof-time scanner fields to see whether a real separator exists before touching live-facing behavior.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-structural-field-inventory.ts; npx tsx tools/automation/unified-positive-held-local-preview-structural-no-lookahead-classifier.ts; npx tsx tools/automation/unified-positive-held-local-preview-structured-snapshot-miner.ts; npx tsx tools/automation/unified-positive-held-local-preview-structured-snapshot-classifier.ts; npx tsx tools/automation/unified-positive-held-local-preview-structured-snapshot-validation.ts.
+Result: Passed. Structural inventory read 204 rows with 0 blocked and 72 field summaries. The simple structural no-lookahead classifier evaluated 65 classifiers and accepted 0. Structured snapshot mining read 204 rows with 0 blocked and 86 feature summaries. The structured snapshot classifier evaluated 68 classifiers and accepted 6 research candidates, all TurtleSoup. The cleanest split is TurtleSoup `modelCandidateExecutionStatus=Conditional` / `entryTriggerPendingEvidence=true` / `protectedStopEvidence=false`: kept 42 winners, 20 losses, 17 unresolved for +$2,566.25; rejected 5 winners, 41 losses, 28 unresolved for -$1,355. Session/day validation preserved all 6 candidates for broader replay validation. This supports research-side separation of Conditional/entry-pending TurtleSoup review candidates from Blocked/protected-stop/problem rows, not a live filter.
+Trading logic changed: No. This was diagnostic-only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local scanner decision tapes only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The accepted classifiers are research leads, not live rules. TurtleSoup should stay enabled, but Blocked/protected-stop/problem rows should be penalized or held only after a broader replay package validates that treatment.
+Next recommended action: Build a broader replay validation package focused on the 6 accepted TurtleSoup proof-time snapshot classifiers, especially Conditional/entry-pending/no-protected-stop-blocker versus Blocked/protected-stop rows, before any scanner-visible ranking or canExecute change.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Run negative-filter, broad risk-cap, feature-search, enrichment, and pre-entry classifier diagnostics.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The selected 24-row package suggested risk caps might isolate IntradayMssMicroContinuation and TurtleSoup losses. This phase validated that idea against the broader local intake set before any scanner-visible change.
