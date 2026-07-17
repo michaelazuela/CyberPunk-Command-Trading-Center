@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add TurtleSoup same-slate rank simulation.
+Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-rank-simulation.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-rank-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Rank-penalty validation showed blocked protected-stop TurtleSoup was net negative but still contained winners. This phase tested a hypothetical same-date/session rank penalty in research-only mode before any scanner-visible behavior change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-rank-simulation.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-turtlesoup-rank-simulation -- --json.
+Result: Passed. Real local simulation read 153 TurtleSoup package rows across 86 same-date/session slates. Penalized rows: 78. Top changed slates: 1. Blocked protected-stop top before/after: 36/35. Top-selection one-MES P/L before/after: +$2386.25/+$2270.00, delta -$116.25. False-winner demotions from the rank simulation: 0. Hard-block false-reject winners from validation remain 7. Recommendation: reject_rank_penalty.
+Trading logic changed: No. This is a read-only local simulation. It does not install a rank penalty, hard block, review note, remove TurtleSoup, run setupScanner, post Discord, read/write Supabase, read the live bridge, change canExecute, change ranking, or change entry/stop/target/risk rules.
+Bridge impact: None. It reads prior local diagnostic output only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This same-slate simulation rejects the rank penalty for the current evidence set, but it does not explain every individual blocked protected-stop loser. Future work should isolate the one changed slate and the 43 losing blocked rows for review-note language or proof-quality diagnostics only.
+Next recommended action: Do not install a TurtleSoup rank penalty. Build a research-only blocked-row reason drilldown or review-note wording probe so the desk can explain weak protected-stop states without suppressing the model.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add TurtleSoup rank-penalty validation with false-winner visibility.
 Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-rank-penalty-validation.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-rank-penalty-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The action probe showed blocked protected-stop TurtleSoup is strong enough to consider a rank penalty, but the affected bucket still contains winners. This phase validates rank-penalty-only handling and explicitly reports false-reject winners so the desk does not accidentally turn it into a hard block.
