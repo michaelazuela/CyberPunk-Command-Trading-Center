@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add TurtleSoup extreme-risk rank simulation.
+Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-extreme-risk-rank-simulation.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-extreme-risk-rank-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The valid-review separator diagnostic found only one caution bucket, TurtleSoup with risk over 15 points. The desk needed a same-slate research simulation before considering any scanner-visible rank penalty or model change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-extreme-risk-rank-simulation.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-turtlesoup-extreme-risk-rank-simulation -- --installed-score-comparison tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-installed-score-comparison-1784400327124.json --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784400307549.json --separator-diagnostic tools/automation/diagnostic-reports/unified-positive-held-local-preview-valid-review-separator-diagnostic-1784401458690.json --json.
+Result: Passed. The simulation joined 373 installed-score rows across 85 slates, applied a hypothetical 12-point research penalty to 16 valid-review TurtleSoup rows with riskPoints greater than 15, changed 3 top slates, reduced penalized top slates from 3 to 0, and improved simulated top-selection gross one-MES P/L from 3258.22 to 3588.22, a +330.00 delta. However, it also produced 3 false winner demotions, so the report recommendation is review_note_only rather than live rank penalty.
+Trading logic changed: No. This is a local/read-only rank simulation only. It does not change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Risk over 15 points alone is not a clean enough filter because it demotes winning TurtleSoup rows. It should not become scanner-visible without a stricter no-lookahead companion condition.
+Next recommended action: Mine the 16 TurtleSoup extreme-risk rows for a second pre-entry separator that protects the 3 winners while still cautioning the two top-slate losses, focusing on session, direction, proof latency, score gap to alternate, and whether the competing Sweep/FVG candidate is clean.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add valid-review no-lookahead separator diagnostic.
 Files changed: tools/automation/unified-positive-held-local-preview-valid-review-separator-diagnostic.ts, tools/automation/unified-positive-held-local-preview-valid-review-separator-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The desk needed to mine the 75 valid-review top slates for pre-entry/model-metadata separators before considering any scanner-visible ranking change.
