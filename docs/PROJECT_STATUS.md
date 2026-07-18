@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add scanner geometry-validator replay proof.
+Files changed: tools/automation/unified-positive-held-local-preview-scanner-geometry-validator-replay.ts, tools/automation/unified-positive-held-local-preview-scanner-geometry-validator-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After installing the scanner geometry validator, the desk needed a durable read-only proof that saved June 10/12 bad candidate surfaces would now be blocked while later valid same-direction surfaces remained intact.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-scanner-geometry-validator-replay.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-scanner-geometry-validator-replay -- --scanner-geometry-path tools/automation/diagnostic-reports/unified-positive-held-local-preview-scanner-geometry-path-diagnostic-1784404766000.json --json.
+Result: Passed. The replay evaluated 13 saved candidate surfaces from the June 10/12 geometry-path report: 11 invalid surfaces were demoted to Blocked/InvalidStopLocation by the committed scanner validator, 2 later valid same-direction surfaces remained preserved, and 0 rows had entry/stop/target level drift.
+Trading logic changed: No additional runtime change. This is a local/read-only validator replay diagnostic that applies the already-committed scanner validator to saved candidate surfaces. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None. It reads saved diagnostic reports and local scanner decision tapes only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is validator replay proof against saved surfaces, not regenerated historical scanner tapes. Fresh scanner-generated replay artifacts still need to be produced when a local OHLC-to-scanner artifact generator is available.
+Next recommended action: Build or reuse a fresh local OHLC-to-scanner artifact generator for the June 10 and June 12 lunch windows so the complete scanner tape can be regenerated under the new validator, then rerun the replay package/outcome/source-proof chain from those fresh artifacts.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Install scanner candidate geometry validator before ranking.
 Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
 Reason: Scanner geometry-path diagnostics showed invalid SweepMssFvgRetrace entry/stop geometry can appear either in setupCandidateStatus only or earlier in candidateLifecycleTrace/deskState. The scanner needed a narrow common boundary guard so directionally impossible full-level candidates cannot compete in ranking or review selection.
