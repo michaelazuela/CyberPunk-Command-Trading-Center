@@ -3,12 +3,12 @@
 ## Latest Change
 
 Date: 2026-07-18
-Task: Fail closed when HTF displacement MSS protected stop is on the wrong side of entry.
+Task: Fail closed when MSS continuation protected stops are on the wrong side of entry.
 Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
-Reason: Repaired raw-OHLC scanner artifacts showed HTF displacement MSS continuation rows being blocked by directionally impossible protected-stop geometry, mostly shorts where the fallback protected 5M MSS swing stop was below the fresh entry. The builder should not compute targets from an invalid entry/stop pair and leave cleanup to downstream validation.
-Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run test; npm run build; git diff --check; regenerated raw-OHLC scanner artifacts for 2026-06-03, 2026-06-05, 2026-06-08, 2026-06-09, 2026-06-15, 2026-06-16, and 2026-06-19 using the saved MES June 1-July 2 OHLC source.
-Result: Passed. All seven formerly invalid-geometry replay days now report invalidGeometryBlockedCandidates 0, with 0 executable candidates created. The new guard demotes wrong-side protected MSS stops to missing protected-stop evidence before targets are built.
-Trading logic changed: Yes, narrowly. HTF displacement MSS continuation now requires its selected protected 5M MSS stop to be beyond the actual entry before computing app targets. Wrong-side stops remain conditional with missing protected-stop evidence instead of carrying invalid full geometry.
+Reason: Repaired raw-OHLC scanner artifacts showed MSS continuation rows being blocked by directionally impossible protected-stop geometry. HTF displacement MSS had mostly short fallback stops below entry; the broader rerun also exposed two Intraday MSS Micro long rows where the selected stop was above entry. The builders should not compute targets from an invalid entry/stop pair and leave cleanup to downstream validation.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run test; npm run build; git diff --check; regenerated raw-OHLC scanner artifacts for 2026-06-03, 2026-06-05, 2026-06-08, 2026-06-09, 2026-06-15, 2026-06-16, 2026-06-19, and 2026-06-30 using the saved MES June 1-July 2 OHLC source.
+Result: Passed. All formerly invalid-geometry replay days now report invalidGeometryBlockedCandidates 0, with 0 executable candidates created. The new guard demotes wrong-side protected MSS stops to missing protected-stop evidence before targets are built.
+Trading logic changed: Yes, narrowly. HTF displacement MSS continuation and Intraday MSS Micro continuation now require the selected protected 5M MSS stop to be beyond the actual entry before computing app targets. Wrong-side stops remain conditional with missing protected-stop evidence instead of carrying invalid full geometry.
 Bridge impact: None. Replay used saved local OHLC artifacts only; NinjaTrader bridge behavior was not changed.
 Journal/RAG impact: None.
 Supabase impact: None.

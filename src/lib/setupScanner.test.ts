@@ -2194,6 +2194,56 @@ const tests: Array<[string, () => void]> = [
     assert.ok(micro.evidence.some((item) => item.includes('not the MSS close')));
   }],
 
+  ['Intraday MSS Micro Continuation does not build targets from a protected stop on the wrong side of entry', () => {
+    const context = htfMssContext('LONG', {
+      sessionType: 'lunch',
+      chartTimestamp: '2026-06-08T13:35:00-04:00',
+      keyLevels: {
+        ...htfMssContext('LONG').keyLevels,
+        currentPrice: 7419,
+        activeSwingLow: 7419.25,
+        activeSwingHigh: 7420.5,
+      },
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+      timeframeMssEvidence: timeframeMssEvidenceLayer('bullish', {
+        '5M': { evidenceTimestamp: '2026-06-08T13:20:00-04:00' },
+      }),
+      fvgZones: [{
+        direction: 'LONG',
+        lower: 7412,
+        upper: 7417.75,
+        midpoint: 7415,
+        formedAt: '2026-06-08T13:20:00-04:00',
+        formedCandleIndex: 3,
+        impulseQualified: true,
+        impulseBodyRatio: 1.5,
+        impulseRangeRatio: 1.5,
+        confidence: 'High',
+      }],
+      candles: [
+        { index: 0, timestamp: '2026-06-08T13:05:00-04:00', open: 7422, high: 7423, low: 7420, close: 7421, direction: 'bearish', confidence: 'High' },
+        { index: 1, timestamp: '2026-06-08T13:10:00-04:00', open: 7421, high: 7422, low: 7419.25, close: 7420, direction: 'bearish', confidence: 'High' },
+        { index: 2, timestamp: '2026-06-08T13:15:00-04:00', open: 7420, high: 7421, low: 7419.5, close: 7420.5, direction: 'bullish', confidence: 'High' },
+        { index: 3, timestamp: '2026-06-08T13:20:00-04:00', open: 7412.5, high: 7418, low: 7412, close: 7418, direction: 'bullish', confidence: 'High', isExpansion: true },
+        { index: 4, timestamp: '2026-06-08T13:35:00-04:00', open: 7419.25, high: 7420, low: 7415, close: 7419, direction: 'bullish', confidence: 'High', isRejection: true },
+      ],
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'lunch', chartContext: context, result: null });
+    const micro = result.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation);
+
+    assert.ok(micro);
+    assert.equal(micro.direction, 'LONG');
+    assert.equal(micro.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(micro.stop, null);
+    assert.equal(micro.target1, null);
+    assert.equal(micro.target2, null);
+    assert.ok(micro.missingEvidence.some((item) => item.includes('selected stop 7419.00 is not below entry 7419.00')));
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
   ['Intraday MSS Micro Continuation promotes bullish MSS close-through retest without requiring a 5M FVG', () => {
     const context = htfMssContext('LONG', {
       tradeDate: '2026-06-09',

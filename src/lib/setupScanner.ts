@@ -3675,10 +3675,14 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
   const htfGate = htfContextGate(chartContext);
   const retest = intradayMicroContinuationTriggerPlan(chartContext, direction, fvg);
   const entry = retest.entry;
-  const protectedMssStop = retest.source === 'mss_close_through_retest'
+  const rawProtectedMssStop = retest.source === 'mss_close_through_retest'
     ? { stop: retest.stop, reason: retest.stopBlocker }
     : protectedFiveMinuteMssStopResult(chartContext, direction);
-  const stop = retest.stop ?? protectedMssStop.stop;
+  const protectedMssStop = protectedMssStopBeyondEntry(direction, entry, {
+    stop: retest.stop ?? rawProtectedMssStop.stop,
+    reason: retest.stopBlocker ?? rawProtectedMssStop.reason,
+  });
+  const stop = protectedMssStop.stop;
   const targets = computedTargets(direction, entry, stop);
   const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
     (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
