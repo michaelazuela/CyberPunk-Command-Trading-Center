@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Validate nonmatching Sweep invalid-stop penalty candidate in research.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-nonmatching-penalty-validation.ts, tools/automation/unified-positive-held-local-preview-sweep-nonmatching-penalty-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The corrected top-selection simulation improved by demoting a nonmatching Sweep row, so the desk needed to prove the nonmatching bucket was actually an invalid-stop loser bucket rather than a broad Sweep removal.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-nonmatching-penalty-validation.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-nonmatching-penalty-validation -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784348679609.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784331967550.json --top-selection-simulation tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-lead-top-selection-simulation-1784349349414.json --json.
+Result: Passed. Corrected run evaluated 373 source rows and 100 joined Sweep rows. Sweep lead bucket: 80 rows. Nonmatching Sweep bucket: 20 rows, 0 false-reject winners, -$221.25 one-MES P/L. Top-selection simulation delta remained +$35.00. Recommended action is validate_invalid_stop_penalty_research_only.
+Trading logic changed: No. This is a local diagnostic only. It does not install a rank penalty, remove SweepMssFvgRetrace, change live ranking, scanner behavior, canExecute, Discord, Supabase, bridge behavior, entry, stop, target, or risk.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The evidence supports invalid-stop Sweep penalty research, not live-facing behavior yet. The top-selection improvement is still narrow because only one same-session slate changed.
+Next recommended action: Build a guarded scanner-replay dry-run that applies the invalid-stop Sweep penalty only in research selection and proves it does not hide valid Conditional/EntryTriggerPending Sweep rows or stronger alternate-model tickets.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add corrected Sweep lead same-session top-selection simulation.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-lead-top-selection-simulation.ts, tools/automation/unified-positive-held-local-preview-sweep-lead-top-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The corrected Sweep intake classifier showed Conditional/EntryTriggerPending rows were cleaner in isolation, but the desk still needed proof that using the lead would improve same-session top-ticket selection before any scanner-visible behavior.
