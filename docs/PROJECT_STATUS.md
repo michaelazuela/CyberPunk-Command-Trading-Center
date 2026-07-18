@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add repaired raw-OHLC scanner artifact dedupe/timing filter.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-dedupe-timing-filter.ts, tools/automation/raw-ohlc-scanner-artifact-dedupe-timing-filter.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The repaired replay package produced 144 candidate rows, but many were repeated 5M event states. The desk needed a local/read-only campaign-level filter before any scanner-visible ranking or publish logic could be considered.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-dedupe-timing-filter.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-dedupe-timing-filter -- --replay-package-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784408142980.json --json.
+Result: Passed. The filter reduced 144 replay rows to 30 model/direction/level campaigns. With same-bar entries excluded by default and stale SweepMssFvgRetrace rows isolated, only 3 campaign leads remained eligible: 0 winners, 3 stopped-before-T1 losses, -273.75 one-MES research P/L, 113 same-bar excluded rows, 11 stale Sweep isolated rows, 17 unresolved/blocked rows, and livePromotionAllowedRows 0.
+Trading logic changed: No. This is a local/read-only diagnostic over saved replay outcome artifacts. It does not run setupScanner, post Discord, write Supabase, read live bridge data, loosen canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is stricter than the raw repeated-row outcome report. It deliberately treats same-bar entries as unproven campaign evidence unless a model is explicitly allowlisted, and it isolates stale Sweep rows instead of counting them as publishable wins.
+Next recommended action: Add a read-only model-specific timing allowlist probe to test whether any model legitimately deserves same-bar handling; do not install a live rank boost or publish change until that probe separates after-lunch/opening-drive immediacy from repeated scanner visibility.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add repaired raw-OHLC scanner artifact replay-package adapter and run outcome/source-proof chain.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The repaired scanner artifact package needed to flow through the existing replay outcome and source/proof timing tools without changing those outcome engines or reading live systems.
