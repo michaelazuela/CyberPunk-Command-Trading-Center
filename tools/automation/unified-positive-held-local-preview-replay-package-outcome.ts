@@ -227,6 +227,10 @@ function pointsToPl(direction: Direction, entry: number, exit: number): number {
   return round(points * POINT_VALUE);
 }
 
+function stopIsDirectionallyValid(direction: Direction, entry: number, stop: number): boolean {
+  return direction === 'LONG' ? stop < entry : stop > entry;
+}
+
 function buildOutcomeRow(row: UnifiedPositiveHeldLocalPreviewReplayPackageReport['rows'][number]): UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeRow {
   const bars = loadDecisionTapeBars(row.sourceTapePath);
   const proofTime = normalizeTime(row.proofTime) || row.proofTime;
@@ -242,6 +246,9 @@ function buildOutcomeRow(row: UnifiedPositiveHeldLocalPreviewReplayPackageReport
     !Number.isFinite(row.t1) ? 'missing T1' : null,
     !Number.isFinite(row.t2) ? 'missing T2' : null,
     riskPoints <= 0 ? 'missing positive entry-to-stop risk' : null,
+    Number.isFinite(row.entry) && Number.isFinite(row.stop) && !stopIsDirectionallyValid(row.direction, row.entry, row.stop)
+      ? 'directionally invalid entry-to-stop geometry'
+      : null,
   ].filter((item): item is string => Boolean(item));
 
   if (blockers.length) {

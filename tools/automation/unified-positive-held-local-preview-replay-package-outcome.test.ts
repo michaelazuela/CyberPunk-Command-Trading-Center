@@ -223,6 +223,35 @@ const replayPackageReport: UnifiedPositiveHeldLocalPreviewReplayPackageReport = 
       outcomeInputStatus: 'ready_for_read_only_outcome_replay',
       blockers: [],
     },
+    {
+      ticketId: '2026-06-19-morning-SweepMssFvgRetrace-LONG',
+      tradeDate: '2026-06-19',
+      session: 'morning',
+      instrument: 'MES',
+      setupType: 'SweepMssFvgRetrace',
+      direction: 'LONG',
+      proofTime: '2026-06-16T10:00:00.0000000',
+      firstSeenTime: '2026-06-16T10:00:00.0000000',
+      lastSeenTime: '2026-06-16T10:10:00.0000000',
+      occurrences: 1,
+      entry: 100,
+      stop: 104,
+      t1: 106,
+      t2: 108,
+      riskPoints: 4,
+      t1R: 1.5,
+      t2R: 2,
+      proofState: 'scanner_held_complete',
+      triageScore: 120,
+      sourceTapePath: longTape,
+      barsSource: 'scanner_decision_tape_completed_5m',
+      barsLoaded: 3,
+      barsAfterProof: 3,
+      firstBarTime: '2026-06-16T10:00:00',
+      lastBarTime: '2026-06-16T10:10:00',
+      outcomeInputStatus: 'ready_for_read_only_outcome_replay',
+      blockers: [],
+    },
   ],
   blockers: [],
   recommendations: ['Run outcome replay.'],
@@ -236,22 +265,22 @@ const report = buildUnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport({
 }, '2026-07-17T00:01:00.000Z');
 
 assert.equal(report.reportType, 'unified_positive_held_local_preview_replay_package_outcome');
-assert.equal(report.status, 'pass');
+assert.equal(report.status, 'fail');
 assert.equal(report.authority.researchOnly, true);
 assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
-assert.equal(report.summary.packageRows, 3);
+assert.equal(report.summary.packageRows, 4);
 assert.equal(report.summary.resolvedRows, 2);
 assert.equal(report.summary.unresolvedRows, 1);
-assert.equal(report.summary.blockedRows, 0);
+assert.equal(report.summary.blockedRows, 1);
 assert.equal(report.summary.noFillRows, 1);
 assert.equal(report.summary.stoppedBeforeT1Rows, 1);
 assert.equal(report.summary.t1AndT2Rows, 1);
 assert.equal(report.summary.grossResolvedOneMesPl, -5);
-assert.equal(report.summary.daySessionModelGroups.length, 3);
+assert.equal(report.summary.daySessionModelGroups.length, 4);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
 const longRow = report.rows.find((row) => row.ticketId === '2026-06-16-morning-OpeningDriveFvgContinuation-LONG');
@@ -272,6 +301,13 @@ const noFillRow = report.rows.find((row) => row.ticketId === '2026-06-18-morning
 assert.equal(noFillRow?.outcomeStatus, 'unresolved');
 assert.equal(noFillRow?.outcomeLabel, 'no_fill');
 assert.equal(noFillRow?.resolvedOneMesPl, null);
+
+const invalidStopRow = report.rows.find((row) => row.ticketId === '2026-06-19-morning-SweepMssFvgRetrace-LONG');
+assert.equal(invalidStopRow?.outcomeStatus, 'blocked');
+assert.equal(invalidStopRow?.outcomeLabel, 'blocked');
+assert.equal(invalidStopRow?.resolvedOneMesPl, null);
+assert.ok(invalidStopRow?.blockers.includes('directionally invalid entry-to-stop geometry'));
+assert.ok(report.blockers.some((blocker) => blocker.includes('directionally invalid entry-to-stop geometry')));
 assert.match(report.markdown, /Gross resolved one-MES P\/L: -5/);
 
 const missing = buildUnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport({

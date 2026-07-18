@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Block invalid stop geometry in held-local replay outcome P/L.
+Files changed: tools/automation/unified-positive-held-local-preview-replay-package-outcome.ts, tools/automation/unified-positive-held-local-preview-replay-package-outcome.test.ts, docs/PROJECT_STATUS.md.
+Reason: Sweep filter validation exposed rows labeled stopped_before_t1 while resolved one-MES P/L was positive. The root cause was directionally invalid stop geometry, such as long rows with the stop above entry or short rows with the stop below entry. The research outcome replay was computing signed P/L anyway, which inflated invalid rows.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-replay-package-outcome.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-replay-package-outcome -- --replay-package <broad package> --json; local sanity check for positive stopped_before_t1 rows.
+Result: Passed for focused regression; broad diagnostic now fails closed as intended because 6 SweepMssFvgRetrace rows are blocked for directionally invalid entry-to-stop geometry. The broad rerun changed package totals from 373 rows, 267 resolved, 106 unresolved, 0 blocked, +$9,909.52 to 373 rows, 263 resolved, 104 unresolved, 6 blocked, +$9,380.77. SweepMssFvgRetrace changed from 68 resolved, 32 unresolved, 0 blocked, +$3,837.50 to 64 resolved, 30 unresolved, 6 blocked, +$3,308.75. Sanity check found 0 stopped_before_t1 rows with positive resolved P/L after the fix.
+Trading logic changed: No live trading logic changed. This changes research outcome accounting only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Downstream broad source/proof timing and rank simulations should be regenerated from the corrected outcome report after blocked invalid-stop rows are handled explicitly.
+Next recommended action: Regenerate source/proof timing from the corrected outcome report with invalid-stop blocked rows preserved as data-quality blockers, then rerun the Sweep intake/top-selection validation on the corrected set.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add and run SweepMssFvgRetrace intake-feature classifier.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-intake-feature-classifier.ts, tools/automation/unified-positive-held-local-preview-sweep-intake-feature-classifier.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Sweep segment research showed that the strongest adverse-path separator was replay-outcome evidence and could not be used live. This phase mined pre-outcome intake/proof-timing fields for a cleaner Sweep separator before considering any scanner-visible change.
