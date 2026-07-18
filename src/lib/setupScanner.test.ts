@@ -3473,6 +3473,29 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.blockReason, null);
   }],
 
+  ['HTF displacement MSS continuation does not build targets from a protected stop on the wrong side of entry', () => {
+    const base = htfDisplacementContinuationContext('SHORT');
+    const context = htfDisplacementContinuationContext('SHORT', {
+      candles: base.candles?.map((candle, index) => {
+        if (index === 0) return { ...candle, high: 7580 };
+        if (index === 1) return { ...candle, high: 7580.75 };
+        if (index === 2) return { ...candle, high: 7580.5 };
+        return candle;
+      }),
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.stop, null);
+    assert.equal(candidate.target1, null);
+    assert.equal(candidate.target2, null);
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('selected stop 7581.00 is not above entry 7581.25')));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
+  }],
+
   ['HTF displacement MSS continuation does not fall back to proposed stop when protected 5M MSS swing stop is unproven', () => {
     const context = htfDisplacementContinuationContext('LONG', {
       proposedStop: 7599,

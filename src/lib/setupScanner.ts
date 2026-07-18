@@ -2758,6 +2758,22 @@ function protectedFiveMinuteMssStop(chartContext: ChartContext, direction: Direc
   return protectedFiveMinuteMssStopResult(chartContext, direction).stop;
 }
 
+function protectedMssStopBeyondEntry(
+  direction: Direction,
+  entry: number | null,
+  result: ProtectedMssStopResult
+): ProtectedMssStopResult {
+  if (result.stop === null || entry === null || hasDirectionallyValidStop(direction, entry, result.stop)) {
+    return result;
+  }
+  return {
+    stop: null,
+    reason: direction === 'SHORT'
+      ? `Protected 5M MSS swing stop blocked: selected stop ${formatLinePrice(result.stop)} is not above entry ${formatLinePrice(entry)}.`
+      : `Protected 5M MSS swing stop blocked: selected stop ${formatLinePrice(result.stop)} is not below entry ${formatLinePrice(entry)}.`,
+  };
+}
+
 function protectedFiveMinuteRetestSwingStopResult(
   direction: Direction,
   candles: ReturnType<typeof readableCompletedFiveMinuteCandles>,
@@ -4181,10 +4197,10 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
   const mssClose = reentryPlan.decisionLevel ?? parsePrice(fiveDisplacement?.close) ?? parsePrice(chartContext.proposedEntry);
   const entry = reentryPlan.confirmed ? reentryPlan.entry : parsePrice(chartContext.proposedEntry) ?? mssClose;
   const fallbackProtectedMssStop = protectedFiveMinuteMssStopResult(chartContext, direction);
-  const protectedMssStop = {
+  const protectedMssStop = protectedMssStopBeyondEntry(direction, entry, {
     stop: reentryPlan.stop ?? fallbackProtectedMssStop.stop,
     reason: reentryPlan.stopBlocker ?? fallbackProtectedMssStop.reason,
-  };
+  });
   const stop = protectedMssStop.stop;
   const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close) ?? entry;
   const target = liquidityTargetForContinuation(chartContext, direction, entry, currentPrice);

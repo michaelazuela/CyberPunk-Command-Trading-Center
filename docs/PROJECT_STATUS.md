@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Fail closed when HTF displacement MSS protected stop is on the wrong side of entry.
+Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
+Reason: Repaired raw-OHLC scanner artifacts showed HTF displacement MSS continuation rows being blocked by directionally impossible protected-stop geometry, mostly shorts where the fallback protected 5M MSS swing stop was below the fresh entry. The builder should not compute targets from an invalid entry/stop pair and leave cleanup to downstream validation.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run test; npm run build; git diff --check; regenerated raw-OHLC scanner artifacts for 2026-06-03, 2026-06-05, 2026-06-08, 2026-06-09, 2026-06-15, 2026-06-16, and 2026-06-19 using the saved MES June 1-July 2 OHLC source.
+Result: Passed. All seven formerly invalid-geometry replay days now report invalidGeometryBlockedCandidates 0, with 0 executable candidates created. The new guard demotes wrong-side protected MSS stops to missing protected-stop evidence before targets are built.
+Trading logic changed: Yes, narrowly. HTF displacement MSS continuation now requires its selected protected 5M MSS stop to be beyond the actual entry before computing app targets. Wrong-side stops remain conditional with missing protected-stop evidence instead of carrying invalid full geometry.
+Bridge impact: None. Replay used saved local OHLC artifacts only; NinjaTrader bridge behavior was not changed.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This does not promote new trades. It makes invalid HTF MSS geometry cleaner and safer, but the broader June 1-July 2 replay/ranking package still needs to be rebuilt after this fix.
+Next recommended action: Continue the broad repaired raw-OHLC artifact run in one-day chunks and rerun replay-package/outcome/dedupe/allowlist/separator reports before any scanner-visible rank or publish change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add same-bar winner/loss separator drilldown for repaired raw-OHLC replay outcomes.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-samebar-separator-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-samebar-separator-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Single-model same-bar allowlist probes turned positive, but most models still had selected stopped-before-T1 rows. The desk needed to isolate same-bar winners vs losses by model, time bucket, risk, MFE/R, MAE/R, and first replay-bar behavior before any live-facing allowlist or rank overlay.
