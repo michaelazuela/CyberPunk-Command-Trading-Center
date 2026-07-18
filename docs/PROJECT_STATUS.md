@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add installed-score replay comparison for the invalid-stop Sweep rank penalty.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-installed-score-comparison.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-installed-score-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After installing the narrow candidate-book rank penalty, the desk needed proof that the installed scoring path matches the prior research overlay before considering any pipeline or scanner-facing expansion.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-penalty-installed-score-comparison.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-penalty-installed-score-comparison -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784348679609.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784331967550.json --fresh-scanner-overlay-dry-run tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-overlay-dry-run-1784395568082.json --json.
+Result: Passed. Installed-score comparison evaluated 373 rows through buildUnifiedDeskCandidateBook, including 100 Sweep rows, 80 valid Conditional/EntryTriggerPending Sweep lead rows, and 20 invalid-stop Sweep rows. Installed penalty rows: 20. Valid Sweep lead rows penalized: 0. canExecute=true rows: 0. Entry/stop/target/risk drift rows: 0. Overlay row counts matched expected proof, and the prior overlay top-selection delta remained +$35.00.
+Trading logic changed: No additional live trading logic changed in this phase. This adds local/read-only comparison proof only. The prior checkpoint already installed the narrow candidate-book score penalty; this phase does not change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves the candidate-book score path, not a tradeDecisionPipeline or scanner-selection change. Any expansion into pipeline final selection remains a separate trading-rule/model-ranking change.
+Next recommended action: Keep tradeDecisionPipeline untouched for now. Run a scanner-artifact comparison that consumes candidate-book output and proves whether the score penalty materially changes human-review ticket selection without changing publishDiscord, shouldPost, canExecute, entry, stop, target, or risk.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Install narrow invalid-stop Sweep rank penalty in the unified desk candidate book.
 Files changed: src/lib/unifiedDeskCandidateBook.ts, src/lib/unifiedDeskCandidateBook.test.ts, docs/PROJECT_STATUS.md.
 Reason: The live-facing proposal gate passed and the user approved the narrow install. The change applies only at the unified desk candidate-book ranking score boundary so invalid-stop Sweep rows stop outranking protected alternatives while final execution approval remains unchanged.
