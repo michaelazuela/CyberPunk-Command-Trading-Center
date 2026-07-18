@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add same-bar winner/loss separator drilldown for repaired raw-OHLC replay outcomes.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-samebar-separator-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-samebar-separator-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Single-model same-bar allowlist probes turned positive, but most models still had selected stopped-before-T1 rows. The desk needed to isolate same-bar winners vs losses by model, time bucket, risk, MFE/R, MAE/R, and first replay-bar behavior before any live-facing allowlist or rank overlay.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-samebar-separator-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-samebar-separator-drilldown -- --replay-package-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784408142980.json --json.
+Result: Passed. The drilldown evaluated 113 same-bar rows: 79 winners, 28 losses, 0 unresolved, +9850 one-MES research P/L, 5 positive same-bar model groups, 4 loss-bearing model groups, and livePromotionAllowedRows 0. AfterLunchDriveFvgContinuation was the clean standout in this narrow repaired-artifact set: 8 rows, 8 winners, 0 losses, +1060, 0 first-replay-bar stops, and 4 first-replay-bar T1 hits. Other same-bar-positive models still carried losses: HtfDisplacementFvgContinuation 20/9, HtfDisplacementMssContinuation 5/7, IntradayMssMicroContinuation 28/9, SweepMssFvgRetrace 18/3.
+Trading logic changed: No. This is a local/read-only drilldown over saved replay outcome artifacts. It does not run setupScanner, post Discord, write Supabase, read live bridge data, loosen canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The clean AfterLunch same-bar result is promising but comes from the repaired June 10-12 lunch artifact set only. It should not become live-facing until a broader repaired artifact replay confirms the same behavior across more sessions.
+Next recommended action: Broaden the repaired raw-OHLC scanner artifact run to the full June 1-July 2 morning/lunch/evening research window, then rerun replay-package, outcome, dedupe, allowlist, and separator reports before installing any scanner-visible rank or publish change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add same-bar allowlist probe for repaired raw-OHLC campaign evidence.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-samebar-allowlist-probe.ts, tools/automation/raw-ohlc-scanner-artifact-samebar-allowlist-probe.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The campaign dedupe/timing filter showed same-bar entries dominate the repaired replay row set. The desk needed to test same-bar inclusion model-by-model before considering any live-facing rank or publish change.
