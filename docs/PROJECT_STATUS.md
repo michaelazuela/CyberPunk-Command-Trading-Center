@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add repaired raw-OHLC scanner artifact replay-package adapter and run outcome/source-proof chain.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The repaired scanner artifact package needed to flow through the existing replay outcome and source/proof timing tools without changing those outcome engines or reading live systems.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-replay-package.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-replay-package -- --scanner-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-06-10-to-2026-06-12-1784407274138.json --json; npm run diagnostic:held-local-preview-replay-package-outcome -- --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784408134268.json --json; npm run diagnostic:held-local-preview-replay-package-source-proof-timing -- --replay-package-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784408142980.json --json.
+Result: Passed. The adapter created 144 ready replay rows, 0 blocked rows, 0 invalid-geometry rows, 5 model groups, and livePromotionAllowedRows 0. Outcome replay resolved 127 rows with 90 T1/T2 winners, 31 stopped-before-T1 losses, 17 no-fill rows, and +12123.75 gross one-MES research P/L. Source/proof timing evaluated all 144 rows: 90 winners, 31 losses, 23 unresolved/no-fill-or-other unresolved, 0 blocked, 5 positive model groups, and livePromotionAllowedRows 0.
+Trading logic changed: No additional runtime change in this checkpoint. This is a local/read-only adapter that emits an existing replay-package schema from saved scanner artifact candidates with complete valid entry/stop/T1/T2. It does not run setupScanner, post Discord, write Supabase, read live bridge data, loosen canExecute, or change outcome math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The 144 rows are repeated 5M event states, not deduped scanner-owned trade tickets. Same-bar entries and stale/repeated entries inflate research counts, so this result is directional proof only, not a live-publish recommendation.
+Next recommended action: Add a read-only dedupe/timing filter over the repaired artifact replay rows: one candidate per setup/direction campaign, exclude same-bar entry rows unless explicitly allowed by model, and isolate stale Sweep rows before any ranking or publish-facing change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add raw OHLC scanner artifact pre/post comparison proof.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After the Model 1 protected stop fix, the desk needed a durable read-only comparison proving the repaired raw-OHLC scanner artifact package removed invalid geometry without creating executable rows.
