@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add valid-review top-slate outcome diagnostic.
+Files changed: tools/automation/unified-positive-held-local-preview-valid-review-top-slate-outcome.ts, tools/automation/unified-positive-held-local-preview-valid-review-top-slate-outcome.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After clearing blocked-top slate coverage, the desk needed to analyze the 75 valid-review installed top slates and identify winner/loss/unresolved structure before any scanner-visible ranking behavior is considered.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-valid-review-top-slate-outcome.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-valid-review-top-slate-outcome -- --installed-score-comparison tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-installed-score-comparison-1784400327124.json --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784400307549.json --json.
+Result: Passed. The diagnostic evaluated 85 slates and found 75 valid-review installed top slates: 51 winners, 13 losses, 11 unresolved, 0 blocked, 0 missing timing, 75 canExecute=false rows, and gross resolved one-MES P/L of 3009.46. Model outcomes: OpeningDriveFvgContinuation 23 rows, 15 winners, 3 losses, 5 unresolved, +1120.04; TurtleSoup 16 rows, 10 winners, 4 losses, 2 unresolved, +755; SweepMssFvgRetrace 18 rows, 13 winners, 3 losses, 2 unresolved, +682.5; AfterLunchDriveFvgContinuation 18 rows, 13 winners, 3 losses, 2 unresolved, +451.92. Losses show wider risk than winners across all four top models, and TurtleSoup losses show slower proof-to-entry timing than winners.
+Trading logic changed: No. This is a local/read-only diagnostic only. It does not change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is outcome analysis, not a no-lookahead filter install. The next step must prove separators using only fields available before entry.
+Next recommended action: Build a no-lookahead separator diagnostic for the valid-review top slates, starting with risk width and proof-to-entry timing buckets by model/session. Do not promote the invalid-stop Sweep penalty to scanner-visible behavior.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Confirm blocked-top slates cleared after research-only replay triage regeneration.
 Files changed: tools/automation/unified-positive-held-local-preview-blocked-top-slate-drilldown.ts, tools/automation/unified-positive-held-local-preview-blocked-top-slate-drilldown.test.ts, docs/PROJECT_STATUS.md.
 Reason: After installing blocked-top alternate intake triage, the downstream research chain needed to confirm whether the 2026-06-12 morning invalid-stop Sweep top slate still existed. The drilldown diagnostic also needed to treat zero blocked-top slates as a successful cleared state rather than a failure.
