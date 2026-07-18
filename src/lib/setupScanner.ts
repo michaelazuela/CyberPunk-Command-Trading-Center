@@ -1148,6 +1148,62 @@ function opposingLiquidityTarget(chartContext: ChartContext, direction: Directio
   return candidates[0] ?? null;
 }
 
+function sweepTimestampMs(sweep: { timestamp?: string | null }): number {
+  const parsed = Date.parse(String(sweep.timestamp || ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function sameTimestamp(a?: string | null, b?: string | null): boolean {
+  return Boolean(a && b && a === b);
+}
+
+function sweepExtremeFromEvent(
+  chartContext: ChartContext,
+  direction: Direction,
+  sweep: NonNullable<ChartContext['liquidityEvents']>[number],
+): number | null {
+  const candles = chartContext.candles || [];
+  const matchedFailedBreak = (chartContext.failedBreakEvents || []).find((event) =>
+    event.direction === direction &&
+    sameTimestamp(event.timestamp, sweep.timestamp) &&
+    Number.isFinite(event.sweptExtreme)
+  );
+  const sweepCandle = sweep.timestamp ? candles.find((candle) => candle.timestamp === sweep.timestamp) : null;
+  return direction === 'LONG'
+    ? parsePrice(matchedFailedBreak?.sweptExtreme) ?? parsePrice(sweepCandle?.low) ?? parsePrice(sweep.level)
+    : parsePrice(matchedFailedBreak?.sweptExtreme) ?? parsePrice(sweepCandle?.high) ?? parsePrice(sweep.level);
+}
+
+function stopBeyondSweepExtreme(direction: Direction, sweepExtreme: number | null): number | null {
+  if (direction !== 'LONG' && direction !== 'SHORT' || sweepExtreme === null) return null;
+  return direction === 'LONG'
+    ? roundToTick(sweepExtreme - TRADE_RULES.targetModel.tickSize)
+    : roundToTick(sweepExtreme + TRADE_RULES.targetModel.tickSize);
+}
+
+function modelOneProtectedSweepStop(args: {
+  chartContext: ChartContext;
+  direction: Direction;
+  sweeps: NonNullable<ChartContext['liquidityEvents']>;
+  entry: number | null;
+}): { sweepExtreme: number | null; stop: number | null } {
+  if (args.direction !== 'LONG' && args.direction !== 'SHORT') return { sweepExtreme: null, stop: null };
+  const sameDirectionSweeps = args.sweeps
+    .filter((sweep) => sweep.direction === args.direction)
+    .sort((a, b) => sweepTimestampMs(b) - sweepTimestampMs(a));
+  if (!sameDirectionSweeps.length) return { sweepExtreme: null, stop: null };
+
+  for (const sweep of sameDirectionSweeps) {
+    const sweepExtreme = sweepExtremeFromEvent(args.chartContext, args.direction, sweep);
+    const stop = stopBeyondSweepExtreme(args.direction, sweepExtreme);
+    if (args.entry === null || hasDirectionallyValidStop(args.direction, args.entry, stop)) {
+      return { sweepExtreme, stop };
+    }
+  }
+
+  return { sweepExtreme: null, stop: null };
+}
+
 function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirmation = false): ModelOneValidation | null {
   if (!chartContext) return null;
   const candles = chartContext.candles || [];
@@ -1263,20 +1319,15 @@ function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirm
     missingEvidence.push('Entry inside FVG or valid confluence zone');
   }
 
-  const failedBreak = (chartContext.failedBreakEvents || []).find((event) => event.direction === direction && Number.isFinite(event.sweptExtreme));
-  const sweepCandle = sweep?.timestamp ? candles.find((candle) => candle.timestamp === sweep.timestamp) : null;
-  const sweepExtreme = direction === 'LONG'
-    ? parsePrice(failedBreak?.sweptExtreme) ?? parsePrice(sweepCandle?.low) ?? parsePrice(chartContext.keyLevels.activeSwingLow) ?? parsePrice(sweep?.level)
-    : parsePrice(failedBreak?.sweptExtreme) ?? parsePrice(sweepCandle?.high) ?? parsePrice(chartContext.keyLevels.activeSwingHigh) ?? parsePrice(sweep?.level);
-  const stop = manualLevelConfirmation || sweepExtreme === null
-    ? null
-    : direction === 'LONG'
-      ? roundToTick(sweepExtreme - TRADE_RULES.targetModel.tickSize)
-      : roundToTick(sweepExtreme + TRADE_RULES.targetModel.tickSize);
+  const protectedSweepStop = manualLevelConfirmation
+    ? { sweepExtreme: null, stop: null }
+    : modelOneProtectedSweepStop({ chartContext, direction, sweeps, entry });
+  const sweepExtreme = protectedSweepStop.sweepExtreme;
+  const stop = protectedSweepStop.stop;
   if (stop !== null && sweepExtreme !== null && (direction === 'LONG' ? stop < sweepExtreme : stop > sweepExtreme)) {
     evidence.push('Stop beyond sweep extreme');
   } else {
-    missingEvidence.push('Stop beyond sweep extreme');
+    missingEvidence.push(entry !== null ? 'Directionally valid stop beyond sweep extreme' : 'Stop beyond sweep extreme');
   }
 
   const stopIsDirectionallyValid = hasDirectionallyValidStop(direction, entry, stop);

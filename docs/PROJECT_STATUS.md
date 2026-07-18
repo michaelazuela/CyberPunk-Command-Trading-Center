@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add raw OHLC scanner artifact generator and fix Model 1 protected sweep-stop selection.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-generator.ts, tools/automation/raw-ohlc-scanner-artifact-generator.test.ts, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Fresh June 10/12 lunch scanner regeneration showed SweepMssFvgRetrace could pair a later FVG entry with an earlier same-direction sweep stop above a long entry. The geometry validator blocked the malformed rows, but the builder still needed to choose a directionally valid protected sweep extreme instead of the first same-direction sweep.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-generator.test.ts; npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifacts -- --market-bars-json tools/automation/diagnostic-reports/raw-ohlc-source-MES-2026-06-01-to-2026-07-02-1784223007126.json --start-date 2026-06-10 --end-date 2026-06-12 --instrument MES --sessions lunch --json.
+Result: Passed. The first fresh local OHLC replay produced 144 lunch events with 19 invalid-geometry blocked SweepMssFvgRetrace candidates. After the stop-source fix, the same 144-event replay produced 0 invalid-geometry blocked candidates, 0 executable candidates, 566 conditional candidates, 0 HTF data-limited events, and no report blockers. The June 10 14:45 long candidate now has entry 7308.25, protected stop 7301.25, T1 7318.75, and T2 7322.25, but remains Conditional/EntryTriggerPending due to missing/ opposing 5M MSS, line-in-the-sand, and target-room blockers.
+Trading logic changed: Yes, narrowly. SweepMssFvgRetrace now derives its protected stop from the latest same-direction sweep extreme that is directionally valid against the selected FVG entry; if none exists, the stop remains unavailable and normal deterministic gates block promotion. It does not loosen canExecute, does not create executable plans from HTF context, does not alter TurtleSoup, does not change app target math, and does not touch Discord, Supabase, bridge behavior, or automated execution.
+Bridge impact: None. The generator reads local canonical OHLC JSON only and does not call NinjaTrader live bridge.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The new artifact generator is intentionally slower because it runs full chart-context/scanner replay per completed 5M candle. The June 10 15:30 long row becomes geometrically valid but structurally extended, so it remains conditional and should be studied before any ranking/publish change.
+Next recommended action: Add a small read-only comparison pass that consumes the pre/post raw-OHLC scanner artifact packages and summarizes changed model rows by date/session/time/setup, then feed the repaired artifact package into the replay package/outcome/source-proof chain.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add scanner geometry-validator replay proof.
 Files changed: tools/automation/unified-positive-held-local-preview-scanner-geometry-validator-replay.ts, tools/automation/unified-positive-held-local-preview-scanner-geometry-validator-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After installing the scanner geometry validator, the desk needed a durable read-only proof that saved June 10/12 bad candidate surfaces would now be blocked while later valid same-direction surfaces remained intact.

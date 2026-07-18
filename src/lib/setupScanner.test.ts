@@ -5896,6 +5896,90 @@ const tests: Array<[string, () => void]> = [
     assert.equal(invalid.target2, 7427.75);
     assert.ok(invalid.missingEvidence.includes('Directionally invalid entry-to-stop geometry.'));
   }],
+
+  ['Sweep MSS FVG retrace uses latest directionally valid sweep stop for later FVG entry', () => {
+    const context = structuredContext();
+    context.sessionType = 'replay_lunch';
+    context.tradeDate = '2026-06-10';
+    context.chartTimestamp = '2026-06-10T14:45:00';
+    context.proposedEntry = null;
+    context.proposedStop = null;
+    context.setupEvidence = {
+      liquiditySweep: {
+        ...(context.setupEvidence?.liquiditySweep || {}),
+        detected: true,
+        possible: false,
+        direction: 'LONG',
+        entry: null,
+        stop: null,
+        confidence: 'High',
+        evidence: ['Regression fixture sweep and reclaim facts detected.'],
+        missingEvidence: [],
+      },
+    };
+    context.keyLevels = {
+      ...context.keyLevels,
+      currentPrice: 7305.75,
+      activeSwingLow: 7301.5,
+      activeSwingHigh: 7328.75,
+      nearestResistance: 7335,
+    };
+    context.candles = [
+      { index: 0, timestamp: '2026-06-10T12:15:00', open: 7324, high: 7326, low: 7319.5, close: 7322, direction: 'bullish', bodyQuality: 'normal', upperWickQuality: 'small', lowerWickQuality: 'large', isExpansion: false, isRejection: true, isBreather: false, isReclaim: true, confidence: 'High' },
+      { index: 1, timestamp: '2026-06-10T13:35:00', open: 7310, high: 7311, low: 7303.25, close: 7308, direction: 'bullish', bodyQuality: 'normal', upperWickQuality: 'small', lowerWickQuality: 'large', isExpansion: false, isRejection: true, isBreather: false, isReclaim: true, confidence: 'High' },
+      { index: 2, timestamp: '2026-06-10T13:55:00', open: 7305, high: 7314, low: 7305, close: 7312, direction: 'bullish', bodyQuality: 'large', upperWickQuality: 'small', lowerWickQuality: 'small', isExpansion: true, isRejection: false, isBreather: false, isReclaim: false, confidence: 'High' },
+      { index: 3, timestamp: '2026-06-10T14:45:00', open: 7306, high: 7309.25, low: 7301.5, close: 7305.75, direction: 'bearish', bodyQuality: 'small', upperWickQuality: 'large', lowerWickQuality: 'large', isExpansion: false, isRejection: true, isBreather: true, isReclaim: false, confidence: 'High' },
+    ];
+    context.liquidityEvents = [
+      { type: 'sweep', direction: 'LONG', level: 7321.5, sweptLevelLabel: 'Recent swing low', reclaimed: true, timestamp: '2026-06-10T12:15:00', confidence: 'High', evidence: 'Early reclaimed sweep.' },
+      { type: 'sweep', direction: 'LONG', level: 7307, sweptLevelLabel: 'Recent swing low', reclaimed: true, timestamp: '2026-06-10T13:35:00', confidence: 'High', evidence: 'Later reclaimed sweep.' },
+    ];
+    context.liquiditySweeps = context.liquidityEvents;
+    context.reclaimEvents = [
+      { direction: 'LONG', reclaimedLevel: 7307, timestamp: '2026-06-10T13:35:00', confidence: 'High', evidence: 'Later sweep reclaimed.' },
+    ];
+    context.failedBreakEvents = [
+      { direction: 'LONG', failedLevel: 7321.5, levelLabel: 'Recent swing low', sweptExtreme: 7319.5, timestamp: '2026-06-10T12:15:00', candleIndex: 0, confidence: 'High', evidence: 'Early failed breakdown.' },
+      { direction: 'LONG', failedLevel: 7307, levelLabel: 'Recent swing low', sweptExtreme: 7303.25, timestamp: '2026-06-10T13:35:00', candleIndex: 1, confidence: 'High', evidence: 'Later failed breakdown.' },
+    ];
+    context.displacementCandles = [
+      { direction: 'LONG', timestamp: '2026-06-10T13:55:00', candleIndex: 2, bodyToRange: 0.8, closeLocation: 'top_quarter', leavesImbalance: true, breaksStructure: true, quality: 'confirmed', confidence: 'High', displacementScore: 80 },
+    ];
+    context.fvgZones = [
+      { direction: 'LONG', upper: 7310, lower: 7306.5, midpoint: 7308.25, formedAt: '2026-06-10T13:55:00', formedCandleIndex: 2, reclaimed: true, reclaimTimestamp: '2026-06-10T14:00:00', impulseQualified: true, impulseBodyRatio: 0.8, impulseRangeRatio: 1.2, confidence: 'High' },
+    ];
+    context.marketStructure = {
+      ...context.marketStructure,
+      trend: 'bullish',
+      marketStructureShift: true,
+      expansionCondition: true,
+    };
+    context.candleFacts = {
+      ...context.candleFacts,
+      expansionCandlePresent: true,
+      reclaimCandlePresent: true,
+      pullbackPresent: true,
+    };
+    context.setupReadyFacts = {
+      pullbackIntoFvg: true,
+      fvgReclaimed: true,
+      breakOfStructure: true,
+      sweepThenReclaim: true,
+      notes: ['Regression fixture.'],
+    };
+    context.targetObjectives = [
+      { label: 'Upside liquidity', price: 7330, direction: 'LONG', source: 'lunch', type: 'liquidity_pool', confidence: 'High', score: 80, distancePoints: null, rMultiple: null, reason: 'Fixture upside liquidity.' },
+    ];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_lunch', chartContext: context, result: null });
+    const candidate = result.candidates.find((item) => item.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.equal(candidate?.direction, 'LONG');
+    assert.equal(candidate?.entry, 7308.25);
+    assert.equal(candidate?.stop, 7303);
+    assert.equal(candidate?.executionStatus !== ExecutionStatus.Blocked || candidate?.blockReason !== NoTradeReason.InvalidStopLocation, true);
+    assert.ok(candidate?.evidence.includes('Stop beyond sweep extreme'));
+  }],
 ];
 
 for (const [name, test] of tests) {
