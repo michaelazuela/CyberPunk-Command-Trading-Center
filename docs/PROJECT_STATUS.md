@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add Sweep penalty scanner overlay readiness gate.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-scanner-overlay-readiness.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-scanner-overlay-readiness.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The guarded penalty replay was clean, but the desk needed a scanner-readiness gate proving the research penalty proof and scanner dry-run zero-live-publish proof are both clean before any fresh overlay experiment.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-penalty-scanner-overlay-readiness.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-penalty-scanner-overlay-readiness -- --sweep-penalty-guarded-replay tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-guarded-replay-1784391142108.json --scanner-dry-run-replay tools/automation/diagnostic-reports/unified-positive-scanner-dry-run-replay-1784350014342.json --json.
+Result: Passed. Guarded replay status pass; scanner dry-run status pass. Valid Sweep lead rows: 80. Invalid-stop Sweep penalty rows: 20. Valid Sweep lead rows penalized: 0. Guarded changed slates: 1. Guarded top-selection delta: +$35.00. Scanner dry-run rows: 4. Scanner zero-live-publish rows: 4. Scanner blocked rows: 0. Recommended action: ready_for_fresh_research_scanner_overlay_dry_run.
+Trading logic changed: No. This is a local/read-only readiness gate only. It does not install an overlay, rank penalty, live scanner run, canExecute change, Discord post, Supabase write, bridge read/write, entry, stop, target, risk, or model availability change.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves readiness for a fresh research overlay dry-run, not production behavior. Any live-facing rank change still requires separate evidence and approval.
+Next recommended action: Build and run the fresh research scanner overlay dry-run that applies the invalid-stop Sweep penalty to scanner selection artifacts only, while preserving normal scanner output and publish behavior.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add guarded replay for research-only invalid-stop Sweep penalty.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-guarded-replay.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-guarded-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The nonmatching Sweep validation proved the bad bucket was Blocked/InvalidStopLocation, so the desk needed a guarded replay proving that applying a research-only penalty protects valid Conditional/EntryTriggerPending Sweep rows and does not hide stronger alternate-model tickets.
