@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add valid-review no-lookahead separator diagnostic.
+Files changed: tools/automation/unified-positive-held-local-preview-valid-review-separator-diagnostic.ts, tools/automation/unified-positive-held-local-preview-valid-review-separator-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The desk needed to mine the 75 valid-review top slates for pre-entry/model-metadata separators before considering any scanner-visible ranking change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-valid-review-separator-diagnostic.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-valid-review-separator-diagnostic -- --valid-review-top-slate-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-valid-review-top-slate-outcome-1784400784609.json --json.
+Result: Passed. The diagnostic evaluated 75 valid-review top slates: 51 winners, 13 losses, 11 unresolved, gross resolved one-MES P/L of 3009.46, 26 candidate positive selector buckets, and 1 candidate caution filter bucket. Positive buckets include fast proof-to-entry, tight/clean risk, all three sessions, OpeningDriveFvgContinuation, SweepMssFvgRetrace, and both directions. The only caution bucket was TurtleSoup with extreme risk over 15 points: 3 rows, 1 winner, 2 losses, gross resolved one-MES P/L -81.25, 33% resolved win rate.
+Trading logic changed: No. This is a local/read-only diagnostic only. It does not change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The separator buckets are hypotheses, not live filters. The TurtleSoup extreme-risk caution bucket is small at 3 rows and needs a fresh no-lookahead rank simulation before any scanner-visible penalty.
+Next recommended action: Build a research-only TurtleSoup extreme-risk rank simulation using riskPoints > 15 as a penalty candidate, compare slate selection/P&L against the current valid-review top slate baseline, and keep all live execution behavior unchanged unless the replay proof improves.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add valid-review top-slate outcome diagnostic.
 Files changed: tools/automation/unified-positive-held-local-preview-valid-review-top-slate-outcome.ts, tools/automation/unified-positive-held-local-preview-valid-review-top-slate-outcome.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After clearing blocked-top slate coverage, the desk needed to analyze the 75 valid-review installed top slates and identify winner/loss/unresolved structure before any scanner-visible ranking behavior is considered.
