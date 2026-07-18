@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add and run SweepMssFvgRetrace segmented filter research.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-segment-filter.ts, tools/automation/unified-positive-held-local-preview-sweep-segment-filter.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Broad positive-family replay rejected a blanket model-family boost even though SweepMssFvgRetrace was positive in aggregate. This phase isolated Sweep by session, direction, risk, proof timing, same-bar/no-fill/stale behavior, and replay adverse-path tags to determine whether a narrow separator exists before any scanner-visible change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-segment-filter.test.ts; npm run diagnostic:held-local-preview-sweep-segment-filter -- --json; npx tsc --noEmit --pretty false.
+Result: Passed. Real broad run read 373 source/proof timing rows and 100 SweepMssFvgRetrace rows. Sweep aggregate remained positive with 41 winners, 20 losses, 39 unresolved, +$3,837.50. The diagnostic evaluated 12 segments. Three proof-timing segments became candidate_for_segment_replay: entry_within_15_minutes kept 81 rows, 41/19/21 W/L/U, rejected 0 winners, 1 loss, 18 unresolved, and improved P/L by +$12.50; not_stale_over_30_minutes kept 95 rows, 41/19/35 W/L/U, rejected 0 winners, 1 loss, 4 unresolved, and improved P/L by +$12.50; has_entry_fill kept 87 rows, 41/20/26 W/L/U, rejected 0 winners, 0 losses, 13 unresolved, and held P/L flat. The strongest loss separator was no_adverse_excursion_over_1r, but it is replay_outcome evidence: it kept 67 rows, 30/2/35 W/L/U, rejected 18 losses but also 11 winners, and must not become a live filter. Simple session, direction, and risk segments were rejected because they cut too many winners or worsened P/L.
+Trading logic changed: No. This adds a diagnostic only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The useful Sweep separator is currently mostly proof-timing/replay-outcome evidence, not a clean pre-trade feature. Outcome-path adverse excursion cannot be used live; it should guide the next structured feature mining pass.
+Next recommended action: Keep SweepMssFvgRetrace. Do not install a blanket boost or removal. Mine the no_adverse_excursion_over_1r loss cluster for pre-entry structured features, then validate whether those features can explain same-bar losses without false-rejecting winners.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Run broad local replay validation for positive-family boost candidates.
 Files changed: tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.ts, docs/PROJECT_STATUS.md.
 Reason: The selected 24-row package made SweepMssFvgRetrace and AfterLunchDriveFvgContinuation look boost-worthy. This phase broadened the replay package using the existing local intake set to test whether a blanket positive-family boost actually improves same-date/session selection.
