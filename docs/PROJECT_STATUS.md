@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add scanner geometry-path diagnostic for invalid Sweep/FVG rows.
+Files changed: tools/automation/unified-positive-held-local-preview-scanner-geometry-path-diagnostic.ts, tools/automation/unified-positive-held-local-preview-scanner-geometry-path-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The replay-package geometry gate quarantined invalid entry/stop rows, but the desk still needed to identify whether those bad levels came from candidate construction, setup-status export, or replay mapping before any live-facing guard is considered.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-scanner-geometry-path-diagnostic.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-scanner-geometry-path -- --geometry-source-drilldown tools/automation/diagnostic-reports/unified-positive-held-local-preview-geometry-source-drilldown-1784403724422.json --replay-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-1784404069417.json --json.
+Result: Passed. The diagnostic found 2 invalid geometry rows. The 2026-06-10 lunch SweepMssFvgRetrace LONG bad levels appeared only in setupCandidateStatus at 13:50, then a valid same-direction setup-status row appeared at 14:45 with entry 7308.25 and stop 7305. The 2026-06-12 lunch SweepMssFvgRetrace SHORT bad levels appeared in both candidateLifecycleTrace/deskState and setupCandidateStatus at 12:00/12:05, then a valid same-direction lifecycle candidate appeared at 13:35 with entry 7441 and stop 7446.75. Recommendation is inspect_candidate_builder_before_status_export.
+Trading logic changed: No. This is a local/read-only scanner tape diagnostic only. It does not run setupScanner, change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports and local scanner decision tapes only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This diagnostic proves source-path location, not the final live fix. A live guard must still be installed in the smallest deterministic boundary and tested against both bad fixture rows plus known valid same-direction later rows.
+Next recommended action: Add a narrow shared candidate-geometry validator at the scanner candidate export/selection boundary so LONG candidates with stop >= entry and SHORT candidates with stop <= entry are marked invalid data-quality rows before ranking/review visibility. Preserve `canExecute=false`, do not remove TurtleSoup/Sweep, and do not change Discord/Supabase/bridge behavior.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add replay-package geometry gate for directionally invalid entry/stop rows.
 Files changed: tools/automation/unified-positive-held-local-preview-replay-package.ts, tools/automation/unified-positive-held-local-preview-replay-package.test.ts, tools/automation/unified-positive-held-local-preview-replay-package-outcome.test.ts, tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.ts, tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.test.ts, docs/PROJECT_STATUS.md.
 Reason: Geometry-source drilldown proved two invalid SweepMssFvgRetrace replacement rows were already inverted in the scanner decision tape at the selected proof time. The research replay package needed to quarantine directionally invalid LONG/SHORT entry-stop geometry before outcome and rank simulations trust those rows as reviewable candidates.
