@@ -151,6 +151,72 @@ assert.equal(
 );
 assert.match(report.markdown, /Selected replay package rows: 3/);
 
+const blockedTopAlternative = buildUnifiedPositiveHeldLocalPreviewIntakeTriageReport({
+  reportDir: 'diagnostic-reports',
+  intakeReportPath: 'intake.json',
+  intakeReport: {
+    reportType: 'unified_positive_held_local_preview_reviewed_case_intake',
+    status: 'pass',
+    rows: [
+      {
+        intakeId: '2026-06-12-morning-SweepMssFvgRetrace-LONG',
+        tradeDate: '2026-06-12',
+        session: 'morning',
+        instrument: 'MES',
+        setupType: 'SweepMssFvgRetrace',
+        direction: 'LONG',
+        firstSeenTime: '2026-06-12T10:10:00.0000000',
+        lastSeenTime: '2026-06-12T11:55:00.0000000',
+        occurrences: 18,
+        entry: 7395,
+        stop: 7432,
+        target1: 7450.5,
+        target2: 7470,
+        riskPoints: 37,
+        candidateState: null,
+        executionStatus: 'Blocked',
+        detectedStatus: 'Blocked',
+        blockReason: 'InvalidStopLocation',
+        sourceFile: 'scanner-decision-tape-2026-06-12-MES-morning.json',
+        intakeDecision: 'candidate_for_review_intake',
+      },
+      {
+        intakeId: '2026-06-12-morning-SweepMssFvgRetrace-SHORT',
+        tradeDate: '2026-06-12',
+        session: 'morning',
+        instrument: 'MES',
+        setupType: 'SweepMssFvgRetrace',
+        direction: 'SHORT',
+        firstSeenTime: '2026-06-12T10:00:00.0000000',
+        lastSeenTime: '2026-06-12T11:45:00.0000000',
+        occurrences: 3,
+        entry: 7413.25,
+        stop: 7444.25,
+        target1: 7366.75,
+        target2: 7281,
+        riskPoints: 31,
+        candidateState: null,
+        executionStatus: 'Conditional',
+        detectedStatus: 'Possible',
+        blockReason: 'EntryTriggerPending',
+        sourceFile: 'scanner-decision-tape-2026-06-12-MES-morning.json',
+        intakeDecision: 'candidate_for_review_intake',
+      },
+    ],
+  },
+  maxReplayPackageRows: 2,
+  maxRowsPerModel: 1,
+}, '2026-07-17T00:00:30.000Z');
+
+assert.equal(blockedTopAlternative.status, 'pass');
+assert.equal(blockedTopAlternative.summary.selectedReplayPackageRows, 2);
+assert.ok(blockedTopAlternative.selectedReplayPackage.some((row) => row.intakeId === '2026-06-12-morning-SweepMssFvgRetrace-LONG'));
+assert.ok(blockedTopAlternative.selectedReplayPackage.some((row) => row.intakeId === '2026-06-12-morning-SweepMssFvgRetrace-SHORT'));
+assert.match(
+  blockedTopAlternative.rows.find((row) => row.intakeId === '2026-06-12-morning-SweepMssFvgRetrace-SHORT')?.triageReason || '',
+  /blocked-top alternate triage/,
+);
+
 const missing = buildUnifiedPositiveHeldLocalPreviewIntakeTriageReport({
   reportDir: 'diagnostic-reports',
   intakeReportPath: null,

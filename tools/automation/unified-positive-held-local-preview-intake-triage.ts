@@ -209,6 +209,21 @@ function groupKey(row: Pick<TriageRow, 'setupType' | 'session' | 'proofState'>):
   return `${row.setupType}|${row.session}|${row.proofState}`;
 }
 
+function slateKey(row: Pick<TriageRow, 'tradeDate' | 'session'>): string {
+  return `${row.tradeDate}|${row.session}`;
+}
+
+function isInvalidStopBlocked(row: TriageRow): boolean {
+  return row.executionStatus === 'Blocked' && row.blockReason === 'InvalidStopLocation';
+}
+
+function isValidReplayAlternative(row: TriageRow): boolean {
+  return row.triageDecision !== 'already_processed_reference' &&
+    row.executionStatus === 'Conditional' &&
+    row.blockReason === 'EntryTriggerPending' &&
+    row.proofState === 'scanner_held_complete';
+}
+
 function buildGroups(rows: TriageRow[]): TriageGroup[] {
   const groups = new Map<string, TriageGroup>();
   rows
@@ -230,8 +245,12 @@ function buildGroups(rows: TriageRow[]): TriageGroup[] {
     .sort((a, b) => b.selected - a.selected || b.candidates - a.candidates || a.setupType.localeCompare(b.setupType));
 }
 
-function selectRows(rows: TriageRow[], maxReplayPackageRows: number, maxRowsPerModel: number): Set<string> {
+function selectRows(rows: TriageRow[], maxReplayPackageRows: number, maxRowsPerModel: number): {
+  selectedIds: Set<string>;
+  blockedTopAlternativeIds: Set<string>;
+} {
   const selected = new Set<string>();
+  const blockedTopAlternativeIds = new Set<string>();
   const perModel = new Map<string, number>();
   const candidates = rows
     .filter((row) => row.triageDecision !== 'already_processed_reference')
@@ -244,7 +263,32 @@ function selectRows(rows: TriageRow[], maxReplayPackageRows: number, maxRowsPerM
     selected.add(row.intakeId);
     perModel.set(row.setupType, modelCount + 1);
   }
-  return selected;
+
+  const selectedRows = (): TriageRow[] => rows.filter((row) => selected.has(row.intakeId));
+  const lowestReplaceableSelected = (): TriageRow | null => selectedRows()
+    .filter((row) => !isInvalidStopBlocked(row) && !blockedTopAlternativeIds.has(row.intakeId))
+    .sort((a, b) => a.triageScore - b.triageScore || a.occurrences - b.occurrences || b.intakeId.localeCompare(a.intakeId))[0] || null;
+
+  for (const blockedRow of selectedRows().filter(isInvalidStopBlocked)) {
+    const alternative = candidates
+      .filter((row) => !selected.has(row.intakeId))
+      .filter((row) => slateKey(row) === slateKey(blockedRow))
+      .filter(isValidReplayAlternative)
+      .sort((a, b) => b.triageScore - a.triageScore || b.occurrences - a.occurrences || a.intakeId.localeCompare(b.intakeId))[0];
+    if (!alternative) continue;
+    if (selected.size < maxReplayPackageRows) {
+      selected.add(alternative.intakeId);
+      blockedTopAlternativeIds.add(alternative.intakeId);
+      continue;
+    }
+    const replacement = lowestReplaceableSelected();
+    if (!replacement) continue;
+    selected.delete(replacement.intakeId);
+    selected.add(alternative.intakeId);
+    blockedTopAlternativeIds.add(alternative.intakeId);
+  }
+
+  return { selectedIds: selected, blockedTopAlternativeIds };
 }
 
 function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewIntakeTriageReport, 'markdown'>): string {
@@ -313,11 +357,13 @@ export function buildUnifiedPositiveHeldLocalPreviewIntakeTriageReport(args: {
         : 'Held until selected into a small replay package.',
     };
   });
-  const selectedIds = selectRows(triageRows, maxReplayPackageRows, maxRowsPerModel);
+  const selection = selectRows(triageRows, maxReplayPackageRows, maxRowsPerModel);
   triageRows.forEach((row) => {
-    if (selectedIds.has(row.intakeId)) {
+    if (selection.selectedIds.has(row.intakeId)) {
       row.triageDecision = 'selected_for_replay_package';
-      row.triageReason = 'Selected by read-only triage for the next replay/outcome package; this is not live ranking or execution approval.';
+      row.triageReason = selection.blockedTopAlternativeIds.has(row.intakeId)
+        ? 'Selected by read-only blocked-top alternate triage so a valid same-slate candidate can be compared against an InvalidStopLocation row; this is not live ranking or execution approval.'
+        : 'Selected by read-only triage for the next replay/outcome package; this is not live ranking or execution approval.';
     }
   });
   const selectedReplayPackage = triageRows

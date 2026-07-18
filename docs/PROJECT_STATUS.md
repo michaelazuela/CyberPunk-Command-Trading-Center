@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Install research-only blocked-top alternate selection in replay intake triage.
+Files changed: tools/automation/unified-positive-held-local-preview-intake-triage.ts, tools/automation/unified-positive-held-local-preview-intake-triage.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Blocked-top slate drilldown proved the 2026-06-12 morning valid short Sweep candidate existed in intake but was held out of the replay/source-proof package while the invalid-stop long was selected. The research package needed to include a valid same-slate comparison candidate before ranking conclusions are trusted.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-intake-triage.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-intake-triage -- --intake-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-reviewed-case-intake-1784329856547.json --max-replay-package-rows 373 --max-rows-per-model 500 --json.
+Result: Passed. The 373-row research triage package now selects both 2026-06-12-morning-SweepMssFvgRetrace-LONG (Blocked/InvalidStopLocation, score 157) and 2026-06-12-morning-SweepMssFvgRetrace-SHORT (Conditional/EntryTriggerPending, score 142). The short row receives the explicit reason: selected by read-only blocked-top alternate triage so a valid same-slate candidate can be compared against an InvalidStopLocation row. The weaker blocked TurtleSoup long for the same slate remains held for later.
+Trading logic changed: No. This changes only the local/read-only replay intake triage diagnostic package selection. It does not change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves replay-package coverage, not trade profitability. Downstream source/proof timing, installed-score comparison, and full-slate comparison must be regenerated from this selected package before considering any scanner-visible review behavior.
+Next recommended action: Regenerate the downstream replay/source-proof timing and installed-score comparison from the fixed 373-row triage package, then rerun full-slate selection comparison to confirm the June 12 morning valid short competes in ranking.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add blocked-top slate drilldown for the remaining invalid-stop Sweep top row.
 Files changed: tools/automation/unified-positive-held-local-preview-blocked-top-slate-drilldown.ts, tools/automation/unified-positive-held-local-preview-blocked-top-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Full model-family slate comparison showed the installed invalid-stop Sweep penalty was safe but selection-neutral, with one remaining invalid-stop Sweep top slate on 2026-06-12 morning. The desk needed to prove whether that slate had no valid alternative or whether replay-package triage held the valid alternative out.
