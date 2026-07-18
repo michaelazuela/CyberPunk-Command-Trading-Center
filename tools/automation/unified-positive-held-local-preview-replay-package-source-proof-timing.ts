@@ -328,7 +328,8 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewReplayPackage
 function hasOnlyRowLevelOutcomeBlockers(report: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport | null): boolean {
   if (!report || report.status === 'pass') return false;
   if (!report.rows.length || report.summary.blockedRows <= 0) return false;
-  return report.blockers.length > 0 && report.blockers.every((blocker) => /:\s+/.test(blocker));
+  const blockers = report.blockers.filter((blocker) => blocker !== 'replay package status fail');
+  return blockers.length > 0 && blockers.every((blocker) => /:\s+/.test(blocker));
 }
 
 export function buildUnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport(args: {

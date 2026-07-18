@@ -103,6 +103,7 @@ export interface UnifiedPositiveHeldLocalPreviewReplayPackageReport {
     replayPackageRows: number;
     readyRows: number;
     blockedRows: number;
+    directionallyInvalidGeometryRows: number;
     modelGroups: number;
     sessionGroups: number;
     livePromotionAllowedRows: 0;
@@ -209,6 +210,10 @@ function levelR(args: { direction: Direction; entry: number; stop: number; targe
     : round((args.entry - args.target) / risk);
 }
 
+function hasDirectionallyValidEntryStop(args: { direction: Direction; entry: number; stop: number }): boolean {
+  return args.direction === 'LONG' ? args.stop < args.entry : args.stop > args.entry;
+}
+
 function tapePath(auditDir: string, row: Pick<TriageRow, 'tradeDate' | 'instrument' | 'session'>): string {
   return path.join(auditDir, `scanner-decision-tape-${row.tradeDate}-${row.instrument}-${row.session}.json`);
 }
@@ -237,6 +242,9 @@ function buildRow(row: TriageRow, auditDir: string): ReplayPackageRow {
     !Number.isFinite(row.target1) ? 'missing T1' : null,
     !Number.isFinite(row.target2) ? 'missing T2' : null,
     riskPoints <= 0 ? 'missing positive entry-to-stop risk' : null,
+    Number.isFinite(row.entry) && Number.isFinite(row.stop) && !hasDirectionallyValidEntryStop({ direction: row.direction, entry: row.entry, stop: row.stop })
+      ? 'directionally invalid entry-to-stop geometry'
+      : null,
     !fs.existsSync(sourceTapePath) ? 'missing scanner decision tape' : null,
     bars.length === 0 ? 'missing completed 5M bars from scanner decision tape' : null,
     barsAfterProof === 0 ? 'missing completed 5M bars at or after proof time' : null,
@@ -289,6 +297,7 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewReplayPackage
     `- Replay package rows: ${report.summary.replayPackageRows}.`,
     `- Ready rows: ${report.summary.readyRows}.`,
     `- Blocked rows: ${report.summary.blockedRows}.`,
+    `- Directionally invalid geometry rows: ${report.summary.directionallyInvalidGeometryRows}.`,
     `- Model groups: ${report.summary.modelGroups}.`,
     `- Session groups: ${report.summary.sessionGroups}.`,
     `- Live promotion allowed rows: ${report.summary.livePromotionAllowedRows}.`,
@@ -342,6 +351,7 @@ export function buildUnifiedPositiveHeldLocalPreviewReplayPackageReport(args: {
       replayPackageRows: rows.length,
       readyRows: rows.filter((row) => row.outcomeInputStatus === 'ready_for_read_only_outcome_replay').length,
       blockedRows: rows.filter((row) => row.outcomeInputStatus === 'blocked').length,
+      directionallyInvalidGeometryRows: rows.filter((row) => row.blockers.includes('directionally invalid entry-to-stop geometry')).length,
       modelGroups: new Set(rows.map((row) => row.setupType)).size,
       sessionGroups: new Set(rows.map((row) => row.session)).size,
       livePromotionAllowedRows: 0,

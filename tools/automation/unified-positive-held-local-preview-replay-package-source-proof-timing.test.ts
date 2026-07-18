@@ -230,7 +230,7 @@ const blockedOutcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeR
       blockers: ['directionally invalid entry-to-stop geometry'],
     },
   ],
-  blockers: ['invalid-stop: directionally invalid entry-to-stop geometry'],
+  blockers: ['replay package status fail', 'invalid-stop: directionally invalid entry-to-stop geometry'],
 };
 
 const blockedReport = buildUnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport({

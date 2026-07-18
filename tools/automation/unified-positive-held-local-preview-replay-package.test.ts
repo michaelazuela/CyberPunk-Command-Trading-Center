@@ -72,7 +72,7 @@ const triageReport = {
       lastSeenTime: '2026-06-17T13:05:00.0000000',
       occurrences: 1,
       entry: 200,
-      stop: 205,
+      stop: 195,
       target1: 192.5,
       target2: 190,
       riskPoints: 5,
@@ -102,6 +102,7 @@ assert.equal(blockedReport.authority.changesCanExecute, false);
 assert.equal(blockedReport.summary.selectedRowsRead, 2);
 assert.equal(blockedReport.summary.readyRows, 1);
 assert.equal(blockedReport.summary.blockedRows, 1);
+assert.equal(blockedReport.summary.directionallyInvalidGeometryRows, 1);
 assert.equal(blockedReport.summary.livePromotionAllowedRows, 0);
 
 const readyRow = blockedReport.rows.find((row) => row.ticketId === '2026-06-16-morning-OpeningDriveFvgContinuation-LONG');
@@ -114,6 +115,7 @@ assert.equal(readyRow?.barsSource, 'scanner_decision_tape_completed_5m');
 
 const blockedRow = blockedReport.rows.find((row) => row.ticketId === '2026-06-17-lunch-AfterLunchDriveFvgContinuation-SHORT');
 assert.equal(blockedRow?.outcomeInputStatus, 'blocked');
+assert.ok(blockedRow?.blockers.includes('directionally invalid entry-to-stop geometry'));
 assert.ok(blockedRow?.blockers.includes('missing scanner decision tape'));
 assert.match(blockedReport.markdown, /Ready rows: 1/);
 
@@ -142,9 +144,10 @@ const passReport = buildUnifiedPositiveHeldLocalPreviewReplayPackageReport({
   auditDir,
 }, '2026-07-17T00:01:00.000Z');
 
-assert.equal(passReport.status, 'pass');
-assert.equal(passReport.summary.readyRows, 2);
-assert.equal(passReport.summary.blockedRows, 0);
+assert.equal(passReport.status, 'fail');
+assert.equal(passReport.summary.readyRows, 1);
+assert.equal(passReport.summary.blockedRows, 1);
+assert.equal(passReport.summary.directionallyInvalidGeometryRows, 1);
 assert.equal(passReport.summary.modelGroups, 2);
 assert.equal(passReport.summary.sessionGroups, 2);
 

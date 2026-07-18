@@ -131,6 +131,7 @@ const replayPackageReport: UnifiedPositiveHeldLocalPreviewReplayPackageReport = 
     replayPackageRows: 3,
     readyRows: 3,
     blockedRows: 0,
+    directionallyInvalidGeometryRows: 0,
     modelGroups: 3,
     sessionGroups: 2,
     livePromotionAllowedRows: 0,
