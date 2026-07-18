@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add live-facing proposal gate for invalid-stop Sweep rank penalty.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-live-proposal.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-live-proposal.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh scanner overlay dry-run proved the invalid-stop Sweep penalty is ready for a live-facing proposal, but model ranking changes require a separate explicit approval gate before any live behavior is installed.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-penalty-live-proposal.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-penalty-live-proposal -- --fresh-scanner-overlay-dry-run tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-overlay-dry-run-1784395568082.json --json.
+Result: Passed. Proposal evidence: overlay status pass, source rows 373, Sweep rows 100, valid Conditional/EntryTriggerPending Sweep lead rows 80, invalid-stop Sweep penalty rows 20, valid Sweep lead rows penalized 0, changed slates 1, top-selection delta +$35.00, scanner dry-run rows 4, zero-live-publish rows 4, blocked rows 0, live-promotion rows 0. Recommendation: approval_ready_for_narrow_live_rank_penalty.
+Trading logic changed: No. This is a local/read-only proposal gate only. It does not install a rank penalty, change live ranking, remove TurtleSoup, remove SweepMssFvgRetrace, change canExecute, post Discord, write Supabase, read live bridge data, or change entry, stop, target, risk, session, model availability, or automated execution behavior.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The proposal is approval-ready, but any live rank penalty remains a model-ranking change and must be explicitly approved before implementation. The first live install should target src/lib/unifiedDeskCandidateBook.ts first and only touch src/lib/tradeDecisionPipeline.ts after focused regression proof.
+Next recommended action: If explicitly approved, install the narrow invalid-stop Sweep rank penalty behind the smallest ranking boundary, with focused tests proving TurtleSoup/Sweep availability, canExecute, Discord, Supabase, bridge, entry/stop/target/risk, and valid Sweep lead rows are unchanged.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add fresh research scanner overlay dry-run for invalid-stop Sweep penalty.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-overlay-dry-run.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-overlay-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The readiness gate passed, so the desk needed a fresh research scanner overlay dry-run that applies the invalid-stop Sweep penalty to scanner-selection artifacts only while proving normal scanner output and publish behavior remain unchanged.
