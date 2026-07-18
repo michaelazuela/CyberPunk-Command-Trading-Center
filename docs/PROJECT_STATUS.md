@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add corrected Sweep lead same-session top-selection simulation.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-lead-top-selection-simulation.ts, tools/automation/unified-positive-held-local-preview-sweep-lead-top-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The corrected Sweep intake classifier showed Conditional/EntryTriggerPending rows were cleaner in isolation, but the desk still needed proof that using the lead would improve same-session top-ticket selection before any scanner-visible behavior.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-lead-top-selection-simulation.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-lead-top-selection-simulation -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784348679609.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784331967550.json --json.
+Result: Passed. Corrected run evaluated 373 joined rows, 100 Sweep rows, 80 Conditional/EntryTriggerPending Sweep lead rows, 20 nonmatching Sweep rows, and 85 same-session slates. The research-only nonmatching-Sweep penalty changed 1 slate and improved top-selection P/L from +$1,863.83 to +$1,898.83, delta +$35.00. The changed slate was 2026-07-09 evening: baseline top was a nonmatching Sweep long at -$15.00; simulated top became TurtleSoup long at +$20.00.
+Trading logic changed: No. This is a local diagnostic only. It does not change live ranking, scanner behavior, canExecute, Discord, Supabase, bridge behavior, entry, stop, target, risk, or model availability.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The improvement is real but small and only changed one slate. It supports a fresh replay validation of a nonmatching-Sweep rank penalty, not a live-facing install yet.
+Next recommended action: Run a fresh replay/package validation for nonmatching Sweep rows to confirm whether the penalty consistently removes losers without burying stronger alternate-model tickets.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Regenerate corrected source/proof timing with invalid-stop blockers preserved.
 Files changed: tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.ts, tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.test.ts, docs/PROJECT_STATUS.md.
 Reason: After invalid stop geometry was blocked in outcome replay, the broad outcome report correctly failed closed with 6 row-level blockers. Source/proof timing needed to distinguish fatal report failures from intentional row-level data-quality blockers so corrected research could continue without treating blocked invalid-stop rows as wins or losses.
