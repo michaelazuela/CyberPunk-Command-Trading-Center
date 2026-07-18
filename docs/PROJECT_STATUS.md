@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add guarded replay for research-only invalid-stop Sweep penalty.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-guarded-replay.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-guarded-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The nonmatching Sweep validation proved the bad bucket was Blocked/InvalidStopLocation, so the desk needed a guarded replay proving that applying a research-only penalty protects valid Conditional/EntryTriggerPending Sweep rows and does not hide stronger alternate-model tickets.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-penalty-guarded-replay.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-penalty-guarded-replay -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784348679609.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784331967550.json --penalty-validation tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-nonmatching-penalty-validation-1784349779727.json --json.
+Result: Passed. Corrected guarded replay evaluated 373 joined rows, 100 Sweep rows, 80 valid Conditional/EntryTriggerPending Sweep lead rows, and 20 invalid-stop Sweep penalty rows. Valid Sweep lead rows penalized: 0. Same-session slates: 85. Changed slates: 1. The changed slate started from an invalid-stop Sweep top and landed on a valid Sweep lead or alternate model. Top-selection P/L improved from +$1,863.83 to +$1,898.83, delta +$35.00. Recommended action: research_penalty_ready_for_fresh_scanner_dry_run.
+Trading logic changed: No. This is a local/read-only guarded replay only. It does not install a live rank penalty, remove SweepMssFvgRetrace, change live ranking, scanner behavior, canExecute, Discord, Supabase, bridge behavior, entry, stop, target, or risk.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Evidence is still research-only and the top-selection improvement is narrow. The next proof must use a fresh scanner dry-run before any live-facing behavior.
+Next recommended action: Run a fresh scanner dry-run with this invalid-stop Sweep penalty as an explicitly research-only overlay and compare scanner selection artifacts before/after.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Validate nonmatching Sweep invalid-stop penalty candidate in research.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-nonmatching-penalty-validation.ts, tools/automation/unified-positive-held-local-preview-sweep-nonmatching-penalty-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The corrected top-selection simulation improved by demoting a nonmatching Sweep row, so the desk needed to prove the nonmatching bucket was actually an invalid-stop loser bucket rather than a broad Sweep removal.
