@@ -325,6 +325,12 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewReplayPackage
   ].join('\n');
 }
 
+function hasOnlyRowLevelOutcomeBlockers(report: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport | null): boolean {
+  if (!report || report.status === 'pass') return false;
+  if (!report.rows.length || report.summary.blockedRows <= 0) return false;
+  return report.blockers.length > 0 && report.blockers.every((blocker) => /:\s+/.test(blocker));
+}
+
 export function buildUnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport(args: {
   reportDir: string;
   replayPackageOutcomePath: string | null;
@@ -333,12 +339,12 @@ export function buildUnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimi
   const outcomeRows = args.replayPackageOutcomeReport?.rows || [];
   const rows = outcomeRows.map(buildRow);
   const modelTiming = buildModelTiming(rows);
+  const outcomeHasOnlyRowLevelBlockers = hasOnlyRowLevelOutcomeBlockers(args.replayPackageOutcomeReport);
   const blockers = [
     !args.replayPackageOutcomePath ? 'missing replay package outcome path' : null,
     !args.replayPackageOutcomeReport ? 'missing replay package outcome report' : null,
-    args.replayPackageOutcomeReport && args.replayPackageOutcomeReport.status !== 'pass' ? `replay package outcome status ${args.replayPackageOutcomeReport.status}` : null,
+    args.replayPackageOutcomeReport && args.replayPackageOutcomeReport.status !== 'pass' && !outcomeHasOnlyRowLevelBlockers ? `replay package outcome status ${args.replayPackageOutcomeReport.status}` : null,
     rows.length === 0 ? 'no outcome rows evaluated' : null,
-    rows.some((row) => row.outcomeBucket === 'blocked') ? 'one or more outcome rows are blocked' : null,
   ].filter((item): item is string => Boolean(item));
   const positiveModelGroups = modelTiming.filter((row) => (row.grossResolvedOneMesPl ?? 0) > 0).length;
   const negativeModelGroups = modelTiming.filter((row) => (row.grossResolvedOneMesPl ?? 0) < 0).length;
@@ -377,6 +383,12 @@ export function buildUnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimi
     blockers,
     recommendations: blockers.length
       ? ['Do not use timing findings until the outcome report has no blockers.']
+      : rows.some((row) => row.outcomeBucket === 'blocked')
+        ? [
+          'Proceed with corrected timing research while preserving blocked rows as data-quality rows, not wins or losses.',
+          'Do not use blocked invalid-stop rows for model-quality P/L, rank boosts, canExecute changes, or scanner-visible filters.',
+          'Regenerate downstream Sweep and positive-family diagnostics from this corrected source/proof timing report.',
+        ]
       : [
         'Keep the positive model families in research; do not remove or broaden models from this timing report alone.',
         'Use the negative model groups as the next narrow filter target: isolate proof-to-entry timing, same-bar entry, stale-entry, and MAE/R behavior before any scanner-visible rank overlay expansion.',

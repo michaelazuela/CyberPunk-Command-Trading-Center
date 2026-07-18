@@ -2,6 +2,21 @@
 
 ## Latest Change
 
+Date: 2026-07-18
+Task: Regenerate corrected source/proof timing with invalid-stop blockers preserved.
+Files changed: tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.ts, tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.test.ts, docs/PROJECT_STATUS.md.
+Reason: After invalid stop geometry was blocked in outcome replay, the broad outcome report correctly failed closed with 6 row-level blockers. Source/proof timing needed to distinguish fatal report failures from intentional row-level data-quality blockers so corrected research could continue without treating blocked invalid-stop rows as wins or losses.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-replay-package-source-proof-timing -- --replay-package-outcome <corrected broad outcome> --json; npm run diagnostic:held-local-preview-positive-family-boost-validation -- --source-proof-timing <corrected timing> --json; npm run diagnostic:held-local-preview-sweep-segment-filter -- --source-proof-timing <corrected timing> --json; npm run diagnostic:held-local-preview-sweep-intake-feature-classifier -- --source-proof-timing <corrected timing> --intake-triage <broad triage> --json.
+Result: Passed. Corrected timing now passes with 373 evaluated rows, 151 winners, 93 losses, 123 unresolved, 6 blocked invalid-stop rows, and +$9,380.77 gross resolved one-MES P/L. Positive-family boost remains rejected: top selection before/after +$2,600.05/+2,428.81, delta -$171.24. Corrected Sweep segment result: 100 rows, 41 winners, 17 losses, 36 unresolved, +$3,308.75; entry_within_15_minutes kept 77 rows with 41/16/20 W/L/U and rejected 0 winners, 1 loss, 16 unresolved. Corrected Sweep intake classifier kept the same top lead: Conditional/EntryTriggerPending kept 80 rows with 41/11/27 W/L/U, rejected 0 winners, 6 losses, 9 unresolved, and kept +$3,530.00.
+Trading logic changed: No live trading logic changed. This changes research timing eligibility only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Corrected timing allows row-level blocked data-quality rows to pass downstream diagnostics. Those blocked rows must remain excluded from model-quality P/L and scanner-visible ranking decisions.
+Next recommended action: Build a research-only same-session top-selection simulation for the corrected Conditional/EntryTriggerPending Sweep lead. Do not install a filter unless the simulation improves top selection without hiding better alternate model tickets.
+
+## Previous Change
+
 Date: 2026-07-17
 Task: Block invalid stop geometry in held-local replay outcome P/L.
 Files changed: tools/automation/unified-positive-held-local-preview-replay-package-outcome.ts, tools/automation/unified-positive-held-local-preview-replay-package-outcome.test.ts, docs/PROJECT_STATUS.md.

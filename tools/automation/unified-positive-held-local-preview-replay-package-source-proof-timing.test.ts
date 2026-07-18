@@ -190,6 +190,62 @@ assert.equal(intraday?.staleEntryOver30MinuteLosses, 1);
 assert.match(intraday?.recommendation || '', /narrower proof\/timing filter/);
 assert.match(report.markdown, /Model Timing/);
 
+const blockedOutcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport = {
+  ...outcomeReport,
+  status: 'fail',
+  summary: {
+    ...outcomeReport.summary,
+    packageRows: 4,
+    blockedRows: 1,
+  },
+  rows: [
+    ...outcomeReport.rows,
+    {
+      ticketId: 'invalid-stop',
+      tradeDate: '2026-06-19',
+      session: 'morning',
+      setupType: 'SweepMssFvgRetrace',
+      direction: 'LONG',
+      proofTime: '2026-06-19T09:30:00',
+      outcomeStatus: 'blocked',
+      outcomeLabel: 'blocked',
+      entry: 100,
+      stop: 104,
+      t1: 106,
+      t2: 108,
+      riskPoints: 4,
+      barsSource: 'scanner_decision_tape_completed_5m',
+      barsLoaded: 6,
+      barsAfterProof: 6,
+      entryHitTime: null,
+      firstReplayBarTime: null,
+      stopHitTime: null,
+      t1HitTime: null,
+      t2HitTime: null,
+      maximumFavorableExcursion: null,
+      maximumAdverseExcursion: null,
+      resolvedOneMesPl: null,
+      resolvedR: null,
+      intrabarAmbiguity: false,
+      blockers: ['directionally invalid entry-to-stop geometry'],
+    },
+  ],
+  blockers: ['invalid-stop: directionally invalid entry-to-stop geometry'],
+};
+
+const blockedReport = buildUnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport({
+  reportDir: 'reports',
+  replayPackageOutcomePath: 'blocked-outcome.json',
+  replayPackageOutcomeReport: blockedOutcomeReport,
+}, '2026-07-17T00:01:30.000Z');
+
+assert.equal(blockedReport.status, 'pass');
+assert.equal(blockedReport.summary.evaluatedRows, 4);
+assert.equal(blockedReport.summary.blocked, 1);
+assert.equal(blockedReport.summary.grossResolvedOneMesPl, 25);
+assert.equal(blockedReport.rows.find((row) => row.ticketId === 'invalid-stop')?.outcomeBucket, 'blocked');
+assert.match(blockedReport.recommendations.join(' '), /blocked rows as data-quality rows/);
+
 const missing = buildUnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport({
   reportDir: 'reports',
   replayPackageOutcomePath: null,
