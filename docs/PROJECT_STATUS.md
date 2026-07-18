@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-17
+Task: Add and run SweepMssFvgRetrace intake-feature classifier.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-intake-feature-classifier.ts, tools/automation/unified-positive-held-local-preview-sweep-intake-feature-classifier.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Sweep segment research showed that the strongest adverse-path separator was replay-outcome evidence and could not be used live. This phase mined pre-outcome intake/proof-timing fields for a cleaner Sweep separator before considering any scanner-visible change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-intake-feature-classifier.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-intake-feature-classifier -- --json.
+Result: Passed. The real run read 373 source/proof timing rows, joined all 100 SweepMssFvgRetrace rows to intake triage, evaluated 71 classifiers, accepted 9 research leads, and allowed 0 live-promotion rows. The top pre-outcome lead was executionStatus=Conditional, mirrored by blockReason=EntryTriggerPending and status_blockReason=Conditional_EntryTriggerPending. Those kept 80 rows with 41/11/28 W/L/U, +$3,650.00, and rejected 20 rows with 0/9/11 W/L/U and 0 false-rejected winners. Other accepted leads were weaker because they false-rejected winners: entry_same_bar kept 72 rows, 34/17/21, +$3,500.00, but rejected 7 winners; block_entryBucket=EntryTriggerPending_entry_same_bar kept 65 rows, 34/10/21, +$3,205.00, but rejected 7 winners; detectedStatus=Possible, riskQuality=normal, direction=SHORT, and risk_lte_8 all rejected too many winners for a surgical live-facing rule.
+Trading logic changed: No. This adds a diagnostic only. It does not change scanner setup logic, live ranking, canExecute, entry, stop, target, risk, Discord posting, Supabase writes, bridge behavior, or automated execution.
+Bridge impact: None. It reads saved local diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The top lead is promising but still retrospective research. It says blocked/non-entry-trigger-pending Sweep rows are suspicious, not that Conditional rows should be boosted live. A fresh package must validate this before any rank overlay or ticket filter change.
+Next recommended action: Validate a narrow Sweep filter candidate that excludes Blocked/non-EntryTriggerPending rows from promotion research while preserving Conditional/EntryTriggerPending rows. Keep it research-only and compare same-session top selection before touching live ranking.
+
+## Previous Change
+
+Date: 2026-07-17
 Task: Add and run SweepMssFvgRetrace segmented filter research.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-segment-filter.ts, tools/automation/unified-positive-held-local-preview-sweep-segment-filter.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Broad positive-family replay rejected a blanket model-family boost even though SweepMssFvgRetrace was positive in aggregate. This phase isolated Sweep by session, direction, risk, proof timing, same-bar/no-fill/stale behavior, and replay adverse-path tags to determine whether a narrow separator exists before any scanner-visible change.
