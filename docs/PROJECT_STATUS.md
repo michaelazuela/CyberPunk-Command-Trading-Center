@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add raw OHLC scanner artifact pre/post comparison proof.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After the Model 1 protected stop fix, the desk needed a durable read-only comparison proving the repaired raw-OHLC scanner artifact package removed invalid geometry without creating executable rows.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-comparison.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-comparison -- --before-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-06-10-to-2026-06-12-1784406668099.json --after-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-06-10-to-2026-06-12-1784407274138.json --json.
+Result: Passed. The comparison joined 1,152 candidate rows across 144 before/after events. InvalidGeometry rows went from 19 to 0, blocked rows went from 19 to 0, conditional rows went from 547 to 566, executable rows stayed 0 to 0, changed rows were 101, livePromotionAllowedRows stayed 0, and blockers were empty.
+Trading logic changed: No additional runtime change in this checkpoint. This is a local/read-only comparator over saved artifact packages. It does not run setupScanner, does not post Discord, does not write Supabase, does not read live bridge data, and does not change canExecute, entry, stop, target, or risk behavior.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves pre/post scanner artifact deltas, not trade outcomes. The repaired artifact package still needs to be fed into replay package/outcome/source-proof analysis before ranking or publish changes.
+Next recommended action: Feed raw-ohlc-scanner-artifacts-MES-2026-06-10-to-2026-06-12-1784407274138.json into the replay package/outcome/source-proof chain, adapting the existing decision-tape-oriented readers only if necessary and keeping the run research-only.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add raw OHLC scanner artifact generator and fix Model 1 protected sweep-stop selection.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-generator.ts, tools/automation/raw-ohlc-scanner-artifact-generator.test.ts, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Fresh June 10/12 lunch scanner regeneration showed SweepMssFvgRetrace could pair a later FVG entry with an earlier same-direction sweep stop above a long entry. The geometry validator blocked the malformed rows, but the builder still needed to choose a directionally valid protected sweep extreme instead of the first same-direction sweep.
