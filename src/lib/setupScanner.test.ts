@@ -6,10 +6,11 @@ import {
   DayType,
   ExecutionStatus,
   NoTradeReason,
+  SetupCandidate,
   SetupCandidateStatus,
   SetupType,
 } from '../types';
-import { computeZoneOverlap, getScannedSetupTypes, scanSetupCandidates } from './setupScanner';
+import { applyCandidateGeometryValidation, computeZoneOverlap, getScannedSetupTypes, scanSetupCandidates } from './setupScanner';
 import { normalizeCandidateIctModelLabel, normalizeIctModelLabel } from './ictModelLabels';
 import { buildTradeJournalRecord } from './tradeJournal';
 
@@ -5845,6 +5846,55 @@ const tests: Array<[string, () => void]> = [
 
     assert.equal(rangeReclaim, undefined);
     assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
+  }],
+
+  ['directionally invalid full-level candidate geometry is blocked before ranking', () => {
+    const baseCandidate: SetupCandidate = {
+      setupType: SetupType.SweepMssFvgRetrace,
+      scenarioLabel: 'Scanner geometry validator fixture',
+      direction: 'SHORT',
+      detectedStatus: SetupCandidateStatus.Possible,
+      confidence: 'Medium',
+      priority: 90,
+      entry: 7441,
+      stop: 7446.75,
+      target1: 7432.5,
+      target2: 7427.75,
+      riskPoints: 5.75,
+      riskAdvisoryStatus: 'RISK_WITHIN_STANDARD_LIMIT',
+      riskPolicy: 'STANDARD_RISK',
+      invalidation: 'Invalid above protected short stop.',
+      entryClarity: 1,
+      stopClarity: 1,
+      targetClarity: 1,
+      proximityScore: 0.8,
+      levelContextScore: 10,
+      evidence: ['Fixture candidate.'],
+      missingEvidence: [],
+      executionStatus: ExecutionStatus.Conditional,
+      blockReason: NoTradeReason.EntryTriggerPending,
+      requiredTrigger: 'Wait for completed 5M proof.',
+      nextAction: 'Wait.',
+      reducedRiskPlan: null,
+    };
+
+    const valid = applyCandidateGeometryValidation(baseCandidate);
+    assert.equal(valid.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(valid.blockReason, NoTradeReason.EntryTriggerPending);
+
+    const invalid = applyCandidateGeometryValidation({
+      ...baseCandidate,
+      stop: 7425,
+      riskPoints: 16,
+    });
+    assert.equal(invalid.detectedStatus, SetupCandidateStatus.Blocked);
+    assert.equal(invalid.executionStatus, ExecutionStatus.Blocked);
+    assert.equal(invalid.blockReason, NoTradeReason.InvalidStopLocation);
+    assert.equal(invalid.entry, 7441);
+    assert.equal(invalid.stop, 7425);
+    assert.equal(invalid.target1, 7432.5);
+    assert.equal(invalid.target2, 7427.75);
+    assert.ok(invalid.missingEvidence.includes('Directionally invalid entry-to-stop geometry.'));
   }],
 ];
 

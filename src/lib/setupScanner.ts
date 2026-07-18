@@ -2064,6 +2064,32 @@ function executionStatusFor(
   return { executionStatus: ExecutionStatus.Executable, blockReason: null };
 }
 
+function candidateHasDirectionallyInvalidEntryStop(candidate: SetupCandidate): boolean {
+  if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return false;
+  if (typeof candidate.entry !== 'number' || !Number.isFinite(candidate.entry)) return false;
+  if (typeof candidate.stop !== 'number' || !Number.isFinite(candidate.stop)) return false;
+  return candidate.direction === 'LONG'
+    ? candidate.stop >= candidate.entry
+    : candidate.stop <= candidate.entry;
+}
+
+function appendMissingEvidence(candidate: SetupCandidate, evidence: string): string[] {
+  return candidate.missingEvidence.includes(evidence)
+    ? candidate.missingEvidence
+    : [...candidate.missingEvidence, evidence];
+}
+
+export function applyCandidateGeometryValidation(candidate: SetupCandidate): SetupCandidate {
+  if (!candidateHasDirectionallyInvalidEntryStop(candidate)) return candidate;
+  return {
+    ...candidate,
+    detectedStatus: SetupCandidateStatus.Blocked,
+    executionStatus: ExecutionStatus.Blocked,
+    blockReason: NoTradeReason.InvalidStopLocation,
+    missingEvidence: appendMissingEvidence(candidate, 'Directionally invalid entry-to-stop geometry.'),
+  };
+}
+
 function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, text: string): SetupCandidate {
   const allowed = entry.allowedSessions.includes(input.sessionType);
   const missingMorningWindowContext = isLunchSubtype(entry.setupType) && (!isLunchSession(input.sessionType) || !hasCompletedMorningWindowContext(input.chartContext));
@@ -5581,7 +5607,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
       )
       .map((candidate) => applyActiveTimeframeMssRulesToCandidate(candidate, input.chartContext))
       .map((candidate) => applyHtfLineInSandRuleToCandidate(candidate, input.chartContext))
-      .map((candidate) => attachActiveCampaign(candidate, input.chartContext)),
+      .map((candidate) => attachActiveCampaign(candidate, input.chartContext))
+      .map((candidate) => applyCandidateGeometryValidation(candidate)),
   ]
     .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a));
 

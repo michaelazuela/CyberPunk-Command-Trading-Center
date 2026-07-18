@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Install scanner candidate geometry validator before ranking.
+Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
+Reason: Scanner geometry-path diagnostics showed invalid SweepMssFvgRetrace entry/stop geometry can appear either in setupCandidateStatus only or earlier in candidateLifecycleTrace/deskState. The scanner needed a narrow common boundary guard so directionally impossible full-level candidates cannot compete in ranking or review selection.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsc --noEmit --pretty false.
+Result: Passed. The validator preserves original entry/stop/target/risk fields for audit but marks LONG candidates with stop >= entry and SHORT candidates with stop <= entry as SetupCandidateStatus.Blocked, ExecutionStatus.Blocked, blockReason InvalidStopLocation, and adds missing evidence: Directionally invalid entry-to-stop geometry. Valid same-direction candidates remain untouched.
+Trading logic changed: Yes, narrowly. This is a safety/determinism guard only: impossible entry/stop geometry is demoted before ranking. It does not recalculate entry, stop, target, or risk; does not loosen canExecute; does not remove TurtleSoup or SweepMssFvgRetrace; does not add rank penalties; and does not add automated execution.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This can reduce visibility of malformed candidates that previously appeared as conditional review ideas. That is intended because their stop is on the wrong side of entry. Valid later candidates with corrected protected stops remain eligible.
+Next recommended action: Run the replay/audit chain again from fresh scanner artifacts or a scanner dry-run package to confirm the June 10 and June 12 invalid Sweep/FVG rows are now blocked before ranking while later valid same-direction candidates remain available.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add scanner geometry-path diagnostic for invalid Sweep/FVG rows.
 Files changed: tools/automation/unified-positive-held-local-preview-scanner-geometry-path-diagnostic.ts, tools/automation/unified-positive-held-local-preview-scanner-geometry-path-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The replay-package geometry gate quarantined invalid entry/stop rows, but the desk still needed to identify whether those bad levels came from candidate construction, setup-status export, or replay mapping before any live-facing guard is considered.
