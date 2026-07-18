@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add same-bar allowlist probe for repaired raw-OHLC campaign evidence.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-samebar-allowlist-probe.ts, tools/automation/raw-ohlc-scanner-artifact-samebar-allowlist-probe.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The campaign dedupe/timing filter showed same-bar entries dominate the repaired replay row set. The desk needed to test same-bar inclusion model-by-model before considering any live-facing rank or publish change.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-samebar-allowlist-probe.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-samebar-allowlist-probe -- --replay-package-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784408142980.json --json.
+Result: Passed. Six variants were evaluated: baseline plus one same-bar allowlist per model. Baseline remained -273.75 one-MES. Single-model allowlists turned positive but all still carried selected stopped-before-T1 losses: AfterLunchDriveFvgContinuation +61.25 with 3 winners/3 losses; HtfDisplacementFvgContinuation +56.25 with 3/4; HtfDisplacementMssContinuation +57.5 with 1/6; IntradayMssMicroContinuation +81.25 with 4/4; SweepMssFvgRetrace +291.25 with 3/4. Stale Sweep rows remained isolated and livePromotionAllowedRows stayed 0.
+Trading logic changed: No. This is a local/read-only probe over saved replay outcome artifacts and the research-only dedupe filter. It does not run setupScanner, post Discord, write Supabase, read live bridge data, loosen canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Single-model allowlisting is not enough evidence for live behavior because each positive variant still includes selected losses and the sample is only June 10-12 lunch from repaired artifacts.
+Next recommended action: Add a read-only same-bar separator drilldown to compare same-bar winners vs stopped-before-T1 rows by model, stop distance, MAE/R, first replay bar behavior, and time-of-day before any allowlist or rank-overlay install.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add repaired raw-OHLC scanner artifact dedupe/timing filter.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-dedupe-timing-filter.ts, tools/automation/raw-ohlc-scanner-artifact-dedupe-timing-filter.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The repaired replay package produced 144 candidate rows, but many were repeated 5M event states. The desk needed a local/read-only campaign-level filter before any scanner-visible ranking or publish logic could be considered.
