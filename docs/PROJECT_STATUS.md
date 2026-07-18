@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add TurtleSoup extreme-risk companion-filter diagnostic.
+Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-extreme-risk-companion-filter.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-extreme-risk-companion-filter.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The initial TurtleSoup extreme-risk simulation improved replay P/L but demoted winners and sometimes replaced a penalized TurtleSoup top row with blocked or missing-timing rows. The desk needed to distinguish real better-review replacements from artificial loss avoidance.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-turtlesoup-extreme-risk-companion-filter.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-turtlesoup-extreme-risk-companion-filter -- --installed-score-comparison tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-installed-score-comparison-1784400327124.json --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784400307549.json --extreme-risk-simulation tools/automation/diagnostic-reports/unified-positive-held-local-preview-turtlesoup-extreme-risk-rank-simulation-1784401946242.json --json.
+Result: Passed. The diagnostic tested four pre-entry TurtleSoup wide-risk variants. All four were rejected because changed slates depended on blocked or missing-timing replacements. risk_gt_15 penalized 16 rows, changed 3 slates, had 1 valid replacement, 2 blocked/missing replacements, 1 false top-winner demotion, and +330 simulated P/L. risk_gt_20, risk_gt_20_proof_0, and risk_gte_23_proof_0 avoided false top-winner demotions but still changed only 2 slates, both with blocked/missing replacements, so all were rejected for blocked replacement.
+Trading logic changed: No. This is a local/read-only companion-filter diagnostic only. It does not change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for live behavior. The research conclusion is negative: do not install TurtleSoup extreme-risk rank penalty from this evidence.
+Next recommended action: Leave TurtleSoup active. Do not install the extreme-risk penalty. Move back to candidate-quality research: identify why the alternate Sweep/FVG rows in 2026-06-10 and 2026-06-12 lunch are blocked/missing timing before using them as replacements.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add TurtleSoup extreme-risk rank simulation.
 Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-extreme-risk-rank-simulation.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-extreme-risk-rank-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The valid-review separator diagnostic found only one caution bucket, TurtleSoup with risk over 15 points. The desk needed a same-slate research simulation before considering any scanner-visible rank penalty or model change.
