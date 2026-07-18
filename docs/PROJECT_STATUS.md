@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add replacement blocker drilldown for TurtleSoup extreme-risk alternates.
+Files changed: tools/automation/unified-positive-held-local-preview-replacement-blocker-drilldown.ts, tools/automation/unified-positive-held-local-preview-replacement-blocker-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The TurtleSoup extreme-risk companion filter rejected all penalty variants because improved slates depended on replacement rows that were blocked or missing timing. The desk needed to identify whether those replacements were valid human-review alternatives or defective geometry rows.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-replacement-blocker-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-replacement-blocker-drilldown -- --companion-filter tools/automation/diagnostic-reports/unified-positive-held-local-preview-turtlesoup-extreme-risk-companion-filter-1784402435883.json --installed-score-comparison tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-installed-score-comparison-1784400327124.json --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784400307549.json --replay-package-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784400290822.json --json.
+Result: Passed. The drilldown found 3 changed-slate replacement rows: 1 viable replacement and 2 directionally invalid geometry rows. The viable replacement was 2026-06-05 lunch SweepMssFvgRetrace SHORT, but it replaced a winning TurtleSoup row, so it does not justify a TurtleSoup penalty. The invalid replacements were 2026-06-10 lunch SweepMssFvgRetrace LONG with entry 7308.25 and stop 7339.5, and 2026-06-12 lunch SweepMssFvgRetrace SHORT with entry 7441 and stop 7425. Both are upside-down for their direction and remain non-viable as rank replacements.
+Trading logic changed: No. This is a local/read-only replacement autopsy only. It does not change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for live behavior. The research conclusion is that replacement geometry, not TurtleSoup model removal, is the next issue.
+Next recommended action: Build a research-only geometry-source drilldown for the June 10 and June 12 SweepMssFvgRetrace replacement rows to identify where entry/stop inversion enters the saved candidate path. Do not install rank penalties or remove TurtleSoup.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add TurtleSoup extreme-risk companion-filter diagnostic.
 Files changed: tools/automation/unified-positive-held-local-preview-turtlesoup-extreme-risk-companion-filter.ts, tools/automation/unified-positive-held-local-preview-turtlesoup-extreme-risk-companion-filter.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The initial TurtleSoup extreme-risk simulation improved replay P/L but demoted winners and sometimes replaced a penalized TurtleSoup top row with blocked or missing-timing rows. The desk needed to distinguish real better-review replacements from artificial loss avoidance.
