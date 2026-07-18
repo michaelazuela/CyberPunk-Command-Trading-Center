@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add blocked-top slate drilldown for the remaining invalid-stop Sweep top row.
+Files changed: tools/automation/unified-positive-held-local-preview-blocked-top-slate-drilldown.ts, tools/automation/unified-positive-held-local-preview-blocked-top-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Full model-family slate comparison showed the installed invalid-stop Sweep penalty was safe but selection-neutral, with one remaining invalid-stop Sweep top slate on 2026-06-12 morning. The desk needed to prove whether that slate had no valid alternative or whether replay-package triage held the valid alternative out.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-blocked-top-slate-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-blocked-top-slate-drilldown -- --full-slate-selection-comparison tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-full-slate-selection-comparison-1784399208407.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784331967550.json --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784348679609.json --json.
+Result: Passed. The drilldown found 1 blocked-top slate and 1 valid-candidate-held-out slate. The 2026-06-12 morning slate had 3 intake rows but only 1 replay/source-proof timing row. The selected replay row was 2026-06-12-morning-SweepMssFvgRetrace-LONG, blocked by InvalidStopLocation. The valid held-out row was 2026-06-12-morning-SweepMssFvgRetrace-SHORT, Conditional/EntryTriggerPending with scanner_held_complete proof. Recommendation: fix_replay_package_triage_selection_research_only.
+Trading logic changed: No. This is a local/read-only diagnostic only. It does not change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The issue is upstream in research replay-package triage coverage, not live scanner ranking. Any fix should stay research-only and only affect local replay-package candidate selection.
+Next recommended action: Install a research-only replay-package triage fix that includes one valid Conditional/EntryTriggerPending alternative when a selected top row is blocked by InvalidStopLocation, then rerun source/proof timing and selection diagnostics.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add full model-family slate comparison for installed invalid-stop Sweep rank penalty.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-full-slate-selection-comparison.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-full-slate-selection-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Sweep-only fresh artifact selection was safe but neutral, so the desk needed to test whether the installed invalid-stop Sweep penalty changes unified ranking when all model-family candidates compete by day/session.
