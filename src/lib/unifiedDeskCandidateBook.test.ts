@@ -144,6 +144,68 @@ assert.ok(blockedBook.primaryDeskIdea?.blockers.includes('Actual entry-to-stop r
 assert.equal(blockedBook.notes.some((note) => note.includes('automatic execution approval')), true);
 assert.equal(blockedBook.notes.some((note) => note.includes('Gemini/advisory narrative is excluded')), true);
 
+const invalidStopSweep = candidate({
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'invalid-stop-sweep',
+  direction: 'LONG',
+  priority: 100,
+  modelConfidenceScore: 100,
+  decisionQualityScore: 100,
+  executionStatus: ExecutionStatus.Blocked,
+  blockReason: NoTradeReason.InvalidStopLocation,
+  missingEvidence: ['Stop is on the wrong side of the protected 5M structure.'],
+});
+const validSweepLead = candidate({
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'valid-sweep-lead',
+  direction: 'LONG',
+  priority: 88,
+  modelConfidenceScore: 88,
+  decisionQualityScore: 88,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  requiredTrigger: 'Wait for completed 5M retest/re-entry proof.',
+});
+const turtleSoupBlockedRisk = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'turtle-risk',
+  direction: 'LONG',
+  priority: 90,
+  modelConfidenceScore: 90,
+  decisionQualityScore: 90,
+  executionStatus: ExecutionStatus.Blocked,
+  blockReason: NoTradeReason.RiskTooWide,
+  missingEvidence: ['Actual entry-to-stop risk exceeds the configured max risk.'],
+});
+
+const sweepPenaltyBook = buildUnifiedDeskCandidateBook({
+  sessionType: 'morning',
+  candidates: [invalidStopSweep, turtleSoupBlockedRisk, validSweepLead],
+});
+const invalidStopSweepItem = sweepPenaltyBook.candidates.find((item) => item.candidateKey.includes('invalid-stop-sweep'));
+const turtleSoupRiskItem = sweepPenaltyBook.candidates.find((item) => item.candidateKey.includes('turtle-risk'));
+const validSweepLeadItem = sweepPenaltyBook.candidates.find((item) => item.candidateKey.includes('valid-sweep-lead'));
+
+assert.equal(sweepPenaltyBook.primaryDeskIdea?.candidateKey, 'SweepMssFvgRetrace|valid-sweep-lead|LONG|100.00|2');
+assert.equal(validSweepLeadItem?.state, 'human_review');
+assert.equal(validSweepLeadItem?.canExecute, false);
+assert.equal(validSweepLeadItem?.entry, validSweepLead.entry);
+assert.equal(validSweepLeadItem?.stop, validSweepLead.stop);
+assert.equal(validSweepLeadItem?.target1, validSweepLead.target1);
+assert.equal(validSweepLeadItem?.target2, validSweepLead.target2);
+assert.equal(turtleSoupRiskItem?.setupType, SetupType.TurtleSoup);
+assert.equal(turtleSoupRiskItem?.state, 'blocked');
+assert.equal(invalidStopSweepItem?.state, 'blocked');
+assert.ok(
+  (turtleSoupRiskItem?.score || 0) > (invalidStopSweepItem?.score || 0),
+  'invalid-stop Sweep penalty should demote only the blocked invalid-stop Sweep row inside blocked candidates',
+);
+assert.equal(sweepPenaltyBook.approvalBoundary.changesCanExecute, false);
+assert.equal(sweepPenaltyBook.approvalBoundary.changesEntryStopTargets, false);
+assert.equal(sweepPenaltyBook.approvalBoundary.changesRiskRules, false);
+assert.equal(sweepPenaltyBook.approvalBoundary.postsDiscord, false);
+assert.equal(sweepPenaltyBook.approvalBoundary.writesSupabase, false);
+
 const missingPlanGeometry = candidate({
   setupType: SetupType.IntradayMssMicroContinuation,
   scenarioLabel: 'missing-plan',

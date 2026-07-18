@@ -99,6 +99,7 @@ const STATE_ORDER: Record<UnifiedDeskCandidateState, number> = {
   blocked: 2,
   no_trade: 1,
 };
+const INVALID_STOP_SWEEP_RANK_PENALTY = 18;
 
 function finitePrice(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
@@ -278,6 +279,14 @@ function tradingModelStateForCandidate(args: {
   return 'blocked';
 }
 
+function invalidStopSweepRankPenalty(candidate: SetupCandidate): number {
+  return candidate.setupType === SetupType.SweepMssFvgRetrace &&
+    candidate.executionStatus === ExecutionStatus.Blocked &&
+    candidate.blockReason === NoTradeReason.InvalidStopLocation
+    ? INVALID_STOP_SWEEP_RANK_PENALTY
+    : 0;
+}
+
 function scoreForCandidate(args: {
   candidate: SetupCandidate;
   state: UnifiedDeskCandidateState;
@@ -316,8 +325,9 @@ function scoreForCandidate(args: {
         : args.state === 'no_chase'
           ? -18
           : -28;
+  const rankPenalty = invalidStopSweepRankPenalty(candidate);
   return {
-    score: Math.round(bounded(base + stateAdjustment) * 100) / 100,
+    score: Math.round(bounded(base + stateAdjustment - rankPenalty) * 100) / 100,
     freshnessScore,
     htfScore,
     fiveMinuteProofScore,

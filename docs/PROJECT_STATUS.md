@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Install narrow invalid-stop Sweep rank penalty in the unified desk candidate book.
+Files changed: src/lib/unifiedDeskCandidateBook.ts, src/lib/unifiedDeskCandidateBook.test.ts, docs/PROJECT_STATUS.md.
+Reason: The live-facing proposal gate passed and the user approved the narrow install. The change applies only at the unified desk candidate-book ranking score boundary so invalid-stop Sweep rows stop outranking protected alternatives while final execution approval remains unchanged.
+Tests run: npx tsx src/lib/unifiedDeskCandidateBook.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-penalty-live-proposal -- --fresh-scanner-overlay-dry-run tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-overlay-dry-run-1784395568082.json --json.
+Result: Passed. The regression proves a blocked SweepMssFvgRetrace row with InvalidStopLocation receives the narrow ranking penalty, a valid Conditional/EntryTriggerPending Sweep lead is not penalized, TurtleSoup remains available/ranked, and canExecute plus entry/stop/target/risk output remains unchanged.
+Trading logic changed: Yes, narrowly. Unified desk candidate-book ranking score now subtracts 18 points only for setupType SweepMssFvgRetrace with executionStatus Blocked and blockReason InvalidStopLocation. No setup eligibility, model availability, execution approval, canExecute, entry, stop, target, risk, session, bridge, Discord, Supabase, or automated execution behavior changed.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This first install affects the audit/candidate-book ranking boundary only. The trade decision pipeline and scanner eligibility remain untouched. The next proof should rerun the replay package against this installed score path and compare with the research overlay result.
+Next recommended action: Run the installed-score replay comparison and confirm it matches the research overlay: 80 valid Sweep lead rows preserved, 20 invalid-stop Sweep rows penalized, +$35.00 top-selection delta, zero canExecute/Discord/Supabase/bridge behavior change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add live-facing proposal gate for invalid-stop Sweep rank penalty.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-live-proposal.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-live-proposal.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fresh scanner overlay dry-run proved the invalid-stop Sweep penalty is ready for a live-facing proposal, but model ranking changes require a separate explicit approval gate before any live behavior is installed.
