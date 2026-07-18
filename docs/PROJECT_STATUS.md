@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add fresh scanner-artifact selection comparison for installed invalid-stop Sweep rank penalty.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-artifact-selection-comparison.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-artifact-selection-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh scanner-artifact package proved Sweep coverage and live-flag safety; the desk needed a local before/after top-selection comparison to confirm whether invalid-stop Sweep rows stop beating valid Conditional/EntryTriggerPending Sweep leads before any scanner-visible behavior is considered.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-artifact-selection-comparison.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-penalty-fresh-scanner-artifact-selection-comparison -- --fresh-scanner-artifact-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-artifact-package-1784398222449.json --json; git diff --check.
+Result: Passed. The real comparison processed 100 Sweep artifacts across 67 slates. It found 20 installed invalid-stop Sweep penalty rows, 0 valid Sweep leads penalized, 100 shouldPost=false rows, 100 publishDiscord=false rows, 100 canExecute=false rows, and 100 entry/stop/target/risk-preserved rows. Top selection was neutral: 0 changed slates, 5 invalid-stop baseline top slates, 5 invalid-stop installed top slates, 62 valid Sweep lead baseline top slates, and 62 valid Sweep lead installed top slates. Recommendation: fresh_artifact_selection_comparison_neutral_keep_research_only.
+Trading logic changed: No. This is a local/read-only diagnostic only. It does not change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Sweep-only artifact ranking is safe but not decisive. The invalid-stop penalty does not yet improve top selection inside the isolated Sweep artifact package, so installing additional scanner-visible behavior from this result would be premature.
+Next recommended action: Broaden the local selection comparison to full model-family slates using the installed-score comparison rows, preserving shouldPost=false, publishDiscord=false, canExecute=false, and entry/stop/target/risk, then measure whether invalid-stop Sweep rows are displaced by stronger valid candidates from the unified candidate book.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Generate fresh local scanner-artifact package for installed invalid-stop Sweep rank penalty.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-artifact-package.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-artifact-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The scanner-artifact comparison proved prior dry-run artifacts preserved live behavior but did not include Sweep rows from the installed-score package, so the desk needed a fresh local artifact package with Sweep coverage before selection comparison.
