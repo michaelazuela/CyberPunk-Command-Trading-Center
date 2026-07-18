@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add geometry-source drilldown for invalid Sweep/FVG replacements.
+Files changed: tools/automation/unified-positive-held-local-preview-geometry-source-drilldown.ts, tools/automation/unified-positive-held-local-preview-geometry-source-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Replacement blocker drilldown proved the June 10 and June 12 SweepMssFvgRetrace alternates had directionally invalid entry/stop geometry. The desk needed to identify whether inversion came from replay mapping or was already present in the scanner decision tape.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-geometry-source-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-geometry-source-drilldown -- --replacement-blocker-drilldown tools/automation/diagnostic-reports/unified-positive-held-local-preview-replacement-blocker-drilldown-1784403282049.json --replay-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-1784400266321.json --json.
+Result: Passed. The report found 2 invalid replacement rows and both bad geometry cases originated in the scanner decision tape at the selected proof time. 2026-06-10 lunch SweepMssFvgRetrace LONG had replay entry 7308.25 and stop 7339.5 at 13:50, with the first later valid same-direction tape event at 14:45 using entry 7308.25 and stop 7305. 2026-06-12 lunch SweepMssFvgRetrace SHORT had replay entry 7441 and stop 7425 at 12:00, with the first later valid same-direction tape event at 13:35 using entry 7441 and stop 7446.75.
+Trading logic changed: No. This is a local/read-only geometry-source diagnostic only. It does not change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports and local scanner decision tapes only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for live behavior. The research selector can still choose first proof rows with inverted geometry until the replay package adds a local geometry gate.
+Next recommended action: Add a research-only replay-package geometry gate so directionally invalid entry/stop rows are blocked before outcome/rank simulations, then regenerate downstream replay reports. Do not install TurtleSoup penalties or any live rank change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add replacement blocker drilldown for TurtleSoup extreme-risk alternates.
 Files changed: tools/automation/unified-positive-held-local-preview-replacement-blocker-drilldown.ts, tools/automation/unified-positive-held-local-preview-replacement-blocker-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The TurtleSoup extreme-risk companion filter rejected all penalty variants because improved slates depended on replacement rows that were blocked or missing timing. The desk needed to identify whether those replacements were valid human-review alternatives or defective geometry rows.
