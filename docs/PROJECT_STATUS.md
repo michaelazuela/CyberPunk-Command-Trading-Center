@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add fresh research scanner overlay dry-run for invalid-stop Sweep penalty.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-overlay-dry-run.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-overlay-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The readiness gate passed, so the desk needed a fresh research scanner overlay dry-run that applies the invalid-stop Sweep penalty to scanner-selection artifacts only while proving normal scanner output and publish behavior remain unchanged.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-penalty-fresh-scanner-overlay-dry-run.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-penalty-fresh-scanner-overlay-dry-run -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784348679609.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784331967550.json --readiness tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-scanner-overlay-readiness-1784391483027.json --scanner-dry-run-replay tools/automation/diagnostic-reports/unified-positive-scanner-dry-run-replay-1784350014342.json --json.
+Result: Passed. Fresh overlay dry-run evaluated 373 joined rows, 100 Sweep rows, 80 valid Conditional/EntryTriggerPending Sweep lead rows, and 20 invalid-stop Sweep penalty rows. Valid Sweep lead rows penalized: 0. Overlay penalty rows: 20. Same-session slates: 85. Changed slates: 1, and it changed from invalid-stop Sweep to a protected destination. Baseline/overlay top-selection P/L: +$1,863.83 / +$1,898.83, delta +$35.00. Scanner dry-run rows: 4, zero-live-publish rows: 4, blocked rows: 0. Recommended action: research_overlay_candidate_ready_for_live_proposal.
+Trading logic changed: No. This is a local/read-only fresh scanner overlay dry-run only. It does not install an overlay, rank penalty, live scanner behavior, canExecute change, Discord post, Supabase write, bridge read/write, entry, stop, target, risk, or model availability change.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves the research overlay enough for a live-facing proposal, not enough to silently install live behavior. A live rank penalty still requires a separate explicit approval gate and focused scanner/ranking regression tests.
+Next recommended action: Prepare the live-facing proposal for an invalid-stop Sweep rank penalty: exact function boundary, tests required, rollback path, and why TurtleSoup/Sweep model availability remains unchanged.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add Sweep penalty scanner overlay readiness gate.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-scanner-overlay-readiness.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-scanner-overlay-readiness.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The guarded penalty replay was clean, but the desk needed a scanner-readiness gate proving the research penalty proof and scanner dry-run zero-live-publish proof are both clean before any fresh overlay experiment.
