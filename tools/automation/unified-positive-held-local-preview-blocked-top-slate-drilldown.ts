@@ -93,6 +93,7 @@ export interface UnifiedPositiveHeldLocalPreviewBlockedTopSlateDrilldownReport {
     missingContextSlates: number;
     livePromotionAllowedRows: 0;
     recommendation:
+      | 'no_blocked_top_slates_remaining'
       | 'fix_replay_package_triage_selection_research_only'
       | 'mine_more_intake_context_before_fix'
       | 'reject_blocked_top_slate_drilldown';
@@ -296,11 +297,12 @@ export function buildUnifiedPositiveHeldLocalPreviewBlockedTopSlateDrilldownRepo
     !args.intakeTriageReport ? 'missing intake triage report' : null,
     !args.sourceProofTimingPath ? 'missing source/proof timing path' : null,
     !args.sourceProofTimingReport ? 'missing source/proof timing report' : null,
-    rows.length === 0 ? 'no blocked top slates found for drilldown' : null,
   ].filter((item): item is string => Boolean(item));
   const recommendation = blockers.length
     ? 'reject_blocked_top_slate_drilldown'
-    : validHeld > 0
+    : rows.length === 0
+      ? 'no_blocked_top_slates_remaining'
+      : validHeld > 0
       ? 'fix_replay_package_triage_selection_research_only'
       : 'mine_more_intake_context_before_fix';
   const base: Omit<UnifiedPositiveHeldLocalPreviewBlockedTopSlateDrilldownReport, 'markdown'> = {
@@ -332,6 +334,11 @@ export function buildUnifiedPositiveHeldLocalPreviewBlockedTopSlateDrilldownRepo
           'Install a research-only replay-package triage fix that includes one valid Conditional/EntryTriggerPending alternative when the selected top row is blocked by InvalidStopLocation.',
           'Do not change scanner-visible behavior, canExecute, Discord, Supabase, bridge, entry, stop, target, risk, or model availability.',
         ]
+        : recommendation === 'no_blocked_top_slates_remaining'
+          ? [
+            'No blocked-top slates remain in the supplied full-slate comparison.',
+            'Continue downstream outcome/rank research only; do not change scanner-visible behavior from this confirmation.',
+          ]
         : [
           'Mine upstream scanner/proof generation for the blocked-top slates before changing triage selection.',
           'Keep invalid-stop rank penalty research-only until valid alternatives are reliably present in the replay package.',

@@ -289,6 +289,29 @@ assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesCanExecute, false);
 
+const cleared = buildUnifiedPositiveHeldLocalPreviewBlockedTopSlateDrilldownReport({
+  reportDir: 'reports',
+  fullSlateSelectionComparisonPath: 'full-slate.json',
+  fullSlateSelectionComparisonReport: {
+    ...fullSlate,
+    slates: [{
+      ...fullSlate.slates[0],
+      installedTopInvalidStopSweep: false,
+      installedTopValidReviewCandidate: true,
+      installedTopTicketId: '2026-06-12-morning-SweepMssFvgRetrace-SHORT',
+    }],
+  },
+  intakeTriagePath: 'intake.json',
+  intakeTriageReport: intake,
+  sourceProofTimingPath: 'timing.json',
+  sourceProofTimingReport: timing,
+}, '2026-07-18T00:00:30.000Z');
+
+assert.equal(cleared.status, 'pass');
+assert.equal(cleared.summary.recommendation, 'no_blocked_top_slates_remaining');
+assert.equal(cleared.summary.blockedTopSlates, 0);
+assert.equal(cleared.blockers.length, 0);
+
 const blocked = buildUnifiedPositiveHeldLocalPreviewBlockedTopSlateDrilldownReport({
   reportDir: 'reports',
   fullSlateSelectionComparisonPath: null,
