@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add scanner-artifact comparison for installed invalid-stop Sweep rank penalty.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-scanner-artifact-comparison.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-scanner-artifact-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The installed-score comparison passed, so the next guardrail needed to prove whether existing scanner dry-run artifacts were covered by installed scoring and whether any live publish/canExecute behavior changed.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-penalty-scanner-artifact-comparison.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-penalty-scanner-artifact-comparison -- --scanner-dry-run-replay tools/automation/diagnostic-reports/unified-positive-scanner-dry-run-replay-1784350014342.json --installed-score-comparison tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-penalty-installed-score-comparison-1784396831623.json --json.
+Result: Passed. Existing scanner dry-run rows: 4. Installed-score rows: 373. Joined scanner rows: 0 because the prior scanner dry-run artifact set does not include the installed-score Sweep package rows. Scanner behavior changed rows: 0. shouldPost changed rows: 0. publishDiscord changed rows: 0. canExecute changed rows: 0. Installed invalid-stop Sweep rows: 20. Installed valid Sweep lead rows: 80. Installed penalty rows: 20. Installed valid Sweep leads penalized: 0. Recommendation: needs_fresh_scanner_artifacts.
+Trading logic changed: No. This is a local/read-only scanner-artifact comparison only. It does not change scanner eligibility, tradeDecisionPipeline, canExecute, entry, stop, target, risk, bridge, Discord, Supabase, model availability, or automated execution.
+Bridge impact: None. It reads saved diagnostic reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Existing scanner dry-run artifacts preserve live behavior but do not cover Sweep rows from the installed-score package. The next proof must create fresh local scanner artifacts that include Sweep candidate-book output before any scanner-visible selection discussion.
+Next recommended action: Generate a fresh local scanner-artifact package from installed candidate-book rows, including valid Sweep leads and invalid-stop Sweep rows, and prove shouldPost=false, publishDiscord=false, canExecute=false, and entry/stop/target/risk unchanged.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add installed-score replay comparison for the invalid-stop Sweep rank penalty.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-penalty-installed-score-comparison.ts, tools/automation/unified-positive-held-local-preview-sweep-penalty-installed-score-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After installing the narrow candidate-book rank penalty, the desk needed proof that the installed scoring path matches the prior research overlay before considering any pipeline or scanner-facing expansion.
