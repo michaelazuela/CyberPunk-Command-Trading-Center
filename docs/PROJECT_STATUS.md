@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector proofSelectionSignal shadow dry-run.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-shadow-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-shadow-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The pure scanner-owned proofSelectionSignal builder passed, but the desk needed a durable shadow dry-run proving that attaching generated signals to cloned scanner-like candidates does not alter rank order, rank score, execution status, or blocker state.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-shadow-dry-run.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-shadow-dry-run -- --json; npx tsc --noEmit --pretty false.
+Result: Shadow dry-run generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-shadow-dry-run-1784493039057.json. Status pass. Rows compared: 4. Signals attached: 4. keep_later_sweep_proof rows: 2. rankOrderChanged: false. rankScoreChangedRows: 0. executionStatusChangedRows: 0. blockReasonChangedRows: 0. canExecuteChangedRows: 0. livePromotionAllowedRows: 0. Recommendation is prepare_scanner_population_preflight_next.
+Trading logic changed: No. This is a local/read-only shadow dry-run over cloned candidates. It does not run setupScanner, populate live candidates, alter ranking, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The shadow dry-run proves inert attachment only on a synthetic scanner-like slate. The next step must still prove safe population against scanner output before any ranking consumer is allowed.
+Next recommended action: Add a scanner population preflight that verifies where completed 5M proof timestamps can be sourced from live scanner-owned candidate/context fields, with ranking still disabled.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector scanner-owned proofSelectionSignal dry-run builder.
 Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
 Reason: The type-only `proofSelectionSignal` boundary existed, but the desk needed a pure scanner-owned builder that can compute same-completed-5M proof collision metadata from app-owned refs without wiring it into scan output or ranking.
