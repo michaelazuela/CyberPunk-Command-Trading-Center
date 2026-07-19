@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add research-only negative overlay simulation for no-chase/late-day/target-room tags.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Source-context drilldown showed unresolved missing-top rows were concentrated in no_chase, late_day_after_1500, target_room_blocked_before_t1, and entry_trigger_pending tags. The desk needed a local dry-run to test whether penalizing those tags improves top-slate selection without demoting known winners before considering any live-facing proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-simulation -- --overlay-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-dry-run-1784442068271.json --source-context-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-source-context-drilldown-1784443491543.json --json.
+Result: Negative overlay simulation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-simulation-1784443993746.json. It evaluated 10,732 source rows across 2,684 slates. Penalized rows: 53. Changed slates: 39. Changed from known winner slates: 0. Changed away from penalized missing-outcome slates: 39. Overlay/negative top one-MES P/L on available outcomes: +66652.08 / +67244.58. Known changed-slate delta remained 0 because most changed slates still lacked resolved top outcomes. Missing top outcome rows improved only from 1,637 to 1,631, so recommendation remains keep_research_only. Live promotion allowed rows: 0.
+Trading logic changed: No. This is a local/read-only negative overlay simulation over saved reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The penalty appears directionally useful and did not demote known winners, but broad top-slate outcome coverage remains too incomplete for a live proposal. Some replacement tops still lack outcomes, so the next phase must outcome-cover changed replacement tops before any production discussion.
+Next recommended action: Build a changed-slate replacement coverage package for the 39 negative-overlay changed slates, replay any replacement tops with complete levels/tapes, then rerun the negative overlay on outcome-covered changed slates only. Keep promotion disabled.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add source-context drilldown for unresolved overlay missing-top rows.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-source-context-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-source-context-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The unresolved drilldown showed the 60 replay-ready missing-top rows did not resolve into winners/losses. The desk needed to quantify the original scanner snapshot context behind those rows: no-chase labels, target-room blockers, entry-trigger-pending state, late-day timing, and missing-evidence state.
