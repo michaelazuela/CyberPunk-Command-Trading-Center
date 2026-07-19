@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector approval-boundary contract.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The non-overlap selector dry run was strong enough for a proposal-boundary check, but not a direct live install.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-approval-contract.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-approval-contract -- --selector-dry-run tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run-1784479984846.json --json.
+Result: Approval contract generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-approval-contract-1784480158122.json. The contract passed for keep_long_or_lunch_else_replacement: selected +13907.59, keep-all +10170.00, replace-all +10395.79, +3737.59 vs keep-all, +3511.80 vs replace-all. approvalBoundaryClean is true. proposalReady is false. liveInstallAllowed and scannerVisibleChangeAllowed are false. All canExecute, Discord, Supabase, bridge, entry/stop/target, and risk change flags remain false.
+Trading logic changed: No. This is a local/read-only approval-boundary contract only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The selector is not installed. A separate live-proposal phase is required before any scanner-visible behavior can be considered.
+Next recommended action: Build a live-proposal draft for keep_long_or_lunch_else_replacement that maps exactly where the selector would sit, proves no changes to canExecute/Discord/Supabase/bridge/entry-stop-target-risk, and keeps install disabled until explicit final approval.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Run non-overlap OpeningDrive keep-later selector validation.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The broad validation package included overlapping daily and combined reports. The desk needed a cleaner non-overlap check before any approval-boundary proposal.
