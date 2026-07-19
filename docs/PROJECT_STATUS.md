@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add retained residue separator miner for proofSelectionSignal research.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-residue-separator-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-residue-separator-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The retained problem-slate drilldown classified the residue, but it did not compare residue against retained winners. This miner compares retained winners and retained problems using proof-time/clock-derived fields only, excluding outcome-derived MFE/MAE from separator candidates.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-residue-separator-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-residue-separator-miner -- --filter-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-filter-simulation-1784503600748.json --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784503584511.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-residue-separator-miner-1784504474348.json. Status pass. Retained slates: 28. Retained winner/problem slates: 20/8. Feature stats: 24. Positive-lane candidates: 2. Negative-filter candidates: 0. Top positive lanes: riskBucket=risk_lt_10 with 10 winner slates and 0 problem slates; proofWindow=proof_14_to_15 with 4 winner slates and 0 problem slates. runtimeRankConsumerAllowedByThisReport remains false.
+Trading logic changed: No. This is a local/read-only saved-report separator miner. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The positive lanes are promising but still research-only; they must be validated as a rank-priority overlay rather than a hard execution gate.
+Next recommended action: Simulate a research-only positive rank overlay for retained low-risk and 14:00-15:00 proof-window lanes, then compare slate selection impact before any scanner-visible consumer.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add retained problem-slate drilldown for broader proofSelectionSignal filter residue.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-problem-slate-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-problem-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The broader daily filter simulation improved the slate set but still retained 6 unresolved and 2 stopped problem slates. This drilldown joins filter decisions, problem-slate metrics, and earliest outcome rows to classify the remaining residue without changing runtime ranking.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: This classifies remaining residue but does not yet prove a separator against retained winning slates.
 Next recommended action: Mine pre-entry distance, fill state, follow-through, and moderate-adverse proof-time features against retained winners before any scanner-visible rank consumer.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add broader daily proofSelectionSignal real-row replay package.
