@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector disabled shadow comparison.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The unified candidate-book now exposes audit-only collision metadata. The desk needs a disabled shadow selector report before any saved-artifact parity or scanner-visible proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison -- --input-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --json.
+Result: Shadow comparison generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison-1784481493936.json. Status pass. It audited 383 saved snapshots and found 375 collision rows: 224 keep_later_sweep_proof, 151 prefer_replacement, and 284 rows where the disabled shadow selection would differ from the current candidate-book primary. selectedCanExecuteTrueRows, livePromotionAllowedRows, scannerVisibleChangeAllowedRows, and entryStopTargetRiskDriftRows are all 0.
+Trading logic changed: No. This is a local/read-only disabled shadow comparison. It rebuilds the audit candidate book from saved snapshots and reports shadowSelectedKey only; it does not feed selector output into ranking, setupScanner, canExecute, entry, stop, target, risk, Discord, Supabase, bridge, or app runtime behavior.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The tool requires saved snapshots with same completed 5M proof collision groups to produce useful rows.
+Next recommended action: Run the shadow comparison on saved scanner snapshots or generate a collision snapshot package if the current saved reports are rollups only.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add unified candidate-book collision metadata contract.
 Files changed: src/lib/unifiedDeskCandidateBook.ts, src/lib/unifiedDeskCandidateBook.test.ts, docs/PROJECT_STATUS.md.
 Reason: The OpeningDrive selector live-proposal draft identified missing duplicate/campaign collision metadata as the next required contract before any disabled shadow overlay.
