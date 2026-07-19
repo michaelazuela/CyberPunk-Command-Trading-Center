@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add proofSelectionSignal rank-effect simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-effect-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-effect-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The real-metadata replay proved current scanner metadata can reconstruct 220 real keep_later_sweep_proof rows. The next guardrailed step was to simulate rank effect against saved outcome evidence and safety drift before any runtime rank-consumer consideration.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-effect-simulation.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-effect-simulation -- --json.
+Result: Rank-effect simulation generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-effect-simulation-1784496781948.json. Status pass. Real keep_later_sweep_proof rows: 220. Real keep-later rows with valid deterministic levels: 135. Real prefer_replacement rows: 23. Real missing completed proof groups: 0. Outcome-backed changed rows: 4. Outcome-backed gross resolved one-MES P/L: 478.75. Outcome-backed coverage of real keep-later rows: 1.82%. Valid-level coverage of real keep-later rows: 61.36%. Saved missing outcome rows: 0. Safety drift rows: 0. researchRankEffectSupported: true. runtimeRankConsumerAllowedByThisReport: false. Recommendation is expand_outcome_join_before_runtime_rank_consumer.
+Trading logic changed: No. This is a local/read-only saved-report simulation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The changed subset is positive, but outcome coverage is only 1.82% of the 220 real keep-later rows. Runtime ranking remains blocked until the outcome/candidate-key join covers a much larger share of real rows.
+Next recommended action: Expand the outcome/candidate-key join across the 220 real keep_later_sweep_proof rows, still research-only, so the desk can separate positive selectors from no-fill/invalid-stop/no-outcome rows before any scanner-visible rank consumer.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add real-metadata replay audit for proofSelectionSignal.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-metadata-replay-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-metadata-replay-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The rank-consumer proposal audit showed research could continue but runtime ranking was not ready until saved real-artifact keep-later groups were reconstructed through the current proofSelectionSignal builder. This replay does that without running setupScanner or installing a rank consumer.
