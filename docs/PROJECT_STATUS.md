@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add risk cap to strict unified rank simulation and run cross-period validation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.test.ts, docs/PROJECT_STATUS.md.
+Reason: Strict mode was clean in each in-sample period, but holdout selection used wide average risk. The desk needed a max-risk gate and a true cross-period transfer check before considering any scanner-visible rank proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-july-unified-rank-simulation -- --mode strict_specific_zero_loss --max-risk-points 16 --separator-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-july-unified-separator-1784434312048.json --samebar-reports [July 3-July 17 same-bar reports] --json; npm run research:raw-ohlc-scanner-artifact-july-unified-rank-simulation -- --mode strict_specific_zero_loss --max-risk-points 16 --separator-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-july-unified-separator-1784435189250.json --samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --json; cross-checks using the fixed July separator on the June 1-July 2 report and the fixed June separator on the July 3-July 17 reports.
+Result: In-sample risk-capped strict mode stayed clean but transfer failed. July separator on July, max risk 16: 117 selected, 102 winners, 0 losses, 7 other resolved, 8 unresolved, +5422.52 one-MES, avg risk 5.15. June separator on June, max risk 16: 9 selected, 9 winners, 0 losses, +272.50 one-MES, avg risk 3.03. True cross-period test failed: July separator on June selected 204 rows with 154 winners and 50 losses, +9745.77 one-MES; June separator on July selected 2 rows, both losses, -30.00 one-MES. Zero-loss specific bucket intersection across periods was 0.
+Trading logic changed: No. This is a local/read-only research simulation option over saved same-bar and separator reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The strict bucket approach overfits period-specific state. Do not install it live and do not use it to loosen canExecute.
+Next recommended action: Stop trying to promote static bucket rules. Build a richer no-lookahead feature comparison for transfer-stable state: completed 5M retest quality, displacement/retest freshness, HTF target room, session phase, direction, risk, MFE/MAE path shape, and prior RAG/outcome labels.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Validate strict unified rank simulation on June 1-July 2 holdout same-bar artifact.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: Strict July mode selected 130 rows with 0 stopped-before-T1 losses, but it needed an earlier holdout check before any scanner-visible rank proposal. The desk reused the prior June 1-July 2 same-bar report as a fresh validation set for the same research-only separator/simulation tools.

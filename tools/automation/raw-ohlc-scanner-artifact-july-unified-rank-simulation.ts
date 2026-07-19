@@ -13,6 +13,7 @@ interface CliOptions {
   separatorReport: string | null;
   samebarReports: string[];
   mode: 'broad_bucket_score' | 'strict_specific_zero_loss';
+  maxRiskPoints: number | null;
   outDir: string;
   json: boolean;
 }
@@ -72,6 +73,7 @@ export interface RawOhlcScannerArtifactJulyUnifiedRankSimulationReport {
     separatorReport: string | null;
     samebarReports: string[];
     mode: CliOptions['mode'];
+    maxRiskPoints: number | null;
   };
   assumptions: {
     consumesExistingSameBarAndSeparatorReportsOnly: true;
@@ -171,6 +173,7 @@ export function parseRawOhlcScannerArtifactJulyUnifiedRankSimulationArgs(args = 
     separatorReport: readFlag(args, '--separator-report') || latestMatchingFile(outDir, /^raw-ohlc-scanner-artifact-july-unified-separator-\d+\.json$/),
     samebarReports: splitPaths(readFlag(args, '--samebar-reports')),
     mode,
+    maxRiskPoints: readFlag(args, '--max-risk-points') ? Number(readFlag(args, '--max-risk-points')) : null,
     outDir,
     json: args.includes('--json'),
   };
@@ -260,6 +263,7 @@ function selectRows(
   rows: RawOhlcScannerArtifactSameBarSeparatorRow[],
   separatorReport: RawOhlcScannerArtifactJulyUnifiedSeparatorReport,
   mode: CliOptions['mode'],
+  maxRiskPoints: number | null,
 ): SimulatedRow[] {
   const groups = new Map<string, RawOhlcScannerArtifactSameBarSeparatorRow[]>();
   for (const row of rows) groups.set(proofEventKey(row), [...(groups.get(proofEventKey(row)) || []), row]);
@@ -267,6 +271,7 @@ function selectRows(
   for (const groupRows of groups.values()) {
     const scored = groupRows
       .map((row) => scoreRow(row, separatorReport, mode))
+      .filter((row) => maxRiskPoints === null || row.riskPoints <= maxRiskPoints)
       .filter((row) => row.rankScore > 0 && row.positiveMatches.length > 0)
       .sort((a, b) => b.rankScore - a.rankScore || a.riskPoints - b.riskPoints || a.ticketId.localeCompare(b.ticketId));
     if (scored[0]) selected.push(scored[0]);
@@ -316,10 +321,12 @@ export function buildRawOhlcScannerArtifactJulyUnifiedRankSimulationReport(args:
   samebarReportPaths: string[];
   samebarReports: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport[];
   mode?: CliOptions['mode'];
+  maxRiskPoints?: number | null;
 }, generatedAt = new Date().toISOString()): RawOhlcScannerArtifactJulyUnifiedRankSimulationReport {
   const rows = args.samebarReports.flatMap((report) => report.rows || []);
   const mode = args.mode || 'broad_bucket_score';
-  const selectedRows = args.separatorReport ? selectRows(rows, args.separatorReport, mode) : [];
+  const maxRiskPoints = args.maxRiskPoints ?? null;
+  const selectedRows = args.separatorReport ? selectRows(rows, args.separatorReport, mode, maxRiskPoints) : [];
   const selectedIds = new Set(selectedRows.map((row) => row.ticketId));
   const rejectedRows = rows.filter((row) => !selectedIds.has(row.ticketId));
   const selectedSummary = summarize(selectedRows);
@@ -342,6 +349,7 @@ export function buildRawOhlcScannerArtifactJulyUnifiedRankSimulationReport(args:
       separatorReport: args.separatorReportPath,
       samebarReports: args.samebarReportPaths,
       mode,
+      maxRiskPoints,
     },
     assumptions: {
       consumesExistingSameBarAndSeparatorReportsOnly: true,
@@ -405,6 +413,7 @@ export function runRawOhlcScannerArtifactJulyUnifiedRankSimulationCli(args = pro
     samebarReportPaths: options.samebarReports,
     samebarReports: options.samebarReports.map((filePath) => readJson<RawOhlcScannerArtifactSameBarSeparatorDrilldownReport>(filePath)),
     mode: options.mode,
+    maxRiskPoints: options.maxRiskPoints,
   });
   const paths = writeRawOhlcScannerArtifactJulyUnifiedRankSimulationReport(report, options.outDir);
   if (options.json) {

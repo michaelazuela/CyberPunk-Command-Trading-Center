@@ -197,6 +197,19 @@ assert.equal(strictReport.summary.selectedRows, 1);
 assert.equal(strictReport.summary.selectedSummary.losses, 0);
 assert.equal(strictReport.selectedRows[0].ticketId, 'good-sweep');
 
+const riskCappedReport = buildRawOhlcScannerArtifactJulyUnifiedRankSimulationReport({
+  reportDir: 'reports',
+  separatorReportPath: 'separator.json',
+  separatorReport,
+  samebarReportPaths: ['samebar.json'],
+  samebarReports: [samebarReport],
+  mode: 'strict_specific_zero_loss',
+  maxRiskPoints: 5,
+}, '2026-07-19T00:03:00.000Z');
+
+assert.equal(riskCappedReport.source.maxRiskPoints, 5);
+assert.equal(riskCappedReport.summary.selectedRows, 0);
+
 const parsed = parseRawOhlcScannerArtifactJulyUnifiedRankSimulationArgs([
   '--separator-report',
   'separator.json',
@@ -204,11 +217,14 @@ const parsed = parseRawOhlcScannerArtifactJulyUnifiedRankSimulationArgs([
   'a.json,b.json',
   '--mode',
   'strict_specific_zero_loss',
+  '--max-risk-points',
+  '16',
   '--json',
 ]);
 assert.equal(parsed.separatorReport, 'separator.json');
 assert.deepEqual(parsed.samebarReports, ['a.json', 'b.json']);
 assert.equal(parsed.mode, 'strict_specific_zero_loss');
+assert.equal(parsed.maxRiskPoints, 16);
 assert.equal(parsed.json, true);
 
 console.log('raw OHLC July unified rank simulation verified.');
