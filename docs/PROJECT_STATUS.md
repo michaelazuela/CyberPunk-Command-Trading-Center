@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Run read-only Sweep same-bar dedupe and re-entry evidence check.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The loss case classifier showed 9 installed-priority losses were all duplicate/re-entry clusters and target-room/risk-context rows. The desk needed to determine whether the next step should be a broad same-bar/Sweep penalty or a narrower duplicate campaign and fresh re-entry policy.
+Tests run: npm run research:raw-ohlc-scanner-artifact-dedupe-timing-filter -- --replay-package-outcome "tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784474838098.json" --json; npm run research:raw-ohlc-scanner-artifact-dedupe-timing-filter -- --replay-package-outcome "tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784474838098.json" --allow-same-bar-model SweepMssFvgRetrace --json; npm run research:raw-ohlc-scanner-artifact-samebar-model-separator -- --samebar-separator-report "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784474843614.json" --setup-type SweepMssFvgRetrace --json.
+Result: Generic dedupe/timing filter passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-dedupe-timing-filter-1784475695415.json. It selected 28 campaign rows from 848 input rows, excluded 707 same-bar rows, suppressed 35 duplicate campaign rows, and produced +870.01 gross selected one-MES P/L with 0 live-promotion rows. With SweepMssFvgRetrace same-bar allowlisted, the filter passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-dedupe-timing-filter-1784475711953.json. It selected 52 campaign rows, suppressed 263 duplicate campaign rows, and produced +2291.26 gross selected one-MES P/L with 0 live-promotion rows. Against the 9 priority-loss rows from the classifier, 8 were duplicate-suppressed and 1 remained as the earliest selected July 13 long campaign lead. Sweep same-bar model separator passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-model-separator-1784475746523.json. Sweep same-bar rows are not junk as a broad class: 252 rows, 173 winners, 72 losses, 69% win rate, and +17987.50 gross one-MES P/L.
+Trading logic changed: No. This is a local/read-only evidence check over saved replay outcome and same-bar reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The broad Sweep same-bar bucket is positive, so a blanket same-bar or Sweep penalty would throw away good evidence. The remaining problem is duplicate campaign selection and whether a post-stop fresh re-entry should be treated as a new review candidate.
+Next recommended action: Build the next read-only simulator around same campaign clusters: compare earliest-only, first-non-loss, and fresh-post-stop-reentry policies, and require completed 5M re-entry proof before any simulated re-entry is counted. Keep live behavior unchanged.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority loss case classifier.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-case-classifier.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-case-classifier.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The broad July raw-OHLC evidence refresh showed 9 installed-priority losses but no clean no-lookahead or structural rank filter. The desk needed a durable read-only case classifier to separate true model weakness from duplicate/re-entry clustering, stop-first-then-later-target replay ordering, and target-room/risk context.
