@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority structural separator drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-separator-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-separator-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Simple risk-size guards did not explain the fresh underperformance without rejecting too many prior priority winners. The desk needs a read-only structural/outcome separator drilldown to identify whether the loser is explained by stop-hit timing, target-delivery timing, MFE/MAE, intrabar ambiguity, or same-bar outcome sequence before any scanner-visible ranking change.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-separator-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-separator-drilldown -- --json.
+Result: Structural separator drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-structural-separator-drilldown-1784468077823.json. It evaluated 14 installed-priority source rows, with 9 priority-better rows and 1 priority-underperformance row. It found 3 pure underperformance feature rows, but all are outcome-only/research-only: both_stopped_before_t1, priority_mae_at_or_over_1r, and priority_outcome_stopped_before_t1. Mixed/non-installable features included OpeningDrive intrabar ambiguity, priority T1/T2 later than OpeningDrive, and OpeningDrive stopped-before-T1. liveInstallableFeatureRows remains 0, livePromotionAllowedRows remains 0, and broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only structural separator drilldown. It consumes saved source-selection and same-bar diagnostic reports only and does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The cleanest separators use future outcome information, so they cannot be installed live. They are useful only as clues for the next no-lookahead mining pass.
+Next recommended action: Mine pre-entry or first-completed-bar structural features that approximate the outcome-only loser signature without lookahead.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority risk-guard validation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-risk-guard-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-risk-guard-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fresh contradiction suggested priority risk size may matter, but the prior positive baseline includes high-risk and high-risk-ratio priority winners. The desk needs a read-only validation pass that tests simple priority risk caps, risk-ratio guards, and risk-delta guards before any scanner-visible ranking change.
