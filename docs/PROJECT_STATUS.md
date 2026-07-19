@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add OpeningDrive combined research selector.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-selector.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-selector.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Two OpeningDrive same-bar research leads validated separately: tight LONG risk_4_to_8 and wider fineRiskBucket=risk_24_to_32. The desk needed a read-only combined selector that dedupes one row per proof event and reports selected vs still-rejected rows before any scanner-visible proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-selector.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-combined-selector -- --samebar-separator-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --setup-type OpeningDriveFvgContinuation --json.
+Result: Focused test and real local selector passed. OpeningDrive source rows/proof events were 149/149. The combined selector selected 32 rows: 31 T1/T2 winners, 0 stopped-before-T1 losses, 1 other resolved, +5917.60 one-MES, avg risk 18.52. Tight LONG risk_4_to_8 contributed 12 rows with 11 winners, 0 losses, 1 other resolved, +585.06. Fine risk_24_to_32 contributed 20 rows with 20 winners, 0 losses, +5332.54. Rejected rows dropped to 117 but still contained 80 winners and all 37 stopped-before-T1 losses. livePromotionAllowedRows remains 0.
+Trading logic changed: No. This is a local/read-only research selector over saved same-bar replay artifacts. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is still derived from the same saved same-bar artifact package. It is a stronger research selector, not a live rule. The selected set includes wide-risk rows, so risk-quality and fresh replay validation remain required.
+Next recommended action: Run a fresh/out-of-sample raw-OHLC replay package for the combined OpeningDrive selector and compare selected vs rejected behavior by day before proposing any scanner-visible rank/filter change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Validate OpeningDrive fine-risk candidate.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The rejected-geometry miner identified OpeningDrive fineRiskBucket=risk_24_to_32 as the strongest clean rejected proof-time bucket. The desk needed a frozen validation pass before considering any combined OpeningDrive candidate package or scanner-visible proposal.
