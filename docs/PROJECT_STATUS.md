@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add OpeningDrive frozen candidate validation phase.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-candidate-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-candidate-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The prior no-lookahead separator identified OpeningDrive LONG|risk_4_to_8 as a clean in-sample research lead. The desk needed a frozen-candidate validation pass that holds the rule fixed and checks train/validation behavior by date before any scanner-visible consideration.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-candidate-validation.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-candidate-validation -- --samebar-separator-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --setup-type OpeningDriveFvgContinuation --candidate-direction LONG --candidate-risk-bucket risk_4_to_8 --json.
+Result: Focused test and real local validation passed. The frozen OpeningDrive direction_risk=LONG|risk_4_to_8 candidate matched 12 of 149 same-bar OpeningDrive rows. Full sample: 11 T1/T2 winners, 0 stopped-before-T1 losses, 1 other resolved row, +585.06 one-MES, avg risk 4.98 points. Default date holdout split: train 84 rows with 3 matching rows, 3 winners, 0 losses, +178.14; validation 65 rows with 9 matching rows, 8 winners, 0 losses, 1 other resolved row, +406.92, avg risk 4.69. Validation decision: validated_for_more_research. livePromotionAllowedRows remains 0.
+Trading logic changed: No. This is a local/read-only research post-processor over saved same-bar replay artifacts. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The candidate still selects a small subset and rejects many winners. It is validated only as a research lead, not as a live filter. The other resolved validation row should be inspected with richer proof-time geometry before any scanner-visible behavior is proposed.
+Next recommended action: Mine proof-time OpeningDrive geometry for the rejected winner population and the one other-resolved validation row, then run a fresh replay package before any live-facing rank/filter change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add OpeningDrive no-lookahead separator research phase.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-no-lookahead-separator.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-no-lookahead-separator.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: OpeningDriveFvgContinuation same-bar rows were strongly positive in replay, but the strongest separators used future path/outcome tags. The desk needed a proof-time-only classifier so no live rank/filter hypothesis is built from lookahead evidence.
