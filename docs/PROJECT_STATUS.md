@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add raw Sweep source-field drilldown and run available raw replay package split.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-source-field-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-source-field-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The Sweep latest-positive metadata drilldown found no zero-loss transfer segment. The desk needed to check whether richer raw replay-package fields such as proofState, execution/block reason, bars-after-proof, T1/T2 R, occurrences, time, session, direction, and risk could isolate the latest winners without using outcome-path hindsight.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-source-field-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-source-field-drilldown -- --train-replay-packages [available raw replay packages through July 15] --train-outcome-reports [paired available outcome reports through July 15] --test-replay-packages tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784433378541.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784433627629.json --test-outcome-reports tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784433384201.json,tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784433633227.json --min-rows-per-period 5 --json.
+Result: Source-field drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-source-field-drilldown-1784440047757.json. Joined train/test rows 3301/160; same-bar Sweep train/test rows 1032/45; zero-loss transfer segments 0; latest-positive train-loss-bearing segments 23; latest-positive train-weak segments 10; live promotion allowed rows 0; recommendation mine_scanner_snapshot_fields. Top latest-positive source-field buckets remained broad and train-loss-bearing: Conditional|EntryTriggerPending test 45 rows, 41 winners, 2 losses, +7030.00, but train had 1032 rows, 641 winners, 213 losses, +71391.25; Possible:Conditional:EntryTriggerPending test 45 rows, 41 winners, 2 losses, +7030.00, but train had 1022 rows, 637 winners, 209 losses, +71318.75; lunch|Possible:Conditional:EntryTriggerPending test 21 rows, 21 winners, 0 losses, +2940.00, but train had 616 rows, 412 winners, 64 losses, +52047.50. The narrower lunch|SHORT|14:00-14:59|risk_8_to_16 proof bucket was latest clean but train-weak: test 12 rows, 12 winners, 0 losses, +1680.00, train 53 rows, 22 winners, 1 loss, 24 other resolved, 6 unresolved, +5151.25.
+Trading logic changed: No. This is a local/read-only join over saved raw replay packages and saved outcome reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Available raw replay packages contain fewer same-bar Sweep source rows than the broader same-bar report inventory, so this is not a complete historical source-field proof. The result is still directionally useful: current raw source fields are too broad and do not explain the historical Sweep stop-outs.
+Next recommended action: Mine scanner artifact event snapshots directly for pre-entry structured fields that are not preserved in replay package rows: completed 5M candle shape, recent swing distance, FVG/level overlap, session high/low relationship, HTF context sufficiency, and candidate status details. Keep it research-only.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add SweepMssFvgRetrace latest-positive drilldown and run July 16-17 split.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-latest-positive-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-latest-positive-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The latest July 16-17 rejected bucket showed strong SweepMssFvgRetrace positives, but the prior transfer-stable selector found zero zero-loss transferable buckets. The desk needed a narrow Sweep-only drilldown before deciding whether to build a richer separator.
