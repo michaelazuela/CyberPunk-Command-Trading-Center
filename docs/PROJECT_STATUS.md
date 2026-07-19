@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive fine-risk approval contract.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The OpeningDrive fine-risk lane validated cleanly, but scanner-visible ranking would be a trading/model-selection behavior change. The desk needed a read-only approval contract before any implementation phase.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-approval-contract.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-fine-risk-approval-contract -- --json.
+Result: Approval contract passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-fine-risk-approval-contract-1784457885570.json. The contract captured 22 fine_risk_24_to_32 lane rows with 20 winners, 0 losses, 2 other-resolved, 0 unresolved, +5728.80 one-MES. It also preserved the warning context: the fresh package still has 56 rejected losses and tight_long_risk_4_to_8 still has 6 losses. failedGateCount=0, livePromotionAllowedRows=0, and recommendation=await_explicit_approval_or_broaden_research.
+Trading logic changed: No. This is a local/read-only contract-only approval artifact. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The contract is not an implementation approval by itself. A future scanner-visible OpeningDrive fine-risk install would be a model-ranking/trading-behavior change and must be done as a separate explicit approval-gated phase.
+Next recommended action: Broaden research without touching live behavior: validate the same fine-risk lane against additional saved package slices or build a dry-run comparison that shows exactly which scanner slates would change if this lane were preferred.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive fine-risk lane validation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-lane-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-lane-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fresh OpeningDrive replay package showed the broad selector was profitable but loss-bearing, while the fine_risk_24_to_32 lane was clean. The desk needed an isolated lane validation before any research-only proposal candidate.
