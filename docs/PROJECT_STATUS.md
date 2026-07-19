@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive fine-risk lane validation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-lane-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-lane-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh OpeningDrive replay package showed the broad selector was profitable but loss-bearing, while the fine_risk_24_to_32 lane was clean. The desk needed an isolated lane validation before any research-only proposal candidate.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-lane-validation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-fine-risk-lane-validation -- --json.
+Result: Fine-risk lane validation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-fine-risk-lane-validation-1784457523653.json. It isolated fine_risk_24_to_32 from the fresh OpeningDrive package and found 22 rows, 20 winners, 0 losses, 2 other-resolved, 0 unresolved, +5728.80 one-MES, average risk 26.62 points, and validationDecision=validated_for_research_proposal_candidate. Day results: 2026-06-03 had 4 winners, 0 losses, +970.00; 2026-06-12 had 5 winners, 0 losses, +1431.90; 2026-06-22 had 1 winner, 0 losses, +252.50; 2026-06-25 had 7 winners, 0 losses, +1902.50; 2026-06-26 had 3 winners, 0 losses, +775.64; 2026-07-17 had 0 winners, 0 losses, 2 other-resolved, +396.26. Session result: morning only, 22 rows, 20 winners, 0 losses, +5728.80. livePromotionAllowedRows remains 0.
+Trading logic changed: No. This is a local/read-only promotion-disabled lane validation. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This validates one narrow OpeningDrive lane only. It does not validate tight_long_risk_4_to_8, and it does not prove scanner-visible ranking is safe without an approval contract and collision-priority check.
+Next recommended action: Add an OpeningDrive fine-risk research proposal/approval contract that keeps live promotion disabled, compares the lane against rejected losses and selector collisions, and states the exact scanner-visible behavior that would be proposed later if approved.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive fresh replay package.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The OpeningDrive pivot readiness audit showed a clean but undersized selected sample. The desk needed a read-only fresh replay package over saved same-bar scanner artifacts before considering any OpeningDrive proposal update.
