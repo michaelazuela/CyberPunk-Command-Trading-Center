@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add proofSelectionSignal rank-consumer proposal audit.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-consumer-proposal-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-consumer-proposal-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The installed metadata audit proved scanner-visible proofSelectionSignal is inert. This proposal audit combines real-artifact collision coverage, installed inertness, and prior saved-adapter outcome evidence to decide whether to continue rank-consumer research without installing runtime ranking.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-consumer-proposal-audit.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-consumer-proposal-audit -- --json; npx tsc --noEmit --pretty false.
+Result: Rank-consumer proposal audit generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-consumer-proposal-audit-1784495929163.json. Status pass. Real OpeningDrive + Sweep groups: 363. Real AfterLunch + Sweep groups: 493. Installed signal rows: 2. Installed keep_later_sweep_proof rows in synthetic audit: 0. Saved eligible adapter rows: 4. Saved changed rows gross one-MES P/L: 478.75. Saved missing outcome rows: 0. Safety drift rows: 0. researchRankConsumerSupported: true. runtimeRankConsumerAllowedByThisReport: false. Recommendation is build_real_metadata_replay_before_runtime_rank_consumer.
+Trading logic changed: No. This is a local/read-only saved-report proposal audit. It does not install ranking behavior, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Research supports continuing, but runtime ranking is still not approved because current installed scanner metadata has not yet been replayed through real keep-later scanner contexts.
+Next recommended action: Build a real-metadata replay audit that reconstructs saved real-artifact keep-later groups through current scanner metadata and proves the proposed rank consumer would remain research-only before any runtime consideration.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add installed proofSelectionSignal metadata comparison audit.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-installed-metadata-comparison-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-installed-metadata-comparison-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Scanner-visible proofSelectionSignal metadata is now populated. The desk needed a focused installed-output audit comparing current scan output against the same candidates with metadata stripped, proving the metadata remains inert before any rank-consumer research.
