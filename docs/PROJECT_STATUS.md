@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority structural validation rollup.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The structural context miner found best_conditional_IntradayMssMicroContinuation as a thin research candidate, so the desk needed a durable rollup across individual day structural-context reports before any future scanner-visible proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup -- --structural-context-reports "<July 17, July 16, July 15 structural context reports>" --json.
+Result: Structural validation rollup passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup-1784473826676.json. Across the individual July 15, July 16, and July 17 structural-context reports, the rollup evaluated 22 rows: 3 priority loss rows and 19 priority non-loss rows. best_conditional_IntradayMssMicroContinuation appeared on 2 rows, both July 15 priority losses, with 0 priority non-loss rows and -97.50 one-MES P/L. July 16 and July 17 had no priority losses and no rows matching the feature. Recommendation is needs_more_unseen_negative_observations. liveInitialRankFeatureRows remains 0, livePromotionAllowedRows remains 0, and broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only rollup over saved structural-context miner reports only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The structural feature has not false-rejected non-loss rows in this rollup, but all matched losses are from one day. It is a research candidate, not a live rank filter.
+Next recommended action: Keep collecting fresh OpeningDrive priority collision artifacts and rerun the structural validation rollup when new negative rows appear. Do not install a scanner-visible penalty until the feature catches unseen losses without rejecting non-loss rows.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority structural context miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The priority loss profile found no clean initial-rank filter from proof/risk/time fields. Manual inspection of saved scanner tapes showed the July 15 loss cluster may align with a pre-entry structural-context shift where the best conditional model changed from OpeningDriveFvgContinuation to IntradayMssMicroContinuation, so the desk needed a reusable read-only miner over saved proof-time scanner tape snapshots.
