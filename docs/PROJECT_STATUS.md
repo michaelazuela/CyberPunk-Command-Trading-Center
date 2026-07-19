@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive OOS collision comparison.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-collision-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-collision-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The OOS replay package selected 4 clean OpeningDrive rows. The desk needed a narrow same-event comparison to determine whether the installed OpeningDrive selector was beating or displacing better competing desk ideas at the same trade date/session/proof time.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-collision-comparison.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-oos-collision-comparison -- --json.
+Result: OOS collision comparison passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-oos-collision-comparison-1784462448939.json. The installed OpeningDrive OOS package selected 4 rows, all clean with 0 selected losses and +513.14 one-MES. One row had no same-event competitor. Three rows had same-event competitors that were better on evaluation outcome: 2026-07-17 10:00 HTF displacement MSS continuation beat OpeningDrive by +11.87; 2026-07-17 10:05 SweepMssFvgRetrace beat OpeningDrive by +14.37; 2026-07-17 10:40 SweepMssFvgRetrace beat OpeningDrive by +170. Aggregate best-competing one-MES was +635.00, so selected OpeningDrive trailed by -121.86. Recommendation=inspect_competitor_collisions.
+Trading logic changed: No. This is a local/read-only comparison artifact. It consumes existing OOS package and same-bar reports only and does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The OOS selected OpeningDrive sample remains small and clean, but the comparison suggests it should not automatically outrank clean same-direction HTF displacement MSS or Sweep candidates at the same proof event.
+Next recommended action: Add a research-only same-event ranking collision drilldown for the 3 lagging rows to identify the no-lookahead separator between OpeningDrive, HTF displacement MSS, and SweepMssFvgRetrace before any further scanner-visible tuning.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive OOS replay collision package.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-replay-collision-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-replay-collision-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The OOS readiness artifact showed the transfer-stable selector selected 0 rows. The desk needed a dedicated OOS replay package that directly applies the installed OpeningDrive clean-pocket selectors to the OOS same-bar rows.
