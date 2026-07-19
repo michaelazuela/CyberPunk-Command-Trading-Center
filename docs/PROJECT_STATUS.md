@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive fine-risk slate dry-run comparison.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-slate-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-slate-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fine-risk approval contract showed a clean lane, but the desk needed a dry-run comparison that states exactly what changes versus the broader OpeningDrive selected set before any scanner-visible ranking decision.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-slate-dry-run.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-fine-risk-slate-dry-run -- --json.
+Result: Slate dry-run passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-fine-risk-slate-dry-run-1784458309117.json. Baseline broad OpeningDrive selected set had 51 rows with 39 winners, 6 losses, 3 other-resolved, 3 unresolved, +6595.16 one-MES. Proposed fine-risk-only retained 22 rows with 20 winners, 0 losses, 2 other-resolved, 0 unresolved, +5728.80 one-MES. The dry run removed 29 rows: 19 winners, 6 losses, 1 other-resolved, 3 unresolved, +866.36 one-MES. Proposed delta is -866.36 one-MES versus broad selected, while removing all 6 selected losses. livePromotionAllowedRows remains 0 and recommendation=approval_candidate_but_keep_research_only.
+Trading logic changed: No. This is a local/read-only dry-run comparison. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Fine-risk-only is cleaner but less profitable than the broad selected set in this saved sample because it removes 19 winners along with 6 losses. It should be treated as a risk-quality lane, not a blanket profitability improvement.
+Next recommended action: Mine the removed tight_long_risk_4_to_8 lane to separate its 19 winners from 6 losses, instead of installing fine-risk-only as a broad preference.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive fine-risk approval contract.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The OpeningDrive fine-risk lane validated cleanly, but scanner-visible ranking would be a trading/model-selection behavior change. The desk needed a read-only approval contract before any implementation phase.
