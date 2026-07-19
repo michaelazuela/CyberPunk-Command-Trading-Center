@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS broad feature search.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-feature-search.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-feature-search.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The broad simple separator simulation did not find a zero-loss live-usable separator. The desk needed a richer no-lookahead feature search that separates pre-entry fields from replay/outcome-only diagnostics before any further simulation.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-feature-search.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-feature-search -- --broad-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json --separator-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-loss-separator-simulation-1784451260931.json --json.
+Result: Broad feature search passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-feature-search-1784451731195.json. It inspected 378 selected HTF-MSS rows with 92 losses and produced 33 pre-entry buckets, 21 regime diagnostic buckets, and 14 replay/outcome-only buckets. Top pre-entry bucket by loss share was session:morning with 210 rows, 131 winners, 60 losses, 1 unresolved, +11467.50 one-MES, but this bucket is too broad and profitable to become a reject. The strongest simple loss-heavy pre-entry bucket remains riskBucket:risk_gte_24 with 74 rows, 9 winners, 46 losses, 1 unresolved, -1187.50 one-MES; previous simulation proved it still rejects winners and leaves losses. Finer risk_28_to_32 shows 39 rows, 4 winners, 19 losses, +2020.00 one-MES and needs combination simulation rather than direct use. Top replay-only separator is separatorTag:stopped_before_t1, which is outcome-known and cannot be used live. livePromotionAllowedRows remains 0. Recommendation: simulate_pre_entry_feature_candidates.
+Trading logic changed: No. This is a local/read-only feature-search report. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Feature buckets are evidence only. Replay/outcome-only buckets are explicitly not live filters. Broad profitable buckets such as session:morning or direction:SHORT cannot be treated as rejection logic without additional proof.
+Next recommended action: Build a promotion-disabled pre-entry feature-candidate simulation using the feature-search buckets, especially fine risk, session, direction, and proof-time combinations, with livePromotionAllowedRows=0 before any scanner-visible proposal.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS broad loss separator simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-loss-separator-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-loss-separator-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The broad selected-loss drilldown identified risk_gte_24 and the largest session/direction/time/risk combos as candidate separators. The desk needed a promotion-disabled simulation to measure both loss reduction and rejected winners before considering any implementation request.
