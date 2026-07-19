@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Inspect unresolved transfer-stable selector rows.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The selector rollup found 3 unresolved July rows. The desk needed to know whether they were no-fill, stopped hidden failures, or on-side/no-follow-through rows before fresh replay validation.
+Tests run: rg exact unresolved ticket IDs across tools/automation/diagnostic-reports; inspected unified-positive-held-local-preview-replay-package-outcome-1784431527410.json/md and selector report raw-ohlc-scanner-artifact-transfer-stable-selector-simulation-1784436769550.json/md.
+Result: All 3 unresolved rows are 2026-07-03 lunch SweepMssFvgRetrace LONG at 12:45, 12:50, and 12:55, risk 3.25, matched bucket setup_session_direction_time:SweepMssFvgRetrace|lunch|LONG|12:00-12:59. They were not no-fill: entryHitTime equals proof time for each row. They were no_target_or_stop_hit rows with no stop/T1/T2 hit in the replay window. MFE/MAE points: 12:45 MFE 2.75 and MAE 1.5; 12:50 MFE 2.25 and MAE 1.25; 12:55 MFE 2.25 and MAE 0.75. Against 3.25 risk, MFE stayed below 1R and MAE stayed below 0.5R. Interpretation: on-side/no-follow-through, not loss-bearing and not no-fill.
+Trading logic changed: No. Documentation-only inspection of saved diagnostic artifacts.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The replay window did not resolve those rows; fresh replay should either extend outcome observation or exclude unresolved rows from promotion analysis until resolved.
+Next recommended action: Build a fresh replay validation package for the 76 resolved transfer-stable selector rows first, while tracking the 3 July 3 unresolved Sweep long rows as separate no-follow-through research notes.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add transfer-stable selector rollup.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-rollup.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The zero-loss selector simulation selected 79 rows across June/July. The desk needed day/session/model P/L plus isolated unresolved rows before deciding the next fresh-replay validation package.
