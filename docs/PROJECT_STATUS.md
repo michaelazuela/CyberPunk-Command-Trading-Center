@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add installed proofSelectionSignal metadata comparison audit.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-installed-metadata-comparison-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-installed-metadata-comparison-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Scanner-visible proofSelectionSignal metadata is now populated. The desk needed a focused installed-output audit comparing current scan output against the same candidates with metadata stripped, proving the metadata remains inert before any rank-consumer research.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-installed-metadata-comparison-audit.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-installed-metadata-comparison-audit -- --json; npx tsc --noEmit --pretty false.
+Result: Installed metadata comparison audit generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-installed-metadata-comparison-audit-1784495569009.json. Status pass. Contexts scanned: 2. Candidates compared: 16. Signal-installed rows: 2. keep_later_sweep_proof rows in these synthetic contexts: 0. rankScoreChangedRows: 0. rankOrderChangedContexts: 0. executionStatusChangedRows: 0. blockReasonChangedRows: 0. discordEligibilityChangedRows: 0. humanCanExecuteChangedRows: 0. entryStopTargetRiskChangedRows: 0. livePromotionAllowedRows: 0. Recommendation is installed_metadata_is_inert_prepare_next_rank_consumer_research.
+Trading logic changed: No. This is a local/read-only installed metadata audit. It does not add a rank consumer, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The installed audit's synthetic contexts proved inert scanner-visible metadata but did not naturally produce keep_later_sweep_proof rows, so any future rank-consumer research must stay real-artifact/replay-only before runtime consideration.
+Next recommended action: Add a research-only rank-consumer proposal audit using saved real-artifact keep-later groups, with no scanner-visible rank changes, to decide whether the metadata should ever influence ranking.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Install scanner-visible metadata-only proofSelectionSignal population.
 Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
 Reason: The approval checkpoint passed and the real-artifact collision miner proved natural same-completed-5M proof groups exist without synthetic companion rows. This installs only optional scanner-owned metadata on candidates from the completed 5M proof timestamp while keeping rank consumers disabled.
