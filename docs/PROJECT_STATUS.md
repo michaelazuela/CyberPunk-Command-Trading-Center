@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector runtime approval checkpoint.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-approval-checkpoint.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-approval-checkpoint.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The saved-artifact adapter dry-run passed and recommended preparing a runtime approval checkpoint before any scanner-visible selector/ranking install. This checkpoint names exact likely runtime files, explicit out-of-scope files, allowed behavior, forbidden behavior, regression commands, and rollback path.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-approval-checkpoint.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-approval-checkpoint -- --saved-artifact-adapter-dry-run tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-saved-artifact-adapter-dry-run-1784490498355.json --json.
+Result: Runtime approval checkpoint generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-approval-checkpoint-1784490926583.json. Status pass. Changed rows built: 4. Eligible adapter rows: 4. Blocked adapter rows: 0. Non-Sweep adapter rows: 0. Missing outcome rows: 0. Changed rows gross resolved one-MES P/L: +478.75. livePromotionAllowedRows: 0. runtimeInstallReadyForExplicitApproval: true. runtimeInstallAllowedByThisReport: false. Recommendation is request_explicit_runtime_install_approval_or_continue_research.
+Trading logic changed: No. This is a local/read-only approval checkpoint only. It does not install selector behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The checkpoint identifies a future scanner-visible ranking/selection preference as ready for an explicit approval decision, but no runtime behavior has changed in this commit.
+Next recommended action: If explicit runtime install approval is accepted, implement one tiny `src/lib/setupScanner.ts` preference scoped only to `SweepMssFvgRetrace` `keep_later_sweep_proof`, with `src/lib/setupScanner.test.ts` regression coverage and no Discord/Supabase/bridge/canExecute/entry-stop-target-risk changes.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector saved-artifact adapter dry-run.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-saved-artifact-adapter-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-saved-artifact-adapter-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The adapter contract passed and recommended a saved-artifact adapter dry-run before any runtime approval checkpoint. This dry-run proves the adapter output shape from saved slates only while keeping scanner-visible selector behavior disabled.
