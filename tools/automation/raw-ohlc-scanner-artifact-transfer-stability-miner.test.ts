@@ -143,7 +143,9 @@ assert.equal(mined.summary.trainRows, 12);
 assert.equal(mined.summary.testRows, 12);
 assert.equal(mined.summary.livePromotionAllowedRows, 0);
 assert.equal(mined.summary.stablePositiveBuckets > 0, true);
+assert.equal(mined.summary.zeroLossStablePositiveBuckets > 0, true);
 assert.equal(mined.stablePositiveBuckets.some((bucket) => bucket.key.includes('AfterLunchDriveFvgContinuation')), true);
+assert.equal(mined.zeroLossStablePositiveBuckets.every((bucket) => bucket.train.losses === 0 && bucket.test.losses === 0), true);
 assert.equal(mined.unstableBuckets.some((bucket) => bucket.key.includes('OpeningDriveFvgContinuation') && bucket.verdict === 'train_positive_test_failed'), true);
 assert.match(mined.markdown, /Raw-OHLC Transfer Stability Miner/);
 

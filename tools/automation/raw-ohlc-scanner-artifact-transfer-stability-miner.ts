@@ -13,7 +13,12 @@ type BucketKind =
   | 'risk_setup'
   | 'time_setup'
   | 'session_direction_setup'
-  | 'session_risk_setup';
+  | 'session_risk_setup'
+  | 'setup_session_direction_risk'
+  | 'setup_session_direction_time'
+  | 'setup_session_risk_time'
+  | 'setup_direction_risk_time'
+  | 'setup_session_direction_risk_time';
 
 interface CliOptions {
   trainSamebarReports: string[];
@@ -88,6 +93,7 @@ export interface RawOhlcScannerArtifactTransferStabilityMinerReport {
     testRows: number;
     sharedBuckets: number;
     stablePositiveBuckets: number;
+    zeroLossStablePositiveBuckets: number;
     stableCautionBuckets: number;
     trainPositiveTestFailedBuckets: number;
     testPositiveTrainFailedBuckets: number;
@@ -95,6 +101,7 @@ export interface RawOhlcScannerArtifactTransferStabilityMinerReport {
     recommendation: 'mine_richer_no_lookahead_features' | 'validate_stable_buckets_on_fresh_replay' | 'fix_inputs';
   };
   stablePositiveBuckets: StabilityBucket[];
+  zeroLossStablePositiveBuckets: StabilityBucket[];
   stableCautionBuckets: StabilityBucket[];
   unstableBuckets: StabilityBucket[];
   blockers: string[];
@@ -184,7 +191,12 @@ function bucketKey(row: RawOhlcScannerArtifactSameBarSeparatorRow, kind: BucketK
   if (kind === 'risk_setup') return `${riskBucket(row)}|${row.setupType}`;
   if (kind === 'time_setup') return `${row.timeBucket}|${row.setupType}`;
   if (kind === 'session_direction_setup') return `${row.session}|${row.direction}|${row.setupType}`;
-  return `${row.session}|${riskBucket(row)}|${row.setupType}`;
+  if (kind === 'session_risk_setup') return `${row.session}|${riskBucket(row)}|${row.setupType}`;
+  if (kind === 'setup_session_direction_risk') return `${row.setupType}|${row.session}|${row.direction}|${riskBucket(row)}`;
+  if (kind === 'setup_session_direction_time') return `${row.setupType}|${row.session}|${row.direction}|${row.timeBucket}`;
+  if (kind === 'setup_session_risk_time') return `${row.setupType}|${row.session}|${riskBucket(row)}|${row.timeBucket}`;
+  if (kind === 'setup_direction_risk_time') return `${row.setupType}|${row.direction}|${riskBucket(row)}|${row.timeBucket}`;
+  return `${row.setupType}|${row.session}|${row.direction}|${riskBucket(row)}|${row.timeBucket}`;
 }
 
 function isWinner(row: RawOhlcScannerArtifactSameBarSeparatorRow): boolean {
@@ -216,7 +228,20 @@ function summarize(rows: RawOhlcScannerArtifactSameBarSeparatorRow[]): PeriodBuc
 }
 
 function bucketMap(rows: RawOhlcScannerArtifactSameBarSeparatorRow[]): Map<string, { kind: BucketKind; key: string; rows: RawOhlcScannerArtifactSameBarSeparatorRow[] }> {
-  const kinds: BucketKind[] = ['setupType', 'session_setup', 'direction_setup', 'risk_setup', 'time_setup', 'session_direction_setup', 'session_risk_setup'];
+  const kinds: BucketKind[] = [
+    'setupType',
+    'session_setup',
+    'direction_setup',
+    'risk_setup',
+    'time_setup',
+    'session_direction_setup',
+    'session_risk_setup',
+    'setup_session_direction_risk',
+    'setup_session_direction_time',
+    'setup_session_risk_time',
+    'setup_direction_risk_time',
+    'setup_session_direction_risk_time',
+  ];
   const map = new Map<string, { kind: BucketKind; key: string; rows: RawOhlcScannerArtifactSameBarSeparatorRow[] }>();
   for (const row of rows) {
     for (const kind of kinds) {
@@ -286,7 +311,7 @@ function buildMarkdown(report: Omit<RawOhlcScannerArtifactTransferStabilityMiner
     '## Summary',
     `- Train/test rows: ${report.summary.trainRows}/${report.summary.testRows}.`,
     `- Shared buckets: ${report.summary.sharedBuckets}.`,
-    `- Stable positive/caution: ${report.summary.stablePositiveBuckets}/${report.summary.stableCautionBuckets}.`,
+    `- Stable positive/zero-loss/caution: ${report.summary.stablePositiveBuckets}/${report.summary.zeroLossStablePositiveBuckets}/${report.summary.stableCautionBuckets}.`,
     `- Train-positive failed/test-positive failed: ${report.summary.trainPositiveTestFailedBuckets}/${report.summary.testPositiveTrainFailedBuckets}.`,
     `- Recommendation: ${report.summary.recommendation}.`,
     `- Live promotion allowed rows: ${report.summary.livePromotionAllowedRows}.`,
@@ -295,6 +320,11 @@ function buildMarkdown(report: Omit<RawOhlcScannerArtifactTransferStabilityMiner
     '| Kind | Key | Train Rows | Train W/L/O/U | Train P/L | Test Rows | Test W/L/O/U | Test P/L | Score | Verdict | Reason |',
     '|---|---|---:|---|---:|---:|---|---:|---:|---|---|',
     ...report.stablePositiveBuckets.map(bucketRow),
+    '',
+    '## Zero-Loss Stable Positive Buckets',
+    '| Kind | Key | Train Rows | Train W/L/O/U | Train P/L | Test Rows | Test W/L/O/U | Test P/L | Score | Verdict | Reason |',
+    '|---|---|---:|---|---:|---:|---|---:|---:|---|---|',
+    ...report.zeroLossStablePositiveBuckets.map(bucketRow),
     '',
     '## Stable Caution Buckets',
     '| Kind | Key | Train Rows | Train W/L/O/U | Train P/L | Test Rows | Test W/L/O/U | Test P/L | Score | Verdict | Reason |',
@@ -327,6 +357,7 @@ export function buildRawOhlcScannerArtifactTransferStabilityMinerReport(args: {
   const testRows = args.testSamebarReports.flatMap((report) => report.rows || []);
   const buckets = buildStabilityBuckets(trainRows, testRows, minRowsPerPeriod);
   const stablePositiveBuckets = buckets.filter((bucket) => bucket.verdict === 'stable_positive_research');
+  const zeroLossStablePositiveBuckets = stablePositiveBuckets.filter((bucket) => bucket.train.losses === 0 && bucket.test.losses === 0);
   const stableCautionBuckets = buckets.filter((bucket) => bucket.verdict === 'stable_caution_research').sort((a, b) => a.score - b.score);
   const unstableBuckets = buckets.filter((bucket) => bucket.verdict === 'train_positive_test_failed' || bucket.verdict === 'test_positive_train_failed');
   const blockers = [
@@ -342,6 +373,7 @@ export function buildRawOhlcScannerArtifactTransferStabilityMinerReport(args: {
     testRows: testRows.length,
     sharedBuckets: buckets.filter((bucket) => bucket.train.rows > 0 && bucket.test.rows > 0).length,
     stablePositiveBuckets: stablePositiveBuckets.length,
+    zeroLossStablePositiveBuckets: zeroLossStablePositiveBuckets.length,
     stableCautionBuckets: stableCautionBuckets.length,
     trainPositiveTestFailedBuckets: buckets.filter((bucket) => bucket.verdict === 'train_positive_test_failed').length,
     testPositiveTrainFailedBuckets: buckets.filter((bucket) => bucket.verdict === 'test_positive_train_failed').length,
@@ -372,6 +404,7 @@ export function buildRawOhlcScannerArtifactTransferStabilityMinerReport(args: {
     },
     summary,
     stablePositiveBuckets,
+    zeroLossStablePositiveBuckets,
     stableCautionBuckets,
     unstableBuckets,
     blockers,
@@ -379,7 +412,7 @@ export function buildRawOhlcScannerArtifactTransferStabilityMinerReport(args: {
       ? ['Fix the train/test same-bar report inputs before using transfer stability findings.']
       : [
         stablePositiveBuckets.length
-          ? 'Treat stable positive buckets as research hypotheses only; validate them on fresh replay before any scanner-visible proposal.'
+          ? 'Treat stable positive buckets as research hypotheses only; validate zero-loss subsegments on fresh replay before any scanner-visible proposal.'
           : 'Static same-bar bucket metadata did not produce a transfer-stable positive selector; mine richer no-lookahead proof/geometry/context fields next.',
         'Preserve canExecute, 5M execution authority, protected stops, target/risk math, Discord posting, Supabase persistence, and bridge behavior.',
       ],
@@ -417,6 +450,7 @@ export function runRawOhlcScannerArtifactTransferStabilityMinerCli(args = proces
       status: report.status,
       summary: report.summary,
       stablePositiveBuckets: report.stablePositiveBuckets.slice(0, 10),
+      zeroLossStablePositiveBuckets: report.zeroLossStablePositiveBuckets.slice(0, 10),
       stableCautionBuckets: report.stableCautionBuckets.slice(0, 10),
       unstableBuckets: report.unstableBuckets.slice(0, 10),
       blockers: report.blockers,
