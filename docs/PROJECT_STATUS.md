@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add OpeningDrive pivot readiness audit.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-pivot-readiness-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-pivot-readiness-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The HTF-MSS package-chain audit recommended pivoting away from further HTF-MSS filter mining. The desk needed a read-only OpeningDrive readiness check before making OpeningDrive the next research target.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-pivot-readiness-audit.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-pivot-readiness-audit -- --candidate-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-candidate-validation-1784427054383.json --combined-selector tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-combined-selector-1784433642868.json --json.
+Result: OpeningDrive pivot readiness audit passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-pivot-readiness-audit-1784456561925.json. Candidate validation remains validated_for_more_research. The combined selector selected 3 rows with 1 winner, 0 losses, 2 other-resolved, +438.76 one-MES, while rejected rows still contain 3 stopped-before-T1 losses. SampleSizeReady is false because only 3 selected rows are available. livePromotionAllowedRows remains 0. Recommendation: build_fresh_openingdrive_replay_package.
+Trading logic changed: No. This is a local/read-only promotion-disabled pivot readiness audit. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The OpeningDrive selector is clean but too small. It must be expanded through a fresh replay package before any proposal update.
+Next recommended action: Build a fresh OpeningDriveFvgContinuation replay package from saved same-bar scanner artifacts and validate whether the selector remains loss-free with at least 5 selected rows.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS package diminishing-returns audit.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-package-diminishing-returns-audit.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-package-diminishing-returns-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The HTF-MSS clean zero-winner package chain was producing smaller and smaller loss reductions. The desk needed a read-only package-chain audit to decide whether to keep mining HTF-MSS filters or pivot to another model family.
