@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add research-only negative overlay replacement coverage package.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-replacement-coverage.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-replacement-coverage.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Negative overlay simulation changed 39 top slates without demoting known winners, but 33 replacement tops still lacked outcomes. The desk needed a local coverage pass to identify which changed replacement tops had deterministic levels and completed 5M tape before using them as evidence.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-replacement-coverage.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-replacement-coverage -- --negative-simulation-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-simulation-1784443993746.json --scanner-artifacts [same 11 saved scanner artifact reports used by overlay dry run] --min-ready-rows 1 --json; npx tsx tools/automation/unified-positive-held-local-preview-replay-package-outcome.ts --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-replacement-replay-package-1784444692657.json --json.
+Result: Coverage passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-replacement-coverage-1784444692657.json. It inspected 39 changed slates, 39 replacement top refs, and 39 unique replacement top ticket IDs against 21,472 saved scanner candidate rows. Ready replay rows: 16. Blocked rows: 23, all incomplete deterministic levels. Missing artifact rows: 0. Missing completed-5M rows: 0. Directionally invalid geometry rows: 0. Outcome replay passed: tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784444700308.json. The 16 replacement tops produced 6 resolved rows, 10 unresolved rows, 0 blocked, 0 no-fill, 2 stopped-before-T1, 4 T1+T2, and gross resolved one-MES P/L +592.50. Model split: HtfDisplacementMssContinuation 5 rows / 4 resolved / +655.00, IntradayMssMicroContinuation 3 rows / 2 resolved / -62.50, HtfDisplacementFvgContinuation 5 unresolved, SweepMssFvgRetrace 3 unresolved.
+Trading logic changed: No. This is a local/read-only changed-slate replacement coverage package and replay-package output over saved reports/artifacts. It does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Evidence improved for outcome-ready replacement tops, especially HTF displacement MSS continuation, but 23 changed replacement tops remain blocked by incomplete deterministic levels and the negative overlay is still not scanner-visible. The result supports a follow-up comparison on outcome-covered changed slates only, not a live rank change.
+Next recommended action: Build an outcome-covered changed-slate comparison report that joins the negative replacement outcome replay back to the original overlay/negative tops, calculates per-slate delta only where both sides have usable outcome evidence, and keeps promotion disabled.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add research-only negative overlay simulation for no-chase/late-day/target-room tags.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Source-context drilldown showed unresolved missing-top rows were concentrated in no_chase, late_day_after_1500, target_room_blocked_before_t1, and entry_trigger_pending tags. The desk needed a local dry-run to test whether penalizing those tags improves top-slate selection without demoting known winners before considering any live-facing proposal.
