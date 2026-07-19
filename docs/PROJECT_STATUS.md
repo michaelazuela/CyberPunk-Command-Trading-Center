@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add promotion-disabled HTF-MSS-only overlay simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-only-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-only-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The model/tag cross-tab showed the useful resolved replacement evidence was isolated to HtfDisplacementMssContinuation, while non-HTF-MSS replacements were negative or unresolved. The desk needed a small promotion-disabled simulation to test only that subset before any live-facing proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-only-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-only-simulation -- --original-top-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-original-top-drilldown-1784445622237.json --outcome-comparison tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-outcome-comparison-1784445231688.json --model-tag-crosstab tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-model-tag-crosstab-1784445963651.json --json.
+Result: HTF-MSS-only simulation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-only-simulation-1784446374691.json. It evaluated 39 changed slates and selected only 5 rows where the original top was no-chase/stale, the replacement top was HtfDisplacementMssContinuation, and replacement coverage was ready. Selected resolved/unresolved/blocked rows: 4 / 1 / 0. Selected resolved gross one-MES P/L: +655.00. Rejected rows: 34, including 29 non-HTF-MSS and 23 no-coverage rows. Selected no-chase rows: 5. Selected late-day rows: 2. Live promotion allowed rows: 0. Recommendation: prepare_promotion_disabled_live_proposal.
+Trading logic changed: No. This is a local/read-only saved-report simulation. It does not recompute outcomes, run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This supports a promotion-disabled HTF-MSS-only proposal candidate, not a live install. It still needs a formal proposal package with explicit guardrails and regression tests proving no scanner-visible or live behavior changes.
+Next recommended action: Build a formal promotion-disabled HTF-MSS-only live-proposal package that documents exact selection criteria, authority boundaries, non-live flags, rollback path, and required future approval gate. Keep promotion disabled.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add research-only negative overlay model/tag cross-tab.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-model-tag-crosstab.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-model-tag-crosstab.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The original-top drilldown proved displaced originals were replay-coverable but heavily no-chase/stale tagged. The desk needed a small cross-tab to decide whether the useful replacement evidence was broad or isolated to a specific replacement model.
