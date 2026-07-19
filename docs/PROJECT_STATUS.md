@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS separator diagnostic.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-diagnostic.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Breadth validation showed HTF-MSS was positive overall but had a loss-bearing July 9 morning pocket. The desk needed a research-only separator diagnostic using saved same-bar rows to identify positive and caution buckets before any promotion-disabled simulation or approval discussion.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-diagnostic.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-diagnostic -- --breadth-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-breadth-validation-1784447544203.json --samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431534036.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431771575.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431966066.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432306845.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432497417.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432696212.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432909449.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433151405.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433389789.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433638554.json --json.
+Result: Separator diagnostic passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-diagnostic-1784447927534.json. It evaluated 105 HTF-MSS same-bar rows: 62 winners, 10 losses, 18 unresolved, +5772.50 one-MES. Positive buckets: 35. Caution buckets: 4. Strong positive examples: morning risk_8_to_16 had 21 rows, 19 winners, 0 losses, +2172.50; risk_8_to_16 overall had 26 rows, 19 winners, 0 losses, +2172.50. Hard caution pocket: 2026-07-09 morning had 7 rows, 0 winners, 7 losses, -630.00. Recommendation: build_promotion_disabled_separator_simulation.
+Trading logic changed: No. This is a local/read-only separator diagnostic. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The separator is still a research hypothesis. Same-bar outcome fields are evaluation-only and must not become live scoring inputs. The next phase should simulate a promotion-disabled HTF-MSS separator over saved rows, proving livePromotionAllowedRows stays 0.
+Next recommended action: Build a promotion-disabled HTF-MSS separator simulation that applies positive/caution buckets to saved rows only. Keep promotion disabled and live behavior unchanged.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS breadth validation before live approval.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-breadth-validation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-breadth-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The approval contract said the next non-approval path should broaden validation. The desk needed to compare the narrow 5-row HTF-MSS proposal against the broader July HTF-ready rollup and detect any loss-bearing day/session pockets before scanner-visible implementation can even be discussed.
