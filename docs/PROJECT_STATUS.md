@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS pre-entry feature simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-pre-entry-feature-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-pre-entry-feature-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Broad feature search found several loss-heavy pre-entry buckets, but the desk needed a promotion-disabled simulation to measure selected/rejected winners, losses, unresolved rows, and one-MES P/L before any implementation request.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-pre-entry-feature-simulation.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-pre-entry-feature-simulation -- --broad-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json --feature-search tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-feature-search-1784451731195.json --json.
+Result: Pre-entry feature simulation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-pre-entry-feature-simulation-1784452244993.json. It tested 20 promotion-disabled pre-entry scenarios over 378 selected HTF-MSS rows with 92 losses. No zero-selected-loss scenario exists and no best install candidate exists. session:morning removed 60 losses but rejected 131 winners and +11467.50 one-MES, so it is not usable as a reject. direction:SHORT removed 51 losses but rejected 120 winners and +7353.75. riskBucket:risk_gte_24 selected 304 rows with 222 winners, 46 losses, 17 unresolved, +21591.25 while rejecting 74 rows with 9 winners, 46 losses, 1 unresolved, -1187.50. fineRiskBucket:risk_28_to_32 selected 339 rows with 227 winners, 73 losses, 18 unresolved, +18383.75 while rejecting 39 rows with 4 winners, 19 losses, 0 unresolved, +2020.00. livePromotionAllowedRows remains 0. Recommendation: continue_feature_search.
+Trading logic changed: No. This is a local/read-only promotion-disabled simulation. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Single pre-entry feature rejection is not clean enough. The better path is narrower combination mining, not a live rule.
+Next recommended action: Build a compound pre-entry feature miner/simulation that intersects fine risk, session, direction, proof-time, and sessionDirectionTimeRisk candidates to search for smaller high-loss/low-winner-cost pockets while keeping promotion disabled.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS broad feature search.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-feature-search.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-feature-search.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The broad simple separator simulation did not find a zero-loss live-usable separator. The desk needed a richer no-lookahead feature search that separates pre-entry fields from replay/outcome-only diagnostics before any further simulation.
