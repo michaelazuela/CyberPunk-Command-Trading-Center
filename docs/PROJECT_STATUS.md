@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority structural validation queue.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The structural validation rollup needs more unseen negative observations before any scanner-visible proposal. The desk needed a durable read-only queue that identifies saved source-selection artifacts not yet structurally mined and raw OHLC source windows that may need new OpeningDrive priority collision artifacts.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue -- --json; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-miner -- --source-selection-reports "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-oos-source-installed-selection-1784466868460.json" --json; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner -- --miner-reports "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-miner-1784474251820.json" --json; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup -- --structural-context-reports "<July 9, July 17, July 16, July 15 structural context reports>" --json.
+Result: Structural validation queue passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue-1784474271052.json. It found 5 structural-context reports, 5 source-selection reports, and 5 already-mined source-selection reports after draining the last saved July 9 source-selection report. No saved source-selection reports remain unmined. The queue still found 9 raw OHLC source manifests that can be used to generate new OpeningDrive priority collision artifacts. July 9 structural mining also passed but had 0 rows with structural context, so it did not match best_conditional_IntradayMssMicroContinuation. Updated rollup passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup-1784474271096.json. Across July 9, July 15, July 16, and July 17, the rollup evaluated 23 rows: 4 priority loss rows and 19 priority non-loss rows. best_conditional_IntradayMssMicroContinuation still matched only the 2 July 15 loss rows with 0 priority non-loss rows and -97.50 one-MES P/L. Recommendation remains needs_more_unseen_negative_observations.
+Trading logic changed: No. This is a local/read-only queue over saved structural-context reports, source-selection reports, and raw OHLC source manifests only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Saved source-selection artifacts are exhausted. Remaining progress requires generating new local scanner artifacts from saved raw OHLC source manifests, then rebuilding source-selection, no-lookahead, structural-context, and rollup reports.
+Next recommended action: Run the queued local raw-OHLC scanner artifact generation for the latest July 3-July 17 source first, then rebuild the OpeningDrive priority collision/source-selection chain and rerun structural validation. Keep live behavior unchanged.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority structural validation rollup.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The structural context miner found best_conditional_IntradayMssMicroContinuation as a thin research candidate, so the desk needed a durable rollup across individual day structural-context reports before any future scanner-visible proposal.
