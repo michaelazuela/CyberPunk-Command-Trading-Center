@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS residue compound miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-compound-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-compound-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The first zero-winner-cost compound package left 330 selected residue rows with 56 losses. The desk needed a residue-only compound miner that excludes already rejected pockets and searches only live-usable pre-entry intersections.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-compound-miner.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-compound-miner -- --broad-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json --package-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation-1784453088375.json --residue-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-loss-drilldown-1784453515935.json --package-name zero_winner_cost_all --json.
+Result: Residue compound miner passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-compound-miner-1784453995999.json. It mined 30 residue-only compound scenarios after zero_winner_cost_all rejected 48 rows. Residue remained 330 rows with 56 losses. Top loss-reduction scenario was session=morning|direction=LONG|fineRiskBucket=risk_28_to_32, rejecting 22 rows with 4 winners, 13 losses, 0 unresolved, +462.50, leaving 43 selected losses. Other larger pockets cost 4-8 winners. Best low-winner-cost pocket was session=lunch|direction=SHORT|riskBucket=risk_gte_24, rejecting 7 rows with 0 winners, 5 losses, 0 unresolved, -780.00, leaving 51 selected losses. Additional zero-winner pockets each rejected 4 losses: morning LONG 09:00-09:59 fineRiskBucket risk_16_to_20 and equivalent collapsed feature sets. livePromotionAllowedRows remains 0. Recommendation: simulate_residue_compound_package.
+Trading logic changed: No. This is a local/read-only residue compound miner. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The residue miner found small zero-winner-cost pockets, not an implementation-ready package. A second non-overlapping package simulation is required before any proposal.
+Next recommended action: Simulate a second residue compound package that combines low-winner-cost residue pockets with the first zero_winner_cost_all package, dedupes rejected rows, and reports remaining selected losses.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS residue loss drilldown after compound package.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-loss-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-loss-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The zero-winner-cost compound package removed 36 losses but still left 56 selected losses. The desk needed a read-only drilldown over only the selected residue before mining the next separator family.
