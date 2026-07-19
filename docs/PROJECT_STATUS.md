@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS overlay approval regression contract.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The promotion-disabled HTF-MSS proposal was ready for an approval checkpoint, but the desk needed a separate contract that blocks scanner-visible implementation until explicit approval and names the regression proof required before any future live-facing phase.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-approval-contract.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-approval-contract -- --proposal tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-live-proposal-1784446716041.json --json.
+Result: Approval contract passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-approval-contract-1784447163997.json. Proposal ready: true. Selected rows 5, selected resolved/unresolved 4 / 1, selected resolved gross one-MES P/L +655.00, live promotion allowed rows 0, failed gate count 0. Recommendation: await_explicit_approval_or_broaden_research.
+Trading logic changed: No. This is a local/read-only approval contract. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The evidence is still narrow: 5 selected HTF-MSS replacement rows from the saved composite overlay set. The contract makes future implementation impossible without explicit approval and regression proof, so the next non-approval path should broaden saved-report validation rather than touching live behavior.
+Next recommended action: Broaden saved-report validation to additional days/fresh artifact sets for the same HTF-MSS-only rule, or stop at the approval checkpoint until explicit scanner-visible implementation approval is given.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add formal promotion-disabled HTF-MSS-only proposal package.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-live-proposal.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-live-proposal.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The HTF-MSS-only simulation selected 5 rows, resolved 4, and produced +655.00 one-MES while keeping promotion disabled. The desk needed a formal proposal package that captures the exact future approval-gated criteria and locked prohibitions before any scanner-visible implementation discussion.
