@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority fresh feature rollup.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-rollup.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Fresh unseen replay checks for July 15, July 16, and July 17 showed that proof_bar_failed_close_through_entry did not fire on new OpeningDrive priority collision reports. The desk needed a durable read-only rollup across July 9 and the fresh July 15-17 reports before deciding whether to install or reject the feature.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-rollup.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-rollup -- --source-selection-reports "<July 17, July 16, July 15, July 9 source-selection reports>" --feature-comparison-reports "<matching feature-comparison reports>" --json.
+Result: Fresh feature rollup passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-rollup-1784472350010.json. Across 4 days and 23 comparable OpeningDrive-vs-priority events, installed priority selected all 23 rows and outperformed OpeningDrive by +2025.57 one-MES dollars: priority +2505.00 versus OpeningDrive +479.43. Priority had 4 losses versus OpeningDrive 11 losses. proof_bar_failed_close_through_entry matched only 1 row, caught 1 priority-underperformance row, false-rejected 0 priority-better rows, and simulated only +23.75 improvement. It did not catch the 3 July 15 priority-loss rows. Recommendation is do_not_install_feature_broaden_validation. liveInitialRankFeatureRows remains 0, livePromotionAllowedRows remains 0, and broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only rollup over saved source-selection and feature-comparison reports only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The proof-bar feature is too narrow for current evidence. It caught the original July 9 underperformance but missed fresh July 15 priority losses.
+Next recommended action: Stop pursuing proof_bar_failed_close_through_entry as a live rank guard for now. Next narrow research should mine July 15 priority-loss rows for a stronger no-lookahead separator while preserving installed priority as the default because it materially outperformed OpeningDrive in the fresh rollup.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority unseen feature queue.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-unseen-feature-queue.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-unseen-feature-queue.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fresh feature comparison still had only one matching proof_bar_failed_close_through_entry row. The desk needed a read-only queue to identify any saved OpeningDrive priority source-selection reports not yet checked before deciding whether new artifacts are required.
