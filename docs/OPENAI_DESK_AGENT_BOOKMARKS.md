@@ -26,6 +26,12 @@ Implementation rule:
 - Put variable market/session/replay payloads last.
 - Do not use cached prompts to bypass fresh OHLC, completed 5M proof, risk validation, or safety gates.
 
+Installed boundary:
+
+- `src/lib/openai.ts` keeps the optional OpenAI chart validator's Futures Crusher authority prompt and JSON output contract as stable leading messages.
+- Route, instrument, primary chart context, and image data remain the variable tail.
+- This lets OpenAI's prompt caching apply naturally when the same validator boundary repeats, without adding a new dependency or changing execution authority.
+
 ### Codex / ChatGPT Customization
 
 Source: https://learn.chatgpt.com/docs/customization/overview
@@ -41,6 +47,11 @@ Implementation rule:
 - Keep durable behavior in repo docs or the Futures Crusher plugin.
 - Keep one-off instructions in the current task only.
 - Do not move trading approval into prompt text, memory, Gemini, or advisory model output.
+
+Installed boundary:
+
+- The optional OpenAI validator now carries the durable Futures Crusher authority language in a reusable prompt constant.
+- The prompt states the same locked authority model as the repo: decision-support only, NinjaTrader OHLC as highest-authority data when present, 5M as execution authority, HTF as context only, and app-owned scanner/pipeline as execution authority.
 
 ## Bookmark For Later
 

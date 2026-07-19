@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Install prompt-caching-friendly OpenAI validator customization boundary.
+Files changed: src/lib/openai.ts, src/lib/openai.test.ts, package.json, docs/OPENAI_DESK_AGENT_BOOKMARKS.md, docs/PROJECT_STATUS.md.
+Reason: Prompt caching and customization were marked use-now, but the project still needed the actual optional OpenAI request boundary to carry stable Futures Crusher instructions first and variable chart/session data last.
+Tests run: npx tsx src/lib/openai.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run test; npm run build; git diff --check.
+Result: Passed. The optional OpenAI chart validator now sends stable leading messages for Futures Crusher authority and the JSON contract, followed by variable route/instrument/context/image content. The test proves the stable prefix is identical across different requests and that the validator remains JSON/facts-only. `package.json` now includes the OpenAI boundary test in the normal `npm run test` command chain.
+Trading logic changed: No. This changes optional OpenAI chart validation prompt structure only. It does not change setupScanner, ranking, canExecute, Discord, Supabase, NinjaTrader bridge behavior, entry/stop/target/risk, or automated execution.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Prompt caching is applied through stable request shape at the existing OpenAI boundary; actual cache hits depend on OpenAI API behavior and repeated prompt prefixes. No new OpenAI endpoint or dependency was added.
+Next recommended action: Continue the research-only OpeningDrive no-lookahead separator phase before any scanner-visible rank or publish change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Record OpenAI desk-agent capability recommendations and bookmarks.
 Files changed: docs/OPENAI_DESK_AGENT_BOOKMARKS.md, docs/PROJECT_STATUS.md.
 Reason: The desk reviewed current OpenAI guidance for prompt caching, reasoning continuity, programmatic tool calling, and Codex/ChatGPT customization. Futures Crusher needed a durable note separating what to use now from what to save for a future custom desk-agent orchestration layer.

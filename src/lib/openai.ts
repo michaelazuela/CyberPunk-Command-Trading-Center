@@ -39,24 +39,20 @@ function parseOpenAIContent(data: any): string {
   return '{}';
 }
 
-export async function validateChartExtractionWithOpenAI(
-  imageData: ChartImagePayload,
-  primaryContext: Partial<ChartContext> | undefined,
-  options: {
-    model?: string;
-    routeName?: string;
-    instrument?: string;
-  } = {}
-): Promise<OpenAIChartValidation | null> {
-  const executionImage = extractExecutionImage(imageData);
-  if (!executionImage) return null;
-
-  const systemPrompt = `
+export const OPENAI_DESK_VALIDATOR_AUTHORITY_PROMPT = `
 You are an optional secondary chart extraction validator for a MES/MNQ decision-support app.
+
+Futures Crusher authority model:
+- This is decision support only. No automated orders.
+- NinjaTrader OHLC is the highest-authority market data when present.
+- The 5M chart remains execution authority for entry trigger, active swing, stop placement, risk, invalidation, and final approval.
+- Higher timeframe context is map/support/caution only. It cannot approve execution by itself.
+- AI extraction may identify structured facts, disagreements, and warnings only.
+- The app-owned setup scanner, ranking layer, plan engine, level sanity engine, and trade decision pipeline own executable decisions.
 
 Your job:
 - Extract structured facts from the 5M execution screenshot.
-- Compare those facts against the primary Gemini structuredChartContext.
+- Compare those facts against the primary structuredChartContext.
 - Flag disagreements in key levels, candle facts, and setup evidence.
 
 Hard rules:
@@ -68,13 +64,7 @@ Hard rules:
 - Return valid JSON only.
 `.trim();
 
-  const userPrompt = `
-Route: ${options.routeName || 'unknown'}
-Instrument selected by user: ${options.instrument || 'MES'}
-
-Primary Gemini structuredChartContext to validate:
-${JSON.stringify(primaryContext || {}, null, 2)}
-
+export const OPENAI_CHART_VALIDATION_JSON_CONTRACT = `
 Return this JSON shape:
 {
   "structuredChartContext": {
@@ -129,6 +119,57 @@ Return this JSON shape:
 }
 `.trim();
 
+function buildOpenAIValidationUserPrompt(
+  primaryContext: Partial<ChartContext> | undefined,
+  options: {
+    routeName?: string;
+    instrument?: string;
+  }
+): string {
+  return `
+Route: ${options.routeName || 'unknown'}
+Instrument selected by user: ${options.instrument || 'MES'}
+
+Primary structuredChartContext to validate:
+${JSON.stringify(primaryContext || {}, null, 2)}
+`.trim();
+}
+
+export function buildOpenAIChartValidationMessages(
+  executionImage: string,
+  primaryContext: Partial<ChartContext> | undefined,
+  options: {
+    routeName?: string;
+    instrument?: string;
+  } = {}
+) {
+  const userPrompt = buildOpenAIValidationUserPrompt(primaryContext, options);
+
+  return [
+    { role: 'system', content: OPENAI_DESK_VALIDATOR_AUTHORITY_PROMPT },
+    { role: 'system', content: OPENAI_CHART_VALIDATION_JSON_CONTRACT },
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: userPrompt },
+        { type: 'image_url', image_url: { url: executionImage } },
+      ],
+    },
+  ];
+}
+
+export async function validateChartExtractionWithOpenAI(
+  imageData: ChartImagePayload,
+  primaryContext: Partial<ChartContext> | undefined,
+  options: {
+    model?: string;
+    routeName?: string;
+    instrument?: string;
+  } = {}
+): Promise<OpenAIChartValidation | null> {
+  const executionImage = extractExecutionImage(imageData);
+  if (!executionImage) return null;
+
   const response = await fetch('/api/openai', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -136,16 +177,7 @@ Return this JSON shape:
       model: options.model || OPENAI_VALIDATION_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: userPrompt },
-            { type: 'image_url', image_url: { url: executionImage } },
-          ],
-        },
-      ],
+      messages: buildOpenAIChartValidationMessages(executionImage, primaryContext, options),
     }),
   });
 
