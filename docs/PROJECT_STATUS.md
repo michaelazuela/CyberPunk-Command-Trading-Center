@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Validate OpeningDrive fine-risk candidate.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The rejected-geometry miner identified OpeningDrive fineRiskBucket=risk_24_to_32 as the strongest clean rejected proof-time bucket. The desk needed a frozen validation pass before considering any combined OpeningDrive candidate package or scanner-visible proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-validation.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-fine-risk-validation -- --samebar-separator-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --setup-type OpeningDriveFvgContinuation --candidate-fine-risk-bucket risk_24_to_32 --json.
+Result: Focused test and real local validation passed. The frozen OpeningDrive fine-risk candidate matched 20 of 149 same-bar OpeningDrive rows. Full sample: 20 T1/T2 winners, 0 stopped-before-T1 losses, 0 other resolved, +5332.54 one-MES, avg risk 26.64. Default date holdout split: train 84 rows with 10 matching rows, 10 winners, 0 losses, +2654.40, avg risk 26.51; validation 65 rows with 10 matching rows, 10 winners, 0 losses, +2678.14, avg risk 26.76. Validation decision: validated_for_more_research. livePromotionAllowedRows remains 0.
+Trading logic changed: No. This is a local/read-only research post-processor over saved same-bar replay artifacts. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This candidate uses wide 24-32 point risk, so it may be useful as a review/ranking signal but must not be treated as a live approval rule without selection-priority and risk-quality analysis. The broad rejected population still contains 37 stopped-before-T1 losses.
+Next recommended action: Build a research-only combined OpeningDrive candidate selector that compares LONG risk_4_to_8 and fineRiskBucket=risk_24_to_32 without overlap, ranks one candidate per proof event, and reports what remains rejected.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add OpeningDrive rejected proof-time geometry miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-rejected-geometry-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-rejected-geometry-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The frozen OpeningDrive LONG risk_4_to_8 candidate validated as a clean research lead, but it rejected 137 same-bar rows, including many winners. The desk needed a no-lookahead rejected-population miner before deciding whether a second candidate exists or whether broad OpeningDrive same-bar promotion remains unsafe.
