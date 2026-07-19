@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector exclusion carveout miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-exclusion-carveout-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-exclusion-carveout-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The proposal guard correctly blocked live selector work while 12 rows remained excluded from performance. The desk needed a research-only pass that separates clean no-entry/stale-invalidated accounting carveouts from rows that still need target-generation or manual inspection.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-exclusion-carveout-miner.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-exclusion-carveout-miner -- --blocker-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-blocker-drilldown-1784486960724.json --level-path-diagnostic tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-level-generation-path-diagnostic-1784486967396.json --json.
+Result: Carveout miner generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-exclusion-carveout-miner-1784487867891.json. Status pass. Of 12 excluded rows, 9 are performance-carveout eligible research-accounting rows: 4 fresh-entry-pending rows and 5 stale-invalidated rows. The remaining 3 rows are not selector-ready: 1 HtfDisplacementMssContinuation target-generation gap and 2 manual-inspection rows across SweepMssFvgRetrace and FailedPlanReversal. Selector-proposal eligible rows remain 0 and live-promotion allowed rows remain 0. Recommendation is inspect_target_generation_before_retest.
+Trading logic changed: No. This is a local/read-only research accounting miner only. It does not install selector behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The miner classifies exclusions but does not resolve the 1 target-generation gap or 2 manual-inspection rows.
+Next recommended action: Add a focused unresolved-exclusion drilldown for the 3 non-carveout rows, then rerun readiness with explicit research-accounting carveouts only if the drilldown proves those rows should not count as model-quality losses.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector proposal guard.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-proposal-guard.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-proposal-guard.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Broader selector readiness remained research-only because blocked/no-entry/invalidated rows are still excluded from performance. The desk needed a reusable guard that blocks any future live selector proposal until exclusions are resolved or explicitly carved out with source/proof criteria.
