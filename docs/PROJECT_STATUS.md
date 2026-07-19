@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add promotion-disabled HTF-MSS separator simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The separator diagnostic found positive and caution buckets, but the desk needed a promotion-disabled simulation to prove whether those buckets actually remove the loss-bearing pocket without creating a new live-facing behavior change.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-simulation -- --separator-diagnostic tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-diagnostic-1784447927534.json --samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431534036.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431771575.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431966066.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432306845.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432497417.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432696212.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432909449.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433151405.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433389789.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433638554.json --json.
+Result: Separator simulation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-simulation-1784448289009.json. It evaluated 105 HTF-MSS rows, selected 93, rejected 12. Selected rows: 62 winners, 3 losses, 13 unresolved, +6402.50 one-MES. Rejected rows: 0 winners, 7 losses, 5 unresolved, -630.00 one-MES. The July 9 morning loss pocket was removed, but 3 selected losses remain. Recommendation: revise_separator.
+Trading logic changed: No. This is a local/read-only promotion-disabled simulation. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The first separator removes the largest loss pocket but is still loss-bearing. It is not ready for approval-gated implementation. The next phase should drill down into the 3 selected losses and identify the second separator, likely using proof time, risk, direction, and MAE/MFE behavior.
+Next recommended action: Build a selected-loss drilldown for the 3 HTF-MSS separator-selected losses, then revise the promotion-disabled separator simulation. Keep live behavior unchanged.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS separator diagnostic.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-diagnostic.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Breadth validation showed HTF-MSS was positive overall but had a loss-bearing July 9 morning pocket. The desk needed a research-only separator diagnostic using saved same-bar rows to identify positive and caution buckets before any promotion-disabled simulation or approval discussion.
