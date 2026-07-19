@@ -85,7 +85,7 @@ export interface RawOhlcScannerArtifactTransferStableSelectorSimulationReport {
     rejectedSummary: Summary;
     zeroLossBucketsUsed: number;
     livePromotionAllowedRows: 0;
-    recommendation: 'fresh_replay_validate_selector' | 'revise_selector' | 'fix_inputs';
+    recommendation: 'fresh_replay_validate_selector' | 'no_matching_transfer_stable_bucket' | 'revise_selector' | 'fix_inputs';
   };
   selectedRows: SelectedRow[];
   blockers: string[];
@@ -332,16 +332,20 @@ export function buildRawOhlcScannerArtifactTransferStableSelectorSimulationRepor
       livePromotionAllowedRows: 0,
       recommendation: blockers.length
         ? 'fix_inputs'
-        : selectedSummary.losses === 0 && selectedSummary.winners >= 5
-          ? 'fresh_replay_validate_selector'
-          : 'revise_selector',
+        : selectedRows.length === 0
+          ? 'no_matching_transfer_stable_bucket'
+          : selectedSummary.losses === 0 && selectedSummary.winners >= 5
+            ? 'fresh_replay_validate_selector'
+            : 'revise_selector',
     },
     selectedRows,
     blockers,
     recommendations: blockers.length
       ? ['Fix transfer-stability and same-bar inputs before using this selector simulation.']
       : [
-        selectedSummary.losses === 0
+        selectedRows.length === 0
+          ? 'No rows matched the transfer-stable zero-loss buckets in this sample; this is a no-promotion result, not execution approval.'
+          : selectedSummary.losses === 0
           ? 'Selector simulation is clean in this saved sample; validate on fresh replay before any scanner-visible proposal.'
           : 'Selector simulation is loss-bearing; revise zero-loss bucket use before any scanner-visible proposal.',
         'Keep this research-only: no Discord, Supabase, NinjaTrader bridge, canExecute, entry, stop, target, risk, or live scanner ranking change is approved.',

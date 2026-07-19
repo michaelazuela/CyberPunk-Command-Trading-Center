@@ -155,6 +155,25 @@ assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.selectedRows[0].ticketId, 'selected-low-risk');
 assert.match(report.markdown, /Transfer-Stable Selector Simulation/);
 
+const noMatchReport = buildRawOhlcScannerArtifactTransferStableSelectorSimulationReport({
+  reportDir: 'reports',
+  transferStabilityReportPath: 'stability.json',
+  transferStabilityReport: {
+    ...stabilityReport,
+    zeroLossStablePositiveBuckets: [{
+      ...stabilityReport.zeroLossStablePositiveBuckets[0],
+      key: 'SweepMssFvgRetrace|lunch|risk_4_to_8|12:00-12:59',
+    }],
+  },
+  samebarReportPaths: ['samebar.json'],
+  samebarReports: [samebarReport],
+}, '2026-07-19T00:05:30.000Z');
+
+assert.equal(noMatchReport.status, 'pass');
+assert.equal(noMatchReport.summary.selectedRows, 0);
+assert.equal(noMatchReport.summary.recommendation, 'no_matching_transfer_stable_bucket');
+assert.match(noMatchReport.recommendations[0], /no-promotion/);
+
 const parsed = parseRawOhlcScannerArtifactTransferStableSelectorSimulationArgs([
   '--transfer-stability-report',
   'stability.json',

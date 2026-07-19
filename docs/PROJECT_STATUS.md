@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Clarify transfer-stable selector no-match diagnostics and run latest out-of-sample check.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation.test.ts, docs/PROJECT_STATUS.md.
+Reason: A latest July 16-17 selector run selected zero rows and reported revise_selector. That wording made a professional no-promotion/no-trade result look like a selector failure. The desk needed precise diagnostic language before continuing.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-transfer-stable-selector-simulation -- --transfer-stability-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stability-miner-1784436364289.json --samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433389789.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433638554.json --json; git diff --check.
+Result: Latest July 16-17 out-of-sample selector run passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation-1784438852393.json. Source rows 117, proof events 72, selected rows 0, rejected rows 117, zero-loss buckets used 0, live promotion allowed rows 0, recommendation no_matching_transfer_stable_bucket. The rejected pool was positive but mixed: 74 winners, 22 losses, 8 other resolved, 13 unresolved, +10201.94 one-MES, avg risk 17.92. Interpretation: the transfer-stable selector correctly stood aside because no rows matched the learned zero-loss transfer-stable buckets.
+Trading logic changed: No. This only changes research-report wording for zero selected rows and adds a focused no-match test. It does not run setupScanner as live behavior, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Latest out-of-sample no-match protects against false promotion, but it also means this selector is narrow and may skip profitable mixed buckets until a separate no-lookahead separator is proven.
+Next recommended action: Mine the latest July 16-17 rejected positive/mixed buckets separately, especially SweepMssFvgRetrace afternoon positives and HTF displacement MSS positives, without broadening the transfer-stable selector yet.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add transfer-stable validation-vs-fresh-outcome comparison.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-fresh-outcome-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-fresh-outcome-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Fresh replay recomputed the 76 validation rows from saved completed-5M scanner tapes. The desk needed a ticket-by-ticket comparison to prove the validation manifest and fresh outcome replay did not diverge before moving to latest/out-of-sample artifacts.
