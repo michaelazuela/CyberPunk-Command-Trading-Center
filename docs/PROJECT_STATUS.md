@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add real-metadata replay audit for proofSelectionSignal.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-metadata-replay-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-metadata-replay-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The rank-consumer proposal audit showed research could continue but runtime ranking was not ready until saved real-artifact keep-later groups were reconstructed through the current proofSelectionSignal builder. This replay does that without running setupScanner or installing a rank consumer.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-metadata-replay-audit.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-metadata-replay-audit -- --json; npx tsc --noEmit --pretty false.
+Result: Real-metadata replay audit generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-metadata-replay-audit-1784496320603.json. Status pass. Events scanned: 856. Refs built: 1723. Signal rows: 1723. Collision signal rows: 639. keep_later_sweep_proof rows: 220. prefer_replacement rows: 23. keep-later rows with valid deterministic levels: 135. Missing completed proof groups: 0. runtimeRankConsumerAllowedByThisReport: false. Recommendation is real_metadata_replay_supports_rank_consumer_research_only.
+Trading logic changed: No. This is a local/read-only saved-artifact replay through the current metadata builder. It does not run setupScanner, install ranking behavior, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Real metadata support is now proven, but runtime ranking is still not approved. The next phase must simulate any rank effect against outcomes and safety gates before touching live ranking.
+Next recommended action: Add a research-only rank-effect simulation using the 220 real keep_later_sweep_proof rows and outcome evidence to measure candidate selection impact, P/L, and safety drift with runtime rank changes still disabled.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add proofSelectionSignal rank-consumer proposal audit.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-consumer-proposal-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-consumer-proposal-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The installed metadata audit proved scanner-visible proofSelectionSignal is inert. This proposal audit combines real-artifact collision coverage, installed inertness, and prior saved-adapter outcome evidence to decide whether to continue rank-consumer research without installing runtime ranking.
