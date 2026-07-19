@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add retained problem-slate drilldown for broader proofSelectionSignal filter residue.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-problem-slate-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-problem-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The broader daily filter simulation improved the slate set but still retained 6 unresolved and 2 stopped problem slates. This drilldown joins filter decisions, problem-slate metrics, and earliest outcome rows to classify the remaining residue without changing runtime ranking.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-problem-slate-drilldown.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-problem-slate-drilldown -- --filter-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-filter-simulation-1784503600748.json --problem-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-problem-slate-drilldown-1784503592782.json --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784503584511.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-problem-slate-drilldown-1784504012788.json. Status pass. Problem slates read: 13. Retained problem slates: 8. Retained unresolved/stopped slates: 6/2. Retained no-fill/no-target-or-stop slates: 2/4. Residue classes: 2 entry_not_filled, 3 insufficient_follow_through, 2 moderate_adverse_stopped, 1 unresolved_after_entry. runtimeRankConsumerAllowedByThisReport remains false.
+Trading logic changed: No. This is a local/read-only saved-report drilldown. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This classifies remaining residue but does not yet prove a separator against retained winning slates.
+Next recommended action: Mine pre-entry distance, fill state, follow-through, and moderate-adverse proof-time features against retained winners before any scanner-visible rank consumer.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add broader daily proofSelectionSignal real-row replay package.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-broader-daily-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-broader-daily-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The first proofSelectionSignal filter simulation improved a 13-slate July subset, but it was too small for runtime confidence. This package mines latest saved single-day scanner artifacts, de-dupes equivalent keep_later_sweep_proof rows, checks local scanner-decision tape coverage, and emits read-only replay rows for the existing OHLC outcome runner.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: The broader set is stronger than the first 13-slate check but still only validates one selector surface and one model family. The filter improves resolved P/L and reduces stopped slates, but unresolved slates remain.
 Next recommended action: Mine the remaining unresolved retained slates and the two retained stopped slates for pre-entry/proof-time separators before any scanner-visible rank consumer.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add proofSelectionSignal real-row filter simulation.
