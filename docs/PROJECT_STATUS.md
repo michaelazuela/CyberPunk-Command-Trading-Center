@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive OOS priority simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-priority-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-priority-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The lagging collision drilldown identified same-direction Sweep/HTF priority as the recurring separator. The desk needed a read-only simulation of replacing only lagging OpeningDrive rows with clean same-event same-direction SweepMssFvgRetrace or HtfDisplacementMssContinuation competitors.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-priority-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-oos-priority-simulation -- --json.
+Result: OOS priority simulation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-oos-priority-simulation-1784463227884.json. The original OpeningDrive-selected OOS slice had 4 rows, +513.14 one-MES, and 0 selected losses. The simulation replaced 3 lagging same-event rows with clean same-direction Sweep/HTF competitors, kept 1 OpeningDrive row, and produced +709.38 one-MES, delta +196.24, with 0 simulated losses. Recommendation=validate_priority_rule_broader_oos.
+Trading logic changed: No. This is a local/read-only priority simulation. It consumes an existing comparison report only and does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The priority simulation is still based on a small 4-row OOS selected slice. It supports broader validation only, not scanner-visible install yet.
+Next recommended action: Validate the same-event same-direction Sweep/HTF-over-OpeningDrive priority rule on the broader same-bar/OOS corpus before any runtime ranking change.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive OOS lagging collision drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-lagging-collision-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-lagging-collision-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The OOS collision comparison found that 3 clean OpeningDrive selected rows lagged same-event competitors. The desk needed a richer read-only drilldown to identify whether the separator is same-direction Sweep/HTF priority versus generic outcome-size noise.
