@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority unseen feature queue.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-unseen-feature-queue.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-unseen-feature-queue.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh feature comparison still had only one matching proof_bar_failed_close_through_entry row. The desk needed a read-only queue to identify any saved OpeningDrive priority source-selection reports not yet checked before deciding whether new artifacts are required.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-unseen-feature-queue.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-unseen-feature-queue -- --json; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-comparison -- --source-selection-reports "C:\Users\Mike\Documents\New project\tools\automation\diagnostic-reports\raw-ohlc-scanner-artifact-openingdrive-oos-source-installed-selection-1784465167643.json" --json.
+Result: Unseen feature queue passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-unseen-feature-queue-1784470308526.json. It found 2 saved source-selection reports, 1 already compared, and 1 queued unseen report. The queued comparison also passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-comparison-1784470323890.json. That unseen report rebuilt 13 mined event rows and found 0 proof_bar_failed_close_through_entry matches, so it added no new positive proof and false-rejected 0 priority winners. livePromotionAllowedRows remains 0 and broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only queue and queued comparison over saved artifacts only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Saved artifacts are now exhausted for this feature. Larger validation requires newly generated research artifacts or newly reviewed collision rows.
+Next recommended action: Generate a new unseen OpeningDrive priority collision source-selection artifact package, then rerun the fresh feature comparison. Keep live ranking unchanged.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority fresh feature comparison.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fresh feature package isolated proof_bar_failed_close_through_entry as the only initial-rank usable feature. The desk needed a read-only comparison that rebuilds the miner from saved source-selection/same-bar artifacts and measures whether the packaged feature still catches priority underperformance without rejecting priority winners.
