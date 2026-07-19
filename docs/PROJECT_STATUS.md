@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector live-proposal draft.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-live-proposal.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-live-proposal.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The selector approval contract passed, but the desk needs an explicit live-proposal boundary before any scanner-visible ranking work is considered.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-live-proposal.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-live-proposal -- --approval-contract tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-approval-contract-1784480158122.json --json.
+Result: Live-proposal draft generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-live-proposal-1784480681041.json. Status pass. Readiness decision is ready_for_contract_only_collision_metadata_phase, not live install. It maps the future selector to src/lib/unifiedDeskCandidateBook.ts / buildUnifiedDeskCandidateBook near openingDriveSameEventPriorityPenalty, keeps scannerVisibleInstallAllowedNow false, and requires duplicate/campaign group metadata plus research-to-live parity proof before any disabled shadow overlay.
+Trading logic changed: No. This is a local/read-only proposal artifact only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The proposal intentionally blocks direct installation because the live candidate book still needs a side-effect-free duplicate/campaign collision metadata contract before the selector can be shadow-tested.
+Next recommended action: Add the contract-only duplicate/campaign collision metadata surface in the unified candidate book, then run a disabled shadow overlay comparison before any scanner-visible ranking change.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector approval-boundary contract.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The non-overlap selector dry run was strong enough for a proposal-boundary check, but not a direct live install.
