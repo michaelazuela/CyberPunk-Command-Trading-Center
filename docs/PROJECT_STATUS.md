@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add proofSelectionSignal outcome-key expansion miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-outcome-key-expansion-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-outcome-key-expansion-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The rank-effect simulation showed positive outcome evidence but only as a narrow subset. This miner checks whether the 220 real metadata rows can be joined directly to saved outcome rows or whether a same-date replay package is required.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-outcome-key-expansion-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-outcome-key-expansion-miner -- --json.
+Result: Outcome-key expansion miner generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-outcome-key-expansion-miner-1784497289821.json. Status pass. Real keep_later_sweep_proof rows: 220. Real valid-level keep-later rows: 135. Real date range: 2026-07-06 to 2026-07-17. Outcome rows: 38. Outcome date range: 2026-06-10 to 2026-07-02. Exact outcome matched rows: 0. Loose outcome matched rows: 0. Unmatched real rows: 220. Unmatched real rows with local scanner tape: 220. Unmatched real rows without local scanner tape: 0. Distinct real groups with local scanner tape: 22/22. runtimeRankConsumerAllowedByThisReport: false. Recommendation is build_real_row_replay_package_from_local_scanner_tapes.
+Trading logic changed: No. This is a local/read-only saved-report/key coverage miner. It does not replay outcomes, install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Existing June outcome evidence must not be treated as row-level proof for the July real metadata rows. Runtime ranking remains blocked until same-date/key replay outcomes are generated.
+Next recommended action: Build a real-row replay package from local scanner-decision tapes for the 220 July keep_later_sweep_proof rows, then run read-only outcome replay on that package before any scanner-visible rank consumer.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add proofSelectionSignal rank-effect simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-effect-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-rank-effect-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The real-metadata replay proved current scanner metadata can reconstruct 220 real keep_later_sweep_proof rows. The next guardrailed step was to simulate rank effect against saved outcome evidence and safety drift before any runtime rank-consumer consideration.
