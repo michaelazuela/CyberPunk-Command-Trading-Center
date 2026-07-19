@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS two-separator broad validation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The two-separator package was clean in the narrow saved HTF-MSS package, but the desk needed a broader saved-report validation before any implementation request.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation -- --samebar-reports [14 saved same-bar separator drilldown reports] --json.
+Result: Broad validation passed as a report but rejected implementation readiness: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json. Across 14 saved same-bar reports, deduped HTF-MSS source rows were 388. The two exclusions selected 378 rows with 231 winners, 92 losses, 18 unresolved, +20403.75 one-MES; rejected 10 rows with 0 winners, 10 losses, 0 unresolved, -896.25 one-MES. livePromotionAllowedRows remains 0. Recommendation: revise_separator.
+Trading logic changed: No. This is a local/read-only saved-report validation. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The narrow two-separator package is not safe to generalize. Broader HTF-MSS rows still carry 92 selected stopped-before-T1 losses, so no implementation request should proceed from this package.
+Next recommended action: Add a selected-loss drilldown over the broad-validation selected rows to find the real separator families before any scanner-visible implementation request.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS two-separator approval contract.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The two-separator proposal update was ready as research evidence, so the desk needed a separate approval contract proving the package still cannot become scanner-visible or implementation-allowed without explicit future approval.
