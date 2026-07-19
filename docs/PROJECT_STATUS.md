@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Install OpeningDrive combined clean-pocket ranking preference.
+Files changed: src/types.ts, src/lib/setupScanner.ts, src/lib/unifiedDeskCandidateBook.ts, src/lib/setupScanner.test.ts, src/lib/unifiedDeskCandidateBook.test.ts, docs/PROJECT_STATUS.md.
+Reason: The research approval contract and live-readiness artifact passed. The desk needed the narrow scanner-visible install that prefers approved OpeningDrive clean-pocket candidates after existing deterministic construction/proof gates already produce a candidate.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsx src/lib/unifiedDeskCandidateBook.test.ts; npx tsc --noEmit --pretty false.
+Result: OpeningDriveFvgContinuation candidates can now carry explicit rankingOverlays metadata when they match the approved clean-pocket selectors. The scanner rank score and unified desk audit score consume that overlay as a ranking preference. The overlay records its evidence and safety flags on the candidate.
+Trading logic changed: Yes, narrowly. This changes model ranking preference only for OpeningDriveFvgContinuation candidates that already passed existing candidate construction/proof gates. It does not set canExecute, does not change entry/stop/target/risk math, does not change session windows, does not post Discord, does not write Supabase, does not read live bridge data, and does not automate execution.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is the first scanner-visible installation from the OpeningDrive clean-pocket research. It uses no-lookahead fields only, but should be monitored through replay/live review for ranking collisions with other human-review candidates.
+Next recommended action: Run full verification gates, commit, push, then continue with a research-only collision audit that compares newly preferred OpeningDrive rows against prior primary desk ideas.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive combined clean-pocket live proposal readiness artifact.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-live-proposal.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-live-proposal.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The combined clean-pocket approval contract passed as research-proposal-only. The desk needed a final planning-side readiness artifact that states the exact scanner-visible overlay, disallowed inputs, unchanged boundaries, likely files, rollback plan, and verification commands before any implementation phase.

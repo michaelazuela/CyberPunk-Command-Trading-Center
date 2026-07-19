@@ -4092,6 +4092,74 @@ const tests: Array<[string, () => void]> = [
     assert.ok(candidate.evidence.some((item) => item.includes('Directional bias: LONG')));
   }],
 
+  ['Opening Drive FVG continuation applies clean-pocket ranking preference without changing execution gates', () => {
+    const context = htfDisplacementContinuationContext('LONG', {
+      chartTimestamp: '2026-06-05T10:35:00-04:00',
+      proposedEntry: 7603.25,
+      proposedStop: 7599,
+      riskPoints: 4.25,
+      fvgZones: [{
+        direction: 'LONG',
+        upper: 7604,
+        lower: 7600.5,
+        midpoint: 7603.25,
+        formedAt: '2026-06-05T09:45:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 40,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.entry, 7603.25);
+    assert.equal(candidate.stop, 7599);
+    assert.equal(candidate.riskPoints, 4.25);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.humanReview?.canExecute, false);
+    assert.equal(candidate.humanReview?.requiresTraderConfirmation, true);
+    assert.ok(candidate.rankScore && candidate.rankScore > 0);
+    assert.equal(candidate.rankingOverlays?.[0]?.name, 'openingdrive_combined_clean_pocket_preference');
+    assert.equal(candidate.rankingOverlays?.[0]?.scoreAdjustment, 12);
+    assert.equal(candidate.rankingOverlays?.[0]?.changesCanExecute, false);
+    assert.equal(candidate.rankingOverlays?.[0]?.changesEntryStopTargets, false);
+    assert.equal(candidate.rankingOverlays?.[0]?.changesRiskRules, false);
+    assert.equal(candidate.rankingOverlays?.[0]?.usesOutcomeData, false);
+    assert.equal(candidate.rankingOverlays?.[0]?.usesDateBucket, false);
+    assert.ok(candidate.evidence.some((item) => item.includes('tight_long_10:00-10:59_risk_4_to_5')));
+    assert.ok(candidate.evidence.some((item) => item.includes('excludes trade date, outcome labels, P/L, Discord/RAG labels, and Gemini/advisory text')));
+  }],
+
+  ['Opening Drive FVG continuation does not apply clean-pocket preference to non-matching tight-long rows', () => {
+    const context = htfDisplacementContinuationContext('LONG', {
+      chartTimestamp: '2026-06-05T10:20:00-04:00',
+      proposedEntry: 7604.75,
+      proposedStop: 7599,
+      riskPoints: 5.75,
+      fvgZones: [{
+        direction: 'LONG',
+        upper: 7605,
+        lower: 7601,
+        midpoint: 7604.75,
+        formedAt: '2026-06-05T09:45:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 40,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.rankingOverlays, undefined);
+    assert.ok(!candidate.evidence.some((item) => item.includes('OpeningDrive clean-pocket selector matched')));
+  }],
+
   ['Opening Drive FVG continuation arms during observation but does not become human-review ready before 10:00 ET', () => {
     const context = htfDisplacementContinuationContext('SHORT', {
       chartTimestamp: '2026-06-05T09:50:00-04:00',

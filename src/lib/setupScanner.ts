@@ -3136,6 +3136,79 @@ function isInsideSessionDriveReviewWindow(chartContext: ChartContext | null | un
   return minutes !== null && minutes >= phase.reviewStart && minutes < phase.reviewEnd;
 }
 
+const OPENING_DRIVE_CLEAN_POCKET_OVERLAY_NAME = 'openingdrive_combined_clean_pocket_preference';
+const OPENING_DRIVE_CLEAN_POCKET_RANK_BONUS = 12;
+
+function riskInRange(risk: number | null, lower: number, upper: number): boolean {
+  return risk !== null && risk >= lower && risk < upper;
+}
+
+function openingDriveCombinedCleanPocketReasons(args: {
+  setupType: SetupType.OpeningDriveFvgContinuation | SetupType.AfterLunchDriveFvgContinuation;
+  direction: Direction;
+  risk: number | null;
+  minutes: number | null;
+}): string[] {
+  if (args.setupType !== SetupType.OpeningDriveFvgContinuation || args.risk === null) return [];
+  const reasons: string[] = [];
+  if (args.risk >= 24 && args.risk <= 32) {
+    reasons.push('fine_risk_24_to_32');
+  }
+  if (args.direction !== 'LONG' || !riskInRange(args.risk, 4, 8)) {
+    return Array.from(new Set(reasons));
+  }
+
+  if (riskInRange(args.risk, 4, 5)) reasons.push('tight_long_risk_4_to_5');
+  if (riskInRange(args.risk, 4, 4.5)) reasons.push('tight_long_fine_risk_4.0_to_4.5');
+  if (riskInRange(args.risk, 4.5, 5)) reasons.push('tight_long_fine_risk_4.5_to_5.0');
+  if (riskInRange(args.risk, 5, 5.5)) reasons.push('tight_long_fine_risk_5.0_to_5.5');
+  if (riskInRange(args.risk, 7, 7.5)) reasons.push('tight_long_fine_risk_7.0_to_7.5');
+
+  if (args.minutes !== null) {
+    const hour = Math.floor(args.minutes / 60);
+    const minute = args.minutes % 60;
+    if (minute === 35) reasons.push('tight_long_minute_35');
+    if (minute === 55) reasons.push('tight_long_minute_55');
+    if (hour === 9 && riskInRange(args.risk, 5, 6)) reasons.push('tight_long_09:00-09:59_risk_5_to_6');
+    if (hour === 10 && riskInRange(args.risk, 4, 5)) reasons.push('tight_long_10:00-10:59_risk_4_to_5');
+    if (hour === 10 && riskInRange(args.risk, 6, 7)) reasons.push('tight_long_10:00-10:59_risk_6_to_7');
+    if (hour === 10 && riskInRange(args.risk, 7, 8)) reasons.push('tight_long_10:00-10:59_risk_7_to_8');
+  }
+
+  return Array.from(new Set(reasons));
+}
+
+function openingDriveCombinedCleanPocketRankingOverlays(args: {
+  setupType: SetupType.OpeningDriveFvgContinuation | SetupType.AfterLunchDriveFvgContinuation;
+  direction: Direction;
+  risk: number | null;
+  chartContext: ChartContext;
+}): SetupCandidate['rankingOverlays'] {
+  const reasons = openingDriveCombinedCleanPocketReasons({
+    setupType: args.setupType,
+    direction: args.direction,
+    risk: args.risk,
+    minutes: latestChartMinutes(args.chartContext),
+  });
+  if (!reasons.length) return undefined;
+  return [{
+    name: OPENING_DRIVE_CLEAN_POCKET_OVERLAY_NAME,
+    scoreAdjustment: OPENING_DRIVE_CLEAN_POCKET_RANK_BONUS,
+    reason: `OpeningDrive clean-pocket research preference matched: ${reasons.join(', ')}.`,
+    evidence: [
+      `OpeningDrive clean-pocket selector matched: ${reasons.join(', ')}`,
+      'Preference uses current candidate direction, time, and risk only.',
+      'Preference excludes trade date, outcome labels, P/L, Discord/RAG labels, and Gemini/advisory text.',
+      'Preference changes ranking only; canExecute, entry, stop, targets, risk, and session gates are unchanged.',
+    ],
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesRiskRules: false,
+    usesOutcomeData: false,
+    usesDateBucket: false,
+  }];
+}
+
 function directionalFvgZone(chartContext: ChartContext, direction: Direction) {
   if (direction !== 'LONG' && direction !== 'SHORT') return null;
   return (chartContext.fvgZones || [])
@@ -3340,6 +3413,7 @@ function buildSessionDriveFvgContinuationCandidate(
   const dirLabel = directionLabel(direction);
   const zoneLabel = `${parsePrice(fvg.lower)}-${parsePrice(fvg.upper)}`;
   const tacticalZone = tacticalZoneFromDirectionalFvg(fvg, direction, `${phase.phaseLabel} 5M FVG / imbalance zone`);
+  const rankingOverlays = openingDriveCombinedCleanPocketRankingOverlays({ setupType, direction, risk, chartContext });
   const missingEvidence = Array.from(new Set([
     ...htfGate.missingEvidence,
     ...(!reviewWindow ? [`${phase.phaseLabel} FVG candidate is armed during ${phase.armWindowLabel}; human-review plan waits for ${phase.reviewWindowLabel} review window.`] : []),
@@ -3386,6 +3460,7 @@ function buildSessionDriveFvgContinuationCandidate(
     proximityScore: enoughRoom ? 0.75 : 0.25,
     levelContextScore: score / 5,
     levelContextSummary: `${phase.phaseLabel} FVG continuation: ${dirLabel} 15M displacement, ${dirLabel} 5M structure, FVG zone ${zoneLabel}, target ${target ? `${target.label} ${target.price}` : 'unavailable'}.`,
+    rankingOverlays,
     evidence: Array.from(new Set([
       `${dirLabel} 15M ${phase.displacementLabel} displacement confirmed`,
       ...(hasCompletedMssClose ? [`${dirLabel} completed 5M MSS confirmed`] : []),
@@ -3397,6 +3472,7 @@ function buildSessionDriveFvgContinuationCandidate(
       ...(target ? [`Forward liquidity/target context: ${target.label} ${target.price}`] : []),
       `Directional bias: ${direction}; bias supports ${direction} when 15M displacement, 5M structure, and FVG retest align.`,
       `Confidence score: ${score}/100`,
+      ...(rankingOverlays?.flatMap((overlay) => overlay.evidence) || []),
       'Human review required. Decision-support plan only. Trader must confirm entry before action.',
       `${setupType} never sets canExecute true and does not approve broker execution.`,
       ...(riskNote ? [riskNote] : []),
@@ -4720,6 +4796,9 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
   const countertrendPenalty = candidate.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure')
     ? -60
     : 0;
+  const rankingOverlayBonus = (candidate.rankingOverlays || []).reduce((sum, overlay) => (
+    Number.isFinite(overlay.scoreAdjustment) ? sum + overlay.scoreAdjustment : sum
+  ), 0);
   const score =
     executionScore +
     confidenceScore +
@@ -4730,7 +4809,8 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     (candidate.proximityScore || 0) * 10 +
     confluenceBonus +
     htfReversalDeliveryBonus +
-    countertrendPenalty;
+    countertrendPenalty +
+    rankingOverlayBonus;
   candidate.rankScore = score;
   return score;
 }

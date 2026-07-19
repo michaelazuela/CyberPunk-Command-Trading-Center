@@ -287,6 +287,12 @@ function invalidStopSweepRankPenalty(candidate: SetupCandidate): number {
     : 0;
 }
 
+function rankingOverlayScore(candidate: SetupCandidate): number {
+  return (candidate.rankingOverlays || []).reduce((sum, overlay) => (
+    Number.isFinite(overlay.scoreAdjustment) ? sum + overlay.scoreAdjustment : sum
+  ), 0);
+}
+
 function scoreForCandidate(args: {
   candidate: SetupCandidate;
   state: UnifiedDeskCandidateState;
@@ -326,8 +332,9 @@ function scoreForCandidate(args: {
           ? -18
           : -28;
   const rankPenalty = invalidStopSweepRankPenalty(candidate);
+  const overlayScore = rankingOverlayScore(candidate);
   return {
-    score: Math.round(bounded(base + stateAdjustment - rankPenalty) * 100) / 100,
+    score: Math.round(bounded(base + stateAdjustment - rankPenalty + overlayScore) * 100) / 100,
     freshnessScore,
     htfScore,
     fiveMinuteProofScore,

@@ -1241,6 +1241,17 @@ export interface SetupCandidate {
   decisionQualityScorecard?: DecisionQualityScoreItem[];
   decisionQualityHardBlocker?: string | null;
   executionRefinement1m?: OneMinuteExecutionRefinement | null;
+  rankingOverlays?: Array<{
+    name: 'openingdrive_combined_clean_pocket_preference' | string;
+    scoreAdjustment: number;
+    reason: string;
+    evidence: string[];
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    usesOutcomeData: false;
+    usesDateBucket: false;
+  }>;
   rankScore?: number;
   evidence: string[];
   missingEvidence: string[];

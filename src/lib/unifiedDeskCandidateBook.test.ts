@@ -87,6 +87,50 @@ assert.equal(rankedBook.candidates[1].tradingModelState, 'ranked_candidate');
 assert.equal(rankedBook.candidates[1].nextProofRequired[0], 'Wait for a fresh completed 5M retest/re-entry proof or next setup.');
 assert.equal(rankedBook.primaryDeskIdea?.canExecute, false);
 
+const openingDrivePlain = candidate({
+  setupType: SetupType.OpeningDriveFvgContinuation,
+  scenarioLabel: 'plain-opening-drive',
+  modelConfidenceScore: 80,
+  decisionQualityScore: 80,
+  requiredTrigger: 'Completed 5M FVG retest confirmed.',
+  nextAction: 'Human-review ticket only.',
+});
+const openingDriveOverlay = candidate({
+  setupType: SetupType.OpeningDriveFvgContinuation,
+  scenarioLabel: 'clean-pocket-opening-drive',
+  modelConfidenceScore: 80,
+  decisionQualityScore: 80,
+  entry: 101,
+  stop: 97,
+  target1: 107,
+  target2: 109,
+  requiredTrigger: 'Completed 5M FVG retest confirmed.',
+  nextAction: 'Human-review ticket only.',
+  rankingOverlays: [{
+    name: 'openingdrive_combined_clean_pocket_preference',
+    scoreAdjustment: 12,
+    reason: 'OpeningDrive clean-pocket research preference matched.',
+    evidence: ['Preference changes ranking only; canExecute, entry, stop, targets, risk, and session gates are unchanged.'],
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesRiskRules: false,
+    usesOutcomeData: false,
+    usesDateBucket: false,
+  }],
+});
+const openingDriveOverlayBook = buildUnifiedDeskCandidateBook({
+  sessionType: 'morning',
+  candidates: [openingDrivePlain, openingDriveOverlay],
+  canExecuteByCandidateKey: {},
+});
+
+assert.equal(openingDriveOverlayBook.primaryDeskIdea?.candidateKey, 'OpeningDriveFvgContinuation|clean-pocket-opening-drive|LONG|101.00|1');
+assert.equal(openingDriveOverlayBook.primaryDeskIdea?.state, 'human_review');
+assert.equal(openingDriveOverlayBook.primaryDeskIdea?.canExecute, false);
+assert.equal(openingDriveOverlayBook.primaryDeskIdea?.entry, openingDriveOverlay.entry);
+assert.equal(openingDriveOverlayBook.primaryDeskIdea?.stop, openingDriveOverlay.stop);
+assert.equal(openingDriveOverlayBook.approvalBoundary.changesCanExecute, false);
+
 const afterLunchInWindow = candidate({
   setupType: SetupType.AfterLunchDriveFvgContinuation,
   scenarioLabel: 'in-window',
