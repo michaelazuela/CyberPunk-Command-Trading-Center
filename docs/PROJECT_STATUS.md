@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Run broader OpeningDrive keep-later-proof validation from saved full-slate reports.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The validation harness initially only saw the discovery full-slate report. The desk needed separate saved full-slate dry runs before considering any live-facing proposal.
+Tests run: npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run across 12 saved scanner/outcome pairs; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation -- --json.
+Result: Generated 12 additional local/read-only full-slate dry-run reports and reran validation. Latest validation: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation-1784479147924.json. Across 13 full-slate reports, slate_size:two_candidate_slate produced 224 rows, 183 winners, 41 losses, 0.82 win rate, and -787.90 aggregate suppression delta, with 12 separate validation reports. Candidate held research-only, but not cleanly: the June 1-July 2 combined report showed 105 rows, 88 winners, 17 losses, 0.84 win rate, and +1464.48 suppression delta, meaning replacement top selection outperformed later Sweep proof in that broader slice.
+Trading logic changed: No. This phase generated local diagnostic reports only. It did not edit scanner behavior, setup ranking, Discord, Supabase, bridge, canExecute, or entry/stop/target/risk logic.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The two-candidate rule is not clean enough for scanner-visible use. It needs a companion drilldown to explain the June broad-slice failure before any proposal.
+Next recommended action: Mine the validated two-candidate cases by no-lookahead companion fields such as date range, session, direction, duplicate ordinal, proof age, and replacement setup. Look for a stable keep-later-proof subset or a reject condition for the broad June failure.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority keep-later-proof validation pass.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The keep-later-proof miner found slate_size:two_candidate_slate as the best research candidate, but that needed a separate validation harness before any scanner-visible proposal.
