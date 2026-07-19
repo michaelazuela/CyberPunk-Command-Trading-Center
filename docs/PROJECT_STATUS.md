@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive OOS priority live proposal.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-priority-live-proposal.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-priority-live-proposal.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Broader OOS validation supported a same-event same-direction Sweep/HTF priority rule over OpeningDrive, but scanner-visible ranking changes require a separate proposal with gates, disallowed inputs, unchanged boundaries, rollback, and verification plan.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-priority-live-proposal.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-oos-priority-live-proposal -- --json.
+Result: OOS priority live proposal passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-oos-priority-live-proposal-1784464030766.json. Readiness decision=ready_for_explicit_implementation_approval with failedGateCount=0. Gates passed: validation status pass, proposal recommended, 13 comparable events, priority losses 0, positive delta +1365.61, priority wins majority 9/4. Proposed behavior is same_event_same_direction_sweep_htf_priority_over_openingdrive. It remains scannerVisibleInstallAllowedNow=false and requiredFutureApproval=true.
+Trading logic changed: No. This is a local/read-only live-proposal artifact. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The proposal is ready for explicit implementation approval but does not install runtime ranking. The future implementation must remain same-event/same-direction only and must not remove OpeningDrive or loosen execution gates.
+Next recommended action: If approved, implement the same-event same-direction Sweep/HTF priority overlay as a narrow scanner-visible ranking phase. Do not change canExecute, entry, stop, targets, risk, Discord, Supabase, bridge behavior, or automated execution.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive OOS broader priority validation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-broader-priority-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-broader-priority-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The priority simulation improved the installed-selector OOS slice, but the desk needed a broader same-bar validation across all OOS events where OpeningDrive and same-direction Sweep/HTF candidates appeared together.
