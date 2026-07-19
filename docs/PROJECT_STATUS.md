@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add source-context drilldown for unresolved overlay missing-top rows.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-source-context-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-source-context-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The unresolved drilldown showed the 60 replay-ready missing-top rows did not resolve into winners/losses. The desk needed to quantify the original scanner snapshot context behind those rows: no-chase labels, target-room blockers, entry-trigger-pending state, late-day timing, and missing-evidence state.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-source-context-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-source-context-drilldown -- --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-missing-top-replay-package-1784442707164.json --outcome-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784442715931.json --json.
+Result: Source-context drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-source-context-drilldown-1784443491543.json. It joined all 60 replay rows to saved scanner source context and outcome rows. Key source tags: has_mss_evidence 60 rows, has_fvg_evidence 59 rows, no_chase 39 rows, late_day_after_1500 32 rows, no_missing_evidence 18 rows, entry_trigger_pending 9 rows, target_room_blocked_before_t1 8 rows. The no_chase group had 39 rows, 6 no-fill, 33 no-target-or-stop, avg favorable/adverse R 0.61/0.58. The late-day group had 32 rows, 4 no-fill, 28 no-target-or-stop, avg favorable/adverse R 0.60/0.36. Target-room-blocked rows had 8 no-target-or-stop rows, avg favorable/adverse R 0.70/0.63. Recommendation: use_as_negative_or_review_note_evidence_only.
+Trading logic changed: No. This is a local/read-only source-context drilldown over saved replay, outcome, and scanner artifact files. It does not recompute outcomes, run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This supports a research-side negative/review-note separator for no-chase, target-room blocked, and late-day unresolved top rows. It does not justify live rank promotion. Any live-facing rank penalty or review-note placement still needs a separate proposal and approval.
+Next recommended action: Prepare a research-only negative overlay simulation that suppresses or penalizes missing-top rows carrying no_chase, target_room_blocked_before_t1, entry_trigger_pending, or late_day_after_1500, then compare against known resolved winners before proposing any live-facing behavior.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add unresolved drilldown for overlay missing-top replay rows.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-unresolved-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-unresolved-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The missing-top coverage drilldown found 60 replay-ready rows, but outcome replay resolved none of them. The desk needed a repeatable classification of whether those rows were no-fill, weak follow-through, near-T1 misses, or adverse-near-stop cases before deciding whether overlay coverage should influence ranking research.
