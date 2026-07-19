@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector implementation preflight.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-implementation-preflight.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-implementation-preflight.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The Sweep-only guarded selector dry-run passed, but the desk needed one more no-runtime gate before drafting any selector adapter contract. This preflight verifies the saved dry-run has no invalid proposed rows, no non-Sweep changed rows, no missing outcomes, no remaining carveout blockers, no Discord-post rows, no canExecute changes, and no live promotion rows.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-implementation-preflight.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-implementation-preflight -- --dry-run-comparison tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run-comparison-1784489294041.json --json.
+Result: Preflight generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-implementation-preflight-1784489727175.json. Status pass. Dry-run recommendation: dry_run_supports_sweep_only_guarded_selector_research. Changed slates: 4. Sweep-scope rows: 19. Changed rows gross resolved one-MES P/L: +478.75. Invalid proposed rows: 0. Non-Sweep changed rows: 0. Missing outcome rows: 0. Blocked carveout rows remaining: 0. shouldPost rows: 0. publishDiscord rows: 0. canExecute changed rows: 0. livePromotionAllowedRows: 0. implementationDraftEligible: true. runtimeInstallAllowed: false. Recommendation is draft_no_runtime_selector_adapter_contract_next.
+Trading logic changed: No. This is a local/read-only implementation preflight only. It does not install selector behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Passing preflight only authorizes drafting a no-runtime selector adapter contract. Runtime scanner/ranking behavior remains untouched and still requires a separate explicit approval gate.
+Next recommended action: Draft the no-runtime selector adapter contract for the Sweep-only keep-later-proof selector, then dry-run that contract against saved artifacts before any live-facing selector/ranking install.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive Sweep-only guarded selector dry-run comparison.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The Sweep-only guarded selector proposal required a saved-report dry-run before any runtime selector work. The comparison had to show current baseline selection, proposed Sweep-only selection, changed rows, source/proof validation, deterministic level validation, outcome evidence, P/L by day/session/model, and zero live promotion.
