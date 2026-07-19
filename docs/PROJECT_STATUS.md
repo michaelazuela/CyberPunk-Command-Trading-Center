@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS second residue package simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-package-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-package-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The second residue compound miner found several loss pockets, including a small zero-winner-cost pocket. The desk needed a promotion-disabled package simulation to combine those pockets with base_plus_zero_winner_residue_all, dedupe rejected rows, and measure selected/rejected W/L/U and one-MES P/L before any implementation proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-package-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-package-simulation -- --broad-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json --package-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation-1784453088375.json --residue-package-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-package-simulation-1784454425292.json --second-residue-compound-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-compound-miner-1784455428139.json --package-name base_plus_zero_winner_residue_all --json.
+Result: Second residue package simulation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-package-simulation-1784455822684.json. It tested 4 third-wave packages over 378 HTF-MSS rows. No zero-selected-loss package exists. base_plus_second_zero_winner_all selected 316 rows with 231 winners, 44 losses, 17 unresolved, +24203.75 one-MES, while rejecting 62 rows with 0 winners, 48 losses, 1 unresolved, -3800.00. base_plus_second_low_winner_all selected 314 rows with 230 winners, 43 losses, 17 unresolved, +24313.75, while rejecting 64 rows with 1 winner, 49 losses, 1 unresolved, -3910.00. base_plus_second_top5_loss selected 291 rows with 223 winners, 33 losses, 16 unresolved, +22631.25, while rejecting 87 rows with 8 winners, 59 losses, 2 unresolved, -2227.50. livePromotionAllowedRows remains 0. Recommendation: continue_feature_search.
+Trading logic changed: No. This is a local/read-only promotion-disabled package simulation. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The clean zero-winner extension only removes 3 additional selected losses, and the stronger top-loss package rejects 8 winners. This does not justify live installation.
+Next recommended action: Add a third residue drilldown after base_plus_second_zero_winner_all to classify the remaining 44 selected losses, or pause HTF-MSS filter mining if diminishing returns continue.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS second residue compound miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-compound-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-compound-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The second residue drilldown showed 47 remaining selected losses after base_plus_zero_winner_residue_all, but the broad pre-entry buckets still contained too many winners. The desk needed a second-residue compound miner that intersects only live-usable pre-entry fields before any scanner-visible proposal.
