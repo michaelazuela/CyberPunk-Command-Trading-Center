@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive Sweep-only guarded selector dry-run comparison.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The Sweep-only guarded selector proposal required a saved-report dry-run before any runtime selector work. The comparison had to show current baseline selection, proposed Sweep-only selection, changed rows, source/proof validation, deterministic level validation, outcome evidence, P/L by day/session/model, and zero live promotion.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run-comparison.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run-comparison -- --strict-replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-replay-package-1784486946263.json --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784486954036.json --adjusted-readiness tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-carveout-adjusted-readiness-1784488702948.json --json.
+Result: Dry-run generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run-comparison-1784489294041.json. Status pass. It evaluated 27 saved date/session slates from 38 strict-ready replay rows. Sweep-scope rows: 19. Changed slates: 4. Changed rows with outcome evidence: 4. Changed rows gross resolved one-MES P/L: +478.75. Invalid proposed rows: 0. Non-Sweep changed rows: 0. Missing outcome rows: 0. Blocked carveout rows remaining: 0. shouldPost rows: 0. publishDiscord rows: 0. canExecute changed rows: 0. livePromotionAllowedRows: 0. Recommendation is dry_run_supports_sweep_only_guarded_selector_research.
+Trading logic changed: No. This is a local/read-only saved-report dry-run only. It does not install selector behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The dry-run supports research-only selector preparation. Runtime scanner behavior is still untouched and would require a separate explicitly approved install.
+Next recommended action: Add a no-runtime implementation proposal/preflight for the guarded Sweep-only selector, then run a dry-run adapter against saved scanner artifacts before any live-facing selector/ranking change.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Draft OpeningDrive Sweep-only guarded selector proposal.
 Files changed: docs/research/openingdrive-sweep-only-guarded-selector-proposal.md, docs/PROJECT_STATUS.md.
 Reason: Carveout-adjusted readiness cleared the research-accounting blockers and the proposal guard passed. The desk needed a written, locked proposal boundary before any dry-run or live-facing selector work.
