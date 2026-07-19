@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS package diminishing-returns audit.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-package-diminishing-returns-audit.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-package-diminishing-returns-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The HTF-MSS clean zero-winner package chain was producing smaller and smaller loss reductions. The desk needed a read-only package-chain audit to decide whether to keep mining HTF-MSS filters or pivot to another model family.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-package-diminishing-returns-audit.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-package-diminishing-returns-audit -- --compound-package-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation-1784453088375.json --residue-package-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-package-simulation-1784454425292.json --second-residue-package-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-package-simulation-1784455822684.json --json.
+Result: Diminishing-returns audit passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-package-diminishing-returns-audit-1784456199906.json. It audited 3 clean HTF-MSS package steps. zero_winner_cost_all selected 56 losses with 231 winners. base_plus_zero_winner_residue_all selected 47 losses with the same 231 winners, a clean marginal reduction of 9 losses. base_plus_second_zero_winner_all selected 44 losses with the same 231 winners, a clean marginal reduction of only 3 losses. The strongest tested package selected 33 losses but rejected 8 winners. livePromotionAllowedRows remains 0. Recommendation: halt_htf_mss_filter_mining_and_pivot.
+Trading logic changed: No. This is a local/read-only promotion-disabled package-chain audit. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This does not prove HTF-MSS is invalid. It says the current pre-entry filter-mining path has diminishing returns and should not be installed live.
+Next recommended action: Pivot research to another reviewed model family with cleaner separation potential, preferably OpeningDriveFvgContinuation or AfterLunchDriveFvgContinuation, before any scanner-visible ranking changes.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS second residue package simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-package-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-package-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The second residue compound miner found several loss pockets, including a small zero-winner-cost pocket. The desk needed a promotion-disabled package simulation to combine those pockets with base_plus_zero_winner_residue_all, dedupe rejected rows, and measure selected/rejected W/L/U and one-MES P/L before any implementation proposal.
