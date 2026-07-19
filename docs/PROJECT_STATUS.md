@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add proofSelectionSignal real-row problem-slate drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-problem-slate-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-problem-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The slate audit reduced 131 repeated rows to 13 no-lookahead slates and showed 3 problem slates. This drilldown isolates the unresolved and stopped earliest slates before any runtime rank-consumer consideration.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-problem-slate-drilldown.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-problem-slate-drilldown -- --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784497875616.json --json.
+Result: Problem-slate drilldown generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-problem-slate-drilldown-1784498316199.json. Status pass. Outcome rows: 131. Problem slates: 3. Unresolved problem slates: 2. Stopped problem slates: 1. Problem slates with later positive rows: 0. Problem slates with only one bar after proof: 1. July 7 morning LONG had only one bar after proof and is replay-runway limited. July 10 lunch LONG was unresolved with 10.25 MFE against 13 risk. July 13 morning LONG stopped before T1 and later same-slate rows also stopped. runtimeRankConsumerAllowedByThisReport: false. Recommendation is test_minimum_replay_runway_or_later_proof_filter.
+Trading logic changed: No. This is a local/read-only saved-outcome drilldown. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The results support more research, not runtime ranking. A minimum replay-runway filter may remove one unresolved slate, but it will not explain the July 13 stopped slate.
+Next recommended action: Test a research-only slate filter that excludes insufficient replay-runway slates and separately flags stopped/high-adverse slates, then compare retained slate P/L and problem count against the 13-slate baseline.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add proofSelectionSignal real-row outcome slate audit.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-outcome-slate-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-outcome-slate-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The same-date July outcome replay passed but produced 131 repeated scanner snapshot rows. This audit collapses those repeated snapshots into no-lookahead earliest proof slates by date/session/setup/direction so model-quality analysis does not overcount repeated scanner emissions.
