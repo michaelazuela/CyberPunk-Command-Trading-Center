@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add raw Sweep composite overlay missing-top coverage drilldown and run replay coverage check.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-coverage-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-coverage-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The prior overlay dry run improved known changed-slate selection, but 1,651 top rows lacked outcome coverage. The desk needed to separate replay-ready coverage debt from true blockers before any scanner-visible rank proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-coverage-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-coverage-drilldown -- --overlay-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-dry-run-1784442068271.json --scanner-artifacts [available raw scanner artifact reports through July 17] --min-ready-rows 1 --json; npx tsx tools/automation/unified-positive-held-local-preview-replay-package-outcome.ts --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-missing-top-replay-package-1784442707164.json --json.
+Result: Coverage drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-coverage-drilldown-1784442707164.json. It inspected 2,684 overlay slates, 3,288 missing top refs, and 1,651 unique missing top ticket IDs against 21,472 saved scanner candidate rows. Missing artifact rows: 0; missing completed-5M rows: 0; directionally invalid geometry rows: 0. Ready replay rows: 60. Blocked rows: 1,591, all from incomplete deterministic levels. Generated missing-top replay package: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-missing-top-replay-package-1784442707164.json. Outcome replay passed: tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784442715931.json. The 60 replay-ready rows resolved 0 winners/losses: 60 unresolved, 6 no-fill, 54 no target-or-stop hit, gross one-MES P/L null. Model mix: HtfDisplacementMssContinuation 6 unresolved; IntradayMssMicroContinuation 43 unresolved; OpeningDriveFvgContinuation 7 unresolved; SweepMssFvgRetrace 4 unresolved.
+Trading logic changed: No. This is a local/read-only coverage drilldown and existing completed-5M replay over saved artifacts. It does not run setupScanner as live behavior, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The broad overlay still lacks resolved outcome coverage for many slates. The 60 newly replayed top rows do not add positive evidence, and 1,591 missing top candidates remain blocked by missing deterministic levels. This argues against broadening the overlay from coverage alone.
+Next recommended action: Build a narrow missing-top unresolved/no-fill drilldown to identify whether the 60 ready rows are stale/no-chase, on-side/no-fill, target-room dead, or entry geometry not meaningful after proof. Keep it research-only and do not change live ranking.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add raw Sweep composite overlay dry run and measure top-slate impact.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The validated Sweep composite package replayed cleanly, but the desk needed a scanner-artifact top-slate dry run before any live-facing rank proposal. This phase tests whether a research boost for complete validated Sweep composite candidates would improve top selection without boosting incomplete matches or demoting known winners.
