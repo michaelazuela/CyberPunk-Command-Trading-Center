@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector readiness summary.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-readiness-summary.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-readiness-summary.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The strict replay outcome, blocker drilldown, and level-generation path diagnostic needed one compact research decision surface before any selector or model-removal discussion.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-readiness-summary.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-readiness-summary -- --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784485502806.json --blocker-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-blocker-drilldown-1784485921063.json --level-path-diagnostic tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-level-generation-path-diagnostic-1784486309967.json --json.
+Result: Summary generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-readiness-summary-1784486699087.json. Status pass. Strict-ready package: 7 rows, 5 resolved, 2 unresolved/no-fill, gross one-MES P/L +276.25. SweepMssFvgRetrace: 4 replay rows, 4 resolved, +318.75, but 2 blocked rows remain excluded; evidence state positive_strict_ready_subset. TurtleSoup: 3 replay rows, 1 resolved, 2 unresolved/no-fill, -42.50, with 1 blocked waiting-for-entry row excluded; evidence state weak_or_mixed_subset and not removal proof. Overall recommendation is continue_research_no_live_selector.
+Trading logic changed: No. This is a local/read-only saved-report summary only. It does not install selector behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Positive Sweep evidence is from the strict-ready subset only. Blocked/no-entry rows are intentionally excluded from performance and still need broader coverage before any live selector proposal.
+Next recommended action: Expand strict-ready selector readiness beyond the top-10 missing package by generating a broader ready-only package for remaining missing coverage groups, then compare whether the Sweep-positive/TurtleSoup-weak pattern holds.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector shadow missing level-generation path diagnostic.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-level-generation-path-diagnostic.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-level-generation-path-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The strict blocker drilldown proved 3 blocked top-10 rows had matching-side placeholder levels. The desk needed to classify whether those placeholders were fresh-entry waits, stale invalidations, or target-generation defects before using them as model-quality evidence.
