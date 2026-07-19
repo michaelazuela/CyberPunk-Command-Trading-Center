@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS second-separator simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The selected-loss drilldown found one shared remaining loss pocket after the first HTF-MSS separator. The desk needed a promotion-disabled simulation to prove whether rejecting the July 17 morning LONG 11:00-11:59 / risk_16_to_24 pocket removes the selected stopped-before-T1 rows without touching live behavior.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-simulation -- --separator-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-simulation-1784448289009.json --selected-loss-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-selected-loss-drilldown-1784448717515.json --json.
+Result: Second-separator simulation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-simulation-1784449174061.json. It started from the 93 first-separator selected rows and rejected 3 additional rows matching 2026-07-17 morning LONG, 11:00-11:59 proof time, risk_16_to_24. Remaining selected rows: 90 total, 62 winners, 0 losses, 13 unresolved, +6668.75 one-MES. Newly rejected rows: 0 winners, 3 losses, 0 unresolved, -266.25 one-MES. Total rejected rows: 15 total, 0 winners, 10 losses, 5 unresolved, -896.25 one-MES. livePromotionAllowedRows remains 0. Recommendation: prepare_research_only_proposal_update.
+Trading logic changed: No. This is a local/read-only promotion-disabled simulation. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves a saved-report separator package, not live scanner behavior. It still needs a research-only proposal update and approval contract before any scanner-visible install.
+Next recommended action: Prepare a research-only HTF-MSS proposal update that includes both exclusions, keeps promotion disabled, and proves the approval contract still blocks scanner-visible behavior until separately approved.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS selected-loss drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-selected-loss-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-selected-loss-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The first promotion-disabled HTF-MSS separator simulation removed the July 9 morning loss pocket but still selected 3 stopped-before-T1 rows. The desk needed a narrow drilldown to identify the shared date/session/direction/time/risk pattern before revising the separator.
