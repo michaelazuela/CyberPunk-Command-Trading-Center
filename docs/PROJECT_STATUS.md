@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority keep-later-proof rule miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-rule-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-rule-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The changed-slate miner rejected suppressing later duplicate Sweep proof. The desk needed a research-only no-lookahead combination miner to find whether any positive keep-later-proof rule is worth broader validation.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-rule-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-rule-miner -- --changed-slate-miner "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-changed-slate-miner-1784477881493.json" --json.
+Result: Keep-later-proof rule miner passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-rule-miner-1784478233013.json. It evaluated 174 changed-slate cases and produced 486 no-lookahead rule candidates, with 49 candidates meeting the minimum research thresholds. The broadest best candidate was slate_size:two_candidate_slate: 67 rows, 55 winners, 12 losses, 82% later-Sweep winner rate, +3393.75 baseline later-Sweep P/L versus +2155.06 replacement P/L, and -1238.69 suppression delta. Other validation candidates included LONG + two-candidate slate, IntradayMssMicroContinuation replacements, and lunch-session variants. installableSeparatorFound remains false.
+Trading logic changed: No. This is a local/read-only rule miner over a saved changed-slate report only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The miner found validation candidates, not a live-facing rule. These buckets are in-sample to the July changed-slate package and must be validated on broader or unseen scanner artifacts before any proposal.
+Next recommended action: Validate the best keep-later-proof candidate on a separate/broader replay package. Do not install a rank boost, duplicate rule, or publish change from this miner alone.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority campaign dedupe changed-slate miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-changed-slate-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-changed-slate-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The full-slate dedupe dry run rejected duplicate suppression overall, but the desk needed to know whether any no-lookahead bucket supported suppression or whether later Sweep duplicate proof should be treated as meaningful fresh evidence.
