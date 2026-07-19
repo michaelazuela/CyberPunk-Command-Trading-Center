@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector shadow missing replay package.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The coverage queue identified 50 missing groups. The desk needed a deterministic top-N saved replay package manifest so the next outcome replay phase has an exact, prioritized input instead of manual row selection.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-replay-package.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-replay-package -- --coverage-queue tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-coverage-queue-1784483759678.json --limit 10 --json.
+Result: Missing replay package generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-replay-package-1784484146587.json. Status pass. It packaged the top 10 missing keys, covering 202 of 299 missing shadow rows and 141 of 217 missing would-change-primary rows. Package mix: 6 keep-later Sweep proof rows and 4 prefer-replacement rows. Top key remains 2026-06-23 evening SweepMssFvgRetrace LONG keep_later_sweep_proof. Recommendation is run_saved_outcome_replay_for_package.
+Trading logic changed: No. This is a local/read-only saved-package manifest only. It does not replay OHLC, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Packaged rows are still unresolved. They must not be treated as wins, losses, selector proof, model removal evidence, or live ranking evidence until a separate saved-outcome replay resolves them.
+Next recommended action: Run a saved-report outcome replay for the missing replay package, resolving the top 10 keys before mining or proposing scanner-visible OpeningDrive selector behavior.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector shadow coverage queue.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-coverage-queue.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-coverage-queue.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The separator miner showed promising buckets but incomplete evidence. The desk needed a read-only queue of exactly which unmatched shadow groups need saved outcome replay before any live-facing selector proposal.
