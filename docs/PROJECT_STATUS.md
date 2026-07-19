@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add proofSelectionSignal real-row replay package.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The outcome-key expansion miner proved the July real metadata rows had no direct outcome-key match, but all groups had local scanner-decision tapes. This package converts same-date real keep_later_sweep_proof rows into an outcome-ready replay package without inventing missing levels or bars.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-replay-package.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-replay-package -- --json.
+Result: Real-row replay package generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-replay-package-1784497641954.json. Status pass. Real keep_later_sweep_proof rows read: 220. Ready replay rows: 131. Excluded missing-level rows: 85. Excluded invalid-geometry rows: 0. Excluded missing-tape rows: 0. Excluded missing-bars-after-proof rows: 4. Model groups: 1. Session groups: 2. livePromotionAllowedRows: 0.
+Trading logic changed: No. This is a local/read-only replay package from saved real metadata rows and local scanner-decision tapes. It does not calculate outcomes, install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The package excludes 89 of 220 real keep-later rows because they are not outcome-ready from saved local evidence: 85 missing deterministic levels and 4 lacking completed bars after proof. Those exclusions should be analyzed separately after outcome replay.
+Next recommended action: Run the existing read-only outcome replay against tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-replay-package-1784497641954.json, then summarize one-MES P/L and unresolved/no-fill/stopped behavior by day/session/model.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add proofSelectionSignal outcome-key expansion miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-outcome-key-expansion-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-outcome-key-expansion-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The rank-effect simulation showed positive outcome evidence but only as a narrow subset. This miner checks whether the 220 real metadata rows can be joined directly to saved outcome rows or whether a same-date replay package is required.
