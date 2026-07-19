@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS two-separator approval contract.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The two-separator proposal update was ready as research evidence, so the desk needed a separate approval contract proving the package still cannot become scanner-visible or implementation-allowed without explicit future approval.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-approval-contract.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-approval-contract -- --proposal-update tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-proposal-update-1784449577149.json --json.
+Result: Approval contract passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-approval-contract-1784449960561.json. ProposalReady=true, selected rows 90, winners/losses/unresolved 62/0/13, +6668.75 one-MES, livePromotionAllowedRows=0, failedGateCount=0. The contract keeps implementationAllowedNow=false and scannerVisibleInstallAllowedNow=false. Recommendation: await_explicit_approval_or_broaden_research.
+Trading logic changed: No. This is a local/read-only approval contract. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The saved-report two-separator package is clean inside this research set, but it is not live-installed. Broader validation is still the safer next step before any implementation request.
+Next recommended action: Broaden research-only validation for the two-separator HTF-MSS package against additional saved report slices before considering any scanner-visible implementation phase.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS two-separator proposal update.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-proposal-update.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-separator-proposal-update.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The second-separator simulation removed all selected stopped-before-T1 HTF-MSS losses in the saved report set. The desk needed a research-only proposal update that records both exclusions and keeps scanner-visible behavior disabled until a separate approval contract passes.
