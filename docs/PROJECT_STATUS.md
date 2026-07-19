@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add research-only negative overlay outcome comparison.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-outcome-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-outcome-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The replacement coverage pass found 16 outcome-ready replacement tops and replayed them for +592.50 one-MES gross resolved P/L, but the desk needed a stricter comparison that separates replacement-only evidence from true both-side top-selection delta.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-outcome-comparison.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-outcome-comparison -- --negative-simulation-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-simulation-1784443993746.json --replacement-coverage-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-replacement-coverage-1784444692657.json --replacement-outcome-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784444700308.json --json.
+Result: Outcome comparison passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-outcome-comparison-1784445231688.json. It compared 39 changed slates. Replacement coverage ready/blocked: 16 / 23. Replacement outcome rows: 16. Replacement resolved/unresolved/blocked: 6 / 10 / 0. Replacement resolved gross one-MES P/L: +592.50. Both-side resolved rows: 0, so both-side resolved delta remains unavailable. Replacement-resolved/original-missing rows: 6. Replacement-unresolved/original-missing rows: 10. Recommendation remains keep_research_only.
+Trading logic changed: No. This is a local/read-only saved-report comparison. It does not recompute outcomes, run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The replacement-side evidence is promising, especially the HTF displacement MSS subset, but this still cannot prove a full top-selection delta because original overlay tops remain missing outcomes. Live rank behavior remains unapproved and uninstalled.
+Next recommended action: Build a narrow original-top blocker/evidence drilldown for the 39 changed slates to prove why original tops lack outcomes: incomplete deterministic levels, no-chase/stale state, target-room blocker, or missing replay package eligibility. Keep promotion disabled.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add research-only negative overlay replacement coverage package.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-replacement-coverage.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-replacement-coverage.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Negative overlay simulation changed 39 top slates without demoting known winners, but 33 replacement tops still lacked outcomes. The desk needed a local coverage pass to identify which changed replacement tops had deterministic levels and completed 5M tape before using them as evidence.
