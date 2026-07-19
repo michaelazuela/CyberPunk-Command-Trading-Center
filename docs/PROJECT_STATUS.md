@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add raw Sweep composite overlay dry run and measure top-slate impact.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The validated Sweep composite package replayed cleanly, but the desk needed a scanner-artifact top-slate dry run before any live-facing rank proposal. This phase tests whether a research boost for complete validated Sweep composite candidates would improve top selection without boosting incomplete matches or demoting known winners.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-dry-run.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-dry-run -- --snapshot-miner-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner-1784441052100.json --scanner-artifacts [available raw scanner artifact reports through July 17] --outcome-reports [paired outcome reports plus composite validation outcome] --boost-points 25 --json.
+Result: Overlay dry run passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-dry-run-1784442068271.json. It evaluated 10,732 candidate rows across 2,684 slates from 11 saved scanner artifact reports and 12 saved outcome reports. Validated composite matches: 86; complete rows boosted: 63; incomplete composite matches not boosted: 23. Changed slates: 15; changed to validated composite Sweep: 15; changed from known winner: 0; known changed-slate top-selection delta: +96.25 one-MES. Aggregate top P/L on rows with available outcome changed from +64770.83 baseline to +66652.08 overlay, but 1,651 top rows still lacked outcome coverage, so recommendation remains keep_research_only.
+Trading logic changed: No. This is a local/read-only overlay simulation over saved scanner artifacts and saved outcome reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Outcome coverage is incomplete for broad top-slate comparison, so the overlay is not ready for a live proposal even though the changed slates look constructive. The next proof must reduce missing top-outcome coverage or limit the comparison to fully outcome-covered slates.
+Next recommended action: Build an outcome-coverage drilldown for overlay top rows: isolate slates with missing baseline/overlay outcomes, generate replay packages for missing top candidates where saved completed-5M tapes exist, then rerun the overlay only on outcome-covered slates before any proposal.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add raw Sweep composite validation package and run fresh completed-5M outcome replay.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-validation-package.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-validation-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The composite snapshot miner found two zero-loss transfer Sweep segments. The desk needed to validate only those composite segments through a fresh replay package before considering any scanner-visible proposal.
