@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority campaign dedupe approval contract.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The campaign re-entry simulation showed post-stop re-entry worsened results, while earliest-only same-campaign dedupe remained positive. The desk needed a read-only approval contract to prove the dedupe proposal preserves entry/stop/target/risk, canExecute, and Discord boundaries before any future live-facing dry run.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-approval-contract.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-approval-contract -- --campaign-reentry-simulation "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-reentry-simulation-1784475987923.json" --json.
+Result: Campaign dedupe approval contract passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-approval-contract-1784476346009.json. It consumed the Sweep campaign re-entry simulation, validated earliest-only policy, read 50 campaigns, selected 48 campaign-lead rows, suppressed 283 duplicate rows, produced +1767.50 selected one-MES P/L, and kept livePromotionAllowedRows at 0. Entry/stop/target/risk drift rows, canExecute change rows, and Discord posting change rows are all 0. Recommendation is approval_contract_research_pass.
+Trading logic changed: No. This is a local/read-only approval contract over saved campaign simulation output only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The earliest-only dedupe contract is positive but still selects 21 losing campaign leads. It is not sufficient for a live install by itself. A future scanner-artifact dry run must prove duplicate collapse changes only duplicate visibility and not ranking, levels, risk, canExecute, Discord, Supabase, or bridge behavior.
+Next recommended action: Build a fresh scanner-artifact dry-run comparison for earliest-only exact-campaign dedupe. It should replay the saved July scanner artifact, compare current selected rows versus deduped selected rows, report per-day/session P/L, and explicitly prove no entry/stop/target/risk drift and no live-promotion/canExecute changes.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority campaign re-entry simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-reentry-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-reentry-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The Sweep same-bar dedupe evidence showed that a blanket same-bar/Sweep penalty would reject a profitable bucket, but duplicate campaign rows were heavy. The desk needed a read-only simulator comparing earliest-only campaign selection against a post-stop fresh re-entry policy before considering any live-facing duplicate or re-entry behavior.

@@ -225,6 +225,7 @@
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-loss-case-classifier": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-case-classifier.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-campaign-reentry-simulation": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-reentry-simulation.ts",
+    "research:raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-approval-contract": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-approval-contract.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue.ts",
