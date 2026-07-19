@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive OOS source installed selection comparison.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-source-installed-selection.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-source-installed-selection.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The installed priority comparison consumed the broader validation report. The desk needed one cleaner read-only proof that reads saved same-bar source reports directly and runs the installed candidate-book ranking path per same-event collision.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-source-installed-selection.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-oos-source-installed-selection -- --json.
+Result: Source installed selection passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-oos-source-installed-selection-1784465167643.json. From saved same-bar source reports, 13 comparable events selected Sweep/HTF priority on 13 rows, selected OpeningDrive on 0 rows, created 0 canExecute=true rows, and had 0 approval-boundary drift rows. Priority losses were 0; OpeningDrive losses were 2. One-MES P/L was OpeningDrive +934.39 versus priority +2300.00, delta +1365.61.
+Trading logic changed: No. This is a local/read-only source-artifact comparison. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This validates saved source artifacts only. It does not broaden the overlay to other model families and does not prove fresh future market distributions.
+Next recommended action: Monitor fresh replay/live-observation artifacts for the installed same-event priority overlay before broadening to AfterLunch, TurtleSoup, Sweep variants, or failed-plan reversal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive OOS installed priority comparison.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-installed-priority-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-installed-priority-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After installing the same-event Sweep/HTF priority overlay, the desk needed read-only proof that the installed candidate-book ranking path reproduces the OOS proposal without touching live scanner, Discord, Supabase, bridge behavior, canExecute, or trade math.
