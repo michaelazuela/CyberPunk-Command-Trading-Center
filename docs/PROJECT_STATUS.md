@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector adapter contract.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-adapter-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-adapter-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The implementation preflight passed and recommended drafting a no-runtime selector adapter contract. This contract locks the next saved-artifact adapter dry-run boundary before any scanner-visible selector or ranking install.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-adapter-contract.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-adapter-contract -- --preflight tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-implementation-preflight-1784489727175.json --json.
+Result: Adapter contract generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-adapter-contract-1784490113570.json. Status pass. Preflight ready: true. Changed slates: 4. Sweep-scope rows: 19. Changed rows gross resolved one-MES P/L: +478.75. failedGateCount: 0. livePromotionAllowedRows: 0. Recommendation is draft_saved_artifact_adapter_dry_run_next.
+Trading logic changed: No. This is a local/read-only contract only. It does not install selector behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Passing the adapter contract only authorizes the next saved-artifact adapter dry-run. Runtime scanner/ranking behavior remains untouched and still requires a separate explicit approval gate.
+Next recommended action: Build a saved-artifact adapter dry-run that consumes this contract and proves the adapter output shape before any live-facing selector/ranking install.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector implementation preflight.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-implementation-preflight.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-implementation-preflight.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The Sweep-only guarded selector dry-run passed, but the desk needed one more no-runtime gate before drafting any selector adapter contract. This preflight verifies the saved dry-run has no invalid proposed rows, no non-Sweep changed rows, no missing outcomes, no remaining carveout blockers, no Discord-post rows, no canExecute changes, and no live promotion rows.
