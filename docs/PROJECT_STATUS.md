@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add research-only negative overlay original-top drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-original-top-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-original-top-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The outcome comparison showed replacement-side evidence improved, but both-side delta was unavailable because original overlay tops still lacked direct resolved outcomes. The desk needed to prove whether those original tops were blocked by missing data/levels or by source-quality conditions such as no-chase, late-day, target-room, or entry-pending evidence.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-original-top-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-original-top-drilldown -- --negative-simulation-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-simulation-1784443993746.json --coverage-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-coverage-drilldown-1784442707164.json --source-context-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-source-context-drilldown-1784443491543.json --json.
+Result: Original-top drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-original-top-drilldown-1784445622237.json. It inspected 39 changed slates and 39 original top refs. Original coverage ready/blocked/missing: 39 / 0 / 0. Original source-tagged rows: 39. No-chase rows: 37. Late-day rows: 20. Target-room-blocked rows: 8. Entry-trigger-pending rows: 9. Incomplete-level rows: 0. Ready-but-unresolved rows: 0. Recommendation: use_as_negative_evidence_research_only.
+Trading logic changed: No. This is a local/read-only saved-report drilldown. It does not recompute outcomes, run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This supports the negative evidence hypothesis for displaced original tops, but it is still research-only and not a live rank change. The next step should isolate whether a no-chase/late-day/target-room penalty would preserve the positive HTF displacement MSS replacement cases without lifting unresolved FVG/Sweep replacements.
+Next recommended action: Build a narrow model/tag cross-tab for the 39 changed slates: original-top evidence class versus replacement setup/outcome. Use it to decide whether the next proposal is an HTF-MSS-only research overlay, a no-chase penalty, or just a review note. Keep promotion disabled.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add research-only negative overlay outcome comparison.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-outcome-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-outcome-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The replacement coverage pass found 16 outcome-ready replacement tops and replayed them for +592.50 one-MES gross resolved P/L, but the desk needed a stricter comparison that separates replacement-only evidence from true both-side top-selection delta.
