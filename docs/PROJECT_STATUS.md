@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS second residue loss drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-loss-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-loss-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The base_plus_zero_winner_residue_all package rejected 59 rows with 0 winners but still left 47 selected losses. The desk needed a second-residue drilldown that reconstructs base plus residue package membership before classifying only the remaining selected losses.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-loss-drilldown.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-loss-drilldown -- --broad-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json --package-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation-1784453088375.json --residue-package-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-package-simulation-1784454425292.json --package-name base_plus_zero_winner_residue_all --json.
+Result: Second residue loss drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-second-residue-loss-drilldown-1784454977698.json. It reconstructed package rejection over 378 HTF-MSS rows: 59 rows rejected, 319 second-residue rows selected, and 47 selected losses remain. Top pre-entry buckets are broad and still profitable: morning has 168 rows, 131 winners, 29 losses, 1 unresolved, +13942.50 one-MES; LONG has 167 rows, 111 winners, 25 losses, 12 unresolved, +12507.50; SHORT has 152 rows, 120 winners, 22 losses, 5 unresolved, +11573.75. Narrower loss-heavy pockets remain: risk_gte_24 has 29 rows, 9 winners, 14 losses, 1 unresolved, +1727.50; fineRiskBucket risk_28_to_32 has 22 rows, 4 winners, 13 losses, 0 unresolved, +462.50; morning LONG 10:00-10:59 risk_gte_24 has 26 rows, 8 winners, 12 losses, 1 unresolved, +1753.75. Regime diagnostics show 2026-06-11 morning and 2026-06-24 morning concentrated losses, but date/session is research context only, not a live filter. livePromotionAllowedRows remains 0. Recommendation: mine_second_residue_compounds.
+Trading logic changed: No. This is a local/read-only promotion-disabled drilldown. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The remaining loss buckets are still mixed with winners or profitable as broad groups. They must not be turned into live rejects without a second-residue compound miner and package simulation.
+Next recommended action: Add a second-residue compound miner that intersects only pre-entry fields across the remaining selected rows after base_plus_zero_winner_residue_all.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS residue package simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-package-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-package-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The residue compound miner found a small second-wave zero-winner-cost pocket. The desk needed a promotion-disabled package simulation that combines the original zero_winner_cost_all package with residue-only pockets and dedupes rejected rows before any implementation request.
