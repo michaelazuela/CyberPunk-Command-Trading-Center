@@ -183,15 +183,32 @@ assert.equal(report.selectedRows[0].ticketId, 'good-sweep');
 assert.equal(report.summary.recommendation, 'revise_rank_simulation');
 assert.match(report.markdown, /July Raw-OHLC Unified Rank Simulation/);
 
+const strictReport = buildRawOhlcScannerArtifactJulyUnifiedRankSimulationReport({
+  reportDir: 'reports',
+  separatorReportPath: 'separator.json',
+  separatorReport,
+  samebarReportPaths: ['samebar.json'],
+  samebarReports: [samebarReport],
+  mode: 'strict_specific_zero_loss',
+}, '2026-07-19T00:02:00.000Z');
+
+assert.equal(strictReport.source.mode, 'strict_specific_zero_loss');
+assert.equal(strictReport.summary.selectedRows, 1);
+assert.equal(strictReport.summary.selectedSummary.losses, 0);
+assert.equal(strictReport.selectedRows[0].ticketId, 'good-sweep');
+
 const parsed = parseRawOhlcScannerArtifactJulyUnifiedRankSimulationArgs([
   '--separator-report',
   'separator.json',
   '--samebar-reports',
   'a.json,b.json',
+  '--mode',
+  'strict_specific_zero_loss',
   '--json',
 ]);
 assert.equal(parsed.separatorReport, 'separator.json');
 assert.deepEqual(parsed.samebarReports, ['a.json', 'b.json']);
+assert.equal(parsed.mode, 'strict_specific_zero_loss');
 assert.equal(parsed.json, true);
 
 console.log('raw OHLC July unified rank simulation verified.');

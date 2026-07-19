@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Tighten July unified rank simulation with strict zero-loss bucket mode.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.test.ts, docs/PROJECT_STATUS.md.
+Reason: The first broad-bucket rank simulation was positive but still selected 14 stopped-before-T1 losses because broad setup/time buckets could overpower narrower risk/session caution. The desk needed a stricter research-only mode before any fresh validation or scanner-visible proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-july-unified-rank-simulation -- --mode strict_specific_zero_loss --separator-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-july-unified-separator-1784434312048.json --samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431534036.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431771575.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431966066.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432306845.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432497417.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432696212.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432909449.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433151405.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433389789.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433638554.json --json.
+Result: Strict mode passed and improved the research selection materially. It evaluated 704 rows across 409 proof events and selected 130 rows using only specific zero-loss positive buckets while applying caution matches as hard exclusions. Selected rows: 115 winners, 0 stopped-before-T1 losses, 7 other resolved, 8 unresolved, +8185.02 one-MES, avg risk 6.76. Rejected rows kept all 134 stopped-before-T1 losses plus 196 winners, 110 other resolved, 134 unresolved, +24040.19 one-MES. Recommendation is validate_on_fresh_replay, not install live.
+Trading logic changed: No. This is a local/read-only research simulation mode over saved same-bar and separator reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Strict mode may overfit this July same-bar set and still leaves many winners rejected. It is a candidate research filter, not a live rank rule.
+Next recommended action: Validate strict_specific_zero_loss on a fresh raw-OHLC replay package or an earlier holdout period before any scanner-visible rank overlay proposal.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add July unified rank simulation research pass.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The unified separator found promising positive and caution buckets, but buckets alone do not prove publishable ranking. The desk needed a research-only rank simulation that selects at most one candidate per proof event and compares selected vs rejected outcomes before any scanner-visible rank proposal.

@@ -12,6 +12,7 @@ import type {
 interface CliOptions {
   separatorReport: string | null;
   samebarReports: string[];
+  mode: 'broad_bucket_score' | 'strict_specific_zero_loss';
   outDir: string;
   json: boolean;
 }
@@ -70,6 +71,7 @@ export interface RawOhlcScannerArtifactJulyUnifiedRankSimulationReport {
     reportDir: string;
     separatorReport: string | null;
     samebarReports: string[];
+    mode: CliOptions['mode'];
   };
   assumptions: {
     consumesExistingSameBarAndSeparatorReportsOnly: true;
@@ -161,9 +163,14 @@ function authority(): Authority {
 
 export function parseRawOhlcScannerArtifactJulyUnifiedRankSimulationArgs(args = process.argv.slice(2)): CliOptions {
   const outDir = readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR;
+  const mode = readFlag(args, '--mode') || 'broad_bucket_score';
+  if (mode !== 'broad_bucket_score' && mode !== 'strict_specific_zero_loss') {
+    throw new Error('--mode must be broad_bucket_score or strict_specific_zero_loss.');
+  }
   return {
     separatorReport: readFlag(args, '--separator-report') || latestMatchingFile(outDir, /^raw-ohlc-scanner-artifact-july-unified-separator-\d+\.json$/),
     samebarReports: splitPaths(readFlag(args, '--samebar-reports')),
+    mode,
     outDir,
     json: args.includes('--json'),
   };
@@ -214,8 +221,16 @@ function summarize(rows: Array<RawOhlcScannerArtifactSameBarSeparatorRow | Simul
   };
 }
 
-function scoreRow(row: RawOhlcScannerArtifactSameBarSeparatorRow, separatorReport: RawOhlcScannerArtifactJulyUnifiedSeparatorReport): SimulatedRow {
-  const positive = new Map(separatorReport.topPositiveBuckets.map((bucket) => [`${bucket.kind}:${bucket.key}`, bucket]));
+function scoreRow(
+  row: RawOhlcScannerArtifactSameBarSeparatorRow,
+  separatorReport: RawOhlcScannerArtifactJulyUnifiedSeparatorReport,
+  mode: CliOptions['mode'],
+): SimulatedRow {
+  const allowedStrictKinds = new Set(['risk_setup', 'session_risk_setup', 'session_direction_setup']);
+  const positiveBuckets = mode === 'strict_specific_zero_loss'
+    ? separatorReport.topPositiveBuckets.filter((bucket) => bucket.losses === 0 && allowedStrictKinds.has(bucket.kind))
+    : separatorReport.topPositiveBuckets;
+  const positive = new Map(positiveBuckets.map((bucket) => [`${bucket.kind}:${bucket.key}`, bucket]));
   const caution = new Map(separatorReport.topCautionBuckets.map((bucket) => [`${bucket.kind}:${bucket.key}`, bucket]));
   const keys = bucketKeys(row);
   const positiveMatches = keys.filter((key) => positive.has(key));
@@ -223,8 +238,9 @@ function scoreRow(row: RawOhlcScannerArtifactSameBarSeparatorRow, separatorRepor
   const positiveScore = positiveMatches.reduce((total, key) => total + Math.max(0, positive.get(key)?.score || 0), 0);
   const cautionPenalty = cautionMatches.reduce((total, key) => total + Math.abs(Math.min(0, caution.get(key)?.score || 0)), 0);
   const riskQuality = row.riskPoints < 4 ? 3 : row.riskPoints <= 8 ? 2 : row.riskPoints <= 16 ? 0 : -2;
+  const hardExclusionPenalty = mode === 'strict_specific_zero_loss' && cautionMatches.length ? 10000 : 0;
   return {
-    rankScore: round(positiveScore - cautionPenalty + riskQuality),
+    rankScore: round(positiveScore - cautionPenalty + riskQuality - hardExclusionPenalty),
     ticketId: row.ticketId,
     tradeDate: row.tradeDate,
     session: row.session,
@@ -240,13 +256,17 @@ function scoreRow(row: RawOhlcScannerArtifactSameBarSeparatorRow, separatorRepor
   };
 }
 
-function selectRows(rows: RawOhlcScannerArtifactSameBarSeparatorRow[], separatorReport: RawOhlcScannerArtifactJulyUnifiedSeparatorReport): SimulatedRow[] {
+function selectRows(
+  rows: RawOhlcScannerArtifactSameBarSeparatorRow[],
+  separatorReport: RawOhlcScannerArtifactJulyUnifiedSeparatorReport,
+  mode: CliOptions['mode'],
+): SimulatedRow[] {
   const groups = new Map<string, RawOhlcScannerArtifactSameBarSeparatorRow[]>();
   for (const row of rows) groups.set(proofEventKey(row), [...(groups.get(proofEventKey(row)) || []), row]);
   const selected: SimulatedRow[] = [];
   for (const groupRows of groups.values()) {
     const scored = groupRows
-      .map((row) => scoreRow(row, separatorReport))
+      .map((row) => scoreRow(row, separatorReport, mode))
       .filter((row) => row.rankScore > 0 && row.positiveMatches.length > 0)
       .sort((a, b) => b.rankScore - a.rankScore || a.riskPoints - b.riskPoints || a.ticketId.localeCompare(b.ticketId));
     if (scored[0]) selected.push(scored[0]);
@@ -295,9 +315,11 @@ export function buildRawOhlcScannerArtifactJulyUnifiedRankSimulationReport(args:
   separatorReport: RawOhlcScannerArtifactJulyUnifiedSeparatorReport | null;
   samebarReportPaths: string[];
   samebarReports: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport[];
+  mode?: CliOptions['mode'];
 }, generatedAt = new Date().toISOString()): RawOhlcScannerArtifactJulyUnifiedRankSimulationReport {
   const rows = args.samebarReports.flatMap((report) => report.rows || []);
-  const selectedRows = args.separatorReport ? selectRows(rows, args.separatorReport) : [];
+  const mode = args.mode || 'broad_bucket_score';
+  const selectedRows = args.separatorReport ? selectRows(rows, args.separatorReport, mode) : [];
   const selectedIds = new Set(selectedRows.map((row) => row.ticketId));
   const rejectedRows = rows.filter((row) => !selectedIds.has(row.ticketId));
   const selectedSummary = summarize(selectedRows);
@@ -319,6 +341,7 @@ export function buildRawOhlcScannerArtifactJulyUnifiedRankSimulationReport(args:
       reportDir: args.reportDir,
       separatorReport: args.separatorReportPath,
       samebarReports: args.samebarReportPaths,
+      mode,
     },
     assumptions: {
       consumesExistingSameBarAndSeparatorReportsOnly: true,
@@ -381,6 +404,7 @@ export function runRawOhlcScannerArtifactJulyUnifiedRankSimulationCli(args = pro
       : null,
     samebarReportPaths: options.samebarReports,
     samebarReports: options.samebarReports.map((filePath) => readJson<RawOhlcScannerArtifactSameBarSeparatorDrilldownReport>(filePath)),
+    mode: options.mode,
   });
   const paths = writeRawOhlcScannerArtifactJulyUnifiedRankSimulationReport(report, options.outDir);
   if (options.json) {
