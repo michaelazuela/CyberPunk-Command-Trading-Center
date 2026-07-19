@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add transfer-stable validation-vs-fresh-outcome comparison.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-fresh-outcome-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-fresh-outcome-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Fresh replay recomputed the 76 validation rows from saved completed-5M scanner tapes. The desk needed a ticket-by-ticket comparison to prove the validation manifest and fresh outcome replay did not diverge before moving to latest/out-of-sample artifacts.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-transfer-stable-fresh-outcome-comparison.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-transfer-stable-fresh-outcome-comparison -- --validation-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-validation-package-1784437688496.json --fresh-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784438248792.json --json; git diff --check.
+Result: Comparison passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-fresh-outcome-comparison-1784438597196.json. Validation rows 76, fresh outcome rows 76, matched rows 76, missing fresh rows 0, exact matches 76, divergences 0, fresh losses 0, fresh unresolved 0, fresh blocked 0, fresh one-MES P/L +4856.30. By model: AfterLunchDriveFvgContinuation 28 exact matches, +3073.80; IntradayMssMicroContinuation 21 exact matches, +502.50; SweepMssFvgRetrace 27 exact matches, +1280.00.
+Trading logic changed: No. This is a local/read-only comparison over saved validation and fresh outcome reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This confirms internal consistency of the saved-report replay chain only. It still does not prove latest/out-of-sample scanner behavior.
+Next recommended action: Run a latest/out-of-sample raw-OHLC scanner artifact replay using the same selector proof chain. If that remains clean, prepare a scanner-visible proposal with live promotion still disabled until separately approved.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add transfer-stable fresh replay package joiner and run fresh outcome replay.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-fresh-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-fresh-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The 76-row validation manifest needed to be joined back to full deterministic replay rows with entry, stop, T1/T2, and source tape paths so the existing OHLC outcome engine could replay it fresh instead of trusting saved selector outcomes.
