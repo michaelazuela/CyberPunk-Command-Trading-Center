@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Validate strict unified rank simulation on June 1-July 2 holdout same-bar artifact.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: Strict July mode selected 130 rows with 0 stopped-before-T1 losses, but it needed an earlier holdout check before any scanner-visible rank proposal. The desk reused the prior June 1-July 2 same-bar report as a fresh validation set for the same research-only separator/simulation tools.
+Tests run: npm run research:raw-ohlc-scanner-artifact-july-unified-separator -- --samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --json; npm run research:raw-ohlc-scanner-artifact-july-unified-rank-simulation -- --mode strict_specific_zero_loss --separator-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-july-unified-separator-1784435189250.json --samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --json.
+Result: Holdout separator passed on 1746 same-bar rows: 1154 winners, 513 stopped-before-T1 losses, 79 other resolved, +129931.47 one-MES. Strict rank simulation selected 44 rows from 1035 proof events: 44 winners, 0 stopped-before-T1 losses, 0 other resolved, 0 unresolved, +11042.54 one-MES, avg risk 25.09. Rejected rows retained 1110 winners and all 513 losses. Recommendation remains validate_on_fresh_replay, not live install.
+Trading logic changed: No. This is a local/read-only holdout validation over saved same-bar replay reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Holdout strict selection is clean, but avg risk is wide at 25.09 points because many selected rows came from wide risk_24_to_32 OpeningDrive or risk_gte_32 Sweep buckets. This is not acceptable as-is for live review ranking without risk-quality control.
+Next recommended action: Run a risk-capped strict simulation, likely max risk 16 points first, then compare selected rows/P&L/loss leakage before any scanner-visible rank overlay proposal.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Tighten July unified rank simulation with strict zero-loss bucket mode.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.test.ts, docs/PROJECT_STATUS.md.
 Reason: The first broad-bucket rank simulation was positive but still selected 14 stopped-before-T1 losses because broad setup/time buckets could overpower narrower risk/session caution. The desk needed a stricter research-only mode before any fresh validation or scanner-visible proposal.
