@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add ready-row replay package filter.
+Files changed: tools/automation/unified-positive-held-local-preview-ready-replay-package.ts, tools/automation/unified-positive-held-local-preview-ready-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh replay package builder produced 365 outcome-ready rows but failed the whole package because 8 rows had directionally invalid geometry. The desk needs a read-only filter package that keeps only rows already marked ready_for_read_only_outcome_replay so outcome replay can proceed without repairing or inventing blocked levels.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-ready-replay-package.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-replay-package -- --json; npm run diagnostic:held-local-preview-ready-replay-package -- --replay-package "tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-1784466436418.json" --json; npm run diagnostic:held-local-preview-replay-package-outcome -- --replay-package "tools/automation/diagnostic-reports/unified-positive-held-local-preview-ready-replay-package-1784466551545.json" --json; npm run research:raw-ohlc-scanner-artifact-samebar-separator-drilldown -- --replay-package-outcome "tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784466574968.json" --json; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-fresh-observation-monitor -- --json.
+Result: Ready-row package filter passed: tools/automation/diagnostic-reports/unified-positive-held-local-preview-ready-replay-package-1784466551545.json. It kept 365 ready rows from the fresh 373-row replay package and excluded 8 blocked/directionally-invalid rows without repairing or inferring levels. Outcome replay passed on the ready package: tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784466574968.json with 365 rows, 262 resolved, 103 unresolved, 0 blocked, gross resolved one-MES P/L +8042.02. Same-bar drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784466581009.json with 221 same-bar rows, 111 winners, 69 losses, 30 unresolved, gross one-MES P/L +5405.09. Fresh observation monitor passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-observation-monitor-1784466584727.json, but recommendation is investigate_before_broadening because the one fresh comparable same-event OpeningDrive/Sweep/HTF event selected priority, had 0 boundary drift/canExecute changes, but priority lost worse than OpeningDrive by -23.75 one-MES.
+Trading logic changed: No. This is a local/read-only package filter. It consumes saved replay package rows, excludes blocked rows, and does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The ready-row package intentionally excludes blocked geometry rows rather than repairing them. The fresh comparable event contradicts the prior OOS baseline, so broadening remains disallowed.
+Next recommended action: Drill down into the one fresh comparable event from raw-ohlc-scanner-artifact-openingdrive-priority-fresh-observation-monitor-1784466584727.json before any broader ranking change. Identify trade date, session, side, setup types, levels, proof time, MFE/MAE, and why priority underperformed OpeningDrive.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority fresh source discovery.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-source-discovery.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-source-discovery.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fresh observation monitor proved no newer same-bar reports exist after the baseline. The desk needs a read-only source discovery pass that identifies whether newer replay outcome reports exist and whether they still need same-bar conversion.

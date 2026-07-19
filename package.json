@@ -89,6 +89,7 @@
     "diagnostic:held-local-preview-reviewed-case-intake": "tsx tools/automation/unified-positive-held-local-preview-reviewed-case-intake.ts",
     "diagnostic:held-local-preview-intake-triage": "tsx tools/automation/unified-positive-held-local-preview-intake-triage.ts",
     "diagnostic:held-local-preview-replay-package": "tsx tools/automation/unified-positive-held-local-preview-replay-package.ts",
+    "diagnostic:held-local-preview-ready-replay-package": "tsx tools/automation/unified-positive-held-local-preview-ready-replay-package.ts",
     "diagnostic:held-local-preview-replay-package-outcome": "tsx tools/automation/unified-positive-held-local-preview-replay-package-outcome.ts",
     "diagnostic:held-local-preview-replay-package-source-proof-timing": "tsx tools/automation/unified-positive-held-local-preview-replay-package-source-proof-timing.ts",
     "diagnostic:held-local-preview-replay-package-negative-filter-probe": "tsx tools/automation/unified-positive-held-local-preview-replay-package-negative-filter-probe.ts",
