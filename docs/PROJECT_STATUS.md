@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add transfer-stable fresh replay package joiner and run fresh outcome replay.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-fresh-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-fresh-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The 76-row validation manifest needed to be joined back to full deterministic replay rows with entry, stop, T1/T2, and source tape paths so the existing OHLC outcome engine could replay it fresh instead of trusting saved selector outcomes.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-transfer-stable-fresh-replay-package.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-transfer-stable-fresh-replay-package -- --validation-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-validation-package-1784437688496.json --json; npm run diagnostic:held-local-preview-replay-package-outcome -- --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-fresh-replay-package-1784438229050.json --json; git diff --check.
+Result: Fresh replay package passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-fresh-replay-package-1784438229050.json. It mapped all 76 validation tickets back to full replay rows, with 76 ready rows, 0 blocked rows, and 0 directionally invalid geometry rows. Fresh OHLC outcome replay passed: tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784438248792.json. Outcome: 76 resolved rows, 0 unresolved, 0 blocked, 0 no-fill, 0 stopped-before-T1, 4 T1-only, 72 T1-and-T2, +4856.30 one-MES. By model: AfterLunchDriveFvgContinuation 28 resolved, +3073.80; IntradayMssMicroContinuation 21 resolved, +502.50; SweepMssFvgRetrace 27 resolved, +1280.00.
+Trading logic changed: No. This is a local/read-only replay-package adapter over saved validation and raw replay artifacts, followed by the existing local OHLC outcome replay. It does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is fresh recomputation from saved completed-5M scanner tapes, not a new live scanner artifact run. The next proof should compare the fresh outcome to the validation manifest and then run an out-of-sample/latest artifact package if available.
+Next recommended action: Add a read-only validation-vs-fresh-outcome comparison report, then decide whether the selector is ready for a scanner-visible proposal or still needs a latest-day artifact replay.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add transfer-stable fresh validation package manifest.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-validation-package.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-validation-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The selector rollup had 79 selected rows, but 3 unresolved July 3 Sweep rows needed to be held out before fresh replay validation. The desk needed a repeatable read-only package of only resolved selector rows.
