@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector population approval checkpoint.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-approval-checkpoint.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-approval-checkpoint.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The scanner-output dry-run passed but used synthetic companion rows. This checkpoint locks the permitted future runtime scope, forbidden behavior changes, rollback path, and required real-artifact proof before any scanner-visible proofSelectionSignal population install.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-approval-checkpoint.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-approval-checkpoint -- --json; npx tsc --noEmit --pretty false.
+Result: Population approval checkpoint generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-approval-checkpoint-1784494387280.json. Status pass. Source scanner-output dry-run status: pass. Candidates compared: 4. Synthetic companion rows added: 2. keep_later_sweep_proof rows: 2. rankScoreChangedRows: 0. rankOrderChangedContexts: 0. executionStatusChangedRows: 0. blockReasonChangedRows: 0. canExecuteChangedRows: 0. livePromotionAllowedRows: 0. readyForExplicitPopulationInstallApproval: true. runtimeInstallAllowedByThisReport: false. Recommendation is request_explicit_population_install_approval_or_gather_real_artifact_replay.
+Trading logic changed: No. This is a local/read-only approval checkpoint. It does not install scanner-visible population, add a rank consumer, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The previous scanner-output dry-run still relied on synthetic companion rows, so the next phase should gather real saved scanner artifact coverage before any scanner-visible metadata population.
+Next recommended action: Add a real-artifact scanner collision coverage miner that searches saved scanner/replay artifacts for natural same-completed-5M proof groups, especially OpeningDriveFvgContinuation versus SweepMssFvgRetrace, without changing runtime behavior.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector scanner-output population dry-run.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-scanner-output-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-scanner-output-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The population preflight passed and recommended a scanner-output dry-run that clones scan output, attaches proofSelectionSignal only to clones, and proves no rank/order/status/blocker/live-publish/canExecute changes before any scanner-visible population install.
