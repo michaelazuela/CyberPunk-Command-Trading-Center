@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Attempt local out-of-sample replay for OpeningDrive combined selector.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The combined OpeningDrive selector looked clean on the June 1-July 2 same-bar artifact, so the next narrow step was to check whether a local July 3-July 17 out-of-sample package could validate it without live Supabase, Discord, or NinjaTrader side effects.
+Tests run: npm run research:raw-ohlc-pipeline -- --start-date 2026-07-03 --end-date 2026-07-17 --instrument MES --json; npm run research:raw-ohlc-scanner-artifacts -- --market-bars-json tools/automation/diagnostic-reports/raw-ohlc-source-MES-2026-07-03-to-2026-07-17-1784429714402.json --start-date 2026-07-03 --end-date 2026-07-17 --instrument MES --sessions morning,lunch --json; npm run research:raw-ohlc-scanner-artifact-replay-package -- --scanner-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-03-to-2026-07-17-1784429807339.json --json; npm run diagnostic:held-local-preview-replay-package-outcome -- --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784429816560.json --json; npm run research:raw-ohlc-scanner-artifact-samebar-separator-drilldown -- --replay-package-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784429854006.json --json.
+Result: Local July 3-July 17 OHLC had 1235 bars but no HTF timeframes, so all 1215 scanner cycles were data-limited and all 45 replay sessions were blocked at the pipeline level. The scanner artifact still generated 839 local events, all HTF data-limited, with 1502 conditional and 38 blocked candidates. The replay-package adapter produced 327 rows, but the only model group was SweepMssFvgRetrace, not OpeningDriveFvgContinuation. Outcome replay resolved 320 rows with 207 T1/T2 winners, 106 stopped-before-T1 losses, 7 T1-only rows, 7 no-fill rows, and +20277.50 one-MES. Same-bar drilldown found 242 same-bar Sweep rows, 170 winners, 65 losses, +17955.00, and livePromotionAllowedRows 0. This is not valid OpeningDrive out-of-sample proof.
+Trading logic changed: No. This is a local/read-only status-only research run over saved/local artifacts. It does not run live bridge data, post Discord, write Supabase, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None. The run used local artifacts only and did not call the live NinjaTrader bridge.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: July local source lacks 15M/60M/120M/240M HTF history, so HTF-sensitive model conclusions are data-limited. The July package cannot validate OpeningDrive because no OpeningDrive rows were produced.
+Next recommended action: Run controlled HTF-capable backfill/acquisition for July 3-July 17 or locate an existing full-timeframe raw-OHLC source before attempting true OpeningDrive out-of-sample validation.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add OpeningDrive combined research selector.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-selector.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-selector.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Two OpeningDrive same-bar research leads validated separately: tight LONG risk_4_to_8 and wider fineRiskBucket=risk_24_to_32. The desk needed a read-only combined selector that dedupes one row per proof event and reports selected vs still-rejected rows before any scanner-visible proposal.
