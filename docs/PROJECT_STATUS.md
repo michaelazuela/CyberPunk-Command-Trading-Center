@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority fresh feature package.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-package.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The no-lookahead validation found two candidate features, but only proof_bar_failed_close_through_entry can exist at initial ranking time. The desk needed a read-only package that excludes post-entry telemetry and prepares the next fresh scanner-artifact comparison without touching live behavior.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-package.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-package -- --json.
+Result: Fresh feature package passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-package-1784469495078.json. It consumed 1 validation report and 1 miner report, found 2 validation candidate rows, packaged 1 initial-rank usable proof_bar_failed_close_through_entry row, and excluded 1 post-entry-only first_replay_adverse_ge_0_25r row. The packaged row is 2026-07-09 morning LONG, SweepMssFvgRetrace priority versus OpeningDriveFvgContinuation fallback, with simulated +23.75 one-MES dollars versus installed priority. liveInitialRankFeatureRows remains 0, livePromotionAllowedRows remains 0, and broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only package builder over saved validation/miner reports only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The package has one historical row. It is suitable for the next fresh-artifact comparison, not for live ranking.
+Next recommended action: Run a fresh scanner-artifact comparison for proof_bar_failed_close_through_entry to measure whether the feature catches new underperformance without rejecting priority winners.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority no-lookahead feature validation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The no-lookahead miner found two candidate features on the saved OpeningDrive priority collision set. The desk needed a separate read-only validation pass to simulate fallback impact and false rejection risk before any live-facing rank overlay change.
