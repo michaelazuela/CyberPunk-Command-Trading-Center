@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Run latest July 16-17 transfer-stability rejected-bucket mine.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The transfer-stable selector correctly selected zero rows on July 16-17. The desk needed to know whether that meant no opportunity or whether profitable mixed buckets existed that require a separate, stricter research path.
+Tests run: npm run research:raw-ohlc-scanner-artifact-transfer-stability-miner -- --train-samebar-reports [June 1-July 15 same-bar reports] --test-samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433389789.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433638554.json --min-rows-per-period 5 --json.
+Result: Latest stability report passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stability-miner-1784439075947.json. Train rows 2333, test rows 117, shared buckets 217, stable-positive buckets 40, zero-loss stable-positive buckets 0, stable-caution buckets 1, train-positive/test-failed buckets 391, test-positive/train-failed buckets 33. Top latest stable positives are broad SweepMssFvgRetrace buckets: setupType SweepMssFvgRetrace test 45 rows, 41 winners, 2 losses, +7030.00; lunch|SweepMssFvgRetrace test 21 rows, 21 winners, 0 losses, +2940.00; lunch|SHORT|SweepMssFvgRetrace test 21 rows, 21 winners, 0 losses, +2940.00; risk_16_to_24|SweepMssFvgRetrace test 16 rows, 16 winners, 0 losses, +3400.00; 14:00-14:59|SweepMssFvgRetrace test 12 rows, 12 winners, 0 losses, +1680.00. HtfDisplacementMssContinuation was positive but loss-bearing in latest: 25 rows, 20 winners, 3 losses, +3193.75. OpeningDriveFvgContinuation morning LONG risk_16_to_24 is the only stable caution bucket: latest 6 rows, 1 winner, 5 losses, -240.60.
+Trading logic changed: No. This is a local/read-only miner over saved same-bar reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Broad Sweep latest positives are promising but not safe enough as a live selector because the train side is loss-bearing and there are zero zero-loss transfer buckets. HTF displacement MSS remains positive but loss-bearing and needs a separate separator before any promotion.
+Next recommended action: Build a narrow latest-positive drilldown for SweepMssFvgRetrace using no-lookahead source/session/direction/time/risk buckets, with special focus on lunch SHORT 13:00-14:59 and risk_16_to_24. Keep HTF displacement MSS separate and do not combine it into this Sweep pass.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Clarify transfer-stable selector no-match diagnostics and run latest out-of-sample check.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation.test.ts, docs/PROJECT_STATUS.md.
 Reason: A latest July 16-17 selector run selected zero rows and reported revise_selector. That wording made a professional no-promotion/no-trade result look like a selector failure. The desk needed precise diagnostic language before continuing.
