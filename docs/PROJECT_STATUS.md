@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector proofSelectionSignal population preflight.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-preflight.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-preflight.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The shadow dry-run proved inert signal attachment on cloned candidates. This population preflight inspects source boundaries to confirm whether the project has the type, builder, timestamp sources, and no current scanner-output population before any scanner-output dry-run.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-preflight.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-preflight -- --json; npx tsc --noEmit --pretty false.
+Result: Population preflight generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-preflight-1784493437871.json. Status pass. proofSelectionSignal field exists: true. SetupCandidate top-level completedBarTime exists: false. setupScanner builder exists/exported: true/true. setupScanner currently populates proofSelectionSignal in scan output: false. ChartContext timestamp and timeframe MSS evidence timestamp fields exist: true/true. safePopulationSourceAvailableForPreflight: true. scannerVisiblePopulationAllowedByThisReport: false. Recommendation is draft_scanner_output_population_dry_run_next.
+Trading logic changed: No. This is a local/read-only source preflight. It does not run setupScanner, populate live candidates, alter ranking, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The preflight confirms there is no top-level candidate completedBarTime field, so any future population dry-run must explicitly source completed proof time from scanner-owned context/evidence and must not infer it from research artifacts.
+Next recommended action: Draft a scanner-output population dry-run that clones scan output, derives completed proof refs from scanner-owned context/evidence timestamps, attaches proofSelectionSignal to clones only, and proves rank/order/live-publish/canExecute stay unchanged.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector proofSelectionSignal shadow dry-run.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-shadow-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-shadow-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The pure scanner-owned proofSelectionSignal builder passed, but the desk needed a durable shadow dry-run proving that attaching generated signals to cloned scanner-like candidates does not alter rank order, rank score, execution status, or blocker state.
