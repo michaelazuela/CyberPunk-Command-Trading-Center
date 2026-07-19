@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority fresh contradiction drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-contradiction-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-contradiction-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh same-event observation contradicted the prior clean OOS baseline: installed priority selected SweepMssFvgRetrace over OpeningDriveFvgContinuation but lost worse by -23.75 one-MES. The desk needs a read-only drilldown that records the exact event, risk delta, outcome timing, MFE/MAE, and root-cause tags before any broader ranking change.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-contradiction-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-fresh-contradiction-drilldown -- --json.
+Result: Contradiction drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-contradiction-drilldown-1784467175330.json. It found 1 fresh contradiction row from 1 source row: 2026-07-09 morning LONG at 2026-07-09T09:20:00. Installed priority selected SweepMssFvgRetrace over OpeningDriveFvgContinuation, but both stopped before T1 and Sweep lost worse by 23.75 one-MES. Sweep risk was wider by 4.75 points, the priority T1/T2 arrived later than OpeningDrive T1/T2, OpeningDrive carried intrabar ambiguity, and there were 0 canExecute=true rows and 0 approval-boundary drift rows. Recommendation is research_priority_risk_cap_before_broadening; broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only contradiction drilldown. It consumes saved source-selection and same-bar diagnostic reports only and does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is one fresh contradiction event, not enough to rewrite ranking. It is enough to block broadening and justify a research-only priority risk-cap validation.
+Next recommended action: Build a read-only risk-cap/risk-ratio validation pass for same-event OpeningDrive versus Sweep/HTF priority collisions before any scanner-visible ranking change.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add ready-row replay package filter.
 Files changed: tools/automation/unified-positive-held-local-preview-ready-replay-package.ts, tools/automation/unified-positive-held-local-preview-ready-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fresh replay package builder produced 365 outcome-ready rows but failed the whole package because 8 rows had directionally invalid geometry. The desk needs a read-only filter package that keeps only rows already marked ready_for_read_only_outcome_replay so outcome replay can proceed without repairing or inventing blocked levels.
