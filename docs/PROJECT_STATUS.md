@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add research-only negative overlay model/tag cross-tab.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-model-tag-crosstab.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-model-tag-crosstab.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The original-top drilldown proved displaced originals were replay-coverable but heavily no-chase/stale tagged. The desk needed a small cross-tab to decide whether the useful replacement evidence was broad or isolated to a specific replacement model.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-model-tag-crosstab.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-model-tag-crosstab -- --original-top-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-original-top-drilldown-1784445622237.json --outcome-comparison tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-outcome-comparison-1784445231688.json --json.
+Result: Model/tag cross-tab passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-model-tag-crosstab-1784445963651.json. It joined all 39 changed slates into 10 groups. HTF displacement MSS replacement rows: 10, with 4 resolved and gross resolved one-MES P/L +655.00. Non-HTF-MSS replacement resolved gross one-MES P/L: -62.50. No-chase/stale original rows: 39. Target-room/entry-pending evidence was subordinate in this grouping: 0 primary target-room/entry-pending rows after no-chase/stale classification priority. Recommendation: isolate_htf_mss_research_overlay.
+Trading logic changed: No. This is a local/read-only saved-report cross-tab. It does not recompute outcomes, run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The evidence supports an HTF-MSS-only research overlay direction, not a broad no-chase/negative penalty across all replacement families. FVG and Sweep replacement rows remain unresolved, and Intraday MSS replacement resolved P/L is negative in this set.
+Next recommended action: Build a promotion-disabled HTF-MSS-only research overlay simulation over the changed-slate set, requiring original top to be no-chase/stale and replacement top to be HtfDisplacementMssContinuation with completed 5M replay coverage. Keep scanner/live behavior unchanged.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add research-only negative overlay original-top drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-original-top-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-negative-original-top-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The outcome comparison showed replacement-side evidence improved, but both-side delta was unavailable because original overlay tops still lacked direct resolved outcomes. The desk needed to prove whether those original tops were blocked by missing data/levels or by source-quality conditions such as no-chase, late-day, target-room, or entry-pending evidence.
