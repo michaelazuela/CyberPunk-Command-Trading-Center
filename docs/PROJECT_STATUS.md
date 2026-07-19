@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS breadth validation before live approval.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-breadth-validation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-breadth-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The approval contract said the next non-approval path should broaden validation. The desk needed to compare the narrow 5-row HTF-MSS proposal against the broader July HTF-ready rollup and detect any loss-bearing day/session pockets before scanner-visible implementation can even be discussed.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-breadth-validation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-breadth-validation -- --july-rollup tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-july-htf-ready-rollup-1784433842691.json --approval-contract tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-approval-contract-1784447163997.json --json.
+Result: Breadth validation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-breadth-validation-1784447544203.json. Narrow proposal evidence remained 5 selected rows, 4 resolved, +655.00 one-MES. Broader July HTF-MSS evidence: 107 rows, 89 resolved, 18 unresolved, 0 blocked, +5776.25 gross resolved one-MES. Day/session groups positive/negative/flat: 8 / 1 / 1. Negative pocket: 2026-07-09 morning, 7 resolved rows, -630.00 one-MES. Recommendation: build_htf_mss_separator_before_live_approval.
+Trading logic changed: No. This is a local/read-only breadth validation. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: HTF-MSS is positive in aggregate, but the July 9 morning pocket proves broad promotion would be too blunt. The next phase should isolate separator fields around that negative pocket before any approval-gated implementation.
+Next recommended action: Build a research-only HTF-MSS separator diagnostic using session, direction, risk, proof timing, HTF/proof source, and day/session pocket features. Keep promotion disabled and live behavior unchanged.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS overlay approval regression contract.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The promotion-disabled HTF-MSS proposal was ready for an approval checkpoint, but the desk needed a separate contract that blocks scanner-visible implementation until explicit approval and names the regression proof required before any future live-facing phase.
