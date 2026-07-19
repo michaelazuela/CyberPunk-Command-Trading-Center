@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector carveout-adjusted readiness.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-carveout-adjusted-readiness.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-carveout-adjusted-readiness.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After the unresolved-exclusion drilldown classified all 12 excluded rows as research-accounting carveouts, the desk needed an adjusted readiness surface and a proposal-guard rerun before drafting any guarded selector proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-carveout-adjusted-readiness.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-carveout-adjusted-readiness -- --readiness-summary tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-readiness-summary-1784486977768.json --carveout-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-exclusion-carveout-miner-1784487867891.json --unresolved-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-unresolved-exclusion-drilldown-1784488248752.json --json; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-proposal-guard -- --readiness-summary tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-carveout-adjusted-readiness-1784488702948.json --json.
+Result: Adjusted readiness generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-carveout-adjusted-readiness-1784488702948.json. Status pass. Strict-ready replay remains 38 rows, 22 resolved, 16 unresolved, gross one-MES P/L +1,220. Original blocked rows excluded were 12; total carveout-eligible rows are 12; adjusted blocked rows excluded are 0; manual-inspection rows are 0. Recommendation is prepare_sweep_only_guarded_proposal. Proposal guard generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-proposal-guard-1784488708986.json. Status pass with no hard stops, but proposalAllowed remains false by design and livePromotionAllowedRows remains 0.
+Trading logic changed: No. This is a local/read-only research-accounting readiness report only. It does not install selector behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Passing proposal guard only authorizes drafting a separate guarded proposal; it does not approve live scanner behavior.
+Next recommended action: Draft the Sweep-only guarded selector proposal as research-only: scope it to SweepMssFvgRetrace strict-ready/source-proof-positive rows, keep TurtleSoup/FailedPlan/HTF displacement families unchanged, require explicit approval before any live-facing install, and run a dry-run comparison before touching scanner behavior.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector unresolved-exclusion drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-unresolved-exclusion-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-unresolved-exclusion-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The carveout miner left 3 rows outside performance-carveout eligibility: 1 target-generation gap and 2 manual-inspection rows. The desk needed saved-snapshot evidence proving whether those rows are true unresolved defects or research-accounting exclusions.
