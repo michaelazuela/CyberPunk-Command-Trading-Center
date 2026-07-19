@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive OOS broader priority validation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-broader-priority-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-broader-priority-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The priority simulation improved the installed-selector OOS slice, but the desk needed a broader same-bar validation across all OOS events where OpeningDrive and same-direction Sweep/HTF candidates appeared together.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-broader-priority-validation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-oos-broader-priority-validation -- --json.
+Result: OOS broader priority validation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-oos-broader-priority-validation-1784463620507.json. Across 13 comparable same-event same-direction OOS rows where OpeningDrive and Sweep/HTF both appeared, Sweep/HTF priority was better in 9 rows and OpeningDrive was better-or-equal in 4. OpeningDrive side had 2 stopped-before-T1 losses; priority side had 0 losses. OpeningDrive one-MES P/L was +934.39 versus +2300.00 for the priority side, delta +1365.61. Recommendation=prepare_research_only_live_proposal.
+Trading logic changed: No. This is a local/read-only broader priority validation. It consumes existing same-bar reports only and does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This validates the priority concept on the current OOS same-bar corpus, but it is still a research artifact and does not define runtime eligibility language, disallowed inputs, rollback, or exact integration points.
+Next recommended action: Prepare a research-only live proposal artifact for same-event same-direction Sweep/HTF priority over OpeningDrive. Do not install scanner-visible ranking until that proposal is explicit and approved.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive OOS priority simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-priority-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-priority-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The lagging collision drilldown identified same-direction Sweep/HTF priority as the recurring separator. The desk needed a read-only simulation of replacing only lagging OpeningDrive rows with clean same-event same-direction SweepMssFvgRetrace or HtfDisplacementMssContinuation competitors.
