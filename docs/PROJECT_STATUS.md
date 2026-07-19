@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add transfer-stable selector rollup.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-rollup.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The zero-loss selector simulation selected 79 rows across June/July. The desk needed day/session/model P/L plus isolated unresolved rows before deciding the next fresh-replay validation package.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-rollup.test.ts; npx tsx tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-transfer-stable-selector-rollup -- --selector-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation-1784436768886.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation-1784436769550.json --json; git diff --check.
+Result: Rollup passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-selector-rollup-1784437146610.json. Selected rows: 79 total, 72 winners, 0 losses, 4 other resolved, 3 unresolved, +4856.30 one-MES. By model: AfterLunchDriveFvgContinuation 28 rows, 24 winners, 0 losses, 4 other resolved, +3073.80; IntradayMssMicroContinuation 21 rows, 21 winners, 0 losses, +502.50; SweepMssFvgRetrace 30 rows, 27 winners, 0 losses, 3 unresolved, +1280.00. Unresolved rows are all 2026-07-03 lunch SweepMssFvgRetrace LONG at 12:45, 12:50, and 12:55, risk 3.25, no_target_or_stop_hit, matching setup_session_direction_time:SweepMssFvgRetrace|lunch|LONG|12:00-12:59.
+Trading logic changed: No. This is a local/read-only rollup over saved selector simulation reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Rollup outcomes depend on saved selector reports and do not prove live readiness. The three unresolved Sweep long rows may be no-fill/on-side behavior and should be inspected before any fresh replay promotion.
+Next recommended action: Build a read-only unresolved-row inspection for the July 3 Sweep long 12:45-12:55 rows, then run a fresh replay validation package for the resolved 76 selected rows.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add transfer-stable zero-loss selector simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The transfer-stability miner found zero-loss subsegments, but the desk still needed proof that selecting at most one candidate per proof event from those subsegments remains clean before considering any scanner-visible proposal.
