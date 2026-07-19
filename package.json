@@ -230,6 +230,7 @@
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-changed-slate-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-changed-slate-miner.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-rule-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-rule-miner.ts",
+    "research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue.ts",

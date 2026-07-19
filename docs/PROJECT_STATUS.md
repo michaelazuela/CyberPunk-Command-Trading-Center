@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority keep-later-proof validation pass.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The keep-later-proof miner found slate_size:two_candidate_slate as the best research candidate, but that needed a separate validation harness before any scanner-visible proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation -- --json.
+Result: Validation pass generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation-1784478857402.json. It validated the discovered rule against the saved full-slate report set: 1 full-slate report, 67 aggregate rows, 55 winners, 12 losses, 0.82 win rate, and -1238.69 suppression delta. However, separateValidationReports is 0, so this is only in-sample confirmation and not transfer validation.
+Trading logic changed: No. This is a local/read-only saved-report validator only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The best keep-later-proof candidate remains unvalidated out of sample because only the discovery full-slate report exists in this report family.
+Next recommended action: Generate broader/separate full-slate dry-run reports from the saved day-level raw scanner artifacts and replay outcomes, then rerun keep-later-proof validation across those reports.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority keep-later-proof rule miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-rule-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-rule-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The changed-slate miner rejected suppressing later duplicate Sweep proof. The desk needed a research-only no-lookahead combination miner to find whether any positive keep-later-proof rule is worth broader validation.
