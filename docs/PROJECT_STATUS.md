@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector shadow missing strict blocker drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-blocker-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-blocker-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The strict replay package blocked 3 top-10 missing rows because saved candidates had placeholder levels. The desk needed a saved-snapshot drilldown to separate model-quality evidence from source geometry/selection defects before any scanner-visible selector or model penalty.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-blocker-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-blocker-drilldown -- --strict-replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-replay-package-1784485496946.json --json.
+Result: Drilldown generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-blocker-drilldown-1784485921063.json. Status pass. It inspected 3 blocked rows. All 3 are matching-side missing-level rows with placeholder entry/T1/T2, not completed losing trade evidence. All 3 snapshots also contain a valid opposite or alternate candidate. Rows: 2026-06-24 morning TurtleSoup SHORT had EntryTriggerMissing with entry/T1/T2 placeholders while TurtleSoup LONG and Sweep SHORT were valid/executable alternatives; 2026-06-29 evening Sweep LONG had EntryTriggerMissing with placeholders while valid opposite/alternate candidates existed; 2026-06-29 lunch Sweep SHORT had InvalidStopLocation plus placeholders while a valid alternate short existed. Recommendation is inspect_matching_side_level_generation.
+Trading logic changed: No. This is a local/read-only saved strict-package and saved-snapshot drilldown only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The report identifies saved-snapshot geometry defects only. It does not repair placeholders and does not prove a model should be removed.
+Next recommended action: Add a narrow matching-side level-generation path diagnostic for EntryTriggerMissing/InvalidStopLocation rows to identify whether the scanner has enough 5M proof to compute deterministic entry/stop, or whether those rows should stay blocked as no fresh entry.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector shadow missing strict replay package.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The missing outcome resolver found no strict same date/session/model/direction evidence. The desk needed a deterministic saved-snapshot package builder that turns top missing keys into completed-5M replay inputs only when saved candidates have real positive entry/stop/T1/T2 geometry.
