@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority campaign dedupe changed-slate miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-changed-slate-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-changed-slate-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The full-slate dedupe dry run rejected duplicate suppression overall, but the desk needed to know whether any no-lookahead bucket supported suppression or whether later Sweep duplicate proof should be treated as meaningful fresh evidence.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-changed-slate-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-changed-slate-miner -- --full-slate-dry-run "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run-1784477421004.json" --json.
+Result: Changed-slate miner passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-changed-slate-miner-1784477881493.json. It evaluated 174 slates where suppressing a duplicate Sweep top would change the primary selection. The suppressed later Sweep duplicate was a winner 136 times and a loser 38 times. Baseline later-Sweep top P/L was +13788.75 versus +3013.81 for replacements. No installable suppression separator was found. Strong keep-later-proof buckets included two-candidate slates, OpeningDrive replacements, morning slates, duplicate ordinal 3-5, age 6-15 minutes, and both long/short directions. Recommendation is keep_duplicate_suppression_rejected.
+Trading logic changed: No. This is a local/read-only miner over a saved full-slate dry-run report only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The miner uses outcomes only for research labels. It proves not to suppress duplicates, but it does not yet produce a live-facing positive rule for when later duplicate Sweep proof should be boosted or preserved.
+Next recommended action: Mine a positive keep-later-proof rule from the changed slates. Focus on no-lookahead fields that separate fresh continuation proof from stale repeated visibility, rather than any suppress-duplicate policy.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority campaign dedupe full-slate dry run.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The campaign dedupe dry-run comparison showed earliest-only Sweep dedupe was too blunt when compared against all broad Sweep rows. The desk needed a sharper full-slate dry run to test whether suppressing exact duplicate Sweep campaigns improves the installed primary review selection when other model candidates are present.
