@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add SweepMssFvgRetrace latest-positive drilldown and run July 16-17 split.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-latest-positive-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-latest-positive-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The latest July 16-17 rejected bucket showed strong SweepMssFvgRetrace positives, but the prior transfer-stable selector found zero zero-loss transferable buckets. The desk needed a narrow Sweep-only drilldown before deciding whether to build a richer separator.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-latest-positive-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-latest-positive-drilldown -- --train-samebar-reports [first twelve same-bar reports] --test-samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433389789.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433638554.json --min-rows-per-period 5 --json.
+Result: Sweep latest-positive drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-latest-positive-drilldown-1784439537115.json. Train Sweep rows 1594, latest/test Sweep rows 45, latest-positive segments 51, zero-loss transfer segments 0, latest-positive train-loss-bearing segments 33, live promotion allowed rows 0, recommendation mine_richer_sweep_fields. Top latest-positive train-loss-bearing segments: lunch test 21 rows, 21 winners, 0 losses, +2940.00, but train had 924 rows, 718 winners, 131 losses, +84442.50; lunch|SHORT test 21 rows, 21 winners, 0 losses, +2940.00, but train had 563 rows, 442 winners, 58 losses, +43425.00; risk_16_to_24 test 16 rows, 16 winners, 0 losses, +3400.00, but train had 272 rows, 184 winners, 88 losses, +27832.50; 14:00-14:59 test 12 rows, 12 winners, 0 losses, +1680.00, but train had 350 rows, 278 winners, 54 losses, +27400.00. Morning LONG 10:00 risk_16_to_24 was latest-positive but train-weak, not transferable.
+Trading logic changed: No. This is a local/read-only saved-report drilldown. It does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Sweep still looks profitable in broad latest buckets, but the stable metadata fields are not enough to safely promote it. Installing a live-facing Sweep boost from these fields would overfit the latest two days and ignore historical stop-outs.
+Next recommended action: Mine richer no-lookahead Sweep fields from the source replay/package rows, especially executionStatus/blockReason, source/proof type, stop geometry, first-bar adverse path, MFE/MAE shape, and session-level context. Keep this research-side until it separates the train losses.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Run latest July 16-17 transfer-stability rejected-bucket mine.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The transfer-stable selector correctly selected zero rows on July 16-17. The desk needed to know whether that meant no opportunity or whether profitable mixed buckets existed that require a separate, stricter research path.
