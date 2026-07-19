@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add transfer-stable fresh validation package manifest.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-validation-package.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-validation-package.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The selector rollup had 79 selected rows, but 3 unresolved July 3 Sweep rows needed to be held out before fresh replay validation. The desk needed a repeatable read-only package of only resolved selector rows.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-transfer-stable-validation-package.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-transfer-stable-validation-package -- --selector-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation-1784436768886.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation-1784436769550.json --json; git diff --check.
+Result: Validation package passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-validation-package-1784437688496.json. It read 79 selected rows, packaged 76 resolved rows, and held out 3 unresolved rows. Packaged rows: 72 winners, 0 losses, 4 other resolved, +4856.30 one-MES. By model: AfterLunchDriveFvgContinuation 28 rows, 24 winners, 4 other resolved, +3073.80; IntradayMssMicroContinuation 21 rows, 21 winners, +502.50; SweepMssFvgRetrace 27 rows, 27 winners, +1280.00. The held-out unresolved rows remain the 2026-07-03 lunch SweepMssFvgRetrace LONG 12:45, 12:50, and 12:55 rows.
+Trading logic changed: No. This is a local/read-only validation manifest over saved selector reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This packages saved-report outcomes only. It proves the resolved selector set is clean in the saved artifacts, but it still needs fresh replay validation before any scanner-visible proposal.
+Next recommended action: Run or build the fresh replay validation pass over the 76 validation rows and compare any divergence by day/session/model before proposing a live-facing rank overlay.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Inspect unresolved transfer-stable selector rows.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The selector rollup found 3 unresolved July rows. The desk needed to know whether they were no-fill, stopped hidden failures, or on-side/no-follow-through rows before fresh replay validation.
