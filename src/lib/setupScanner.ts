@@ -102,6 +102,14 @@ export interface SetupScanResult {
   bestConditionalCandidate: SetupCandidate | null;
 }
 
+export interface CompletedFiveMinuteProofSelectionSignalRef {
+  candidateKey: string;
+  setupType: SetupType;
+  direction: Exclude<Direction, 'NO TRADE'>;
+  sessionType: SetupSession;
+  completedBarTime: string;
+}
+
 function normalizeText(value: unknown): string {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
@@ -4761,6 +4769,65 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
       : 'HTF/MSS candidate has scanner levels and direction. Execution still requires final app-owned entry, stop, target, risk visibility, invalidation, session, screenshot-quality, and canExecute gates.',
     reducedRiskPlan: null,
   };
+}
+
+function completedFiveMinuteProofSelectionGroupKey(ref: CompletedFiveMinuteProofSelectionSignalRef): string {
+  return [
+    ref.sessionType,
+    ref.completedBarTime,
+    ref.direction,
+  ].join('|');
+}
+
+function proofSelectorDecisionForGroup(
+  ref: CompletedFiveMinuteProofSelectionSignalRef,
+  group: CompletedFiveMinuteProofSelectionSignalRef[]
+): NonNullable<SetupCandidate['proofSelectionSignal']>['selectorDecision'] {
+  const hasSweep = group.some((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+  const hasReplacement = group.some((candidate) => candidate.setupType !== SetupType.SweepMssFvgRetrace);
+  if (!hasSweep || !hasReplacement) return 'not_applicable';
+  if (ref.setupType === SetupType.SweepMssFvgRetrace && (ref.direction === 'LONG' || ref.sessionType === 'lunch' || ref.sessionType === 'replay_lunch')) {
+    return 'keep_later_sweep_proof';
+  }
+  if (ref.setupType !== SetupType.SweepMssFvgRetrace && ref.direction !== 'LONG' && ref.sessionType !== 'lunch' && ref.sessionType !== 'replay_lunch') {
+    return 'prefer_replacement';
+  }
+  return 'not_applicable';
+}
+
+export function buildCompletedFiveMinuteProofSelectionSignals(
+  refs: CompletedFiveMinuteProofSelectionSignalRef[]
+): Record<string, NonNullable<SetupCandidate['proofSelectionSignal']>> {
+  const groups = refs.reduce<Record<string, CompletedFiveMinuteProofSelectionSignalRef[]>>((acc, ref) => {
+    const groupKey = completedFiveMinuteProofSelectionGroupKey(ref);
+    acc[groupKey] = acc[groupKey] || [];
+    acc[groupKey].push(ref);
+    return acc;
+  }, {});
+  return refs.reduce<Record<string, NonNullable<SetupCandidate['proofSelectionSignal']>>>((acc, ref) => {
+    const groupKey = completedFiveMinuteProofSelectionGroupKey(ref);
+    const group = groups[groupKey] || [];
+    acc[ref.candidateKey] = {
+      metadataSource: 'scanner_owned_completed_5m_proof_group',
+      status: group.length > 1 ? 'same_completed_5m_proof_collision' : 'not_applicable',
+      selectorDecision: proofSelectorDecisionForGroup(ref, group),
+      completedBarTime: ref.completedBarTime,
+      groupKey,
+      groupSize: group.length,
+      competingSetupTypes: group
+        .filter((candidate) => candidate.candidateKey !== ref.candidateKey)
+        .map((candidate) => candidate.setupType),
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      usesOutcomeData: false,
+      usesResearchLabels: false,
+      usesGeminiAdvisoryText: false,
+      usesLiveBridgeReadsInsideRanker: false,
+      scannerVisibleInstallAllowed: false,
+    };
+    return acc;
+  }, {});
 }
 
 export function rankSetupCandidate(candidate: SetupCandidate): number {

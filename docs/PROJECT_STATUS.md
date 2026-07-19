@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector scanner-owned proofSelectionSignal dry-run builder.
+Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
+Reason: The type-only `proofSelectionSignal` boundary existed, but the desk needed a pure scanner-owned builder that can compute same-completed-5M proof collision metadata from app-owned refs without wiring it into scan output or ranking.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit --pretty false.
+Result: Focused scanner coverage passed across 175 cases. The new `buildCompletedFiveMinuteProofSelectionSignals` helper builds `scanner_owned_completed_5m_proof_group` metadata for same completed 5M proof groups, marks SweepMssFvgRetrace long/lunch rows as `keep_later_sweep_proof`, keeps safety fields false, and the regression proves adding the signal to a candidate does not change `rankSetupCandidate`.
+Trading logic changed: No. The helper is pure and unused by `scanSetupCandidates`; it does not populate live candidates, alter ranking, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The builder exists but is not wired to scanner output. Runtime selection remains unchanged until a separate dry-run and approval-gated scanner-visible install.
+Next recommended action: Add a scanner-output shadow dry-run that compares candidates with and without the generated `proofSelectionSignal`, proving zero rank/order/live-publish/canExecute changes before any visible selector install.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector type-only proofSelectionSignal boundary.
 Files changed: src/types.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-type-only.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The runtime signal contract recommended a type-only `SetupCandidate` metadata shape before any scanner-owned population or ranking consumer. This adds the optional `proofSelectionSignal` type with locked false safety fields and no runtime usage.

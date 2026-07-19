@@ -10,7 +10,14 @@ import {
   SetupCandidateStatus,
   SetupType,
 } from '../types';
-import { applyCandidateGeometryValidation, computeZoneOverlap, getScannedSetupTypes, scanSetupCandidates } from './setupScanner';
+import {
+  applyCandidateGeometryValidation,
+  buildCompletedFiveMinuteProofSelectionSignals,
+  computeZoneOverlap,
+  getScannedSetupTypes,
+  rankSetupCandidate,
+  scanSetupCandidates,
+} from './setupScanner';
 import { normalizeCandidateIctModelLabel, normalizeIctModelLabel } from './ictModelLabels';
 import { buildTradeJournalRecord } from './tradeJournal';
 
@@ -4158,6 +4165,77 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.direction, 'LONG');
     assert.equal(candidate.rankingOverlays, undefined);
     assert.ok(!candidate.evidence.some((item) => item.includes('OpeningDrive clean-pocket selector matched')));
+  }],
+
+  ['Opening Drive proofSelectionSignal dry-run builder does not change rank scoring or execution gates', () => {
+    const signals = buildCompletedFiveMinuteProofSelectionSignals([
+      {
+        candidateKey: 'sweep-long',
+        setupType: SetupType.SweepMssFvgRetrace,
+        direction: 'LONG',
+        sessionType: 'morning',
+        completedBarTime: '2026-07-01T14:05:00.000Z',
+      },
+      {
+        candidateKey: 'opening-long',
+        setupType: SetupType.OpeningDriveFvgContinuation,
+        direction: 'LONG',
+        sessionType: 'morning',
+        completedBarTime: '2026-07-01T14:05:00.000Z',
+      },
+      {
+        candidateKey: 'sweep-short-lunch',
+        setupType: SetupType.SweepMssFvgRetrace,
+        direction: 'SHORT',
+        sessionType: 'lunch',
+        completedBarTime: '2026-07-01T17:05:00.000Z',
+      },
+      {
+        candidateKey: 'after-lunch-short',
+        setupType: SetupType.AfterLunchDriveFvgContinuation,
+        direction: 'SHORT',
+        sessionType: 'lunch',
+        completedBarTime: '2026-07-01T17:05:00.000Z',
+      },
+    ]);
+    assert.equal(signals['sweep-long'].metadataSource, 'scanner_owned_completed_5m_proof_group');
+    assert.equal(signals['sweep-long'].status, 'same_completed_5m_proof_collision');
+    assert.equal(signals['sweep-long'].selectorDecision, 'keep_later_sweep_proof');
+    assert.equal(signals['sweep-long'].groupSize, 2);
+    assert.deepEqual(signals['sweep-long'].competingSetupTypes, [SetupType.OpeningDriveFvgContinuation]);
+    assert.equal(signals['sweep-short-lunch'].selectorDecision, 'keep_later_sweep_proof');
+    assert.equal(signals['after-lunch-short'].selectorDecision, 'not_applicable');
+    assert.equal(signals['sweep-long'].changesCanExecute, false);
+    assert.equal(signals['sweep-long'].changesEntryStopTargets, false);
+    assert.equal(signals['sweep-long'].changesRiskRules, false);
+    assert.equal(signals['sweep-long'].usesOutcomeData, false);
+    assert.equal(signals['sweep-long'].usesResearchLabels, false);
+    assert.equal(signals['sweep-long'].usesGeminiAdvisoryText, false);
+    assert.equal(signals['sweep-long'].usesLiveBridgeReadsInsideRanker, false);
+    assert.equal(signals['sweep-long'].scannerVisibleInstallAllowed, false);
+
+    const candidate = {
+      setupType: SetupType.SweepMssFvgRetrace,
+      direction: 'LONG',
+      detectedStatus: SetupCandidateStatus.Detected,
+      confidence: 'High',
+      priority: 80,
+      entryClarity: 8,
+      stopClarity: 8,
+      targetClarity: 8,
+      proximityScore: 8,
+      evidence: [],
+      missingEvidence: [],
+      executionStatus: ExecutionStatus.Conditional,
+      blockReason: NoTradeReason.EntryTriggerPending,
+      requiredTrigger: null,
+      nextAction: 'Review only.',
+      reducedRiskPlan: null,
+    } as SetupCandidate;
+    assert.equal(
+      rankSetupCandidate(candidate),
+      rankSetupCandidate({ ...candidate, proofSelectionSignal: signals['sweep-long'] })
+    );
   }],
 
   ['Opening Drive FVG continuation arms during observation but does not become human-review ready before 10:00 ET', () => {
