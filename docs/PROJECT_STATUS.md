@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add raw Sweep composite validation package and run fresh completed-5M outcome replay.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-validation-package.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-validation-package.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The composite snapshot miner found two zero-loss transfer Sweep segments. The desk needed to validate only those composite segments through a fresh replay package before considering any scanner-visible proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-validation-package.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-validation-package -- --snapshot-miner-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner-1784441052100.json --scanner-artifacts [available raw scanner artifact reports through July 17] --min-rows 1 --json; npx tsx tools/automation/unified-positive-held-local-preview-replay-package-outcome.ts --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-validation-package-1784441531973.json --json.
+Result: Composite validation package passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-validation-package-1784441531973.json. It selected 63 ready Sweep rows from the two zero-loss composite segments, skipped 23 incomplete matches with missing executable levels, had 0 blocked rows, and allowed 0 live-promotion rows. Fresh completed-5M outcome replay passed: tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784441548532.json. Outcome: 63 package rows, 62 resolved, 1 unresolved/no target-or-stop, 0 stopped-before-T1, 6 T1-only, 56 T1+T2, gross one-MES P/L +4271.25. By day/session/model: 2026-06-02 lunch Sweep +745.00; 2026-06-08 lunch Sweep +300.00; 2026-06-22 lunch Sweep +145.00; 2026-07-01 lunch Sweep +120.00; 2026-07-06 lunch Sweep +158.75; 2026-07-07 lunch Sweep +205.00; 2026-07-08 lunch Sweep +112.50; 2026-07-09 lunch Sweep unresolved/no P/L; 2026-07-13 lunch Sweep +525.00; 2026-07-17 lunch Sweep +1960.00.
+Trading logic changed: No. This adds a local/read-only validation package builder and runs existing completed-5M replay over saved artifacts. It does not run setupScanner as live behavior, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves the selected historical saved-artifact rows are clean under the existing completed-5M replay, but it is still not a live selector. Candidate 1 carries an opposing-5M-MSS missing-evidence label, so the next step must explain its semantics before any live-facing rank proposal. Candidate 2 is cleaner but smaller. The package skipped 23 incomplete matches, which is correct for replay but means a live proposal would need an explicit “complete deterministic levels only” gate.
+Next recommended action: Build a scanner-artifact overlay dry run for the two validated composite Sweep selectors to measure top-slate impact without changing live ranking. If top-slate improves without demoting known winners or promoting incomplete rows, prepare a live-proposal report with promotion still disabled until separately approved.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Expand raw Sweep snapshot miner to composite no-lookahead segments.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner.test.ts, docs/PROJECT_STATUS.md.
 Reason: Single scanner snapshot tags remained too broad: they explained the latest Sweep strength but also carried large historical stopped-before-T1 loss buckets. The desk needed to test composite pre-entry fields before deciding whether any Sweep selector deserves fresh replay validation.
