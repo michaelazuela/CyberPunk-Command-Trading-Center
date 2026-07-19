@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add proofSelectionSignal real-row outcome slate audit.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-outcome-slate-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-outcome-slate-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The same-date July outcome replay passed but produced 131 repeated scanner snapshot rows. This audit collapses those repeated snapshots into no-lookahead earliest proof slates by date/session/setup/direction so model-quality analysis does not overcount repeated scanner emissions.
+Tests run: npm run diagnostic:held-local-preview-replay-package-outcome -- --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-replay-package-1784497641954.json --json; npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-outcome-slate-audit.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-outcome-slate-audit -- --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784497875616.json --json.
+Result: Existing outcome replay generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784497875616.json. Status pass. Package rows: 131. Resolved rows: 113. Unresolved rows: 18. Blocked rows: 0. No-fill rows: 0. Stopped before T1 rows: 11. T1-only rows: 50. T1-and-T2 rows: 52. No-target-or-stop rows: 18. Gross resolved one-MES P/L across repeated snapshots: 8381.25. Slate audit generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-outcome-slate-audit-1784497975204.json. Status pass. Outcome rows: 131. Repeated snapshot rows: 118. Slate rows: 13. Resolved slates: 11. Unresolved slates: 2. Blocked slates: 0. Stopped-before-T1 slates: 1. T1-only slates: 2. T1-and-T2 slates: 8. No-target-or-stop slates: 2. No-fill slates: 0. Earliest-slate gross resolved one-MES P/L: 835. runtimeRankConsumerAllowedByThisReport: false.
+Trading logic changed: No. This is a local/read-only saved-outcome slate audit. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The slate result is promising, but losing/unresolved slates still need drilldown before any scanner-visible rank consumer. Repeated snapshot P/L must not be used as independent-trade P/L.
+Next recommended action: Analyze the losing and unresolved earliest slates for separator fields: proof timing, session, direction, stop distance, bars after proof, MFE/MAE, and whether any no-target/no-stop slate would have become clean with a later same-slate proof.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add proofSelectionSignal real-row replay package.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The outcome-key expansion miner proved the July real metadata rows had no direct outcome-key match, but all groups had local scanner-decision tapes. This package converts same-date real keep_later_sweep_proof rows into an outcome-ready replay package without inventing missing levels or bars.
