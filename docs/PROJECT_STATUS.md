@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector runtime signal audit.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The runtime approval checkpoint passed, but the desk needed to prove whether `keep_later_sweep_proof` exists as a scanner-owned live signal before any scanner-visible ranking/selector install. This audit inspects `SetupCandidate`, `setupScanner`, and `unifiedDeskCandidateBook` boundaries without changing runtime behavior.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-audit.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-audit -- --json.
+Result: Runtime signal audit generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-audit-1784491484582.json. Status pass. Runtime checkpoint status: pass. SetupCandidate has selectorDecision/proofState/barsSource/outcomeInputStatus fields: false/false/false/false. setupScanner consumes keep_later_sweep_proof/selectorDecision: false/false. unifiedDeskCandidateBook has selectorDecision and keep_later_sweep_proof: true/true. unifiedDeskCandidateBook selector remains audit-only with live/scanner-visible flags false. runtimeInstallBlockedByMissingLiveSignal: true. safeRuntimeInstallAllowedNow: false. Recommendation is add_scanner_owned_live_signal_contract_before_runtime_ranking.
+Trading logic changed: No. This is a local/read-only audit only. It does not install selector behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: A runtime selector/ranking install should not proceed from research labels alone; the scanner needs an app-owned live signal contract first.
+Next recommended action: Add a contract-only scanner-owned proof-selection signal proposal that defines the exact candidate metadata needed for same-completed-5M proof selection, still with scanner-visible ranking disabled.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector runtime approval checkpoint.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-approval-checkpoint.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-approval-checkpoint.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The saved-artifact adapter dry-run passed and recommended preparing a runtime approval checkpoint before any scanner-visible selector/ranking install. This checkpoint names exact likely runtime files, explicit out-of-scope files, allowed behavior, forbidden behavior, regression commands, and rollback path.
