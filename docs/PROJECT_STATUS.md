@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add July raw-OHLC unified separator research pass.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-july-unified-separator.ts, tools/automation/raw-ohlc-scanner-artifact-july-unified-separator.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The July HTF-ready rollup showed the overall replay set is strong but the OpeningDrive-only selector is not robust out-of-sample. The desk needed a unified research separator that compares all model candidates together by pre-entry/model metadata before any live-ranking proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-july-unified-separator.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-july-unified-separator -- --samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431534036.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431771575.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431966066.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432306845.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432497417.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432696212.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432909449.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433151405.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433389789.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433638554.json --json.
+Result: Unified separator passed across 10 same-bar reports and 704 rows: 311 winners, 134 stopped-before-T1 losses, 117 other resolved, 142 unresolved, +32225.21 one-MES. It found 37 positive research buckets and 18 caution research buckets. Strong positive buckets included risk_lt_4 AfterLunchDriveFvgContinuation, lunch risk_lt_4 AfterLunchDriveFvgContinuation, risk_lt_4 HtfDisplacementMssContinuation, lunch LONG SweepMssFvgRetrace, risk_16_to_24 SweepMssFvgRetrace, morning risk_16_to_24 SweepMssFvgRetrace, and risk_lt_4 OpeningDriveFvgContinuation. Strong caution buckets included morning risk_8_to_16 SweepMssFvgRetrace, morning SHORT SweepMssFvgRetrace, morning risk_4_to_8 SweepMssFvgRetrace, risk_16_to_24 OpeningDriveFvgContinuation, LONG HtfDisplacementFvgContinuation, 14:00 HtfDisplacementFvgContinuation, and risk_8_to_16 HtfDisplacementFvgContinuation.
+Trading logic changed: No. This is a local/read-only research separator over saved same-bar replay reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Buckets are hypotheses, not live filters. Outcome P/L is evaluation-only, and the next phase must prove selection using only pre-entry/model fields in a rank simulation before scanner-visible use.
+Next recommended action: Build a research-only unified rank simulation that scores candidates using positive/caution bucket membership, chooses at most one best candidate per proof event/session, and compares selected vs rejected P/L before any scanner-visible ranking change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add July HTF-ready replay rollup and validate OpeningDrive selector out-of-sample.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-july-htf-ready-rollup.ts, tools/automation/raw-ohlc-scanner-artifact-july-htf-ready-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The July 3-July 17 HTF-capable replay had to be run in one-day chunks because full-range scanner artifact generation timed out. The desk needed one durable rollup report to consolidate the local HTF-ready replay outcomes, same-bar separation, and OpeningDrive combined-selector behavior before any scanner-visible proposal.
