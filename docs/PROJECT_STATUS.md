@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add transfer-stability miner for unified same-bar research buckets.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stability-miner.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stability-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Cross-period testing showed the strict bucket rank simulation overfit. The desk needed a repeatable read-only tool that compares train/test same-bar bucket performance before any scanner-visible rank proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-transfer-stability-miner.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-transfer-stability-miner -- --train-samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --test-samebar-reports [July 3-July 17 daily same-bar reports] --min-rows-per-period 5 --json; npm run research:raw-ohlc-scanner-artifact-transfer-stability-miner -- --train-samebar-reports [July 3-July 17 daily same-bar reports] --test-samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --min-rows-per-period 5 --json; git diff --check.
+Result: Transfer reports passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stability-miner-1784436030799.json and tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stability-miner-1784436031466.json. Both directions found 153 shared buckets, 37 stable-positive research buckets, 7 stable-caution research buckets, and 0 zero-loss stable-positive buckets. Top stable-positive metadata bucket was lunch|SweepMssFvgRetrace, but it still contained stopped-before-T1 rows in both periods: June train 253W/45L and July test 83W/10L, reversed in the opposite run. This confirms static setup/session/risk/time buckets are not clean enough for scanner-visible rank promotion.
+Trading logic changed: No. This is a local/read-only diagnostic over saved same-bar drilldown reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Stable-positive metadata buckets are profitable but loss-bearing. Do not install them live, do not loosen canExecute, and do not treat broad bucket transfer as execution approval.
+Next recommended action: Mine richer no-lookahead proof geometry/context fields inside the stable-positive buckets: completed 5M retest quality, proof-to-entry timing, same-bar adverse excursion, HTF target room, session phase, direction, risk, stop distance, and prior reviewed/RAG labels where available.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add risk cap to strict unified rank simulation and run cross-period validation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.test.ts, docs/PROJECT_STATUS.md.
 Reason: Strict mode was clean in each in-sample period, but holdout selection used wide average risk. The desk needed a max-risk gate and a true cross-period transfer check before considering any scanner-visible rank proposal.
