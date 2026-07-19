@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add July unified rank simulation research pass.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The unified separator found promising positive and caution buckets, but buckets alone do not prove publishable ranking. The desk needed a research-only rank simulation that selects at most one candidate per proof event and compares selected vs rejected outcomes before any scanner-visible rank proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-july-unified-rank-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-july-unified-rank-simulation -- --separator-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-july-unified-separator-1784434312048.json --samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431534036.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431771575.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784431966066.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432306845.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432497417.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432696212.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784432909449.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433151405.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433389789.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784433638554.json --json.
+Result: Rank simulation passed but is not ready for live proposal. It evaluated 704 rows across 409 proof events and selected 183 rows: 132 winners, 14 stopped-before-T1 losses, 18 other resolved, 19 unresolved, +9736.32 one-MES, avg risk 8.14. Rejected rows were 179 winners, 120 losses, 99 other resolved, 123 unresolved, +22488.89 one-MES. Recommendation is revise_rank_simulation because the first-pass score still leaked losses, especially where broad positive buckets outweighed narrower risk caution.
+Trading logic changed: No. This is a local/read-only research simulation over saved same-bar and separator reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The first simulation is intentionally exploratory and still loss-bearing. Do not promote it. The next version should require specific no-loss bucket membership and avoid broad setup-only positives when a narrower risk/session bucket is not clean.
+Next recommended action: Build a strict research-only rank simulation using only specific positive buckets with zero stopped-before-T1 losses, while applying caution buckets as hard research exclusions.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add July raw-OHLC unified separator research pass.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-july-unified-separator.ts, tools/automation/raw-ohlc-scanner-artifact-july-unified-separator.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The July HTF-ready rollup showed the overall replay set is strong but the OpeningDrive-only selector is not robust out-of-sample. The desk needed a unified research separator that compares all model candidates together by pre-entry/model metadata before any live-ranking proposal.
