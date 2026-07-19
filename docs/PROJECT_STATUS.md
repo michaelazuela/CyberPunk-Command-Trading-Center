@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Record OpenAI desk-agent capability recommendations and bookmarks.
+Files changed: docs/OPENAI_DESK_AGENT_BOOKMARKS.md, docs/PROJECT_STATUS.md.
+Reason: The desk reviewed current OpenAI guidance for prompt caching, reasoning continuity, programmatic tool calling, and Codex/ChatGPT customization. Futures Crusher needed a durable note separating what to use now from what to save for a future custom desk-agent orchestration layer.
+Tests run: Documentation-only review.
+Result: Added a no-side-effect bookmark note. Prompt caching and customization are marked use-now. Preserve-reasoning-across-calls and programmatic tool calling are bookmarked for later, with programmatic tools explicitly restricted to read-only/research-side use until strict Futures Crusher approval boundaries exist.
+Trading logic changed: No. This is documentation-only. It does not change setupScanner, ranking, canExecute, Discord, Supabase, NinjaTrader bridge behavior, entry/stop/target/risk, or automated execution.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for live behavior. Future programmatic tool-calling work must not receive side-effect tools until safety gates, idempotency, readback, and rollback are designed.
+Next recommended action: Continue the research-only OpeningDrive no-lookahead separator phase before any scanner-visible rank or publish change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add OpeningDrive same-bar model separator research post-processor.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-samebar-model-separator.ts, tools/automation/raw-ohlc-scanner-artifact-samebar-model-separator.test.ts, tools/automation/raw-ohlc-scanner-artifact-samebar-separator-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-samebar-separator-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The broad June 1-July 2 repaired raw-OHLC replay showed OpeningDriveFvgContinuation as the best same-bar allowlist hypothesis, but every same-bar model still had losses. The desk needed a model-specific loss separator before any scanner-visible same-bar rule or rank change.
