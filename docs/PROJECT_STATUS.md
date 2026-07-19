@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS selected-loss drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-selected-loss-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-selected-loss-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The first promotion-disabled HTF-MSS separator simulation removed the July 9 morning loss pocket but still selected 3 stopped-before-T1 rows. The desk needed a narrow drilldown to identify the shared date/session/direction/time/risk pattern before revising the separator.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-selected-loss-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-selected-loss-drilldown -- --separator-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-simulation-1784448289009.json --json.
+Result: Selected-loss drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-selected-loss-drilldown-1784448717515.json. It inspected the separator-selected set of 93 rows: 62 winners, 3 losses, 13 unresolved, +6402.50 one-MES. The 3 selected losses total -266.25 one-MES and all share 2026-07-17 morning LONG, 11:40/11:45/11:55 proof time, risk 17.75, and positive buckets date_session:2026-07-17|morning, direction:LONG, session:morning, session_direction:morning|LONG, time:11:00-11:59. Recommendation: add_second_separator_simulation.
+Trading logic changed: No. This is a local/read-only selected-loss drilldown. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The drilldown identifies a second separator hypothesis, not an implementation. It must be tested in a promotion-disabled simulation before any proposal update.
+Next recommended action: Build a second promotion-disabled HTF-MSS separator simulation that rejects the July 17 morning LONG 11:00-11:59 / risk_16_to_24 pocket while keeping the July 9 morning caution exclusion. Keep promotion disabled and live behavior unchanged.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add promotion-disabled HTF-MSS separator simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-separator-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The separator diagnostic found positive and caution buckets, but the desk needed a promotion-disabled simulation to prove whether those buckets actually remove the loss-bearing pocket without creating a new live-facing behavior change.
