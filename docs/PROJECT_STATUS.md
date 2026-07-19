@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add OpeningDrive rejected proof-time geometry miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-rejected-geometry-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-rejected-geometry-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The frozen OpeningDrive LONG risk_4_to_8 candidate validated as a clean research lead, but it rejected 137 same-bar rows, including many winners. The desk needed a no-lookahead rejected-population miner before deciding whether a second candidate exists or whether broad OpeningDrive same-bar promotion remains unsafe.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-rejected-geometry-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-rejected-geometry-miner -- --samebar-separator-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --setup-type OpeningDriveFvgContinuation --candidate-direction LONG --candidate-risk-bucket risk_4_to_8 --json.
+Result: Focused test and real local miner passed. OpeningDrive source rows stayed 149. Frozen candidate rows stayed 12 with 11 winners, 0 stopped-before-T1 losses, 1 other resolved row, +585.06 one-MES, avg risk 4.98. Rejected rows were 137 with 100 winners, 37 stopped-before-T1 losses, +15115.44 one-MES, avg risk 19.64. Clean rejected proof-time leads included fineRiskBucket=risk_24_to_32 with 20/0 winners/losses and +5332.54, time_fineRisk=10:00-10:59|risk_24_to_32 with 19/0 and +5090.04, and direction_fineRisk=LONG|risk_24_to_32 with 15/0 and +4110.04. The single candidate other-resolved row was 2026-07-02 morning LONG at 10:20, risk 7.63, outcome t1_hit_only, +56.88 one-MES. livePromotionAllowedRows remains 0.
+Trading logic changed: No. This is a local/read-only research post-processor over saved same-bar replay artifacts. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The rejected population remains loss-bearing, so broad OpeningDrive same-bar promotion is still not justified. The clean rejected leads are wider-risk proxy buckets and require frozen out-of-sample validation before any rank/filter proposal.
+Next recommended action: Freeze and validate the strongest second OpeningDrive candidate, risk_24_to_32, across train/validation splits before considering any scanner-visible rank/filter change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add OpeningDrive frozen candidate validation phase.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-candidate-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-candidate-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The prior no-lookahead separator identified OpeningDrive LONG|risk_4_to_8 as a clean in-sample research lead. The desk needed a frozen-candidate validation pass that holds the rule fixed and checks train/validation behavior by date before any scanner-visible consideration.
