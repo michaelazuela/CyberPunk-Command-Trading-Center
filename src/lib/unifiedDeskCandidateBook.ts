@@ -34,6 +34,21 @@ export interface UnifiedDeskCandidateBookInput {
   canExecuteByCandidateKey?: Record<string, boolean>;
 }
 
+export interface UnifiedDeskCandidateCollisionMetadata {
+  metadataSource: 'audit_same_completed_5m_proof_group';
+  groupKey: string;
+  groupSize: number;
+  proofOrder: number;
+  proofAgeMinutes: 0 | null;
+  competingCandidateKeys: string[];
+  replacementCandidateKey: string | null;
+  selectorCandidate: 'openingdrive_keep_long_or_lunch_else_replacement';
+  selectorEligible: boolean;
+  selectorDecision: 'keep_later_sweep_proof' | 'prefer_replacement' | 'not_applicable';
+  liveInstallAllowed: false;
+  scannerVisibleChangeAllowed: false;
+}
+
 export interface UnifiedDeskCandidateBookItem {
   candidateKey: string;
   setupType: SetupType;
@@ -64,6 +79,7 @@ export interface UnifiedDeskCandidateBookItem {
   nextProofRequired: string[];
   sourceCandidate: SetupCandidate;
   approvalBoundary: UnifiedDeskCandidateBook['approvalBoundary'];
+  collisionMetadata: UnifiedDeskCandidateCollisionMetadata | null;
 }
 
 export interface UnifiedDeskCandidateBook {
@@ -318,6 +334,77 @@ function openingDriveSameEventPriorityPenalty(args: {
   return hasCleanPriorityCandidate ? OPENING_DRIVE_SAME_EVENT_SWEEP_HTF_PRIORITY_PENALTY : 0;
 }
 
+function sameCompletedProofGroupKey(args: {
+  sessionType: UnifiedDeskCandidateBookInput['sessionType'];
+  completedBarTime: string;
+  direction: SetupCandidate['direction'];
+}): string {
+  return [
+    args.sessionType,
+    args.completedBarTime,
+    args.direction,
+  ].join('|');
+}
+
+function selectorDecisionForSameProofCollision(args: {
+  item: UnifiedDeskCandidateBookItem;
+  group: UnifiedDeskCandidateBookItem[];
+  sessionType: UnifiedDeskCandidateBookInput['sessionType'];
+}): UnifiedDeskCandidateCollisionMetadata['selectorDecision'] {
+  const hasSweep = args.group.some((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+  const hasReplacement = args.group.some((candidate) => candidate.setupType !== SetupType.SweepMssFvgRetrace);
+  if (!hasSweep || !hasReplacement) return 'not_applicable';
+  if (args.item.setupType === SetupType.SweepMssFvgRetrace && (args.item.direction === 'LONG' || args.sessionType === 'lunch' || args.sessionType === 'replay_lunch')) {
+    return 'keep_later_sweep_proof';
+  }
+  if (args.item.setupType !== SetupType.SweepMssFvgRetrace && args.item.direction !== 'LONG' && args.sessionType !== 'lunch' && args.sessionType !== 'replay_lunch') {
+    return 'prefer_replacement';
+  }
+  return 'not_applicable';
+}
+
+function collisionMetadataForItem(args: {
+  item: UnifiedDeskCandidateBookItem;
+  items: UnifiedDeskCandidateBookItem[];
+  sessionType: UnifiedDeskCandidateBookInput['sessionType'];
+  completedBarTime: string | null | undefined;
+}): UnifiedDeskCandidateCollisionMetadata | null {
+  if (!args.completedBarTime || args.item.direction === 'NO TRADE') return null;
+  const groupKey = sameCompletedProofGroupKey({
+    sessionType: args.sessionType,
+    completedBarTime: args.completedBarTime,
+    direction: args.item.direction,
+  });
+  const group = args.items.filter((candidate) =>
+    candidate.direction === args.item.direction &&
+    candidate.fiveMinuteProofStatus !== 'missing'
+  );
+  if (group.length < 2) return null;
+  const proofOrder = group.findIndex((candidate) => candidate.candidateKey === args.item.candidateKey) + 1;
+  const replacement = group.find((candidate) => candidate.candidateKey !== args.item.candidateKey && candidate.setupType !== SetupType.SweepMssFvgRetrace) || null;
+  const selectorDecision = selectorDecisionForSameProofCollision({
+    item: args.item,
+    group,
+    sessionType: args.sessionType,
+  });
+  return {
+    metadataSource: 'audit_same_completed_5m_proof_group',
+    groupKey,
+    groupSize: group.length,
+    proofOrder,
+    proofAgeMinutes: 0,
+    competingCandidateKeys: group
+      .filter((candidate) => candidate.candidateKey !== args.item.candidateKey)
+      .map((candidate) => candidate.candidateKey),
+    replacementCandidateKey: replacement?.candidateKey || null,
+    selectorCandidate: 'openingdrive_keep_long_or_lunch_else_replacement',
+    selectorEligible: selectorDecision !== 'not_applicable',
+    selectorDecision,
+    liveInstallAllowed: false,
+    scannerVisibleChangeAllowed: false,
+  };
+}
+
 function rankingOverlayScore(candidate: SetupCandidate): number {
   return (candidate.rankingOverlays || []).reduce((sum, overlay) => (
     Number.isFinite(overlay.scoreAdjustment) ? sum + overlay.scoreAdjustment : sum
@@ -422,14 +509,25 @@ export function buildUnifiedDeskCandidateBook(input: UnifiedDeskCandidateBookInp
       nextProofRequired: nextProofRequired(candidate, state),
       sourceCandidate: candidate,
       approvalBoundary,
+      collisionMetadata: null,
       ...scores,
     } satisfies UnifiedDeskCandidateBookItem;
   });
 
-  const candidates = scoredCandidates.map((item) => {
+  const collisionAnnotatedCandidates = scoredCandidates.map((item) => ({
+    ...item,
+    collisionMetadata: collisionMetadataForItem({
+      item,
+      items: scoredCandidates,
+      sessionType: input.sessionType,
+      completedBarTime: input.completedBarTime,
+    }),
+  }));
+
+  const candidates = collisionAnnotatedCandidates.map((item) => {
     const sameEventPriorityPenalty = openingDriveSameEventPriorityPenalty({
       item,
-      candidates: scoredCandidates,
+      candidates: collisionAnnotatedCandidates,
       completedBarTime: input.completedBarTime,
     });
     return sameEventPriorityPenalty > 0
@@ -481,6 +579,7 @@ export function buildUnifiedDeskCandidateBook(input: UnifiedDeskCandidateBookInp
       'Trading model confidence is scored from app-owned internal model evidence; Gemini/advisory narrative is excluded.',
       'canExecute is preserved only as a compatibility final execution flag and is never created by this book.',
       'When OpeningDrive and clean same-direction Sweep/HTF candidates share the completed 5M proof event, Sweep/HTF ranks first for review without changing execution gates.',
+      'Collision metadata is audit-only and disabled for scanner-visible selector installation until a separate approval-gated shadow overlay phase passes.',
       'Discord, Supabase, bridge behavior, entry, stop, target, risk, and trading rules are unchanged.',
     ],
   };

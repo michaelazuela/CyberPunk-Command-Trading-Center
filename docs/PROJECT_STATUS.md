@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add unified candidate-book collision metadata contract.
+Files changed: src/lib/unifiedDeskCandidateBook.ts, src/lib/unifiedDeskCandidateBook.test.ts, docs/PROJECT_STATUS.md.
+Reason: The OpeningDrive selector live-proposal draft identified missing duplicate/campaign collision metadata as the next required contract before any disabled shadow overlay.
+Tests run: npx tsx src/lib/unifiedDeskCandidateBook.test.ts; npx tsc --noEmit --pretty false.
+Result: Unified Desk Candidate Book audit contract passed. Same completed 5M proof groups now expose audit-only collisionMetadata with group key, group size, proof order, competing candidate keys, selector candidate, selector decision, and disabled live/scanner-visible flags. No completed proof time produces null collisionMetadata.
+Trading logic changed: No. This phase adds audit-only metadata to unified candidate-book items and does not feed it into score, rank, canExecute, entry, stop, target, risk, Discord, Supabase, bridge, or setupScanner behavior.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The metadata currently describes same completed 5M proof groups only. It is not a scanner-visible selector and still requires a separate disabled shadow overlay comparison.
+Next recommended action: Run a disabled shadow overlay comparison from the new collision metadata and verify it matches the saved research selector without using outcome labels, P/L, date buckets, Gemini text, Discord/RAG feedback, or live side effects.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector live-proposal draft.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-live-proposal.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-live-proposal.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The selector approval contract passed, but the desk needs an explicit live-proposal boundary before any scanner-visible ranking work is considered.

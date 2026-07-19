@@ -164,12 +164,21 @@ assert.equal(sameEventPriorityBook.candidates[1].setupType, SetupType.OpeningDri
 assert.equal(sameEventPriorityBook.approvalBoundary.changesCanExecute, false);
 assert.equal(sameEventPriorityBook.approvalBoundary.changesEntryStopTargets, false);
 assert.equal(sameEventPriorityBook.notes.some((note) => note.includes('same-direction Sweep/HTF')), true);
+assert.equal(sameEventPriorityBook.primaryDeskIdea?.collisionMetadata?.metadataSource, 'audit_same_completed_5m_proof_group');
+assert.equal(sameEventPriorityBook.primaryDeskIdea?.collisionMetadata?.groupSize, 2);
+assert.equal(sameEventPriorityBook.primaryDeskIdea?.collisionMetadata?.selectorCandidate, 'openingdrive_keep_long_or_lunch_else_replacement');
+assert.equal(sameEventPriorityBook.primaryDeskIdea?.collisionMetadata?.selectorEligible, true);
+assert.equal(sameEventPriorityBook.primaryDeskIdea?.collisionMetadata?.selectorDecision, 'keep_later_sweep_proof');
+assert.equal(sameEventPriorityBook.primaryDeskIdea?.collisionMetadata?.liveInstallAllowed, false);
+assert.equal(sameEventPriorityBook.primaryDeskIdea?.collisionMetadata?.scannerVisibleChangeAllowed, false);
+assert.equal(sameEventPriorityBook.notes.some((note) => note.includes('Collision metadata is audit-only')), true);
 
 const noProofTimePriorityBook = buildUnifiedDeskCandidateBook({
   sessionType: 'morning',
   candidates: [openingDriveSameEvent, sweepSameEvent],
 });
 assert.equal(noProofTimePriorityBook.primaryDeskIdea?.candidateKey, 'OpeningDriveFvgContinuation|same-event-opening-drive|LONG|100.00|0');
+assert.equal(noProofTimePriorityBook.primaryDeskIdea?.collisionMetadata, null);
 
 const afterLunchInWindow = candidate({
   setupType: SetupType.AfterLunchDriveFvgContinuation,
