@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority fresh observation monitor.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-observation-monitor.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-observation-monitor.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The installed same-event Sweep/HTF priority overlay now has OOS/source proof, but the desk needs a read-only monitor that separates saved baseline proof from fresh replay/live-observation artifacts before any broadening decision.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-observation-monitor.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-fresh-observation-monitor -- --json.
+Result: Fresh observation monitor passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-observation-monitor-1784465679279.json. The baseline source-installed-selection proof is clean, but there are 0 fresh same-bar replay/live-observation reports newer than the baseline. Recommendation is await_fresh_replay_or_live_observation_artifacts. livePromotionAllowedRows remains 0 and broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only observation monitor. It consumes saved diagnostic reports only and does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This monitor does not generate fresh replay/live-observation artifacts. It only prevents the desk from treating saved baseline proof as fresh future-distribution evidence.
+Next recommended action: Build the next small read-only fresh artifact discovery/package pass for post-install same-event OpeningDrive/Sweep/HTF collisions, then rerun this monitor against those fresh reports before broadening to AfterLunch, TurtleSoup, Sweep variants, or failed-plan reversal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive OOS source installed selection comparison.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-source-installed-selection.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-source-installed-selection.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The installed priority comparison consumed the broader validation report. The desk needed one cleaner read-only proof that reads saved same-bar source reports directly and runs the installed candidate-book ranking path per same-event collision.
