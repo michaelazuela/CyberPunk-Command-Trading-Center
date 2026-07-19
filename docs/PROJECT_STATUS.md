@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector shadow missing outcome resolver.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-outcome-resolver.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-outcome-resolver.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The top-10 missing replay package needed to be checked against saved outcome reports before building heavier replay. The resolver separates strict same date/session/model/direction evidence from weak adjacent-session evidence so the desk does not overclaim.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-outcome-resolver.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-outcome-resolver -- --missing-replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-replay-package-1784484146587.json --outcome-json tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784419740441.json --json.
+Result: Missing outcome resolver generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-outcome-resolver-1784484673404.json. Status pass. It loaded 10 package rows and 2,154 saved outcome records. Strict same date/session/model/direction matches: 0 rows, 0 shadow rows, strict P/L 0. Weak adjacent-only evidence: 5 rows, weak P/L +2,416.25. Fully unresolved: 5 rows. All 202 packaged shadow rows remain unresolved under strict evidence. Weak evidence examples: 2026-06-23 evening Sweep LONG had 16 same-date/model/direction records from other sessions with -1,501.25; 2026-06-29 evening Sweep LONG had 18 adjacent records with +3,690. TurtleSoup package rows had no saved outcome evidence. Recommendation is run_actual_missing_session_replay.
+Trading logic changed: No. This is a local/read-only saved-report resolver only. It does not replay OHLC, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Adjacent-session evidence is not valid proof for missing session keys. Evening coverage is the main gap, and TurtleSoup rows remain unresolved.
+Next recommended action: Build an actual saved OHLC replay resolver for the top-10 package rows, prioritizing evening session keys and preserving strict date/session/model/direction accounting.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector shadow missing replay package.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The coverage queue identified 50 missing groups. The desk needed a deterministic top-N saved replay package manifest so the next outcome replay phase has an exact, prioritized input instead of manual row selection.
