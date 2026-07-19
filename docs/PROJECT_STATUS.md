@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority fresh source discovery.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-source-discovery.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-source-discovery.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh observation monitor proved no newer same-bar reports exist after the baseline. The desk needs a read-only source discovery pass that identifies whether newer replay outcome reports exist and whether they still need same-bar conversion.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-source-discovery.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-fresh-source-discovery -- --json.
+Result: Fresh source discovery passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-source-discovery-1784466109143.json. It found 0 replay outcome reports after the baseline, 0 pending outcome reports needing same-bar conversion, 0 converted newer outcomes, and 0 newer same-bar reports. Recommendation is await_new_replay_outcomes. livePromotionAllowedRows remains 0 and broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only discovery artifact. It scans saved diagnostic reports only and does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Discovery does not generate replay outcomes. It confirms the next evidence gap is upstream of same-bar conversion.
+Next recommended action: Build a small read-only post-install replay outcome package generator for same-event OpeningDrive/Sweep/HTF collision candidates, then convert its outcome report through the same-bar drilldown and rerun the fresh observation monitor.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority fresh observation monitor.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-observation-monitor.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-observation-monitor.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The installed same-event Sweep/HTF priority overlay now has OOS/source proof, but the desk needs a read-only monitor that separates saved baseline proof from fresh replay/live-observation artifacts before any broadening decision.
