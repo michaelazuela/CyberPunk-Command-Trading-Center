@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector shadow outcome join.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-outcome-join.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-outcome-join.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The shadow drilldown was ready for outcome joining. The desk needed a saved-report-only join that proves which disabled shadow selector groups have outcome/P&L evidence before mining separators or proposing scanner-visible ranking.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-outcome-join.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-outcome-join -- --shadow-comparison tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison-1784481795693.json --outcome-json tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784419740441.json --json.
+Result: Outcome join generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-outcome-join-1784482962561.json. Status pass. It loaded 375 disabled shadow rows, 65 shadow groups, and 2,154 saved outcome rows. 15 groups joined, covering 76 shadow rows; 50 groups / 299 shadow rows remain unmatched. Joined subset: 6 positive groups, 1 negative group, 8 mixed groups, gross joined one-MES P/L 25,435. Positive joined examples include SweepMssFvgRetrace keep-later proof on 2026-06-11 morning LONG (+3,772.50), 2026-06-25 lunch SHORT (+7,187.50), and IntradayMssMicroContinuation prefer-replacement on 2026-06-16 morning SHORT (+4,070.00). Negative joined example: 2026-07-01 morning SweepMssFvgRetrace LONG (-588.75). Recommendation remains expand_outcome_coverage because most shadow groups still lack direct outcome evidence.
+Trading logic changed: No. This is a local/read-only saved-report join only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Matched P/L is partial coverage and can be duplicated by setup/date/session/direction evidence counts. Do not treat unmatched groups as wins or losses, and do not install scanner-visible ranking from this result alone.
+Next recommended action: Add a research-only separator miner on the 15 joined groups, then expand outcome coverage for the 50 unmatched groups before any live-facing selector proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector shadow drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The disabled shadow selector now emits direction per row. The desk needs a no-lookahead drilldown by selector decision, direction, session, selected setup, and primary-change state before outcome joining.

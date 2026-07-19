@@ -237,6 +237,7 @@
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-live-proposal": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-live-proposal.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-drilldown": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-drilldown.ts",
+    "research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-outcome-join": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-outcome-join.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue.ts",
