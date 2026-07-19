@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add OpeningDrive no-lookahead separator research phase.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-no-lookahead-separator.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-no-lookahead-separator.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: OpeningDriveFvgContinuation same-bar rows were strongly positive in replay, but the strongest separators used future path/outcome tags. The desk needed a proof-time-only classifier so no live rank/filter hypothesis is built from lookahead evidence.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-no-lookahead-separator.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-no-lookahead-separator -- --samebar-separator-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --setup-type OpeningDriveFvgContinuation --json.
+Result: Focused test and real local report passed. OpeningDriveFvgContinuation same-bar source rows stayed 149 total, 111 winners, 37 losses, 0 unresolved, +15700.50 one-MES research P/L, and livePromotionAllowedRows 0. The no-lookahead separator evaluated 43 proof-time buckets and found 2 research leads with zero stopped-before-T1 losses: direction_risk=LONG|risk_4_to_8 kept 12 rows with 11 winners, 0 losses, +585.06 one-MES, avg risk 4.98 points; time_direction_risk=10:00-10:59|LONG|risk_4_to_8 kept 10 rows with 9 winners, 0 losses, +481.30 one-MES, avg risk 4.96 points. Broad 10:00-10:59 remained positive but loss-bearing with 93 winners, 27 losses, +14537.28, so it is not a clean live filter by itself.
+Trading logic changed: No. This is a local/read-only research post-processor over saved same-bar replay artifacts. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The clean buckets reject many winners and are still in-sample research leads. They must be validated against a fresh replay/out-of-sample package with richer proof-time structured geometry before any scanner-visible rank/filter change.
+Next recommended action: Validate OpeningDrive LONG risk_4_to_8 on fresh/out-of-sample repaired raw-OHLC artifacts and add proof-time geometry fields for the rejected winner population before any live-facing change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Operationalize Codex Goals and iterative repair loops for Futures Crusher phases.
 Files changed: docs/CODEX_GOALS_AND_REPAIR_LOOPS.md, docs/OPENAI_DESK_AGENT_BOOKMARKS.md, docs/PROJECT_STATUS.md.
 Reason: The desk reviewed OpenAI guidance for Codex Goals, iterative repair loops, subagents, and workspace agents. Futures Crusher needed a durable goal template so multi-step research/install phases keep going through evidence, verification, docs, commit, push, and handoff without weakening safety gates.
