@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority structural context miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The priority loss profile found no clean initial-rank filter from proof/risk/time fields. Manual inspection of saved scanner tapes showed the July 15 loss cluster may align with a pre-entry structural-context shift where the best conditional model changed from OpeningDriveFvgContinuation to IntradayMssMicroContinuation, so the desk needed a reusable read-only miner over saved proof-time scanner tape snapshots.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner -- --miner-reports "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-miner-1784472758858.json" --json.
+Result: Structural context miner passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner-1784473462912.json. The miner consumed the broad saved no-lookahead miner report, removed duplicate rows, loaded saved replay-package source tape paths, and evaluated 22 proof-time scanner snapshots. It found 3 priority loss rows, 19 priority non-loss rows, and 1 candidate structural feature row. best_conditional_IntradayMssMicroContinuation caught 2 priority loss rows with 0 priority non-loss rows and -97.50 one-MES P/L. All broad context tags such as target_room_blocked_before_t1, timeframe_mss_blocked, risk_RISK_ABOVE_STANDARD_LIMIT, htf_line_in_sand_blocked, and HTF conflict/caution tags also appeared on non-loss rows and are rejected as initial-rank filters. Recommendation is queue_fresh_structural_validation. liveInitialRankFeatureRows remains 0, livePromotionAllowedRows remains 0, and broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only miner over saved miner reports, replay packages, and scanner tapes only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The best_conditional_IntradayMssMicroContinuation feature is promising but thin: 2 caught loss rows in the saved de-duped set. It must be validated on fresh unseen scanner artifacts before any scanner-visible rank penalty or review wording change.
+Next recommended action: Add a read-only fresh structural validation package for best_conditional_IntradayMssMicroContinuation across new OpeningDrive priority collision artifacts. Do not change live rank, canExecute, Discord, Supabase, bridge, entry, stop, target, or risk behavior.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority loss profile.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Fresh feature rollup proved proof_bar_failed_close_through_entry is too narrow for live rank use. The desk needed a read-only de-duped profile of installed OpeningDrive priority losses to separate pre-entry rank evidence from post-entry research-only warnings before considering any scanner-visible filter.
