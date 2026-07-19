@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority risk-guard validation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-risk-guard-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-risk-guard-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh contradiction suggested priority risk size may matter, but the prior positive baseline includes high-risk and high-risk-ratio priority winners. The desk needs a read-only validation pass that tests simple priority risk caps, risk-ratio guards, and risk-delta guards before any scanner-visible ranking change.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-risk-guard-validation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-risk-guard-validation -- --json.
+Result: Risk-guard validation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-risk-guard-validation-1784467643952.json. It evaluated 14 installed-priority source rows across the saved baseline plus fresh contradiction set. Priority beat OpeningDrive on 9 rows, underperformed on 1 row, installed-priority one-MES P/L was +2251.25 versus OpeningDrive +909.39, and 0 simple guard rows qualified. priority_risk_lte_8 caught the bad row but falsely rejected 9 priority-better rows and worsened simulated P/L by -1341.86. priority_risk_lte_10/16/22 missed the bad row or did not improve P/L. risk_ratio_lte_1_5 caught the bad row but falsely rejected 4 priority-better rows and worsened simulated P/L by -708.75. risk_ratio_lte_2/3 and risk_delta_lte_5 missed the bad row; risk_delta_lte_4 caught it but falsely rejected 5 priority-better rows. Recommendation is no_simple_risk_guard_supported; broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only risk-guard validation. It consumes saved source-selection and same-bar diagnostic reports only and does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This rejects only simple risk-size guards, not structural guards. The fresh contradiction still needs a better separator before broadening.
+Next recommended action: Build a read-only structural separator drilldown for the same 14 rows: stop-hit timing, first adverse path, proof location/time, target-delivery timing, intrabar ambiguity, and same-bar outcome sequence.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority fresh contradiction drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-contradiction-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-contradiction-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fresh same-event observation contradicted the prior clean OOS baseline: installed priority selected SweepMssFvgRetrace over OpeningDriveFvgContinuation but lost worse by -23.75 one-MES. The desk needs a read-only drilldown that records the exact event, risk delta, outcome timing, MFE/MAE, and root-cause tags before any broader ranking change.
