@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector shadow separator miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-separator-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-separator-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The outcome join found 15 matched shadow groups but 50 unmatched groups. The desk needed a research-only separator miner that studies only joined evidence and refuses to promote live behavior while coverage remains incomplete.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-separator-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-separator-miner -- --outcome-join tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-outcome-join-1784482962561.json --json.
+Result: Separator miner generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-separator-miner-1784483382646.json. Status pass. It studied 15 joined rows, excluded 50 no-evidence rows, created 20 buckets, found 9 positive candidate buckets, 0 negative candidate buckets, and 11 mixed/underpowered buckets. Gross studied one-MES P/L was 25,435. Stronger research hints: SHORT direction (9 groups, 136 evidence, +15,862.50), lunch session (7 groups, 107 evidence, +11,876.25), lunch SweepMssFvgRetrace (7 groups, +11,876.25), SweepMssFvgRetrace SHORT (4 groups, +9,177.50), and morning IntradayMssMicroContinuation (4 groups, +6,295.00). Broad Sweep keep-later remains mixed/underpowered because it has 10 groups, 156 evidence, +18,750 but includes 1 negative and 4 mixed groups. Recommendation remains expand_outcome_coverage_before_live_proposal.
+Trading logic changed: No. This is a local/read-only saved-report miner only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Candidate buckets are research hints only. Coverage is still incomplete, so no scanner-visible selector, score boost, penalty, or model removal should be installed from this report alone.
+Next recommended action: Build a coverage-expansion queue for the 50 unmatched shadow groups and replay only those missing keys before proposing any live-facing OpeningDrive selector behavior.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector shadow outcome join.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-outcome-join.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-outcome-join.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The shadow drilldown was ready for outcome joining. The desk needed a saved-report-only join that proves which disabled shadow selector groups have outcome/P&L evidence before mining separators or proposing scanner-visible ranking.
