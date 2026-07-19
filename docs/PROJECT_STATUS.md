@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Operationalize Codex Goals and iterative repair loops for Futures Crusher phases.
+Files changed: docs/CODEX_GOALS_AND_REPAIR_LOOPS.md, docs/OPENAI_DESK_AGENT_BOOKMARKS.md, docs/PROJECT_STATUS.md.
+Reason: The desk reviewed OpenAI guidance for Codex Goals, iterative repair loops, subagents, and workspace agents. Futures Crusher needed a durable goal template so multi-step research/install phases keep going through evidence, verification, docs, commit, push, and handoff without weakening safety gates.
+Tests run: npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run test; npm run build; git diff --check.
+Result: Added reusable Futures Crusher Goal templates, a research-only Goal template, a guarded-install Goal template, and an iterative repair loop. Updated OpenAI bookmarks so Goals and iterative repair loops are use-now, subagents and workspace agents are bookmarked with safety boundaries, and no source is skipped as source material.
+Trading logic changed: No. This is documentation/process only. It does not change setupScanner, ranking, canExecute, Discord, Supabase, NinjaTrader bridge behavior, entry/stop/target/risk, or automated execution.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Goals increase persistence but do not bypass safety gates. Any live side effect still needs the matching Futures Crusher approval boundary.
+Next recommended action: Continue the research-only OpeningDrive no-lookahead separator phase under the new Goal pattern before any scanner-visible rank or publish change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Install prompt-caching-friendly OpenAI validator customization boundary.
 Files changed: src/lib/openai.ts, src/lib/openai.test.ts, package.json, docs/OPENAI_DESK_AGENT_BOOKMARKS.md, docs/PROJECT_STATUS.md.
 Reason: Prompt caching and customization were marked use-now, but the project still needed the actual optional OpenAI request boundary to carry stable Futures Crusher instructions first and variable chart/session data last.

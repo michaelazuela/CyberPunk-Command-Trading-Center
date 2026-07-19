@@ -8,6 +8,40 @@ The project remains a MES/MNQ decision-support trading desk. These bookmarks do 
 
 ## Use Now
 
+### Codex Goals
+
+Source: https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex
+
+Use Goals now for multi-step Futures Crusher phases where the instruction is effectively "keep going until this is actually done."
+
+Best fits:
+
+- replay research with evidence artifacts
+- guarded phase installs
+- bug hunts with reproduce/fix/retest loops
+- verification, commit, push, and handoff work
+
+Installed boundary:
+
+- `docs/CODEX_GOALS_AND_REPAIR_LOOPS.md` defines default Futures Crusher Goal templates and stopping conditions.
+- Goals do not override safety gates. They make persistence explicit while preserving approvals for live side effects.
+
+### Iterative Repair Loops
+
+Source: https://developers.openai.com/cookbook/examples/codex/build_iterative_repair_loops_with_codex
+
+Use iterative repair loops now for local/debug/research work:
+
+- run the focused proof
+- patch the smallest failing boundary
+- rerun focused proof
+- repeat until the evidence passes or a real blocker is reached
+
+Installed boundary:
+
+- `docs/CODEX_GOALS_AND_REPAIR_LOOPS.md` defines the Futures Crusher repair loop.
+- Repair loops remain local and evidence-driven unless a separate safety-gated phase approves real side effects.
+
 ### Prompt Caching
 
 Source: https://developers.openai.com/api/docs/guides/prompt-caching
@@ -88,11 +122,39 @@ Required Futures Crusher boundary:
 - No Supabase writes, Discord posts, NinjaTrader repair writes, Cloudflare deployments, service restarts, or trading-rule changes without the existing safety-gate checkpoint.
 - Any side-effect tool must have an explicit approval boundary, idempotency, readback, and rollback plan before it is exposed to agent orchestration.
 
+### Subagents
+
+Source: https://learn.chatgpt.com/docs/agent-configuration/subagents?surface=app
+
+Bookmark for near-term parallel audits:
+
+- one subagent can inspect replay artifacts
+- one can inspect tests
+- one can inspect docs/status
+- one can inspect risk or architecture boundaries
+
+Required Futures Crusher boundary:
+
+- Subagents are read-only/research-side by default.
+- Parent task owns final edits, verification, commit, push, and handoff.
+- Subagents inherit permissions, so do not delegate live Supabase, Discord, NinjaTrader, Cloudflare, or trading-rule changes without an explicit safety-gated plan.
+
+### Workspace Agents And API Triggers
+
+Sources:
+
+- https://developers.openai.com/cookbook/articles/chatgpt-agents-sales-meeting-prep
+- https://developers.openai.com/cookbook/examples/chatgpt/workspace_agents/workspace-agents-api-trigger
+
+Bookmark for later scheduled desk-report or review-workflow orchestration.
+
+Do not implement now because this introduces external agent runs, access tokens, destinations, asynchronous output verification, idempotency, and approval behavior. Futures Crusher would need a separate design before any API-triggered workspace agent can touch reports, RAG, Discord, Supabase, or production workflows.
+
 ## Skip
 
-None.
+None as source material.
 
-All four references are useful. The current install path is to use prompt caching and customization immediately, while preserving reasoning and programmatic tool calling as future orchestration work after the research pipeline proves the exact need.
+The sales-meeting-prep cookbook is not a direct Futures Crusher feature, but its repeatable-agent workflow pattern is useful later. Borrow the pattern only; do not implement the sales workflow.
 
 ## Next Narrow Action
 
