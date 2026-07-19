@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector proposal guard.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-proposal-guard.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-proposal-guard.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Broader selector readiness remained research-only because blocked/no-entry/invalidated rows are still excluded from performance. The desk needed a reusable guard that blocks any future live selector proposal until exclusions are resolved or explicitly carved out with source/proof criteria.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-proposal-guard.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-proposal-guard -- --readiness-summary tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-readiness-summary-1784486977768.json --json.
+Result: Proposal guard generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-proposal-guard-1784487176007.json. Status fail by design. ProposalAllowed is false. Hard stops: 12 blocked rows remain excluded from performance, 4 rows are waiting for fresh entry trigger, 5 rows are stale/invalidated, and readiness recommendation remains continue_research_no_live_selector. This confirms no live selector proposal, model removal, canExecute change, or entry/stop/target/risk change is currently allowed from the broader readiness evidence.
+Trading logic changed: No. This is a local/read-only research proposal guard only. It does not install selector behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The guard blocks live proposal while exclusions remain. It does not resolve excluded rows or decide the final selector.
+Next recommended action: Mine the 12 excluded rows for carveout criteria: separate no-entry waits, stale invalidations, target-generation issues, and true invalid protected-stop rows, then test whether a Sweep-only guarded selector still holds after those carveouts.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Run broader OpeningDrive keep-later selector readiness validation.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The top-10 strict replay package showed positive Sweep evidence and weak TurtleSoup evidence, but broader coverage was needed before treating the pattern as stable.
