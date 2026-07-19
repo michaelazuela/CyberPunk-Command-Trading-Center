@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Expand raw Sweep snapshot miner to composite no-lookahead segments.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner.test.ts, docs/PROJECT_STATUS.md.
+Reason: Single scanner snapshot tags remained too broad: they explained the latest Sweep strength but also carried large historical stopped-before-T1 loss buckets. The desk needed to test composite pre-entry fields before deciding whether any Sweep selector deserves fresh replay validation.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-snapshot-field-miner -- --train-artifacts [available raw scanner artifact reports through July 15] --train-outcome-reports [paired available outcome reports through July 15] --test-artifacts tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-16-to-2026-07-16-1784433373297.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-17-to-2026-07-17-1784433622087.json --test-outcome-reports tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784433384201.json,tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784433633227.json --min-rows-per-period 5 --json.
+Result: Composite snapshot miner passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner-1784441052100.json. Joined train/test Sweep snapshot rows remained 977/76; zero-loss transfer segments improved from 0 to 2; latest-positive train-loss-bearing segments 200; latest-positive train-weak segments 164; live promotion allowed rows 0; recommendation fresh_replay_validate_zero_loss_snapshot_segments. Candidate 1: session_direction_htf_line_missing = lunch|SHORT|not_applicable|obstacle_source_unknown:obstacle_type_unknown|opposing_5m_mss, train 34 rows, 33 winners, 0 losses, 1 other resolved, +1426.25; latest 11 rows, 11 winners, 0 losses, +1540.00. Candidate 2: session_direction_candle_rank = lunch|SHORT|bearish_close|close_middle_half|rank_180_to_239, train 17 rows, 11 winners, 0 losses, 5 other resolved, 1 unresolved, +955.00; latest 6 rows, 6 winners, 0 losses, +840.00.
+Trading logic changed: No. This only expands local/read-only report segmentation over saved artifacts and saved outcomes. It does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The two zero-loss composite segments are research candidates, not live selectors. Candidate 1 includes a missing-evidence/opposing-5M-MSS label and needs careful semantic review before it can become anything more than a replay package filter. Candidate 2 is cleaner but smaller. Neither should touch scanner-visible ranking until fresh replay validation proves the exact selected rows.
+Next recommended action: Build a fresh replay validation package for only these two zero-loss composite Sweep segments, using saved raw scanner artifacts and completed 5M tapes. Keep all output research-only and preserve canExecute/entry/stop/target/risk behavior.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add raw Sweep scanner snapshot field miner and run latest split.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Prior Sweep source-field drilldown showed broad latest positives but no zero-loss transfer segment. The desk needed to inspect no-lookahead scanner snapshot fields that were not preserved in replay package rows: completed 5M candle shape, rank/confidence/target room, timeframe MSS, HTF line state, evidence tags, missing-evidence tags, and session/direction combinations.

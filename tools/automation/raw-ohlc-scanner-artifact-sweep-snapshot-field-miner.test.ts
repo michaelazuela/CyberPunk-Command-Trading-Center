@@ -211,7 +211,9 @@ assert.equal(report.summary.trainSnapshotRows, 12);
 assert.equal(report.summary.testSnapshotRows, 10);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.zeroLossTransferSegments.some((segment) => segment.kind === 'evidence_tag' && segment.key === 'has_tier_a_displacement'), true);
+assert.equal(report.zeroLossTransferSegments.some((segment) => segment.kind === 'session_direction_evidence_target' && segment.key === 'lunch|SHORT|has_tier_a_displacement|clear_to_t2'), true);
 assert.equal(report.latestPositiveTrainLossBearingSegments.some((segment) => segment.kind === 'evidence_tag' && segment.key === 'has_tier_b_displacement'), true);
+assert.equal(report.latestPositiveTrainLossBearingSegments.some((segment) => segment.kind === 'session_direction_candle_target' && segment.key === 'lunch|SHORT|bearish_close|close_lower_quartile|obstacle_before_t1'), true);
 assert.match(report.markdown, /Sweep Snapshot Field Miner/);
 
 const parsed = parseRawOhlcScannerArtifactSweepSnapshotFieldMinerArgs([

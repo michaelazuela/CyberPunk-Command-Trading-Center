@@ -16,9 +16,20 @@ type SegmentKind =
   | 'htf_line_obstacle'
   | 'evidence_tag'
   | 'missing_tag'
+  | 'session_direction'
+  | 'session_direction_rank'
+  | 'session_direction_candle_rank'
+  | 'session_direction_candle_target'
+  | 'session_direction_htf_target'
+  | 'session_direction_confidence_rank_target'
   | 'session_evidence_tag'
   | 'direction_evidence_tag'
   | 'session_direction_evidence_tag'
+  | 'session_direction_evidence_candle'
+  | 'session_direction_evidence_target'
+  | 'session_direction_missing_target'
+  | 'direction_htf_line_target'
+  | 'session_direction_htf_line_missing'
   | 'session_direction_candle';
 
 interface CliOptions {
@@ -429,6 +440,9 @@ function isPositive(summary: SegmentSummary, minRows: number): boolean {
 }
 
 function segmentValues(row: SnapshotRow): Array<{ kind: SegmentKind; key: string }> {
+  const sessionDirection = `${row.session}|${row.direction}`;
+  const candleShape = `${row.candleDirection}|${row.candleCloseLocation}`;
+  const htfLine = `${row.htfLineStatus}|${row.htfLineObstacle}`;
   return [
     { kind: 'candle_direction', key: row.candleDirection },
     { kind: 'candle_body_quality', key: row.candleBodyQuality },
@@ -440,14 +454,27 @@ function segmentValues(row: SnapshotRow): Array<{ kind: SegmentKind; key: string
     { kind: 'timeframe_mss_status', key: row.timeframeMssStatus },
     { kind: 'htf_line_status', key: row.htfLineStatus },
     { kind: 'htf_line_obstacle', key: row.htfLineObstacle },
-    { kind: 'session_direction_candle', key: `${row.session}|${row.direction}|${row.candleDirection}|${row.candleCloseLocation}` },
+    { kind: 'session_direction', key: sessionDirection },
+    { kind: 'session_direction_rank', key: `${sessionDirection}|${row.rankBucket}` },
+    { kind: 'session_direction_candle', key: `${sessionDirection}|${candleShape}` },
+    { kind: 'session_direction_candle_rank', key: `${sessionDirection}|${candleShape}|${row.rankBucket}` },
+    { kind: 'session_direction_candle_target', key: `${sessionDirection}|${candleShape}|${row.targetRoomStatus}` },
+    { kind: 'session_direction_htf_target', key: `${sessionDirection}|${htfLine}|${row.targetRoomStatus}` },
+    { kind: 'session_direction_confidence_rank_target', key: `${sessionDirection}|${row.confidence}|${row.rankBucket}|${row.targetRoomStatus}` },
+    { kind: 'direction_htf_line_target', key: `${row.direction}|${htfLine}|${row.targetRoomStatus}` },
     ...row.evidenceTags.flatMap((tag) => [
       { kind: 'evidence_tag' as const, key: tag },
       { kind: 'session_evidence_tag' as const, key: `${row.session}|${tag}` },
       { kind: 'direction_evidence_tag' as const, key: `${row.direction}|${tag}` },
       { kind: 'session_direction_evidence_tag' as const, key: `${row.session}|${row.direction}|${tag}` },
+      { kind: 'session_direction_evidence_candle' as const, key: `${sessionDirection}|${tag}|${candleShape}` },
+      { kind: 'session_direction_evidence_target' as const, key: `${sessionDirection}|${tag}|${row.targetRoomStatus}` },
     ]),
-    ...row.missingTags.map((tag) => ({ kind: 'missing_tag' as const, key: tag })),
+    ...row.missingTags.flatMap((tag) => [
+      { kind: 'missing_tag' as const, key: tag },
+      { kind: 'session_direction_missing_target' as const, key: `${sessionDirection}|${tag}|${row.targetRoomStatus}` },
+      { kind: 'session_direction_htf_line_missing' as const, key: `${sessionDirection}|${htfLine}|${tag}` },
+    ]),
   ];
 }
 
