@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add positive-lane overlay simulation for proofSelectionSignal research.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-overlay-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-overlay-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The retained residue separator miner found two clean positive lanes: riskBucket=risk_lt_10 and proofWindow=proof_14_to_15. This simulation measures the union of those lanes as a research-only priority boost and explicitly checks precision versus winner recall so it cannot be mistaken for a hard filter.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-overlay-simulation.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-overlay-simulation -- --separator-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-residue-separator-miner-1784504474348.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-overlay-simulation-1784504818812.json. Status pass. Retained slates: 28. Retained winner/problem slates: 20/8. Retained gross resolved one-MES P/L: 2067.5. Overlay selected slates: 11. Overlay selected winner/problem slates: 11/0. Overlay selected gross resolved one-MES P/L: 588.75. Baseline precision: 0.71. Overlay precision: 1.00. Overlay winner recall: 0.55. Non-selected winner slates: 9 with gross resolved one-MES P/L 1620. runtimeRankConsumerAllowedByThisReport remains false.
+Trading logic changed: No. This is a local/read-only saved-report overlay simulation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The overlay is high precision but low recall; using it as a hard filter would discard many winners.
+Next recommended action: Validate the positive lane as a priority boost in a top-slate selection simulation when multiple retained candidates compete, not as a hard exclusion.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add retained residue separator miner for proofSelectionSignal research.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-residue-separator-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-retained-residue-separator-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The retained problem-slate drilldown classified the residue, but it did not compare residue against retained winners. This miner compares retained winners and retained problems using proof-time/clock-derived fields only, excluding outcome-derived MFE/MAE from separator candidates.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: The positive lanes are promising but still research-only; they must be validated as a rank-priority overlay rather than a hard execution gate.
 Next recommended action: Simulate a research-only positive rank overlay for retained low-risk and 14:00-15:00 proof-window lanes, then compare slate selection impact before any scanner-visible consumer.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add retained problem-slate drilldown for broader proofSelectionSignal filter residue.
