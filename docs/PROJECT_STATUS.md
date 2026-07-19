@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later-proof selector dry-run simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Companion drilldown found conflicting keep/replacement groups. The desk needed a research-only selector simulation before considering any scanner-visible proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run -- --validation-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation-1784479147924.json --json.
+Result: Selector dry run generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run-1784479756131.json. Across 224 validated two-candidate cases, keep-all later Sweep proof produced +12497.50, replace-all produced +11709.60, and the best research selector keep_long_or_lunch_else_replacement produced +15767.61. That is +3270.11 versus keep-all and +4058.01 versus replace-all. Other improving selectors: keep_long_else_replacement (+1767.61 vs keep-all), keep_early_mid_not_intraday_replacement (+1177.50), and keep_lunch_else_replacement (+374.58). installableSeparatorFound remains false.
+Trading logic changed: No. This is a local/read-only saved-report selector simulation only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The best selector is still research-only and may be overfit to the current validation package. It needs non-overlap validation and approval-boundary proof before any live-facing proposal.
+Next recommended action: Validate keep_long_or_lunch_else_replacement on non-overlapping packages and then produce an approval-boundary dry-run contract if it still holds. Do not install selector behavior yet.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later-proof companion-field drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-companion-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-companion-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Broader validation showed the two-candidate slate rule held in aggregate but failed in the June broad slice. The desk needed a research-only no-lookahead drilldown before any selector proposal.
