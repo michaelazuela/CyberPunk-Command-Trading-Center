@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority loss case classifier.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-case-classifier.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-case-classifier.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The broad July raw-OHLC evidence refresh showed 9 installed-priority losses but no clean no-lookahead or structural rank filter. The desk needed a durable read-only case classifier to separate true model weakness from duplicate/re-entry clustering, stop-first-then-later-target replay ordering, and target-room/risk context.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-case-classifier.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-loss-case-classifier -- --loss-profile "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile-1784475262281.json" --structural-context "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner-1784474877392.json" --samebar-report "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784474843614.json" --json.
+Result: Loss case classifier passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-loss-case-classifier-1784475436638.json. It classified all 9 priority-loss rows with 0 unclassified losses and 0 live-promotion rows. All 9 rows were duplicate/re-entry clusters and target-room/risk-context rows. Six rows were stop-first-then-later-target cases: the July 10 short cluster stopped on July 10 at 11:30 before later reaching T1/T2 on July 13, and the July 13 long cluster stopped at 9:55 before later reaching T1/T2. The remaining July 15 long cluster did not reach T1/T2 and remains the only true unresolved adverse cluster. Recommendation is inspect_reentry_and_dedupe_policy, not install a new rank filter.
+Trading logic changed: No. This is a local/read-only classifier over saved loss-profile, structural-context, and same-bar reports only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The classifier shows that several losses are replay-ordering/re-entry artifacts rather than obvious pre-entry model failures. Do not use this result to loosen live behavior or promote automated execution.
+Next recommended action: Build a read-only re-entry/deduplication policy simulation for same entry/stop clusters. It should keep only one active review candidate per duplicate cluster and measure whether a fresh re-entry after stop would be valid under completed 5M proof, without changing live scanner behavior.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Refresh broad July raw-OHLC OpeningDrive priority structural validation evidence.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The prior structural validation queue showed saved source-selection artifacts were exhausted and recommended generating fresh local scanner artifacts from the latest July 3-July 17 saved raw-OHLC source before considering any scanner-visible rank filter.

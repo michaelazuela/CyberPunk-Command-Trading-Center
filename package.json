@@ -223,6 +223,7 @@
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-unseen-feature-queue": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-unseen-feature-queue.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-rollup": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-rollup.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile.ts",
+    "research:raw-ohlc-scanner-artifact-openingdrive-priority-loss-case-classifier": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-case-classifier.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue.ts",
