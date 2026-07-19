@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector shadow drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The disabled shadow selector now emits direction per row. The desk needs a no-lookahead drilldown by selector decision, direction, session, selected setup, and primary-change state before outcome joining.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-drilldown -- --shadow-comparison tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison-1784481795693.json --json.
+Result: Shadow drilldown generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-drilldown-1784482217630.json. Status pass. It summarized 375 disabled shadow rows into 14 buckets: 224 keep_later_sweep_proof, 151 prefer_replacement, and 284 would-change-primary rows. selectedCanExecuteTrueRows, livePromotionAllowedRows, scannerVisibleChangeAllowedRows, and entryStopTargetRiskDriftRows are all 0. Recommendation is ready_for_outcome_join.
+Trading logic changed: No. This is a local/read-only saved-report drilldown only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The drilldown is descriptive only. It must not be used as a scanner-visible ranking rule without a separate outcome join and approval checkpoint.
+Next recommended action: Run the drilldown on the latest disabled shadow comparison report and then join the shadow rows to saved outcomes/P&L in a separate research-only package.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add selector shadow direction field.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison.test.ts, docs/PROJECT_STATUS.md.
 Reason: The next drilldown needs explicit direction on each disabled shadow row rather than inferring it from groupKey.
