@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add unresolved drilldown for overlay missing-top replay rows.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-unresolved-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-unresolved-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The missing-top coverage drilldown found 60 replay-ready rows, but outcome replay resolved none of them. The desk needed a repeatable classification of whether those rows were no-fill, weak follow-through, near-T1 misses, or adverse-near-stop cases before deciding whether overlay coverage should influence ranking research.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-unresolved-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-unresolved-drilldown -- --outcome-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784442715931.json --json.
+Result: Unresolved drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-unresolved-drilldown-1784443084944.json. It classified 60 unresolved missing-top replay rows: 6 no-fill, 54 entered unresolved, 8 near-T1 but unresolved, 39 weak-followthrough, and 7 adverse-near-stop. Model/direction split: IntradayMssMicroContinuation LONG 28 rows, mostly weak follow-through, avg favorable/adverse R 0.56/0.26; IntradayMssMicroContinuation SHORT 15 rows, 5 no-fill and 6 adverse-near-stop, avg favorable/adverse R 0.30/0.59; OpeningDriveFvgContinuation LONG 7 weak-followthrough rows, avg favorable/adverse R 0.68/0.59; HtfDisplacementMssContinuation LONG 6 rows, 4 near-T1, avg favorable/adverse R 1.15/0.37; SweepMssFvgRetrace SHORT 4 rows, 3 near-T1 and 1 adverse-near-stop, avg favorable/adverse R 1.14/0.64. Recommendation: do_not_use_missing_top_coverage_as_positive_evidence.
+Trading logic changed: No. This is a local/read-only classification over a saved outcome report. It does not recompute outcomes, run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This explains the 60 newly replayed rows but does not solve the 1,591 candidates blocked by incomplete deterministic levels. Near-T1 unresolved rows may deserve later target-room/staleness research, but they are not proof for live promotion.
+Next recommended action: Build a stale/no-chase and target-room follow-through probe for missing-top rows, focused on IntradayMssMicroContinuation weak-followthrough and short adverse-near-stop cases. Keep HTF/Sweep near-T1 cases separate as review notes, not rank promotion.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add raw Sweep composite overlay missing-top coverage drilldown and run replay coverage check.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-coverage-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-coverage-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The prior overlay dry run improved known changed-slate selection, but 1,651 top rows lacked outcome coverage. The desk needed to separate replay-ready coverage debt from true blockers before any scanner-visible rank proposal.
