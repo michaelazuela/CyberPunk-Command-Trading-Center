@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority campaign dedupe full-slate dry run.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The campaign dedupe dry-run comparison showed earliest-only Sweep dedupe was too blunt when compared against all broad Sweep rows. The desk needed a sharper full-slate dry run to test whether suppressing exact duplicate Sweep campaigns improves the installed primary review selection when other model candidates are present.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run -- --scanner-artifact "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-03-to-2026-07-17-1784472462301.json" --replay-package-outcome "tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784474838098.json" --json.
+Result: Full-slate dry run passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run-1784477421004.json. It consumed the saved July scanner artifact and saved replay outcome rows, evaluated 432 slates and 827 resolved candidate rows, found 331 SweepMssFvgRetrace target rows, simulated suppressing 283 exact duplicate Sweep campaign rows, and changed 174 primary top slates. Eighty-one changed slates promoted a non-Sweep model after duplicate suppression. The outcome rejects live installation: baseline top selected P/L was +28947.04, deduped top selected P/L was +18172.10, for a -10774.94 one-MES delta. canExecute true rows, approval-boundary drift rows, entry/stop/target/risk drift rows, and livePromotionAllowedRows were all 0.
+Trading logic changed: No. This is a local/read-only full-slate dry run over saved scanner artifacts and saved replay outcome rows only. It calls the installed candidate-book audit path but does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Targeted duplicate suppression is rejected for now. Later duplicate Sweep proof rows are often materially better than replacement non-Sweep candidates, so a one-ticket-per-campaign policy would throw away profitable fresh proof.
+Next recommended action: Mine the 174 changed slates, especially the negative-delta slates, for a no-lookahead separator that distinguishes profitable later duplicate proof from repeated stale visibility. Do not install duplicate suppression.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority campaign dedupe dry-run comparison.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-dry-run-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-dry-run-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The approval contract proved earliest-only same-campaign dedupe preserved boundaries, but the desk still needed a fresh scanner-outcome dry run to compare broad current Sweep rows versus deduped campaign-lead rows before any scanner-visible proposal.
