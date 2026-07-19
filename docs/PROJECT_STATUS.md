@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority fresh feature comparison.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh feature package isolated proof_bar_failed_close_through_entry as the only initial-rank usable feature. The desk needed a read-only comparison that rebuilds the miner from saved source-selection/same-bar artifacts and measures whether the packaged feature still catches priority underperformance without rejecting priority winners.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-comparison.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-comparison -- --json.
+Result: Fresh feature comparison passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-comparison-1784469959116.json. It consumed 1 package report and 1 source-selection report, rebuilt 1 mined event row, found 1 proof_bar_failed_close_through_entry match, caught 1 priority-underperformance row, false-rejected 0 priority-better rows, and simulated +23.75 one-MES dollars versus installed priority. liveInitialRankFeatureRows remains 0, livePromotionAllowedRows remains 0, and broadeningAllowedNow remains false. Recommendation is candidate_needs_larger_validation.
+Trading logic changed: No. This is a local/read-only comparison over saved package/source-selection/same-bar artifacts only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The available saved artifacts still provide only one matching row. The feature remains promising but is not live-installable until it survives larger/fresh unseen validation.
+Next recommended action: Build a larger unseen-artifact queue for proof_bar_failed_close_through_entry across additional OpeningDrive priority collision reports or newly generated research artifacts; keep live ranking unchanged.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority fresh feature package.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The no-lookahead validation found two candidate features, but only proof_bar_failed_close_through_entry can exist at initial ranking time. The desk needed a read-only package that excludes post-entry telemetry and prepares the next fresh scanner-artifact comparison without touching live behavior.
