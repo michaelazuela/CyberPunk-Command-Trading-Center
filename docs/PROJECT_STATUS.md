@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS compound pre-entry miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-pre-entry-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-pre-entry-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Single pre-entry feature rejection remained too blunt. The desk needed a promotion-disabled miner for narrower pre-entry intersections using session, direction, proof-time bucket, risk bucket, and fine-risk bucket while excluding date/regime and replay/outcome-known fields.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-pre-entry-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-pre-entry-miner -- --broad-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json --pre-entry-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-pre-entry-feature-simulation-1784452244993.json --json.
+Result: Compound pre-entry miner passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-pre-entry-miner-1784452679960.json. It mined 30 promotion-disabled compound scenarios over 378 selected HTF-MSS rows with 92 losses. Top loss-reduction pocket was session=morning|timeBucket=10:00-10:59|riskBucket=risk_gte_24, rejecting 37 rows with 8 winners, 23 losses, 1 unresolved, +226.25 one-MES, leaving 69 selected losses. Stronger zero-winner-cost pockets exist: session=morning|direction=SHORT|riskBucket=risk_gte_24 rejects 19 losses and 0 winners for -3177.50, leaving 73 selected losses; session=morning|timeBucket=11:00-11:59|riskBucket=risk_gte_24 rejects 14 losses and 0 winners for -352.50, leaving 78 selected losses; session=morning|direction=SHORT|fineRiskBucket=risk_24_to_28 rejects 10 losses and 0 winners for -1235.00, leaving 82 selected losses; session=morning|direction=SHORT|timeBucket=11:00-11:59|riskBucket=risk_gte_24 rejects 9 losses and 0 winners for -1942.50, leaving 83 selected losses. livePromotionAllowedRows remains 0. Recommendation: simulate_compound_package.
+Trading logic changed: No. This is a local/read-only compound feature miner. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Individual compound pockets do not prove a live rule. They need a disjoint package simulation to avoid double-counting and to measure selected/rejected W/L/U and one-MES P/L.
+Next recommended action: Build a promotion-disabled compound package simulation using the low-winner-cost pockets, dedupe overlapping rejected rows, and report remaining selected losses before any scanner-visible proposal.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS pre-entry feature simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-pre-entry-feature-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-pre-entry-feature-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Broad feature search found several loss-heavy pre-entry buckets, but the desk needed a promotion-disabled simulation to measure selected/rejected winners, losses, unresolved rows, and one-MES P/L before any implementation request.
