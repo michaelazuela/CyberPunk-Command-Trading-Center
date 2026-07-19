@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Draft OpeningDrive Sweep-only guarded selector proposal.
+Files changed: docs/research/openingdrive-sweep-only-guarded-selector-proposal.md, docs/PROJECT_STATUS.md.
+Reason: Carveout-adjusted readiness cleared the research-accounting blockers and the proposal guard passed. The desk needed a written, locked proposal boundary before any dry-run or live-facing selector work.
+Tests run: Not yet run for this docs-only draft.
+Result: Added a research-only proposal draft scoped only to SweepMssFvgRetrace strict-ready/source-proof-positive candidates. It explicitly does not remove TurtleSoup, does not loosen canExecute, does not touch Discord/Supabase/bridge behavior, and does not change entry/stop/target/risk math. It requires a dry-run comparison before any runtime code change.
+Trading logic changed: No. Documentation/proposal only.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is a proposal draft only; dry-run proof has not been installed yet.
+Next recommended action: Add the dry-run selector comparison required by the proposal before touching scanner behavior.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector carveout-adjusted readiness.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-carveout-adjusted-readiness.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-carveout-adjusted-readiness.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After the unresolved-exclusion drilldown classified all 12 excluded rows as research-accounting carveouts, the desk needed an adjusted readiness surface and a proposal-guard rerun before drafting any guarded selector proposal.
