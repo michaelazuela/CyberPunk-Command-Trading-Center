@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS residue loss drilldown after compound package.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-loss-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-loss-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The zero-winner-cost compound package removed 36 losses but still left 56 selected losses. The desk needed a read-only drilldown over only the selected residue before mining the next separator family.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-loss-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-loss-drilldown -- --broad-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json --package-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation-1784453088375.json --package-name zero_winner_cost_all --json.
+Result: Residue loss drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-loss-drilldown-1784453515935.json. Starting from 378 HTF-MSS selected rows, zero_winner_cost_all rejected 48 rows and left 330 residue rows with 56 losses. Top residue buckets: session:morning has 172 rows, 131 winners, 33 losses, 1 unresolved, +13602.50; direction:LONG has 171 rows, 111 winners, 29 losses, 12 unresolved, +12167.50; direction:SHORT has 159 rows, 120 winners, 27 losses, 5 unresolved, +10793.75; riskBucket:risk_gte_24 has 36 rows, 9 winners, 19 losses, 1 unresolved, +947.50; timeBucket:10:00-10:59 has 69 rows, 47 winners, 16 losses, 1 unresolved, +5898.75; fineRiskBucket:risk_28_to_32 has 22 rows, 4 winners, 13 losses, 0 unresolved, +462.50; sessionDirectionTimeRisk morning|LONG|10:00-10:59|risk_gte_24 has 26 rows, 8 winners, 12 losses, 1 unresolved, +1753.75. livePromotionAllowedRows remains 0. Recommendation: mine_residue_compounds.
+Trading logic changed: No. This is a local/read-only residue drilldown. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Residue buckets are not implementation-ready. Several are profitable broad buckets and must not become rejects without compound simulation.
+Next recommended action: Mine residue-only compound pockets using the remaining selected rows after zero_winner_cost_all, then simulate a second non-overlapping package.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS compound package simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Compound mining found multiple zero-winner-cost pockets, but those pockets can overlap. The desk needed a promotion-disabled package simulation to dedupe rejected rows and measure combined selected/rejected W/L/U and one-MES P/L before any implementation request.
