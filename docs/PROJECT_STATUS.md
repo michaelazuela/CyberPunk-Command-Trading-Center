@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority no-lookahead feature miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The structural separator drilldown found only outcome-only separators. The desk needs a read-only miner that joins source-selection, same-bar, replay package, and scanner decision tape artifacts to search for pre-entry/proof-bar and first-completed-bar no-lookahead features before any scanner-visible ranking change.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-miner.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-miner -- --json.
+Result: No-lookahead feature miner passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-miner-1784468623583.json. It joined 14 installed-priority source rows to saved same-bar reports, replay package rows, and scanner decision tapes. All 14 rows had tape features. It found 2 candidate no-lookahead research features that caught the lone priority-underperformance row and rejected 0 priority-better rows in this saved set: proof_bar_failed_close_through_entry and first_replay_adverse_ge_0_25r. Mixed/not-useful features included proof_bar_bearish, first_replay_bar_bullish, first_replay_closed_through_entry, proof-bar range tags, and favorable first-replay tags. liveInitialRankFeatureRows remains 0, livePromotionAllowedRows remains 0, and broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only no-lookahead feature miner. It consumes saved diagnostic reports and scanner decision tape artifacts only and does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The candidate features are promising but are still based on a tiny saved set with one underperformance row. first_replay_adverse_ge_0_25r is only known after the first replay bar, so it cannot be used for initial publish ranking.
+Next recommended action: Validate proof_bar_failed_close_through_entry and first_replay_adverse_ge_0_25r on fresh scanner artifacts before any live-facing ranking change.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority structural separator drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-separator-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-separator-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Simple risk-size guards did not explain the fresh underperformance without rejecting too many prior priority winners. The desk needs a read-only structural/outcome separator drilldown to identify whether the loser is explained by stop-hit timing, target-delivery timing, MFE/MAE, intrabar ambiguity, or same-bar outcome sequence before any scanner-visible ranking change.
