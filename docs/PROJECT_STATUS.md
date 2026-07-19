@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Run non-overlap OpeningDrive keep-later selector validation.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The broad validation package included overlapping daily and combined reports. The desk needed a cleaner non-overlap check before any approval-boundary proposal.
+Tests run: npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation -- --keep-rule-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-rule-miner-1784478233013.json --full-slate-reports "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run-1784479136106.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-full-slate-dry-run-1784477421004.json" --json; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run -- --validation-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation-1784479979242.json --json.
+Result: Non-overlap validation generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation-1784479979242.json and selector dry run tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run-1784479984846.json. The raw two-candidate keep-all rule was rejected on the non-overlap package: 172 rows, 143 winners, 29 losses, 0.83 win rate, but +225.79 suppression delta, meaning replace-all slightly beat keep-all. The selector kept its edge: keep_long_or_lunch_else_replacement selected 104 keep rows and 68 replacement rows for +13907.59, versus keep-all +10170.00 and replace-all +10395.79. It beat keep-all by +3737.59 and replace-all by +3511.80. installableSeparatorFound remains false.
+Trading logic changed: No. This phase generated local diagnostic reports and updated docs only. It did not edit scanner behavior, setup ranking, Discord, Supabase, bridge, canExecute, or entry/stop/target/risk logic.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The selector is still research-only and needs an approval-boundary contract proving it can be represented without touching live execution, Discord, Supabase, bridge, canExecute, entry, stop, target, or risk behavior.
+Next recommended action: Build a selector approval-boundary dry-run contract for keep_long_or_lunch_else_replacement. It should explicitly prohibit live installation and only state what a future proposal would need to preserve.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later-proof selector dry-run simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-dry-run.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Companion drilldown found conflicting keep/replacement groups. The desk needed a research-only selector simulation before considering any scanner-visible proposal.
