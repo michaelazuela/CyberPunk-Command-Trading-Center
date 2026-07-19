@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive installed collision audit.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-installed-collision-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-installed-collision-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After installing the OpeningDrive clean-pocket ranking preference, the desk needed a read-only saved-report audit to verify whether the installed overlay creates bad selection collisions versus the prior broad OpeningDrive selected set.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-installed-collision-audit.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-installed-collision-audit -- --json.
+Result: Installed collision audit passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-installed-collision-audit-1784461112117.json. Saved-set baseline had 51 rows. Installed overlay package had 44 rows: 22 retained fine-risk rows, 22 added-back clean-pocket rows, and 7 removed rows. The removed rows contained 1 winner, 6 losses, and 0 unresolved. Installed rows had 0 losses, 3 unresolved, +6726.38 one-MES, and +131.22 one-MES versus the baseline +6595.16. Collision risk=low_saved_set_risk and recommendation=continue_to_research_collision_oos.
+Trading logic changed: No. This is a local/read-only saved-report audit. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This audit is still saved-set evidence, not new out-of-sample replay. The installed overlay should now be checked against an OOS/replay collision package before broadening or tuning.
+Next recommended action: Run an out-of-sample/replay collision audit for OpeningDrive installed preference and compare any newly preferred OpeningDrive row against the prior primary desk idea by day/session.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Install OpeningDrive combined clean-pocket ranking preference.
 Files changed: src/types.ts, src/lib/setupScanner.ts, src/lib/unifiedDeskCandidateBook.ts, src/lib/setupScanner.test.ts, src/lib/unifiedDeskCandidateBook.test.ts, docs/PROJECT_STATUS.md.
 Reason: The research approval contract and live-readiness artifact passed. The desk needed the narrow scanner-visible install that prefers approved OpeningDrive clean-pocket candidates after existing deterministic construction/proof gates already produce a candidate.
