@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS residue package simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-package-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-package-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The residue compound miner found a small second-wave zero-winner-cost pocket. The desk needed a promotion-disabled package simulation that combines the original zero_winner_cost_all package with residue-only pockets and dedupes rejected rows before any implementation request.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-package-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-package-simulation -- --broad-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json --package-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation-1784453088375.json --residue-compound-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-compound-miner-1784453995999.json --base-package-name zero_winner_cost_all --json.
+Result: Residue package simulation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-package-simulation-1784454425292.json. It tested 4 second-wave packages over 378 HTF-MSS rows. No zero-selected-loss package exists. base_plus_zero_winner_residue_all selected 319 rows with 231 winners, 47 losses, 17 unresolved, +24081.25 one-MES, while rejecting 59 rows with 0 winners, 45 losses, 1 unresolved, -3677.50. base_plus_low_winner_residue_all selected 314 rows with 230 winners, 43 losses, 17 unresolved, +24313.75, while rejecting 64 rows with 1 winner, 49 losses, 1 unresolved, -3910.00. base_plus_top5_residue_loss selected 302 rows with 223 winners, 42 losses, 16 unresolved, +21511.25, while rejecting 76 rows with 8 winners, 50 losses, 2 unresolved, -1107.50. livePromotionAllowedRows remains 0. Recommendation: continue_feature_search.
+Trading logic changed: No. This is a local/read-only promotion-disabled package simulation. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The zero-winner package is cleaner but still leaves 47 selected losses. The winner-cost package reduces losses more but rejects 8 winners and is not implementation-ready.
+Next recommended action: Add a second residue drilldown after base_plus_zero_winner_residue_all to classify the remaining 47 losses before considering any scanner-visible proposal.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS residue compound miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-compound-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-residue-compound-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The first zero-winner-cost compound package left 330 selected residue rows with 56 losses. The desk needed a residue-only compound miner that excludes already rejected pockets and searches only live-usable pre-entry intersections.
