@@ -119,7 +119,9 @@ assert.equal(report.summary.scannerVisibleChangeAllowedRows, 0);
 assert.equal(report.summary.entryStopTargetRiskDriftRows, 0);
 assert.equal(report.summary.recommendation, 'ready_for_saved_artifact_shadow_package');
 assert.equal(report.rows.find((row) => row.snapshotId === 'long-keep-sweep')?.shadowSelectedSetupType, SetupType.SweepMssFvgRetrace);
+assert.equal(report.rows.find((row) => row.snapshotId === 'long-keep-sweep')?.direction, 'LONG');
 assert.equal(report.rows.find((row) => row.snapshotId === 'short-prefer-replacement')?.shadowSelectedSetupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(report.rows.find((row) => row.snapshotId === 'short-prefer-replacement')?.direction, 'SHORT');
 assert.match(report.markdown, /disabled shadow comparison/);
 
 console.log('OpeningDrive keep-later-proof selector shadow comparison verified.');

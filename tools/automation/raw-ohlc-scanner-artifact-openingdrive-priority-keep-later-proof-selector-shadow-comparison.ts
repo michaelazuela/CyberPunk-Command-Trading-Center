@@ -25,6 +25,7 @@ interface ShadowRow {
   tradeDate: string | null;
   sessionType: UnifiedDeskCandidateDiagnosticSnapshot['sessionType'];
   completedBarTime: string | null;
+  direction: UnifiedDeskCandidateBookItem['direction'];
   groupKey: string;
   groupSize: number;
   baselinePrimaryKey: string | null;
@@ -160,6 +161,7 @@ function shadowRowsForSnapshot(snapshot: UnifiedDeskCandidateDiagnosticSnapshot)
       tradeDate: snapshot.tradeDate || null,
       sessionType: snapshot.sessionType,
       completedBarTime: snapshot.completedBarTime || null,
+      direction: selected.direction,
       groupKey,
       groupSize: selected.collisionMetadata.groupSize,
       baselinePrimaryKey: book.primaryDeskIdea?.candidateKey || null,

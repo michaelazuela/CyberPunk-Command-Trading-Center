@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add selector shadow direction field.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison.test.ts, docs/PROJECT_STATUS.md.
+Reason: The next drilldown needs explicit direction on each disabled shadow row rather than inferring it from groupKey.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison -- --input-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --json; npx tsc --noEmit --pretty false.
+Result: Direction-aware shadow comparison regenerated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison-1784481795693.json. Status pass. Counts are unchanged: 383 snapshots, 375 collision rows, 224 keep_later_sweep_proof, 151 prefer_replacement, 284 would-change-primary rows, and 0 canExecute/live/scanner-visible/entry-stop-target-risk drift rows.
+Trading logic changed: No. This only adds a local/read-only diagnostic report field and does not change scanner ranking, setupScanner, canExecute, entry, stop, target, risk, Discord, Supabase, bridge, or app runtime behavior.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for live behavior. Existing shadow reports generated before this field need to be regenerated for direction-aware drilldowns.
+Next recommended action: Regenerate the shadow comparison report, then build a direction/session/setup drilldown from the disabled shadow rows.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector disabled shadow comparison.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The unified candidate-book now exposes audit-only collision metadata. The desk needs a disabled shadow selector report before any saved-artifact parity or scanner-visible proposal.
