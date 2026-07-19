@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later-proof companion-field drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-companion-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-companion-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Broader validation showed the two-candidate slate rule held in aggregate but failed in the June broad slice. The desk needed a research-only no-lookahead drilldown before any selector proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-companion-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-companion-drilldown -- --validation-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-validation-1784479147924.json --json.
+Result: Drilldown generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-companion-drilldown-1784479386364.json. It analyzed 224 validated two-candidate cases across 13 full-slate reports. Best keep-later-proof groups: direction:LONG (100 rows, 87 winners, 13 losses, 0.87 win rate, -2555.51 suppression delta), session:lunch (104 rows, 87 winners, 17 losses, -1162.48), ordinal_3_to_5 (-1828.01), age_0_to_5m (-1792.43), age_16_to_30m (-1691.19), and replacement:HtfDisplacementMssContinuation (-916.25). Replacement-better groups: trade_date:2026-06-16 (+3225), ordinal_11_plus (+2935), age_31_to_60m (+2295.63), replacement:IntradayMssMicroContinuation (+2091.25), age_61m_plus (+1793.75), direction:SHORT (+1767.61), and session:morning (+374.58). installableSeparatorFound remains false.
+Trading logic changed: No. This is a local/read-only saved-report companion drilldown only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Single-field groups conflict. A selector needs a conservative dry-run simulation before any live-facing proposal.
+Next recommended action: Simulate a conservative no-lookahead selector across the validated two-candidate slates, likely preserving later Sweep proof for LONG/lunch/early-to-mid proof cases and preferring replacement for SHORT/morning/IntradayMssMicroContinuation/late proof cases. Keep it research-only.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Run broader OpeningDrive keep-later-proof validation from saved full-slate reports.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The validation harness initially only saw the discovery full-slate report. The desk needed separate saved full-slate dry runs before considering any live-facing proposal.
