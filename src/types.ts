@@ -1171,6 +1171,24 @@ export interface OneMinuteExecutionRefinement {
   };
 }
 
+export interface SetupCandidateProofSelectionSignal {
+  metadataSource: 'scanner_owned_completed_5m_proof_group';
+  status: 'same_completed_5m_proof_collision' | 'not_applicable';
+  selectorDecision: 'keep_later_sweep_proof' | 'prefer_replacement' | 'not_applicable';
+  completedBarTime: string | null;
+  groupKey: string;
+  groupSize: number;
+  competingSetupTypes: SetupType[];
+  changesCanExecute: false;
+  changesEntryStopTargets: false;
+  changesRiskRules: false;
+  usesOutcomeData: false;
+  usesResearchLabels: false;
+  usesGeminiAdvisoryText: false;
+  usesLiveBridgeReadsInsideRanker: false;
+  scannerVisibleInstallAllowed: false;
+}
+
 export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
@@ -1241,6 +1259,7 @@ export interface SetupCandidate {
   decisionQualityScorecard?: DecisionQualityScoreItem[];
   decisionQualityHardBlocker?: string | null;
   executionRefinement1m?: OneMinuteExecutionRefinement | null;
+  proofSelectionSignal?: SetupCandidateProofSelectionSignal | null;
   rankingOverlays?: Array<{
     name: 'openingdrive_combined_clean_pocket_preference' | string;
     scoreAdjustment: number;

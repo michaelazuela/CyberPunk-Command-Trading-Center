@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector type-only proofSelectionSignal boundary.
+Files changed: src/types.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-type-only.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The runtime signal contract recommended a type-only `SetupCandidate` metadata shape before any scanner-owned population or ranking consumer. This adds the optional `proofSelectionSignal` type with locked false safety fields and no runtime usage.
+Tests run: npm run test:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-type-only; npx tsc --noEmit --pretty false; rg -n "proofSelectionSignal|keep_later_sweep_proof" src/lib/setupScanner.ts src/types.ts tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-type-only.test.ts.
+Result: Type-only boundary passed. `SetupCandidateProofSelectionSignal` exists with scanner-owned metadata source, same-completed-5M collision status, selector decision, completed bar time, group key, group size, competing setup types, and locked false fields for canExecute/entry-stop-target/risk/outcome/research/Gemini/live-bridge/ranker visibility. `setupScanner.ts` still has no `proofSelectionSignal` or `keep_later_sweep_proof` consumer.
+Trading logic changed: No. This is a type-only boundary. It does not populate the signal, rank on it, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The type exists but no scanner-owned metadata builder exists yet, so runtime selection remains unchanged.
+Next recommended action: Add a read-only scanner metadata builder dry-run that can compute `proofSelectionSignal` from app-owned completed 5M proof groups without changing rank order or scanner-visible behavior.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector runtime signal contract.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The runtime signal audit proved that `keep_later_sweep_proof` is still research/unified-book metadata and not a scanner-owned live signal. This contract defines the exact optional scanner-owned `proofSelectionSignal` metadata needed before any ranking consumer can be considered.

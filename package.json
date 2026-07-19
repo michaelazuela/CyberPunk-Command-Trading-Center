@@ -257,6 +257,7 @@
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-approval-checkpoint": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-approval-checkpoint.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-audit": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-audit.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-contract": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-contract.ts",
+    "test:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-type-only": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-type-only.test.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-context-miner.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-rollup.ts",
     "research:raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue": "tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-structural-validation-queue.ts",
