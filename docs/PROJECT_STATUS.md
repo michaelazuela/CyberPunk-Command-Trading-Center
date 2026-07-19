@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add positive-lane top-selection validation for proofSelectionSignal research.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-top-selection-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-top-selection-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The positive-lane overlay improved precision but had low recall, so it needed a same date/session top-selection simulation before any runtime rank proposal. This validation compares earliest retained slate selection against an overlay that prefers the earliest positive-lane slate when present.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-top-selection-validation.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-top-selection-validation -- --overlay-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-overlay-simulation-1784504818812.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-top-selection-validation-1784505163847.json. Status pass. Date/session groups: 25. Changed selections: 0. Baseline/overlay winner selections: 18/18. Baseline/overlay gross resolved one-MES P/L: 1868.75/1868.75. Gross resolved one-MES P/L delta: 0. runtimeRankConsumerAllowedByThisReport remains false. Recommendation is do_not_install_no_effect_runtime_boost.
+Trading logic changed: No. This is a local/read-only saved-report top-selection validation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The positive lane remains useful as a diagnostic description but has no measured top-selection impact on this saved set.
+Next recommended action: Mine richer same-session competition fields or validate on a dataset where multiple retained candidates actually compete for top selection before any scanner-visible rank consumer.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add positive-lane overlay simulation for proofSelectionSignal research.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-overlay-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-overlay-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The retained residue separator miner found two clean positive lanes: riskBucket=risk_lt_10 and proofWindow=proof_14_to_15. This simulation measures the union of those lanes as a research-only priority boost and explicitly checks precision versus winner recall so it cannot be mistaken for a hard filter.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: The overlay is high precision but low recall; using it as a hard filter would discard many winners.
 Next recommended action: Validate the positive lane as a priority boost in a top-slate selection simulation when multiple retained candidates compete, not as a hard exclusion.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add retained residue separator miner for proofSelectionSignal research.
