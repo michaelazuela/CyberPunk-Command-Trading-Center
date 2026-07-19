@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive OOS collision readiness post-processor.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-collision-readiness.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-collision-readiness.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The installed collision audit was clean on the saved OpeningDrive set, but the desk needed an explicit OOS readiness check before broadening or tuning the installed overlay.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-collision-readiness.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-oos-collision-readiness -- --json.
+Result: OOS collision readiness passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-oos-collision-readiness-1784461516365.json. Installed saved-set audit remains pass with 44 installed rows, 0 losses, and +131.22 one-MES versus baseline. Existing transfer-stable OOS chain had 117 source rows, but selected 0 rows and had 0 zero-loss stable positive buckets. Decision=saved_set_clean_oos_not_yet_validated and recommendation=build_new_oos_replay_collision_package.
+Trading logic changed: No. This is a local/read-only post-processor. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Current transfer-stable OOS evidence is not enough to broaden the OpeningDrive overlay or apply it to other families. The installed overlay should remain unchanged until a dedicated OOS replay collision package exists.
+Next recommended action: Build a dedicated OpeningDrive OOS replay collision package that compares installed-overlay preference against prior primary desk idea by day/session/proof event, then measure W/L/O/U and one-MES P/L.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive installed collision audit.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-installed-collision-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-installed-collision-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After installing the OpeningDrive clean-pocket ranking preference, the desk needed a read-only saved-report audit to verify whether the installed overlay creates bad selection collisions versus the prior broad OpeningDrive selected set.
