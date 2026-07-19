@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add transfer-stable zero-loss selector simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The transfer-stability miner found zero-loss subsegments, but the desk still needed proof that selecting at most one candidate per proof event from those subsegments remains clean before considering any scanner-visible proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation.test.ts; npx tsx tools/automation/raw-ohlc-scanner-artifact-transfer-stability-miner.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-transfer-stable-selector-simulation -- --transfer-stability-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stability-miner-1784436364289.json --samebar-reports tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --json; npm run research:raw-ohlc-scanner-artifact-transfer-stable-selector-simulation -- --transfer-stability-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stability-miner-1784436364289.json --samebar-reports [July 3-July 17 daily same-bar reports] --json; git diff --check.
+Result: Selector reports passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation-1784436768886.json and tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-transfer-stable-selector-simulation-1784436769550.json. June set: 1746 source rows, 1035 proof events, 39 selected, 39 winners, 0 losses, 0 unresolved, +2473.80 one-MES, avg risk 6.33, 7 zero-loss buckets used. July set: 704 source rows, 409 proof events, 40 selected, 33 winners, 0 losses, 4 other resolved, 3 unresolved, +2382.50 one-MES, avg risk 6.55, 8 zero-loss buckets used. Recommendation remains fresh_replay_validate_selector before any scanner-visible proposal.
+Trading logic changed: No. This is a local/read-only selector simulation over saved same-bar and transfer-stability reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is still saved-report research. The selector is clean on the current June/July same-bar artifacts, but it must be validated on fresh replay and must not bypass completed 5M proof, protected stop, target room, canExecute, or no-chase rules.
+Next recommended action: Build the fresh replay validation package for the 79 selected zero-loss transfer-stable rows, including day/session/model P/L and reason codes for the 3 unresolved July rows.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add transfer-stability miner for unified same-bar research buckets.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-transfer-stability-miner.ts, tools/automation/raw-ohlc-scanner-artifact-transfer-stability-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Cross-period testing showed the strict bucket rank simulation overfit. The desk needed a repeatable read-only tool that compares train/test same-bar bucket performance, including deeper no-lookahead metadata combinations, before any scanner-visible rank proposal.
