@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive combined clean-pocket simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The tight-long miner found reusable zero-loss pockets inside the rows removed by the fine-risk-only dry run. The desk needed a research-only package simulation to test whether fine-risk plus clean tight-long pockets improves the slate without reintroducing losses.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-simulation -- --json.
+Result: Combined clean-pocket simulation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-simulation-1784459301092.json. Baseline broad selected remained 51 rows, 39 winners, 6 losses, 3 other-resolved, 3 unresolved, +6595.16 one-MES. Fine-risk-only remained 22 rows, 20 winners, 0 losses, 2 other-resolved, 0 unresolved, +5728.80 one-MES, delta -866.36 versus broad. Fine-risk plus the strongest tight-long pocket, 10:00-10:59|risk_4_to_5, produced 31 rows, 29 winners, 0 losses, 2 other-resolved, 0 unresolved, +6121.34 one-MES, improving fine-risk-only by +392.54 while still trailing broad by -473.82. Fine-risk plus all live-usable zero-loss tight-long buckets produced 44 rows, 38 winners, 0 losses, 3 other-resolved, 3 unresolved, +6726.38 one-MES, improving fine-risk-only by +997.58 and broad selected by +131.22 while removing all 6 broad selected losses. livePromotionAllowedRows remains 0 for every scenario.
+Trading logic changed: No. This is a local/read-only saved-report package simulation. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The all-live-zero-loss bucket package is still mined from the same saved set and may overfit. It includes unresolved rows and must be contract-checked before any implementation proposal. Date buckets remain research context only and are not part of the simulated live-usable package.
+Next recommended action: Add a research-only approval contract for the combined clean-pocket OpeningDrive package. The contract should assert no date-bucket dependency, no live promotion rows, no selected losses, positive delta versus fine-risk-only and broad baseline, and exact scanner-visible behavior that would be proposed later if explicitly approved.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive tight-long lane miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-tight-long-lane-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-tight-long-lane-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fine-risk slate dry-run removed all 6 selected losses, but it also removed 19 winners from the broader OpeningDrive selected set. The desk needed a research-only miner to decide whether the removed tight_long_risk_4_to_8 lane has reusable clean pockets instead of treating the whole lane as bad.
