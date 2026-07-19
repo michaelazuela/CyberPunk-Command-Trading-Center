@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority loss profile.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Fresh feature rollup proved proof_bar_failed_close_through_entry is too narrow for live rank use. The desk needed a read-only de-duped profile of installed OpeningDrive priority losses to separate pre-entry rank evidence from post-entry research-only warnings before considering any scanner-visible filter.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile -- --miner-reports "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-miner-1784472758858.json" --json.
+Result: Priority loss profile passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-loss-profile-1784473000599.json. The profiler consumed the broad saved miner report, removed 13 duplicate rows, and evaluated 22 de-duped installed-priority rows. Priority P/L remained +2553.75 with 3 loss rows and 19 non-loss rows. No initial-rank feature survived: proof_time_ge_1020, risk_points_9_to_10, proof_bar_range_ge_0_9r, proof_bar_range_ge_1r, proof_bar_bullish, and proof_bar_closed_through_entry all also appeared on priority non-loss rows. The cleanest adverse signals were post-entry research-only tags: first_replay_adverse_ge_0_25r, first_replay_adverse_ge_0_5r, first_replay_close_adverse, and first_replay_failed_close_through_entry caught 2 loss rows with 0 non-loss rows, but they occur after the candidate would already be published and must not be used for initial scanner ranking. Recommendation is do_not_install_initial_rank_filter.
+Trading logic changed: No. This is a local/read-only profile over saved miner reports only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The July 15 priority losses are real, but current pre-entry fields do not provide a clean filter without rejecting profitable priority rows. The strongest separator is post-entry only.
+Next recommended action: Keep installed OpeningDrive priority behavior unchanged. Next narrow research should mine pre-entry structural context not yet in this profile, such as prior swing compression, distance to active liquidity objective, and repeated-entry freshness, before considering any scanner-visible penalty.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority fresh feature rollup.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-rollup.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-fresh-feature-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Fresh unseen replay checks for July 15, July 16, and July 17 showed that proof_bar_failed_close_through_entry did not fire on new OpeningDrive priority collision reports. The desk needed a durable read-only rollup across July 9 and the fresh July 15-17 reports before deciding whether to install or reject the feature.
