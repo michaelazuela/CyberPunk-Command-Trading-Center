@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive combined clean-pocket approval contract.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The combined clean-pocket simulation produced a loss-free package that beat both fine-risk-only and broad selected baselines. The desk needed a strict approval contract before any future scanner-visible proposal or implementation phase.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-approval-contract.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-approval-contract -- --json.
+Result: Approval contract passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-approval-contract-1784459657788.json. Target scenario fine_risk_plus_all_live_zero_loss_tight_buckets passed all 10 gates with 44 rows, 38 winners, 0 losses, 3 other-resolved, 3 unresolved, +6726.38 one-MES, +997.58 versus fine-risk-only, and +131.22 versus broad selected. It added 22 tight-long rows with 18 winners and 0 losses. failedGateCount=0, livePromotionAllowedRows=0, decision=approved_for_research_proposal_only. The contract explicitly disallows date-bucket dependency and keeps scannerVisibleInstallAllowedNow=false.
+Trading logic changed: No. This is a local/read-only approval-contract artifact. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This contract approves only a research proposal path. It does not prove live scanner collision behavior, ranking tie-breaks, or behavior on future data. The package includes 3 unresolved rows, so any scanner-visible proposal still needs a separate readiness artifact and explicit implementation approval.
+Next recommended action: Build a live-proposal/readiness artifact for the OpeningDrive combined clean-pocket package that states the exact ranking overlay, collision/tie-break behavior, implementation files that would be touched, rollback plan, and verification requirements without installing it.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive combined clean-pocket simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The tight-long miner found reusable zero-loss pockets inside the rows removed by the fine-risk-only dry run. The desk needed a research-only package simulation to test whether fine-risk plus clean tight-long pockets improves the slate without reintroducing losses.
