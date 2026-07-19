@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority campaign dedupe dry-run comparison.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-dry-run-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-dry-run-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The approval contract proved earliest-only same-campaign dedupe preserved boundaries, but the desk still needed a fresh scanner-outcome dry run to compare broad current Sweep rows versus deduped campaign-lead rows before any scanner-visible proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-dry-run-comparison.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-dry-run-comparison -- --replay-package-outcome "tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784474838098.json" --approval-contract "tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-approval-contract-1784476346009.json" --json.
+Result: Dry-run comparison passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-dry-run-comparison-1784476824941.json. It evaluated 848 saved replay outcome rows, including 331 resolved SweepMssFvgRetrace rows across 48 exact campaigns. Earliest-only dedupe selected 48 rows, suppressed 283 duplicate rows, matched the approval-contract selected ticket IDs, kept entry/stop/target/risk drift rows at 0, kept canExecute and Discord change rows at 0, and kept livePromotionAllowedRows at 0. The result is not install-ready: current broad Sweep rows were +20442.50 one-MES P/L, while deduped campaign leads were +1767.50, a -18675.00 delta. Dedupe improves some loss-heavy clusters but removes many profitable later duplicate rows.
+Trading logic changed: No. This is a local/read-only dry-run comparison over saved replay outcome rows only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Earliest-only dedupe is too blunt as a live-facing proposal. It reduces repeated loss clusters but also discards profitable later duplicate proofs. Do not install scanner-visible dedupe from this evidence.
+Next recommended action: Build a full collision-ranking dry run that asks the real question: when a duplicate Sweep campaign appears in the same slate as other model candidates, does suppressing the duplicate improve the selected primary review ticket without hiding a better non-Sweep candidate?
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority campaign dedupe approval contract.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-dedupe-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The campaign re-entry simulation showed post-stop re-entry worsened results, while earliest-only same-campaign dedupe remained positive. The desk needed a read-only approval contract to prove the dedupe proposal preserves entry/stop/target/risk, canExecute, and Discord boundaries before any future live-facing dry run.
