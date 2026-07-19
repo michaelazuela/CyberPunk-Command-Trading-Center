@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive combined clean-pocket live proposal readiness artifact.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-live-proposal.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-live-proposal.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The combined clean-pocket approval contract passed as research-proposal-only. The desk needed a final planning-side readiness artifact that states the exact scanner-visible overlay, disallowed inputs, unchanged boundaries, likely files, rollback plan, and verification commands before any implementation phase.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-live-proposal.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-live-proposal -- --json.
+Result: Live proposal readiness artifact passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-live-proposal-1784460005364.json. Readiness decision=ready_for_explicit_implementation_approval with failedGateCount=0. Proposed overlay is openingdrive_combined_clean_pocket_preference for OpeningDriveFvgContinuation. It would prefer candidates matching fine_risk_24_to_32 or tight_long_risk_4_to_8 rows matching approved live-usable zero-loss bucket criteria, but only after existing deterministic candidate construction and proof gates already succeed. It explicitly disallows tradeDate/date buckets, outcome labels/P/L, Discord/RAG button labels, and Gemini/advisory text. It keeps scannerVisibleInstallAllowedNow=false and requiredFutureApproval=true.
+Trading logic changed: No. This is a local/read-only live-proposal readiness artifact. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The next step would be scanner-visible ranking behavior. Even if implemented as a narrow overlay after deterministic gates, it must be treated as a trading/model-selection behavior change and requires explicit implementation approval.
+Next recommended action: If approved, implement the OpeningDrive combined clean-pocket preference as a narrow scanner-visible ranking overlay after existing deterministic gates only. Do not change canExecute, entry/stop/target/risk math, Discord posting, Supabase schema, bridge behavior, or automated execution.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive combined clean-pocket approval contract.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The combined clean-pocket simulation produced a loss-free package that beat both fine-risk-only and broad selected baselines. The desk needed a strict approval contract before any future scanner-visible proposal or implementation phase.
