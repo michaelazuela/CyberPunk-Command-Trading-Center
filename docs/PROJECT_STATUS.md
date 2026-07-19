@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector shadow coverage queue.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-coverage-queue.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-coverage-queue.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The separator miner showed promising buckets but incomplete evidence. The desk needed a read-only queue of exactly which unmatched shadow groups need saved outcome replay before any live-facing selector proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-coverage-queue.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-coverage-queue -- --outcome-join tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-outcome-join-1784482962561.json --json.
+Result: Coverage queue generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-coverage-queue-1784483759678.json. Status pass. It queued 50 unmatched groups, 299 unmatched shadow rows, and 217 would-change-primary rows. Queue mix: 26 keep-later Sweep proof groups and 24 prefer-replacement groups. Top missing keys: 2026-06-23 evening SweepMssFvgRetrace LONG keep_later_sweep_proof (41 rows / 29 would-change), 2026-06-23 evening TurtleSoup SHORT prefer_replacement (37 / 0), 2026-06-30 evening SweepMssFvgRetrace LONG keep_later_sweep_proof (26 / 23), 2026-06-14 evening TurtleSoup SHORT prefer_replacement (18 / 18), and 2026-06-12 lunch SweepMssFvgRetrace SHORT keep_later_sweep_proof (17 / 17). Recommendation is build_missing_outcome_replay_package.
+Trading logic changed: No. This is a local/read-only saved-report queue only. It does not replay OHLC, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This queue identifies missing research evidence only. It does not classify the missing keys as wins or losses and does not support live selector installation by itself.
+Next recommended action: Build a saved-outcome replay package for the queued missing keys, prioritizing the top 10 keys by shadowRows and would-change-primary rows.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector shadow separator miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-separator-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-separator-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The outcome join found 15 matched shadow groups but 50 unmatched groups. The desk needed a research-only separator miner that studies only joined evidence and refuses to promote live behavior while coverage remains incomplete.
