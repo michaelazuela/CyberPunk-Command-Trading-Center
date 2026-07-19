@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive OOS installed priority comparison.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-installed-priority-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-installed-priority-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After installing the same-event Sweep/HTF priority overlay, the desk needed read-only proof that the installed candidate-book ranking path reproduces the OOS proposal without touching live scanner, Discord, Supabase, bridge behavior, canExecute, or trade math.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-installed-priority-comparison.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-oos-installed-priority-comparison -- --json.
+Result: Installed priority comparison passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-oos-installed-priority-comparison-1784464776730.json. The installed path selected Sweep/HTF priority on 13 of 13 comparable OOS rows, selected OpeningDrive on 0 rows, created 0 canExecute=true rows, and had 0 approval-boundary drift rows. It preserved the proposal evidence: priority losses 0 and proposal delta +1365.61 one-MES.
+Trading logic changed: No. This is a local/read-only installed-comparison artifact. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves the installed candidate-book overlay behavior against saved OOS validation rows with deterministic fixture levels. It does not yet run a fresh scanner-artifact selection comparison from source artifacts.
+Next recommended action: Run a fresh read-only scanner-artifact selection comparison using saved artifacts only. Do not touch tradeDecisionPipeline, Discord, Supabase, bridge behavior, or execution gates.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Install OpeningDrive same-event Sweep/HTF priority overlay.
 Files changed: src/lib/unifiedDeskCandidateBook.ts, src/lib/unifiedDeskCandidateBook.test.ts, docs/PROJECT_STATUS.md.
 Reason: The approved live proposal showed clean same-direction SweepMssFvgRetrace or HtfDisplacementMssContinuation candidates outperformed OpeningDrive at the same completed 5M proof event. The desk needed the narrow runtime ranking overlay without removing OpeningDrive or changing execution gates.
