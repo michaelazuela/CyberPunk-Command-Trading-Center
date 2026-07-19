@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS broad selected-loss drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-selected-loss-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-selected-loss-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Broad validation showed the two-separator HTF-MSS package still selected 92 stopped-before-T1 losses. The desk needed a read-only loss drilldown to identify the largest no-lookahead separator families before any further simulation.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-selected-loss-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-selected-loss-drilldown -- --broad-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json --json.
+Result: Broad selected-loss drilldown passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-selected-loss-drilldown-1784450833681.json. It inspected 378 broad selected HTF-MSS rows and found 92 losses totaling -10740.00 one-MES. Dominant risk bucket: risk_gte_24 with 46 losses. Dominant time bucket: 10:00-10:59 with 27 losses. Dominant combo: morning|LONG|10:00-10:59|risk_gte_24 with 15 losses and -2281.25 one-MES. Next largest combos were morning|SHORT|11:00-11:59|risk_gte_24 with 9 losses and -1942.50, morning|SHORT|10:00-10:59|risk_gte_24 with 8 losses and -980.00, morning|LONG|11:00-11:59|risk_gte_24 with 5 losses and -912.50, and lunch|SHORT|15:00-15:59|risk_8_to_16 with 5 losses and -262.50. livePromotionAllowedRows remains 0. Recommendation: build_broad_loss_separator_simulation.
+Trading logic changed: No. This is a local/read-only selected-loss drilldown. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This identifies loss clusters, not a safe implementation. The next simulation must measure rejected winners before any rule or rank penalty is considered.
+Next recommended action: Build a promotion-disabled broad loss separator simulation that first tests risk_gte_24 and the largest session/direction/time/risk combos, then reports selected/rejected W/L/U and one-MES P/L with livePromotionAllowedRows=0.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS two-separator broad validation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The two-separator package was clean in the narrow saved HTF-MSS package, but the desk needed a broader saved-report validation before any implementation request.
