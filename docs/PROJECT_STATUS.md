@@ -2,6 +2,21 @@
 
 ## Latest Change
 
+Date: 2026-07-19
+Task: Add OpeningDrive fresh replay package.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The OpeningDrive pivot readiness audit showed a clean but undersized selected sample. The desk needed a read-only fresh replay package over saved same-bar scanner artifacts before considering any OpeningDrive proposal update.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package -- --json.
+Result: OpeningDrive fresh replay package passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package-1784457133714.json. It aggregated 14 same-bar separator reports, 371 source OpeningDriveFvgContinuation rows, 222 deduped rows, and 222 proof events. The package selected 51 rows with 39 winners, 6 losses, 3 other-resolved, 3 unresolved, +6595.16 one-MES, and 0 live-promotion rows. Rejected rows still contain 56 losses. Selector split shows the problem: tight_long_risk_4_to_8 selected 29 rows with 19 winners, 6 losses, 1 other-resolved, 3 unresolved, +866.36, while fine_risk_24_to_32 selected 22 rows with 20 winners, 0 losses, 2 other-resolved, 0 unresolved, +5728.80. Recommendation remains mine_openingdrive_separator because the broad package is not loss-free.
+Trading logic changed: No. This is a local/read-only promotion-disabled replay package. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The full OpeningDrive package is profitable but not clean. Only the fine_risk_24_to_32 selector is currently loss-free in this package, and it needs isolated validation before any proposal update.
+Next recommended action: Add an OpeningDrive fine-risk validation package that isolates fine_risk_24_to_32 across saved artifacts, reports day/session/model P/L and unresolved rows, and proves whether that lane can become a research-only proposal candidate.
+
+## Previous Change
+
 Date: 2026-07-18
 Task: Add OpeningDrive pivot readiness audit.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-pivot-readiness-audit.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-pivot-readiness-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
