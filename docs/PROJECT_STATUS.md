@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add formal promotion-disabled HTF-MSS-only proposal package.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-live-proposal.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-live-proposal.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The HTF-MSS-only simulation selected 5 rows, resolved 4, and produced +655.00 one-MES while keeping promotion disabled. The desk needed a formal proposal package that captures the exact future approval-gated criteria and locked prohibitions before any scanner-visible implementation discussion.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-live-proposal.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-live-proposal -- --htf-mss-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-only-simulation-1784446374691.json --json.
+Result: Proposal package passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-live-proposal-1784446716041.json. Evidence captured: selected rows 5, selected resolved/unresolved 4 / 1, selected resolved gross one-MES P/L +655.00, live promotion allowed rows 0. Proposal criteria: original top no_chase_or_stale_original, replacement HtfDisplacementMssContinuation, replacement coverage ready_for_replay_package, promotion disabled until separate approval checkpoint, 5M deterministic gates unchanged. Recommendation: ready_for_approval_checkpoint.
+Trading logic changed: No. This is a local/read-only proposal package. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The proposal is ready for an approval checkpoint, but no live-facing implementation has been installed. A future implementation still needs explicit approval and regression proof that Discord/Supabase/bridge/canExecute/entry-stop-target-risk behavior remains unchanged.
+Next recommended action: Before any live-facing implementation, prepare an approval-gate checklist and implementation regression contract for the HTF-MSS-only overlay. If approval is not given, continue research by broadening validation to additional days without installing behavior.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add promotion-disabled HTF-MSS-only overlay simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-only-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-only-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The model/tag cross-tab showed the useful resolved replacement evidence was isolated to HtfDisplacementMssContinuation, while non-HTF-MSS replacements were negative or unresolved. The desk needed a small promotion-disabled simulation to test only that subset before any live-facing proposal.
