@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Install OpeningDrive same-event Sweep/HTF priority overlay.
+Files changed: src/lib/unifiedDeskCandidateBook.ts, src/lib/unifiedDeskCandidateBook.test.ts, docs/PROJECT_STATUS.md.
+Reason: The approved live proposal showed clean same-direction SweepMssFvgRetrace or HtfDisplacementMssContinuation candidates outperformed OpeningDrive at the same completed 5M proof event. The desk needed the narrow runtime ranking overlay without removing OpeningDrive or changing execution gates.
+Tests run: npx tsx src/lib/unifiedDeskCandidateBook.test.ts; npx tsc --noEmit --pretty false.
+Result: Focused regression passed. Same-event same-direction Sweep now outranks a higher-confidence OpeningDrive candidate only when the unified book has a completedBarTime proof event; without completedBarTime, OpeningDrive keeps its normal ranking. The book still reports canExecute=false, preserves entry/stop/targets, and leaves approvalBoundary unchanged.
+Trading logic changed: Yes, narrowly. File: src/lib/unifiedDeskCandidateBook.ts. Function: buildUnifiedDeskCandidateBook / openingDriveSameEventPriorityPenalty. Behavior changed: OpeningDrive receives a rank-score penalty only when a clean same-direction SweepMssFvgRetrace or HtfDisplacementMssContinuation candidate shares the completed 5M proof event. It does not approve execution.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This changes unified ranking order for a narrow collision class. It does not change setup creation, canExecute, entry, stop, targets, risk, Discord, Supabase, bridge behavior, or automated execution.
+Next recommended action: Run full verification, commit, push, then run a read-only scanner-artifact comparison to confirm the installed overlay reproduces the proposal results on the OOS set.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive OOS priority live proposal.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-priority-live-proposal.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-oos-priority-live-proposal.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Broader OOS validation supported a same-event same-direction Sweep/HTF priority rule over OpeningDrive, but scanner-visible ranking changes require a separate proposal with gates, disallowed inputs, unchanged boundaries, rollback, and verification plan.

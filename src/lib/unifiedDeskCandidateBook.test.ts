@@ -131,6 +131,46 @@ assert.equal(openingDriveOverlayBook.primaryDeskIdea?.entry, openingDriveOverlay
 assert.equal(openingDriveOverlayBook.primaryDeskIdea?.stop, openingDriveOverlay.stop);
 assert.equal(openingDriveOverlayBook.approvalBoundary.changesCanExecute, false);
 
+const openingDriveSameEvent = candidate({
+  setupType: SetupType.OpeningDriveFvgContinuation,
+  scenarioLabel: 'same-event-opening-drive',
+  direction: 'LONG',
+  modelConfidenceScore: 95,
+  decisionQualityScore: 95,
+  priority: 96,
+  requiredTrigger: 'Completed 5M FVG retest confirmed.',
+  nextAction: 'Human-review ticket only.',
+});
+const sweepSameEvent = candidate({
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'same-event-sweep',
+  direction: 'LONG',
+  modelConfidenceScore: 88,
+  decisionQualityScore: 88,
+  priority: 88,
+  requiredTrigger: 'Completed 5M retest/re-entry proof confirmed.',
+  nextAction: 'Human-review ticket only.',
+});
+const sameEventPriorityBook = buildUnifiedDeskCandidateBook({
+  sessionType: 'morning',
+  completedBarTime: '2026-07-17T10:05:00.0000000',
+  candidates: [openingDriveSameEvent, sweepSameEvent],
+});
+assert.equal(sameEventPriorityBook.primaryDeskIdea?.candidateKey, 'SweepMssFvgRetrace|same-event-sweep|LONG|100.00|1');
+assert.equal(sameEventPriorityBook.primaryDeskIdea?.canExecute, false);
+assert.equal(sameEventPriorityBook.primaryDeskIdea?.entry, sweepSameEvent.entry);
+assert.equal(sameEventPriorityBook.primaryDeskIdea?.stop, sweepSameEvent.stop);
+assert.equal(sameEventPriorityBook.candidates[1].setupType, SetupType.OpeningDriveFvgContinuation);
+assert.equal(sameEventPriorityBook.approvalBoundary.changesCanExecute, false);
+assert.equal(sameEventPriorityBook.approvalBoundary.changesEntryStopTargets, false);
+assert.equal(sameEventPriorityBook.notes.some((note) => note.includes('same-direction Sweep/HTF')), true);
+
+const noProofTimePriorityBook = buildUnifiedDeskCandidateBook({
+  sessionType: 'morning',
+  candidates: [openingDriveSameEvent, sweepSameEvent],
+});
+assert.equal(noProofTimePriorityBook.primaryDeskIdea?.candidateKey, 'OpeningDriveFvgContinuation|same-event-opening-drive|LONG|100.00|0');
+
 const afterLunchInWindow = candidate({
   setupType: SetupType.AfterLunchDriveFvgContinuation,
   scenarioLabel: 'in-window',

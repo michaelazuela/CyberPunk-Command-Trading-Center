@@ -100,6 +100,7 @@ const STATE_ORDER: Record<UnifiedDeskCandidateState, number> = {
   no_trade: 1,
 };
 const INVALID_STOP_SWEEP_RANK_PENALTY = 18;
+const OPENING_DRIVE_SAME_EVENT_SWEEP_HTF_PRIORITY_PENALTY = 14;
 
 function finitePrice(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
@@ -287,6 +288,36 @@ function invalidStopSweepRankPenalty(candidate: SetupCandidate): number {
     : 0;
 }
 
+function isOpeningDriveSameEventPriorityModel(setupType: SetupType): boolean {
+  return setupType === SetupType.SweepMssFvgRetrace ||
+    setupType === SetupType.HtfDisplacementMssContinuation;
+}
+
+function hasInvalidStopBlocker(candidate: SetupCandidate): boolean {
+  return candidate.executionStatus === ExecutionStatus.Blocked &&
+    candidate.blockReason === NoTradeReason.InvalidStopLocation;
+}
+
+function openingDriveSameEventPriorityPenalty(args: {
+  item: UnifiedDeskCandidateBookItem;
+  candidates: UnifiedDeskCandidateBookItem[];
+  completedBarTime: string | null | undefined;
+}): number {
+  if (!args.completedBarTime) return 0;
+  if (args.item.setupType !== SetupType.OpeningDriveFvgContinuation) return 0;
+  const hasCleanPriorityCandidate = args.candidates.some((other) =>
+    other.candidateKey !== args.item.candidateKey &&
+    other.direction === args.item.direction &&
+    isOpeningDriveSameEventPriorityModel(other.setupType) &&
+    other.state !== 'blocked' &&
+    other.state !== 'no_trade' &&
+    other.fiveMinuteProofStatus !== 'missing' &&
+    hasFullPlanLevels(other.sourceCandidate) &&
+    !hasInvalidStopBlocker(other.sourceCandidate)
+  );
+  return hasCleanPriorityCandidate ? OPENING_DRIVE_SAME_EVENT_SWEEP_HTF_PRIORITY_PENALTY : 0;
+}
+
 function rankingOverlayScore(candidate: SetupCandidate): number {
   return (candidate.rankingOverlays || []).reduce((sum, overlay) => (
     Number.isFinite(overlay.scoreAdjustment) ? sum + overlay.scoreAdjustment : sum
@@ -355,7 +386,7 @@ export function buildUnifiedDeskCandidateBook(input: UnifiedDeskCandidateBookInp
     writesSupabase: false,
   };
 
-  const candidates = input.candidates.map((candidate, index) => {
+  const scoredCandidates = input.candidates.map((candidate, index) => {
     const key = buildUnifiedDeskCandidateKey(candidate, index);
     const canExecute = Boolean(input.canExecuteByCandidateKey?.[key]);
     const afterLunchBlocker = afterLunchWindowBlocker(input, candidate);
@@ -393,6 +424,17 @@ export function buildUnifiedDeskCandidateBook(input: UnifiedDeskCandidateBookInp
       approvalBoundary,
       ...scores,
     } satisfies UnifiedDeskCandidateBookItem;
+  });
+
+  const candidates = scoredCandidates.map((item) => {
+    const sameEventPriorityPenalty = openingDriveSameEventPriorityPenalty({
+      item,
+      candidates: scoredCandidates,
+      completedBarTime: input.completedBarTime,
+    });
+    return sameEventPriorityPenalty > 0
+      ? { ...item, score: Math.round(bounded(item.score - sameEventPriorityPenalty) * 100) / 100 }
+      : item;
   }).sort((a, b) =>
     STATE_ORDER[b.state] - STATE_ORDER[a.state] ||
     b.score - a.score ||
@@ -438,6 +480,7 @@ export function buildUnifiedDeskCandidateBook(input: UnifiedDeskCandidateBookInp
       'The highest-ranked idea is the primary desk read, not automatic execution approval.',
       'Trading model confidence is scored from app-owned internal model evidence; Gemini/advisory narrative is excluded.',
       'canExecute is preserved only as a compatibility final execution flag and is never created by this book.',
+      'When OpeningDrive and clean same-direction Sweep/HTF candidates share the completed 5M proof event, Sweep/HTF ranks first for review without changing execution gates.',
       'Discord, Supabase, bridge behavior, entry, stop, target, risk, and trading rules are unchanged.',
     ],
   };
