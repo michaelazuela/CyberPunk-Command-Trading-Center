@@ -169,6 +169,7 @@ assert.equal(report.modelSummaries[0].setupType, 'AfterLunchDriveFvgContinuation
 assert.equal(report.modelSummaries[0].firstReplayBarStopRows, 1);
 assert.equal(report.modelSummaries[0].firstReplayBarT1Rows, 1);
 assert.equal(report.rows.find((row) => row.ticketId === 'same-bar-loss')?.separatorTags.includes('first_replay_bar_stop'), true);
+assert.equal(report.rows.find((row) => row.ticketId === 'same-bar-loss')?.timeBucket, '13:00-13:59');
 assert.match(report.markdown, /Same-Bar Separator Drilldown/);
 
 assert.throws(

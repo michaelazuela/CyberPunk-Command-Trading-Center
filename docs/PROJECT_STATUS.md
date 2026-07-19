@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add OpeningDrive same-bar model separator research post-processor.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-samebar-model-separator.ts, tools/automation/raw-ohlc-scanner-artifact-samebar-model-separator.test.ts, tools/automation/raw-ohlc-scanner-artifact-samebar-separator-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-samebar-separator-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The broad June 1-July 2 repaired raw-OHLC replay showed OpeningDriveFvgContinuation as the best same-bar allowlist hypothesis, but every same-bar model still had losses. The desk needed a model-specific loss separator before any scanner-visible same-bar rule or rank change.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-samebar-separator-drilldown.test.ts; npx tsx tools/automation/raw-ohlc-scanner-artifact-samebar-model-separator.test.ts; npm run research:raw-ohlc-scanner-artifact-samebar-separator-drilldown -- --replay-package-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784419740441.json --json; npm run research:raw-ohlc-scanner-artifact-samebar-model-separator -- --samebar-separator-report tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-samebar-separator-drilldown-1784420127837.json --setup-type OpeningDriveFvgContinuation --json.
+Result: Passed. OpeningDrive same-bar rows: 149 total, 111 winners, 37 losses, 0 unresolved, 0.74 win rate, +15700.50 one-MES, livePromotionAllowedRows 0. The corrected time buckets show 10:00-10:59 ET performed better than 9:00-9:59 ET: 121 rows, 93 winners, 27 losses, +14537.28 versus 28 rows, 18 winners, 10 losses, +1163.22. Clean positive tag: first_replay_bar_t1 had 59 rows, 56 winners, 2 losses, +7083.94. Loss-bearing tags needing validation: mae_at_or_over_1r, stopped_before_t1, first_replay_bar_stop, and intrabar_ambiguity.
+Trading logic changed: No. This is a local/read-only research post-processor and a reporting bucket correction. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: OpeningDrive same-bar remains a research hypothesis only. Every same-bar model still has losses, so no live allowlist or publish change should be installed yet.
+Next recommended action: Validate an OpeningDrive 10:00-10:59 same-bar candidate filter that requires first-replay-bar T1 behavior or excludes first-replay-bar stop/intrabar ambiguity before any scanner-visible rank or publish change.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Fail closed when MSS continuation protected stops are on the wrong side of entry.
 Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
 Reason: Repaired raw-OHLC scanner artifacts showed MSS continuation rows being blocked by directionally impossible protected-stop geometry. HTF displacement MSS had mostly short fallback stops below entry; the broader rerun also exposed two Intraday MSS Micro long rows where the selected stop was above entry. The builders should not compute targets from an invalid entry/stop pair and leave cleanup to downstream validation.

@@ -191,13 +191,8 @@ function isLoss(row: Pick<OutcomeRow, 'outcomeStatus' | 'outcomeLabel'>): boolea
 
 function timeBucket(proofTime: string): string {
   const hour = Number(proofTime.slice(11, 13));
-  const minute = Number(proofTime.slice(14, 16));
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return 'unknown';
-  const total = hour * 60 + minute;
-  if (total < 13 * 60) return '12:00-12:59';
-  if (total < 14 * 60) return '13:00-13:59';
-  if (total < 15 * 60) return '14:00-14:59';
-  return '15:00-15:59';
+  if (!Number.isFinite(hour) || hour < 0 || hour > 23) return 'unknown';
+  return `${String(hour).padStart(2, '0')}:00-${String(hour).padStart(2, '0')}:59`;
 }
 
 function separatorTags(row: OutcomeRow, mfeR: number | null, maeR: number | null): string[] {
