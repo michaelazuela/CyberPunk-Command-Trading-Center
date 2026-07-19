@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add proofSelectionSignal real-row filter simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-filter-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-filter-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The problem-slate drilldown showed one insufficient replay-runway slate and one high-adverse stopped slate. This simulation tests those filters against the full 13-slate baseline without changing scanner ranking or runtime behavior.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-filter-simulation.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-filter-simulation -- --json.
+Result: Filter simulation generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-filter-simulation-1784502861487.json. Status pass. Baseline slates: 13. Baseline resolved/unresolved/stopped slates: 11/2/1. Baseline gross resolved one-MES P/L: 835. Retained slates: 11. Retained resolved/unresolved/stopped slates: 10/1/0. Retained gross resolved one-MES P/L: 866.25. Excluded insufficient replay-runway slates: 1. Excluded high-adverse stopped slates: 1. Retained gross P/L delta: 31.25. runtimeRankConsumerAllowedByThisReport: false. Recommendation is validate_filter_on_broader_real_rows_before_runtime_rank_consumer.
+Trading logic changed: No. This is a local/read-only saved-report filter simulation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The filter improves this small July slate set but still leaves one unresolved slate and is not broad enough for runtime ranking.
+Next recommended action: Validate the insufficient-runway and high-adverse stopped filters on a broader real-row package before considering a scanner-visible rank consumer.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add proofSelectionSignal real-row problem-slate drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-problem-slate-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-problem-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The slate audit reduced 131 repeated rows to 13 no-lookahead slates and showed 3 problem slates. This drilldown isolates the unresolved and stopped earliest slates before any runtime rank-consumer consideration.
