@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority campaign re-entry simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-reentry-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-reentry-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The Sweep same-bar dedupe evidence showed that a blanket same-bar/Sweep penalty would reject a profitable bucket, but duplicate campaign rows were heavy. The desk needed a read-only simulator comparing earliest-only campaign selection against a post-stop fresh re-entry policy before considering any live-facing duplicate or re-entry behavior.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-reentry-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-campaign-reentry-simulation -- --replay-package-outcome "tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784474838098.json" --setup-type SweepMssFvgRetrace --json.
+Result: Campaign re-entry simulation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-campaign-reentry-simulation-1784475987923.json. It evaluated 338 SweepMssFvgRetrace rows across 50 exact model/direction/level campaigns. Forty-four campaigns had duplicate rows, with 288 suppressible duplicate rows. Earliest-only selected 48 rows, produced 25 winners, 21 losses, and +1767.50 one-MES P/L. Earliest-plus-post-stop-reentry selected 50 rows, produced 25 winners, 23 losses, and +1658.75 one-MES P/L. Post-stop re-entry worsened the slate by -108.75 and both detected post-stop re-entry campaigns lost again. Oracle first-non-loss did not improve over earliest-only in this dataset. Recommendation remains research-only: do not install a post-stop re-entry path.
+Trading logic changed: No. This is a local/read-only simulator over saved replay outcome rows only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Earliest-only campaign dedupe is promising as a research direction, but it still leaves 21 selected losses across the broad Sweep set. A live duplicate policy would need a separate scanner-artifact approval contract proving no ticket suppression drift, no entry/stop/target/risk drift, and no Discord behavior change beyond duplicate collapse.
+Next recommended action: Build a read-only approval-contract simulator for earliest-only same-campaign dedupe. It should verify one scanner-owned ticket per exact model/direction/entry/stop/T1/T2 campaign, preserve the selected ticket's entry/stop/targets/risk, suppress duplicates only inside the same campaign, and report selected P/L by day/session before any live-facing proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Run read-only Sweep same-bar dedupe and re-entry evidence check.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The loss case classifier showed 9 installed-priority losses were all duplicate/re-entry clusters and target-room/risk-context rows. The desk needed to determine whether the next step should be a broad same-bar/Sweep penalty or a narrower duplicate campaign and fresh re-entry policy.
