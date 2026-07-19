@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector shadow missing level-generation path diagnostic.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-level-generation-path-diagnostic.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-level-generation-path-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The strict blocker drilldown proved 3 blocked top-10 rows had matching-side placeholder levels. The desk needed to classify whether those placeholders were fresh-entry waits, stale invalidations, or target-generation defects before using them as model-quality evidence.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-level-generation-path-diagnostic.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-level-generation-path-diagnostic -- --blocker-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-blocker-drilldown-1784485921063.json --json.
+Result: Diagnostic generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-level-generation-path-diagnostic-1784486309967.json. Status pass. It classified 3 rows: 2 waiting_for_entry_trigger and 1 invalidated_without_replayable_entry. 2026-06-24 morning TurtleSoup SHORT is EntryTriggerMissing with no entry/T1/T2 and active no-chase/MSS blockers; replay use is do_not_replay_until_fresh_entry. 2026-06-29 evening Sweep LONG is EntryTriggerMissing with no entry/T1/T2, outside active setup scan/chop/countertrend/no-chase blockers; replay use is do_not_replay_until_fresh_entry. 2026-06-29 lunch Sweep SHORT is InvalidStopLocation, stale/invalidation already traded through structure stop; replay use is do_not_replay_stale_invalidated_plan. Recommendation is keep_blocked_until_fresh_entry_or_valid_stop.
+Trading logic changed: No. This is a local/read-only saved blocker-drilldown and saved-snapshot diagnostic only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, repair rows, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This diagnostic explains why blocked rows should stay out of replay/ranking, but it does not repair live level generation or candidate selection.
+Next recommended action: Fold the strict replay outcome and path diagnostic into a compact selector-readiness summary: Sweep strict-ready evidence is positive, TurtleSoup blocked rows are not removal proof, and placeholder/no-chase rows must remain excluded from ranking evidence.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector shadow missing strict blocker drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-blocker-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-shadow-missing-strict-blocker-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The strict replay package blocked 3 top-10 missing rows because saved candidates had placeholder levels. The desk needed a saved-snapshot drilldown to separate model-quality evidence from source geometry/selection defects before any scanner-visible selector or model penalty.
