@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS broad loss separator simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-loss-separator-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-loss-separator-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The broad selected-loss drilldown identified risk_gte_24 and the largest session/direction/time/risk combos as candidate separators. The desk needed a promotion-disabled simulation to measure both loss reduction and rejected winners before considering any implementation request.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-loss-separator-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-loss-separator-simulation -- --broad-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json --loss-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-selected-loss-drilldown-1784450833681.json --json.
+Result: Broad loss separator simulation passed as a report: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-loss-separator-simulation-1784451260931.json. It tested 4 promotion-disabled scenarios over 378 selected HTF-MSS rows with 92 losses. Best loss-reduction scenario was risk_gte_24, but it still selected 304 rows with 222 winners, 46 losses, 17 unresolved, +21591.25 one-MES, while rejecting 74 rows with 9 winners, 46 losses, 1 unresolved, -1187.50 one-MES. morning_risk_gte_24 selected 222/51/17 and rejected 9/41/1. dominant_combo selected 223/77/17 and rejected 8/15/1. top4_loss_combos selected 223/55/17 and rejected 8/37/1. No zero-selected-loss scenario exists. livePromotionAllowedRows remains 0. Recommendation: continue_feature_search.
+Trading logic changed: No. This is a local/read-only promotion-disabled simulation. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Simple risk/time/session separators reduce losses but also reject winners and still leave selected losses. This is not implementation-ready.
+Next recommended action: Run a richer no-lookahead HTF-MSS feature search across selected winners and losses, including MFE/MAE, first replay bar behavior, proof timing, entry/stop geometry, session/date regime, and separator tags before another simulation.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS broad selected-loss drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-selected-loss-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-broad-selected-loss-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Broad validation showed the two-separator HTF-MSS package still selected 92 stopped-before-T1 losses. The desk needed a read-only loss drilldown to identify the largest no-lookahead separator families before any further simulation.
