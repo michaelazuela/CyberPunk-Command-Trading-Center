@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add HTF-MSS compound package simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Compound mining found multiple zero-winner-cost pockets, but those pockets can overlap. The desk needed a promotion-disabled package simulation to dedupe rejected rows and measure combined selected/rejected W/L/U and one-MES P/L before any implementation request.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation -- --broad-validation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-two-separator-broad-validation-1784450372308.json --compound-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-pre-entry-miner-1784452679960.json --json.
+Result: Compound package simulation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-package-simulation-1784453088375.json. It tested 4 promotion-disabled packages over 378 selected HTF-MSS rows with 92 losses. No zero-selected-loss package exists. top5_loss_reduction selected 311 rows with 222 winners, 51 losses, 17 unresolved, +20811.25 and rejected 67 rows with 9 winners, 41 losses, 1 unresolved, -407.50. zero_winner_cost_all selected 330 rows with 231 winners, 56 losses, 17 unresolved, +22961.25 and rejected 48 rows with 0 winners, 36 losses, 1 unresolved, -2557.50. zero_winner_cost_top3 selected 343 rows with 231 winners, 68 losses, 18 unresolved, +21991.25 and rejected 35 rows with 0 winners, 24 losses, 0 unresolved, -1587.50. livePromotionAllowedRows remains 0. Recommendation: continue_feature_search.
+Trading logic changed: No. This is a local/read-only promotion-disabled package simulation. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The package removes a meaningful zero-winner-cost loss pocket but still leaves 56 selected losses. It is not implementation-ready.
+Next recommended action: Add a selected-residue drilldown after zero_winner_cost_all to classify the remaining 56 losses and search for the next non-overlapping separator family.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add HTF-MSS compound pre-entry miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-pre-entry-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-composite-overlay-htf-mss-compound-pre-entry-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Single pre-entry feature rejection remained too blunt. The desk needed a promotion-disabled miner for narrower pre-entry intersections using session, direction, proof-time bucket, risk bucket, and fine-risk bucket while excluding date/regime and replay/outcome-known fields.
