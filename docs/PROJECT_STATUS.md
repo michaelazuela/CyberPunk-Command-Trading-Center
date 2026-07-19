@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-18
+Task: Add raw Sweep scanner snapshot field miner and run latest split.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Prior Sweep source-field drilldown showed broad latest positives but no zero-loss transfer segment. The desk needed to inspect no-lookahead scanner snapshot fields that were not preserved in replay package rows: completed 5M candle shape, rank/confidence/target room, timeframe MSS, HTF line state, evidence tags, missing-evidence tags, and session/direction combinations.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-snapshot-field-miner -- --train-artifacts [available raw scanner artifact reports through July 15] --train-outcome-reports [paired available outcome reports through July 15] --test-artifacts tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-16-to-2026-07-16-1784433373297.json,tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-17-to-2026-07-17-1784433622087.json --test-outcome-reports tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784433384201.json,tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784433633227.json --min-rows-per-period 5 --json.
+Result: Snapshot field miner passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner-1784440750059.json. Joined train/test Sweep snapshot rows 977/76; zero-loss transfer segments 0; latest-positive train-loss-bearing segments 97; latest-positive train-weak segments 56; live promotion allowed rows 0; recommendation mine_composite_snapshot_fields. Broad source/evidence fields remain latest-positive but train-loss-bearing: has_displacement, has_entry_inside_fvg, has_fvg_or_imbalance, has_liquidity_sweep, has_reclaim, and htf_30d_sufficient each had test 76 rows, 65 winners, 2 losses, +11255.00 one-MES, but train 977 rows, 574 winners, 271 losses, +48033.75. Risk-exceeds-standard-limit and rank_180_to_239 were latest-positive but train-weak, not transferable.
+Trading logic changed: No. This is a local/read-only join over saved raw scanner artifacts and saved outcome reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Single snapshot tags are still too broad to explain the July 16-17 Sweep strength without accepting historical stop-outs. Installing a live-facing Sweep promotion from this evidence would overfit the latest two days.
+Next recommended action: Mine composite no-lookahead Sweep snapshot fields that combine session, direction, candle shape, HTF line state, target room, rank/confidence, and evidence/missing-evidence tags. Keep it research-only and require train/test proof before scanner-visible behavior.
+
+## Previous Change
+
+Date: 2026-07-18
 Task: Add raw Sweep source-field drilldown and run available raw replay package split.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-source-field-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-source-field-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The Sweep latest-positive metadata drilldown found no zero-loss transfer segment. The desk needed to check whether richer raw replay-package fields such as proofState, execution/block reason, bars-after-proof, T1/T2 R, occurrences, time, session, direction, and risk could isolate the latest winners without using outcome-path hindsight.
