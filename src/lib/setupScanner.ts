@@ -4830,6 +4830,39 @@ export function buildCompletedFiveMinuteProofSelectionSignals(
   }, {});
 }
 
+function completedFiveMinuteProofTimeFromChartContext(chartContext?: ChartContext | null): string | null {
+  if (chartContext?.chartTimestamp) return chartContext.chartTimestamp;
+  const candles = chartContext?.candles || [];
+  return candles[candles.length - 1]?.timestamp || null;
+}
+
+function attachCompletedFiveMinuteProofSelectionSignals(
+  candidates: SetupCandidate[],
+  sessionType: SetupSession,
+  chartContext?: ChartContext | null
+): SetupCandidate[] {
+  const completedBarTime = completedFiveMinuteProofTimeFromChartContext(chartContext);
+  if (!completedBarTime) return candidates;
+  const refs = candidates
+    .map((candidate, index): CompletedFiveMinuteProofSelectionSignalRef | null => {
+      if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return null;
+      return {
+        candidateKey: `${index}:${candidate.setupType}:${candidate.direction}`,
+        setupType: candidate.setupType,
+        direction: candidate.direction,
+        sessionType,
+        completedBarTime,
+      };
+    })
+    .filter((ref): ref is CompletedFiveMinuteProofSelectionSignalRef => Boolean(ref));
+  if (!refs.length) return candidates;
+  const signals = buildCompletedFiveMinuteProofSelectionSignals(refs);
+  return candidates.map((candidate, index) => {
+    const signal = signals[`${index}:${candidate.setupType}:${candidate.direction}`];
+    return signal ? { ...candidate, proofSelectionSignal: signal } : candidate;
+  });
+}
+
 export function rankSetupCandidate(candidate: SetupCandidate): number {
   const executionScore =
     candidate.executionStatus === ExecutionStatus.Executable ? 100 :
@@ -5788,7 +5821,7 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
     })()
     : null;
   const failedPlanReversalCandidate = buildFailedPlanReversalCandidate(input);
-  const candidates = [
+  const scannerCandidates = [
     ...getPrimarySetupRegistry(input.sessionType)
       .map((entry) =>
         entry.setupType === SetupType.HtfDrawContinuationAfterRaid && htfCandidate
@@ -5827,7 +5860,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
       .map((candidate) => applyHtfLineInSandRuleToCandidate(candidate, input.chartContext))
       .map((candidate) => attachActiveCampaign(candidate, input.chartContext))
       .map((candidate) => applyCandidateGeometryValidation(candidate)),
-  ]
+  ];
+  const candidates = attachCompletedFiveMinuteProofSelectionSignals(scannerCandidates, input.sessionType, input.chartContext)
     .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a));
 
   const bestExecutableCandidate = candidates.find((candidate) => candidate.executionStatus === ExecutionStatus.Executable) || null;

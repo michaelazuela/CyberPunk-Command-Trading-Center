@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Install scanner-visible metadata-only proofSelectionSignal population.
+Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
+Reason: The approval checkpoint passed and the real-artifact collision miner proved natural same-completed-5M proof groups exist without synthetic companion rows. This installs only optional scanner-owned metadata on candidates from the completed 5M proof timestamp while keeping rank consumers disabled.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit --pretty false.
+Result: Focused scanner regression passed across 176 cases. scanSetupCandidates now attaches proofSelectionSignal after existing scanner gates/geometry validation and before the unchanged rank sort. The new regression proves populated signals use scanner_owned_completed_5m_proof_group metadata, carry the completed chart timestamp, keep changesCanExecute/changesEntryStopTargets/changesRiskRules false, do not use outcome/research/Gemini/live-bridge data, keep scannerVisibleInstallAllowed false, and do not change rank order when removed.
+Trading logic changed: No executable trading logic changed. This installs metadata only. It does not add a rank consumer, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The metadata is now scanner-visible to local consumers that inspect SetupCandidate, but every safety field remains locked false and no downstream consumer ranks or publishes from it.
+Next recommended action: Add a scanner-output installed comparison audit that replays saved scanner artifacts/current scanner output and proves populated proofSelectionSignal does not change selected candidate, rank score/order, execution status, canExecute, Discord eligibility, or trade math.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector real-artifact collision miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-artifact-collision-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-artifact-collision-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The population approval checkpoint passed but still carried a caveat that the scanner-output dry-run used synthetic companion rows. This miner consumes saved raw scanner artifacts only and proves whether natural same-completed-5M proof groups exist before scanner-visible proofSelectionSignal population is considered.

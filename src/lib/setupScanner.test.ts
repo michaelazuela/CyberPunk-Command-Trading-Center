@@ -4238,6 +4238,46 @@ const tests: Array<[string, () => void]> = [
     );
   }],
 
+  ['Opening Drive proofSelectionSignal scanner population stays metadata-only', () => {
+    const context = htfDisplacementContinuationContext('SHORT', {
+      chartTimestamp: '2026-06-05T10:20:00-04:00',
+      proposedEntry: 7586.5,
+      proposedStop: 7594.5,
+      fvgZones: [{
+        direction: 'SHORT',
+        upper: 7589,
+        lower: 7584,
+        midpoint: 7586.5,
+        formedAt: '2026-06-05T10:05:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 50,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const signaled = result.candidates.filter((candidate) => candidate.proofSelectionSignal);
+
+    assert.ok(signaled.length > 0);
+    assert.ok(signaled.every((candidate) => candidate.proofSelectionSignal?.metadataSource === 'scanner_owned_completed_5m_proof_group'));
+    assert.ok(signaled.every((candidate) => candidate.proofSelectionSignal?.completedBarTime === '2026-06-05T10:20:00-04:00'));
+    assert.ok(signaled.every((candidate) => candidate.proofSelectionSignal?.changesCanExecute === false));
+    assert.ok(signaled.every((candidate) => candidate.proofSelectionSignal?.changesEntryStopTargets === false));
+    assert.ok(signaled.every((candidate) => candidate.proofSelectionSignal?.changesRiskRules === false));
+    assert.ok(signaled.every((candidate) => candidate.proofSelectionSignal?.usesOutcomeData === false));
+    assert.ok(signaled.every((candidate) => candidate.proofSelectionSignal?.usesResearchLabels === false));
+    assert.ok(signaled.every((candidate) => candidate.proofSelectionSignal?.usesGeminiAdvisoryText === false));
+    assert.ok(signaled.every((candidate) => candidate.proofSelectionSignal?.usesLiveBridgeReadsInsideRanker === false));
+    assert.ok(signaled.every((candidate) => candidate.proofSelectionSignal?.scannerVisibleInstallAllowed === false));
+
+    const order = result.candidates.map((candidate) => `${candidate.setupType}:${candidate.direction}:${candidate.executionStatus}:${candidate.blockReason ?? 'none'}`);
+    const rerankedWithoutSignals = result.candidates
+      .map((candidate) => ({ ...candidate, proofSelectionSignal: null }))
+      .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a))
+      .map((candidate) => `${candidate.setupType}:${candidate.direction}:${candidate.executionStatus}:${candidate.blockReason ?? 'none'}`);
+    assert.deepEqual(order, rerankedWithoutSignals);
+  }],
+
   ['Opening Drive FVG continuation arms during observation but does not become human-review ready before 10:00 ET', () => {
     const context = htfDisplacementContinuationContext('SHORT', {
       chartTimestamp: '2026-06-05T09:50:00-04:00',
