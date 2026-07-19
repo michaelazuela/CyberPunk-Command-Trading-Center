@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector unresolved-exclusion drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-unresolved-exclusion-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-unresolved-exclusion-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The carveout miner left 3 rows outside performance-carveout eligibility: 1 target-generation gap and 2 manual-inspection rows. The desk needed saved-snapshot evidence proving whether those rows are true unresolved defects or research-accounting exclusions.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-unresolved-exclusion-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-unresolved-exclusion-drilldown -- --carveout-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-exclusion-carveout-miner-1784487867891.json --json.
+Result: Drilldown generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-unresolved-exclusion-drilldown-1784488248752.json. Status pass. All 3 previously unresolved rows are newly performance-carveout eligible for research accounting only: the 2026-06-12 SweepMssFvgRetrace long is countertrend/opposing MSS conditional evidence, the 2026-06-24 FailedPlanReversal short lacks app-owned deterministic entry/stop/T1/T2, and the 2026-06-24 HtfDisplacementMssContinuation short has a protected 5M stop conflict because completed 5M MSS is opposing bullish. Manual-inspection rows are now 0. Selector-proposal eligible rows remain 0 and live-promotion allowed rows remain 0. Recommendation is rerun_readiness_with_research_accounting_carveouts.
+Trading logic changed: No. This is a local/read-only saved-report/snapshot drilldown only. It does not install selector behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The drilldown makes the excluded rows research-accounting carveouts, not live selector approvals.
+Next recommended action: Rerun selector readiness with explicit research-accounting carveouts applied so the desk can see whether the Sweep-only guarded proposal is now evidence-ready or still blocked by other proof constraints.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector exclusion carveout miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-exclusion-carveout-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-exclusion-carveout-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The proposal guard correctly blocked live selector work while 12 rows remained excluded from performance. The desk needed a research-only pass that separates clean no-entry/stale-invalidated accounting carveouts from rows that still need target-generation or manual inspection.
