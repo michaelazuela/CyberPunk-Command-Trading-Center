@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive keep-later selector real-artifact collision miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-artifact-collision-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-artifact-collision-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The population approval checkpoint passed but still carried a caveat that the scanner-output dry-run used synthetic companion rows. This miner consumes saved raw scanner artifacts only and proves whether natural same-completed-5M proof groups exist before scanner-visible proofSelectionSignal population is considered.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-artifact-collision-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-artifact-collision-miner -- --json; npx tsc --noEmit --pretty false.
+Result: Real-artifact collision miner generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-artifact-collision-miner-1784494937389.json. Status pass. Events scanned: 856. Candidate rows scanned: 2568. Natural collision groups: 856. Natural collision candidate rows: 2568. OpeningDriveFvgContinuation + SweepMssFvgRetrace groups: 363. AfterLunchDriveFvgContinuation + SweepMssFvgRetrace groups: 493. IntradayMssMicroContinuation + OpeningDriveFvgContinuation + SweepMssFvgRetrace groups: 363. Groups with valid deterministic levels: 412. Missing completed proof groups: 0. readyForPopulationMetadataInstallEvidence: true. scannerVisiblePopulationAllowedByThisReport: false. Recommendation is real_artifact_collision_coverage_supports_population_metadata_checkpoint.
+Trading logic changed: No. This is a local/read-only saved-artifact miner. It does not run setupScanner, install scanner-visible population, add a rank consumer, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves natural same-proof coverage exists in saved scanner artifacts, but it still does not approve a runtime population install or a rank consumer. Runtime metadata population must remain metadata-only and separately verified.
+Next recommended action: Prepare a scanner-visible metadata-only population install for proofSelectionSignal with rank consumers disabled, backed by focused setupScanner regression and full guards.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive keep-later selector population approval checkpoint.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-approval-checkpoint.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-runtime-signal-population-approval-checkpoint.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The scanner-output dry-run passed but used synthetic companion rows. This checkpoint locks the permitted future runtime scope, forbidden behavior changes, rollback path, and required real-artifact proof before any scanner-visible proofSelectionSignal population install.
