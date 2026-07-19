@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add OpeningDrive priority no-lookahead feature validation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The no-lookahead miner found two candidate features on the saved OpeningDrive priority collision set. The desk needed a separate read-only validation pass to simulate fallback impact and false rejection risk before any live-facing rank overlay change.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-validation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-validation -- --json.
+Result: No-lookahead feature validation passed: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-validation-1784469080435.json. It validated 1 miner report with 14 event rows and 2 candidate feature rows. Both first_replay_adverse_ge_0_25r and proof_bar_failed_close_through_entry caught the lone priority-underperformance row, false-rejected 0 priority-better rows, and simulated +23.75 one-MES dollars versus installed priority on the affected row. liveInitialRankFeatureRows remains 0, livePromotionAllowedRows remains 0, and broadeningAllowedNow remains false.
+Trading logic changed: No. This is a local/read-only validation pass over saved miner reports only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner behavior, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The validation still depends on a tiny saved set with one underperformance row. first_replay_adverse_ge_0_25r remains post-entry/research-only, so it cannot drive initial publish ranking. proof_bar_failed_close_through_entry is closer to usable but still needs fresh artifact proof before live-facing behavior.
+Next recommended action: Queue a fresh scanner-artifact validation package for proof_bar_failed_close_through_entry only as the initial-rank candidate; keep first_replay_adverse_ge_0_25r as post-entry research telemetry.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add OpeningDrive priority no-lookahead feature miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-no-lookahead-feature-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The structural separator drilldown found only outcome-only separators. The desk needs a read-only miner that joins source-selection, same-bar, replay package, and scanner decision tape artifacts to search for pre-entry/proof-bar and first-completed-bar no-lookahead features before any scanner-visible ranking change.
