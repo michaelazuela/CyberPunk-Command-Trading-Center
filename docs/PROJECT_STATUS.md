@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Sweep guarded selection simulation.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-selection-simulation.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The collision snapshot guard miner found a promising caution candidate, but the desk needed a saved-report selection simulation to prove whether applying that caution to raw Sweep boost replacements improves or worsens slate-level P/L.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-selection-simulation.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-boost-guarded-selection-simulation -- --boost-validation tools/automation/diagnostic-reports/unified-positive-held-local-preview-positive-family-boost-validation-1784530505989.json --guard-miner tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-collision-snapshot-guard-miner-1784531701913.json --period train --json; npm run diagnostic:held-local-preview-sweep-boost-guarded-selection-simulation -- --boost-validation tools/automation/diagnostic-reports/unified-positive-held-local-preview-positive-family-boost-validation-1784530506171.json --guard-miner tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-collision-snapshot-guard-miner-1784531701913.json --period test --json.
+Result: Reports generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-guarded-selection-simulation-1784532088551.json and tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-guarded-selection-simulation-1784532088583.json. Broad/train: baseline/raw/guarded one-MES P/L 2219.43/2780.63/2916.88, raw delta +561.20, guarded delta +697.45, +136.25 over raw, reverted 2 slates and both were worsened replacements. July/test: baseline/raw/guarded 853.78/1065.63/1271.88, raw delta +211.85, guarded delta +418.10, +206.25 over raw, reverted 3 slates: 2 worsened and 1 improved. Recommendation remains fresh validation before any live-facing proposal.
+Trading logic changed: No. This is local/read-only saved-report research only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The guard feature was mined from the same collision package it improved. It must not be installed into live ranking until a fresh scanner-artifact validation package confirms it transfers.
+Next recommended action: Build a fresh-validation package contract for the Sweep guarded selector so the next unseen scanner artifact can be evaluated without changing live behavior.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep boost collision snapshot guard miner.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-collision-snapshot-guard-miner.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-collision-snapshot-guard-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The Sweep-only collision drilldown proved raw model-family boosting is too blunt. The desk needed a no-lookahead scanner-snapshot miner that focuses specifically on Sweep replacements that worsened the top slate selection.
