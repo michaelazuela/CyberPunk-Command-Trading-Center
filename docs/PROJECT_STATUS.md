@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Probe existing structural inventory coverage for AfterLunch proof-quality mining.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: first-proof preservation was validated for AfterLunch, and the next possible research branch was structural proof-quality mining. Before adding new tooling, the desk checked whether the existing structural inventory source already covered AfterLunch rows.
+Tests run: npm run diagnostic:held-local-preview-structural-field-inventory -- --proof-context-enrichment tools/automation/diagnostic-reports/unified-positive-held-local-preview-broad-proof-context-enrichment-1784333090249.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784400024870.json --json; local setup distribution inspection of tools/automation/diagnostic-reports/unified-positive-held-local-preview-structural-field-inventory-1784521963798.json.
+Result: Structural inventory report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-structural-field-inventory-1784521963798.json with status pass, 204 source/inventoried rows, 0 blocked rows, and 72 field summaries. Setup coverage was TurtleSoup: 153, IntradayMssMicroContinuation: 51, AfterLunchDriveFvgContinuation: 0. This means the existing structural inventory cannot support AfterLunch structural proof-quality mining yet.
+Trading logic changed: No. This was a local/read-only saved-report diagnostic and docs-only status update. It did not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: AfterLunch structural proof-quality evidence is not available from the existing broad structural inventory source. Do not mine AfterLunch structural separators from TurtleSoup/Intraday-only data.
+Next recommended action: Build a small AfterLunch-specific proof-context enrichment queue from the 138 source/proof timing rows before mining structural proof-quality fields.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Validate AfterLunch first-valid-proof preservation conclusion.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-first-proof-preservation.ts, tools/automation/unified-positive-held-local-preview-afterlunch-first-proof-preservation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the AfterLunch changed-slate drilldown showed the timing/risk selector replaced earlier completed-proof winners with later tighter-risk winners, so the desk needed a formal read-only preservation validator before deciding the next research branch.
