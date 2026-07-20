@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Sweep-only boost collision drilldown before any rank boost proposal.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-collision-drilldown.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-collision-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Sweep-only model-family boost improved total slate selection, but it also replaced better top candidates on some slates. The desk needed a repeatable saved-report drilldown before considering any no-lookahead collision guard.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-boost-collision-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-boost-collision-drilldown -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --boost-validation tools/automation/diagnostic-reports/unified-positive-held-local-preview-positive-family-boost-validation-1784530505989.json --json; npm run diagnostic:held-local-preview-sweep-boost-collision-drilldown -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784526031044.json --boost-validation tools/automation/diagnostic-reports/unified-positive-held-local-preview-positive-family-boost-validation-1784530506171.json --json.
+Result: Reports generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-collision-drilldown-1784531089680.json and tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-collision-drilldown-1784531089686.json. Broad Sweep-only changed slates: 34, improved/worsened/same 14/17/3, changed-slate delta +461.20 one-MES, worsened delta -1228.78. July OOS changed slates: 14, improved/worsened/same 9/4/1, changed-slate delta +211.85, worsened delta -256.88. Worsened broad replacements mainly displaced AfterLunchDriveFvgContinuation, HtfDisplacementMssContinuation, OpeningDriveFvgContinuation, and IntradayMssMicroContinuation. July worsened replacements displaced OpeningDriveFvgContinuation, HtfDisplacementFvgContinuation, and HtfDisplacementMssContinuation. This confirms raw Sweep boosting is not ready for live ranking.
+Trading logic changed: No. This is local/read-only saved-report research only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The strongest observed collision tags include adverse excursion, same-bar entry, and stale entry, but those are outcome/proxy fields and must not become live scoring without a no-lookahead scanner-field equivalent.
+Next recommended action: Mine no-lookahead scanner-artifact fields for the exact worsened Sweep replacement slates to find a guard that preserves Sweep's positive selection lift without demoting stronger OpeningDrive, HTF continuation, Intraday, or AfterLunch top candidates.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add isolated setup-family boost validation and compare Sweep versus AfterLunch.
 Files changed: tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.ts, tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.test.ts, docs/PROJECT_STATUS.md.
 Reason: The combined positive-family boost was a proxy for grouping trade ideas together, but the desk needed to separate SweepMssFvgRetrace from AfterLunchDriveFvgContinuation to avoid hiding model-family collisions.
