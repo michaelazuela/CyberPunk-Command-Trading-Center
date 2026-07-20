@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add no-chase protected geometry omission diagnostic.
+Files changed: tools/automation/no-chase-protected-geometry-omission-diagnostic.ts, tools/automation/no-chase-protected-geometry-omission-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Protected geometry reconstruction replay was negative, so the desk needed to identify whether the 15 proof-positive no-chase rows lost entry/stop/target fields in unified ranking or never received scanner-owned geometry from the source candidate.
+Tests run: npx tsx tools/automation/no-chase-protected-geometry-omission-diagnostic.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-protected-geometry-omission-diagnostic -- --proof-report tools/automation/diagnostic-reports/no-chase-ohlc-proof-extractor-1784561861777.json --audit-dir tools/automation/discord-audit --start-date 2026-06-01 --end-date 2026-07-02 --json.
+Result: Omission diagnostic report tools/automation/diagnostic-reports/no-chase-protected-geometry-omission-diagnostic-1784565920471.json passed. Summary: proofOnlyMissingPlanRows=15, snapshotsJoinedRows=15, snapshotsMissingRows=0, sourceNeverBuiltFullGeometryRows=15, unifiedMappingLostGeometryRows=0, sourceInvalidGeometryRows=0, sourceMissingEntryRows=9, sourceMissingStopRows=9, sourceMissingTargetsRows=15, sourceEntryOnlyRows=6, sourceStopOnlyRows=6, sourceNoEntryStopRows=3, canExecuteChangedRows=0, publishDiscordRows=0, livePromotionAllowedRows=0, recommendedNextFix=inspect_intraday_candidate_builder_plan_geometry.
+Trading logic changed: No. This is local saved-report research tooling only. It does not create tickets, wire scanner behavior, run setupScanner, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for runtime behavior; the diagnostic proves the missing geometry originates before unified ranking, so a future fix must inspect the Intraday MSS source builder instead of reconstructing trades after the fact.
+Next recommended action: Inspect the Intraday MSS no-chase candidate-builder/source field path for why entry-only, stop-only, and no-entry-stop candidates are emitted without deterministic targets. Do not loosen canExecute, remove TurtleSoup/Sweep, or install proof-close geometry reconstruction.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add no-chase protected 5M geometry miner.
 Files changed: tools/automation/no-chase-protected-geometry-miner.ts, tools/automation/no-chase-protected-geometry-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Missing-plan drilldown proved the 15 proof-positive no-chase rows cannot be recovered by target derivation alone because every row is missing entry or stop. The desk needed a research-only miner that proposes entry from completed 5M proof close, protected stop from the 5M window extreme plus offset, deterministic 1.5R/2R targets from app trade rules, and replay outcomes without making any row live.
