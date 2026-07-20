@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add Sweep morning LONG full-day outcome comparison across all reviewed rows.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-outcome-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-outcome-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the extended-horizon top-slate replay proved the shorter morning decision-tape outcome source was creating false unresolved/no-fill rows. The next safe step was to recompute the entire SweepMssFvgRetrace morning LONG research subset using saved full-day scanner artifact bars before drawing rank/model conclusions.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-outcome-comparison.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-morning-long-full-day-outcome-comparison -- --baseline-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784503584511.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-outcome-comparison-1784512029623.json. Status pass. Compared rows: 80. Label-changed rows: 28. Baseline/full-day resolved rows: 46/68. Baseline/full-day gross one-MES P/L: 4891.25/6652.5. Gross delta: +1761.25. Full-day unresolved rows: 12. Recommendation: rerun_rank_research_with_full_day_outcomes. runtimeRankConsumerAllowedByThisReport remains false.
+Trading logic changed: No. This is a local/read-only saved-artifact outcome comparison. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This report compares research outcomes only. It does not alter the prior baseline report or any runtime path. Downstream rank/model conclusions made from the shorter-horizon outcome source should be treated as stale until rerun against full-day outcomes.
+Next recommended action: Rerun the Sweep morning LONG rank/no-chase and weak-pocket diagnostics against the full-day outcome comparison before considering any model/ranking recommendation. Separately inspect the 12 full-day unresolved rows.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add Sweep morning LONG extended-horizon outcome replay over saved full-day scanner artifacts.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-extended-horizon-outcome.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-extended-horizon-outcome.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the unresolved top-slate drilldown showed ranking could not replace four unresolved/no-fill tops inside the current outcome package. The next safe step was to determine whether the issue was the model/rank logic or the shorter morning decision-tape outcome source.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: The report uses saved full-day scanner artifacts only. It proves the prior unresolved bucket was partly an outcome-source horizon issue, but it does not install full-day outcome sourcing into any runtime path.
 Next recommended action: Recompute the broader Sweep morning LONG outcome/rank research using full-day saved scanner artifact bars before making any ranking or model-quality conclusion. Separately inspect 2026-07-01 as the one remaining low-MFE unresolved top.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add Sweep morning LONG unresolved top-slate drilldown.
