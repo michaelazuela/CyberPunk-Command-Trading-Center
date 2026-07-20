@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Validate Sweep lunch LONG blocked/no-chase caution-pocket separator in slate selection.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-caution-pocket-selection-validation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-caution-pocket-selection-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Sweep lunch LONG had a broader caution pocket than the low-coverage lunch SHORT unresolved branch, but the caution candidate still needed no-lookahead slate validation before any live-facing rank behavior.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-caution-pocket-selection-validation.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-long-caution-pocket-selection-validation -- --scanner-field-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner-1784515244249.json --caution-pocket-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown-1784516143134.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-long-caution-pocket-selection-validation-1784519849745.json. Status pass. Positive candidate: hasNoChaseMissingEvidence=false. Caution candidate: hasTierBDisplacementEvidence=true. Joined/caution rows: 107/40. Slates: 11. Changed slates: 2. Baseline/simulated top one-MES P/L: 423.75/423.75. Top-selection delta: 0. Changed resolved delta: 0. The changed slates were 2026-06-09 and 2026-07-15; both replaced T1/T2 winners with equal-P/L T1/T2 winners. Recommendation: keep_research_only.
+Trading logic changed: No. This is a local/read-only saved-artifact selection validation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The caution pocket is broad enough to observe but did not improve top selection. Do not install it as a live rank penalty from this evidence.
+Next recommended action: Stop Sweep lunch LONG caution-pocket rank installation. Next narrow research should move to a different model family or validate fresher/broader data where candidate coverage and top-selection improvement both exist.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Validate Sweep lunch SHORT unresolved separator candidates.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-validation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the unresolved separator miner found clean but thin scanner-owned candidates, so they needed validation against all unresolved rows before any behavior proposal.

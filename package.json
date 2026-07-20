@@ -198,6 +198,7 @@
     "research:raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner.ts",
     "research:raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-selection-simulation": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-selection-simulation.ts",
     "research:raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown.ts",
+    "research:raw-ohlc-scanner-artifact-sweep-lunch-long-caution-pocket-selection-validation": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-caution-pocket-selection-validation.ts",
     "research:raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner.ts",
     "research:raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-selection-simulation": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-selection-simulation.ts",
     "research:raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner.ts",
