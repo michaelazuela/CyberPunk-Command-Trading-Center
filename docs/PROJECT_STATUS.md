@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add disabled no-chase preview readiness audit.
+Files changed: tools/automation/no-chase-rebuilt-review-disabled-preview-readiness-audit.ts, tools/automation/no-chase-rebuilt-review-disabled-preview-readiness-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The disabled adapter preview passed for the three no-chase rebuilt review cards. The desk needed a repeatable readiness audit that confirms the preview remains isolated from app runtime, scanner runtime, Discord, Supabase, bridge, canExecute, and scanner visibility before any future live-facing proposal.
+Tests run: npx tsx tools/automation/no-chase-rebuilt-review-disabled-preview-readiness-audit.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-rebuilt-review-disabled-preview-readiness-audit -- --preview tools/automation/diagnostic-reports/no-chase-rebuilt-review-disabled-local-adapter-preview-1784563606130.json --json.
+Result: Disabled preview readiness audit report tools/automation/diagnostic-reports/no-chase-rebuilt-review-disabled-preview-readiness-audit-1784564091275.json passed. Summary: previewCards=3, disabledPreviewCards=3, humanReviewOnlyCards=3, canExecuteFalseCards=3, publishDiscordFalseCards=3, scannerVisibleRows=0, livePromotionAllowedRows=0, runtimeReferenceCount=0, appRuntimeReferenceCount=0, scannerRuntimeReferenceCount=0, discordRuntimeReferenceCount=0, supabaseRuntimeReferenceCount=0, failedGateCount=0, recommendation=ready_for_local_review_only.
+Trading logic changed: No. This is local saved-report readiness tooling only. It does not wire scanner runtime, run setupScanner, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, change entry/stop/target/risk math, or change trading logic.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for runtime behavior; the audit is local/read-only and the preview remains isolated from runtime wiring.
+Next recommended action: Run full checks, commit, push, then broaden no-chase rebuild candidate research before considering any scanner-visible implementation.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add disabled local adapter preview for approved no-chase rebuilt review cards.
 Files changed: tools/automation/no-chase-rebuilt-review-disabled-local-adapter-preview.ts, tools/automation/no-chase-rebuilt-review-disabled-local-adapter-preview.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The no-chase rebuilt review proposal and approval contract were both passing for exactly three complete human-review-only candidates. The desk needed a disabled local preview surface that proves card shape and boundaries before any scanner-visible wiring is considered.
