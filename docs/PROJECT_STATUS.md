@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add Sweep morning LONG pre-entry scanner-field miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-preentry-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-preentry-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the Sweep morning LONG outcome drilldown showed outcome-known MFE/MAE separation, but those cannot become live selectors. The next safe step was to join the same rows back to scanner/pre-entry fields and mine only non-lookahead candidates.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-preentry-field-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-morning-long-preentry-field-miner -- --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784503584511.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-preentry-field-miner-1784509526153.json. Status pass. Outcome rows: 343. Filtered Sweep morning LONG rows: 80. Joined rows: 80. Feature stats: 48. Negative candidates: 14. Positive candidates: 4. Best negative candidate: rankScoreBucket=150_to_199. Best positive candidate: rankScoreBucket=lt_150. Notable broader pre-entry split: htfLineInSandStatus=blocked and hasNoChaseMissingEvidence=true each had 56 rows, 14 winners, 42 problem rows, 0.25 winner rate, 0.75 problem rate. htfLineInSandStatus=not_applicable and hasNoChaseMissingEvidence=false each had 24 rows, 19 winners, 5 problem rows, 3350 gross one-MES P/L, 0.79 winner rate, 0.21 problem rate. runtimeRankConsumerAllowedByThisReport remains false.
+Trading logic changed: No. This is a local/read-only saved-artifact/outcome miner. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Outcomes are used only as research labels; candidate features are pre-entry scanner fields. The apparent rankScore bucket split must be treated cautiously because it may be a proxy for time/session clustering rather than causal trade quality.
+Next recommended action: Validate the broad pre-entry split in a no-lookahead simulation: compare SweepMssFvgRetrace morning LONG rows with htfLineInSandStatus blocked/no-chase evidence against not_applicable/no-no-chase rows, then decide whether it supports a research-only rank penalty or just a review note.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add Sweep morning LONG outcome drilldown for the weakest raw OHLC scanner artifact pocket.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-outcome-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-outcome-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the model/session/direction rollup identified SweepMssFvgRetrace|morning|LONG as the weakest pocket, so the next safe step was to classify its outcome path before proposing any runtime ranking change.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: MFE/MAE are outcome-known fields and must not become live selectors. The report is useful for diagnosing the weak pocket, not for direct runtime filtering.
 Next recommended action: Build a pre-entry-only scanner-field drilldown for the SweepMssFvgRetrace morning LONG rows, especially late 11:00/wide-risk/no-fill/no-target rows, to find a supported field that predicts low-MFE/no-fill behavior without lookahead.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add model/session/direction rollup for raw OHLC scanner artifact outcomes.
