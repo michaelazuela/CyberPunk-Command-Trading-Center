@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Validate AfterLunch structural sequence selector on July OOS replay context.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The June-July structural sequence miner found riskPoints<=10+htfLineBehindPrice as a clean research candidate, but the desk must reject non-transferable selectors before any scanner-visible review note or rank penalty.
+Tests run: npm run diagnostic:held-local-preview-afterlunch-structural-sequence-loss-miner -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784526031044.json --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784525915111.json --scanner-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-03-to-2026-07-17-1784476403453.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner-1784529890597.json. Status pass. July OOS AfterLunch rows matched: 43/43. W/L/U: 39/4/0. Gross one-MES P/L: +2477.61. Research candidates: 0. The prior top selector riskPoints<=10+htfLineBehindPrice selected 0 rows. Bare htfLineBehindPrice selected 1 winner, 0 losses, +140.63 one-MES. The structural sequence selector does not transfer and must not be installed.
+Trading logic changed: No. This is local/read-only saved-report validation only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: AfterLunch remains positive overall, but the current candidate selectors are either too broad or non-transferable.
+Next recommended action: Mine the July OOS four-loss bucket directly against known-at-proof structured candle/zone quality fields rather than broad HTF line or target-distance fields.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Mine AfterLunch structural sequence loss candidates from broader June-July replay context.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner.ts, tools/automation/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Broader validation rejected the same-slice distance/risk separator, so the desk needed richer known-at-proof sequence fields around line-in-sand position, proof age, same-side sequence, and target-room state before any live-facing proposal.
