@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add no-chase missing plan field drilldown.
+Files changed: tools/automation/no-chase-missing-plan-field-drilldown.ts, tools/automation/no-chase-missing-plan-field-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The no-chase proof extractor found 15 completed-5M-proof cases still blocked because deterministic plan fields were incomplete. The desk needed a saved-report drilldown to prove whether target derivation alone can recover them or whether protected 5M entry/stop geometry must be mined first.
+Tests run: npx tsx tools/automation/no-chase-missing-plan-field-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-missing-plan-field-drilldown -- --proof-report tools/automation/diagnostic-reports/no-chase-ohlc-proof-extractor-1784561861777.json --json.
+Result: Missing-plan drilldown report tools/automation/diagnostic-reports/no-chase-missing-plan-field-drilldown-1784564559135.json passed. Summary: proofOnlyMissingPlanRows=15, missingEntryRows=9, missingStopRows=9, missingTargetRows=15, entryAndStopPresentTargetOnlyRows=0, missingEntryOrStopRows=15, intradayRows=15, afterLunchRows=0, morningRows=7, lunchRows=8, completedCloseThroughRows=15, completedRetestHoldRows=0, noImmediateTicketRows=15, canExecuteChangedRows=0, livePromotionAllowedRows=0, recommendedNextFix=mine_protected_5m_entry_stop_geometry.
+Trading logic changed: No. This is local saved-report research tooling only. It does not create tickets, wire scanner behavior, run setupScanner, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for runtime behavior; the drilldown is local/read-only and confirms these 15 rows must not become tickets yet.
+Next recommended action: Run full checks, commit, push, then build protected 5M entry/stop geometry research for these 15 IntradayMssMicroContinuation proof-positive rows.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add disabled no-chase preview readiness audit.
 Files changed: tools/automation/no-chase-rebuilt-review-disabled-preview-readiness-audit.ts, tools/automation/no-chase-rebuilt-review-disabled-preview-readiness-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The disabled adapter preview passed for the three no-chase rebuilt review cards. The desk needed a repeatable readiness audit that confirms the preview remains isolated from app runtime, scanner runtime, Discord, Supabase, bridge, canExecute, and scanner visibility before any future live-facing proposal.
