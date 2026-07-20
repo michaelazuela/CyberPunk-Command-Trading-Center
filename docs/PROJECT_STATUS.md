@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive low-risk loss separator miner.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-separator-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-separator-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The low-risk loss drilldown showed two June 1 LONG losses, but the desk needed to know whether live-usable pre-entry fields can isolate them without date-only, source-report, outcome-tag, or post-entry replay leakage.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-separator-miner.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-separator-miner -- --loss-drilldown tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-drilldown-1784559124557.json --out-dir tools/automation/diagnostic-reports/openingdrive-fresh-20260720 --json.
+Result: Focused test, TypeScript, and actual saved-report separator miner passed. Report generated tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-separator-miner-1784559594900.json. Starting low-risk lane: 31 rows, 29 winners, 2 losses. Zero-winner-cost live-usable scenarios: 0. The only perfect separator is date/context-only: 2026-06-01|LONG|10:00-10:59|risk_2_to_3 rejects both losses and zero winners, but it is not live-usable. Live-usable fields that reject both losses also reject too many winners: LONG|10:00-10:59|risk_2_to_3 rejects 14 winners; LONG|risk_2_to_3 rejects 16; 10:00-10:59|risk_2_to_3 rejects 16; LONG|10:00-10:59 rejects 18; risk_2_to_3 rejects 18; 10:00 hour rejects 22; LONG rejects 23. Recommendation=do_not_filter_low_risk_with_available_fields.
+Trading logic changed: No. This is saved-report-only separator-mining tooling. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner runtime, change canExecute, install live ranking, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Any zero-winner-cost separator found here is still in-sample. It needs validation before proposal work and must not use date-only or outcome/replay tags.
+Next recommended action: Do not install a low-risk exclusion with available fields. Keep low-risk as research context only or use it only inside a broader combined ranking comparison that preserves the stronger fine-risk/combined-clean-pocket lineage.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive low-risk loss drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Recursive low-risk broad validation found 2 stopped-before-T1 losses inside `risk_lt_4`. The desk needs exact loss rows, timing, MFE/MAE, risk buckets, and separator tags before deciding whether a no-lookahead exclusion exists.
