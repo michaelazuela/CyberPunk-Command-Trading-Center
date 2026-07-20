@@ -8858,6 +8858,23 @@ Next recommended action: Observe the next live high-confidence conditional revie
 ## Previous Change
 
 Date: 2026-07-20
+Task: Run targeted raw scanner package backfill for missing Sweep primary-exclusion slates.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The package metadata audit showed 2 of 5 changed dry-run slates were missing raw package coverage, so the desk attempted a local saved-OHLC replay backfill for only those dates/sessions before considering any runtime ranking change.
+Real runs: npm run research:raw-ohlc-scanner-artifacts -- --start-date 2026-06-15 --end-date 2026-06-15 --instrument MES --market-bars-json tools/automation/diagnostic-reports/raw-ohlc-source-MES-2026-06-01-to-2026-07-02-1784223007126.json --sessions evening --json; npm run research:raw-ohlc-scanner-artifacts -- --start-date 2026-06-29 --end-date 2026-06-29 --instrument MES --market-bars-json tools/automation/diagnostic-reports/raw-ohlc-source-MES-2026-06-01-to-2026-07-02-1784223007126.json --sessions morning --json; reran npm run diagnostic:held-local-preview-sweep-primary-exclusion-scanner-artifact-package-metadata-audit -- --dry-run tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-dry-run-1784578184042.json --scanner-package-dir tools/automation/diagnostic-reports --json.
+Reports: tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-generator-MES-2026-06-15-to-2026-06-15-1784579653057.json; tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-generator-MES-2026-06-29-to-2026-06-29-1784579771111.json; tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-package-metadata-audit-1784579779233.json.
+Result: Backfill did not clear runtime-readiness blockers. June 15 evening generated 0 events because the raw replay generator maps only morning/lunch replay session types. June 29 morning generated 33 ready events, but current scanner output emitted SweepMssFvgRetrace as LONG/NO TRADE only, not the held-local SHORT row. The package audit still covered 3 of 5 changed slates, with 3 slates carrying executionStatus/blockReason and 1 carrying exact InvalidStopLocation.
+Trading logic changed: No. This was a local saved-OHLC replay/backfill attempt only.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The held-local Sweep primary-exclusion evidence still does not reproduce across every raw scanner package. Runtime primary-selection exclusion remains unapproved.
+Next recommended action: Add a focused held-local-vs-raw nonreproduction drilldown for the two missing slates before deciding whether to support evening replay artifacts or treat those held-local rows as legacy/non-current evidence.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add raw scanner package metadata audit for Sweep primary exclusion.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-package-metadata-audit.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-package-metadata-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: The reduced scanner reports lacked exact InvalidStopLocation/executionStatus proof, so the desk needed to check full raw scanner artifact packages before deciding whether to change any generator or live selector behavior.
