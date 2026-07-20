@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive low-risk research approval contract.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: OpeningDrive `risk_lt_4` showed a clean saved-report research lane, but it needed an explicit read-only approval contract so the evidence cannot drift into scanner-visible behavior without future gated approval.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-approval-contract.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-low-risk-approval-contract -- --low-risk-validation tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-fine-risk-validation-1784556326436.json --fresh-replay-package tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package-1784556402040.json --out-dir tools/automation/diagnostic-reports/openingdrive-fresh-20260720 --json.
+Result: Focused test, TypeScript, and real saved-report contract run passed. Contract report generated tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-low-risk-approval-contract-1784557284935.json. Status pass. Broad validation: 15 low-risk rows, 15 winners, 0 losses, +350.64 one-MES P/L. Fresh package: 1 low-risk row, 1 winner, 0 losses. livePromotionAllowedRows remains 0.
+Trading logic changed: No. This is saved-report-only contract tooling. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner runtime, change canExecute, install live ranking, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Contract approval is still research-only; future scanner-visible behavior requires a separate explicit approval gate and regression pass.
+Next recommended action: Run the contract against actual saved low-risk validation plus current fresh package, then continue with a low-risk-vs-tight-long comparison simulation if it passes.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add low-risk OpeningDrive research selector to fresh replay packaging.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package.test.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-slate-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-lane-validation.test.ts, docs/PROJECT_STATUS.md.
 Reason: The 2026-07-20 fresh OpeningDrive package rejected a same-bar `risk_lt_4` winner even though the broader saved July same-bar report showed OpeningDrive `risk_lt_4` at 15 winners, 0 losses, +350.64 one-MES P/L. The research-only package now keeps that low-risk bucket before the existing `tight_long_risk_4_to_8` and `fine_risk_24_to_32` selectors.
