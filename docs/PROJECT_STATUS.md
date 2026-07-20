@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add session-bounded profit validation.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-session-bounded-profit-validation.ts, tools/automation/unified-positive-held-local-preview-session-bounded-profit-validation.test.ts, docs/PROJECT_STATUS.md.
+Reason: The profit-source audit identified large profitable model pockets but some top examples resolved across later sessions/days. The desk needed a same-session-only validation using saved scanner decision-tape completed 5M bars before treating any pocket as realistic review-ticket evidence.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-session-bounded-profit-validation.test.ts; npm run diagnostic:held-local-preview-session-bounded-profit-validation -- --outcome-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784419740441.json --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real validation tools/automation/diagnostic-reports/unified-positive-held-local-preview-session-bounded-profit-validation-1784586567833.json passed with sourceRows=2154, validationRows=2154, rowsWithSessionTape=1974, rowsWithBarsAfterProof=1784, resolvedRows=997, winnerRows=742, lossRows=255, unresolvedRows=787, blockedRows=370, oldGrossOneMesPl=130785.88, sessionGrossOneMesPl=75596.81, deltaOneMesPl=-55189.07, targetPocketRows=269, targetPocketSessionGrossOneMesPl=10640.01, targetPocketWinners=82, targetPocketLosses=23, livePromotionAllowedRows=0, recommendation=promote_surviving_pockets_to_scanner_owned_proposal_research. Strongest validated target pocket was SweepMssFvgRetrace morning SHORT risk_8_to_16 with 75 rows, 59W/5L/8U/3B, same-session P/L=7510, winRateResolved=0.92, averageRiskPoints=13.29, example entry=7585.5 stop=7599.5 T1=7564.5 T2=7557.5.
+Trading logic changed: No. This is local saved-report/session-tape validation tooling only. It does not run setupScanner, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Same-session validation depends on available saved scanner decision tapes; rows without local same-session bars are blocked instead of inferred. The report still does not prove scanner-owned publishability or live ranking safety by itself.
+Next recommended action: Build a scanner-owned selector proposal audit for the surviving pockets, starting with SweepMssFvgRetrace morning SHORT risk_8_to_16, then compare it against same-session non-target winners and blocked/unresolved rows before any runtime rank change.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add profit-source audit for high-gross research reports.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-profit-source-audit.ts, tools/automation/unified-positive-held-local-preview-profit-source-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: Earlier broad replay research showed very large gross one-MES P/L, and the desk needed a focused attribution pass to identify which model/session/direction/risk/entry-stop-target pockets produced those numbers without suppressing profitable model evidence or trusting duplicated raw totals.
