@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Build AfterLunch-specific proof-context enrichment from the saved queue.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-context-enrichment.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-context-enrichment.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the AfterLunch queue identified 138 saved-report rows, including 9 changed-slate rows, but the desk needed a joined proof/context enrichment layer before deciding whether first-proof preservation or adverse-path evidence is a real separator.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-proof-context-enrichment.test.ts; npm run diagnostic:held-local-preview-afterlunch-proof-context-enrichment -- --queue tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-context-queue-1784522224261.json --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-context-enrichment-1784523153760.json and .md. Status pass. Queue/enriched rows: 138/138. Blocked rows: 0. Winners/losses/unresolved: 110/27/1. Gross resolved one-MES P/L: +7990.97. Changed-slate first-proof top P/L: +250.01 versus replacement top P/L: +225.01. Same-bar/adverse/intrabar rows: 135/129/79. Research recommendation: preserve_first_valid_proof_research_only.
+Trading logic changed: No. This is a local/read-only saved-report enrichment. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The enrichment still uses outcome labels and saved proof timing. It does not prove a no-lookahead structural rule. The adverse:no bucket was 9/0/0 for +2080.64, but adverse:yes still contained most wins and all losses, so it needs structural separator validation before any scanner-visible behavior.
+Next recommended action: Build an AfterLunch no-lookahead adverse-path separator diagnostic from the enriched report, focusing on whether the adverse:no winner bucket can be identified before entry without using outcome/MFE/MAE labels.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Build AfterLunch-specific proof-context enrichment queue.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-context-queue.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-context-queue.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the broad structural inventory had zero AfterLunch rows, so the desk needed a dedicated saved-report queue from the 138 AfterLunch source/proof timing rows before any structural proof-quality enrichment or separator mining.
