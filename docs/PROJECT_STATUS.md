@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add installed penalty audit for broad model-family Sweep invalid-stop rows.
+Files changed: tools/automation/unified-positive-held-local-preview-model-family-installed-penalty-audit.ts, tools/automation/unified-positive-held-local-preview-model-family-installed-penalty-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The source trace showed invalid-stop Sweep rows were already present in saved scanner setup status, and valid-only same-slate research improved selection by +$93.75. The desk needed to verify whether the already-installed unified candidate book invalid-stop Sweep rank penalty protects current selection before considering builder or ranking changes.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-model-family-installed-penalty-audit.test.ts; npm run diagnostic:held-local-preview-model-family-installed-penalty-audit -- --model-family-broad-replay tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-broad-replay-1784575285131.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784574093106.json --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real audit report tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-installed-penalty-audit-1784577356237.json passed with replayRowsRead=185, auditedRows=185, slates=87, invalidStopSweepRows=38, invalidStopSweepRowsBlocked=38, invalidStopSweepCanExecuteTrueRows=0, invalidStopSweepPrimaryRows=5, invalidStopSweepRowsWithValidAlternativeAbove=31, entryStopTargetRiskDriftRows=0, livePromotionAllowedRows=0. The installed penalty keeps invalid-stop Sweep rows blocked and non-executable, but it is not enough to keep every invalid-stop Sweep row out of primary desk idea selection when no valid same-slate candidate ranks above it.
+Trading logic changed: No. This is local saved-report audit tooling only. It calls the installed unified candidate book scorer on saved rows, but does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The installed penalty is execution-safe but selection-incomplete for blocked primary display. A live-facing change would touch model ranking/selection behavior and needs an approval contract plus scanner-output dry-run proof first.
+Next recommended action: Build a research-only approval contract/dry-run for a stricter primary-selection exclusion that applies only to SweepMssFvgRetrace rows with executionStatus=Blocked and blockReason=InvalidStopLocation, while preserving blocked audit visibility, all valid Sweep/AfterLunch candidates, canExecute=false, and entry/stop/target/risk values.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add model-family valid-only same-slate simulation.
 Files changed: tools/automation/unified-positive-held-local-preview-model-family-valid-slate-simulation.ts, tools/automation/unified-positive-held-local-preview-model-family-valid-slate-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After the Sweep geometry drilldown and source trace, the desk needed to prove whether excluding row-level invalid geometry from research selection improves or worsens same-slate top selection before any Sweep rank proposal or source-builder repair.
