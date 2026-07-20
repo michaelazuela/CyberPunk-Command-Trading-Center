@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add publishable candidate replay outcome package.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-publishable-candidate-replay-outcome-package.ts, tools/automation/unified-positive-held-local-preview-publishable-candidate-replay-outcome-package.test.ts, docs/PROJECT_STATUS.md.
+Reason: The publishable candidate miner found 60 complete scanner-owned human-review candidates, but most lacked joined outcome coverage. The desk needed a local-only selected-24 replay/outcome package using saved scanner decision-tape completed 5M bars before considering any rank-overlay research.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-publishable-candidate-replay-outcome-package.test.ts; npm run diagnostic:held-local-preview-publishable-candidate-replay-outcome-package -- --candidate-miner tools/automation/diagnostic-reports/unified-positive-held-local-preview-publishable-candidate-miner-1784584273145.json --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real selected-24 package tools/automation/diagnostic-reports/unified-positive-held-local-preview-publishable-candidate-replay-outcome-package-1784584810129.json passed with selectedRowsRead=24, packageRows=24, rowsWithLocalTapeBars=24, rowsWithBarsAfterProof=24, publishCanExecuteTrueRows=0, resolvedRows=22, winnerRows=12, lossRows=10, unresolvedRows=2, blockedRows=0, noFillRows=0, noTargetOrStopRows=2, t1OnlyRows=0, t1AndT2Rows=12, stoppedBeforeT1Rows=10, grossResolvedOneMesPl=316.89, joinedOutcomeComparedRows=5, joinedOutcomeMatchRows=5, joinedOutcomeMismatchRows=0, livePromotionAllowedRows=0, recommendation=use_as_research_evidence_for_next_rank_overlay.
+Trading logic changed: No. This is local saved-artifact outcome packaging only. It does not run setupScanner, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The package is selected from the top 24 publishable rows, not the entire 60-row publishable set. Outcome uses saved scanner decision-tape completed 5M bars and conservative same-bar stop-first handling, so it is research evidence only and not a live promotion rule.
+Next recommended action: Compare the selected-24 resolved rows against the remaining 36 publishable rows to isolate whether the edge comes from model family, session, proof state, source tape quality, MFE/MAE profile, or timing before building any rank-overlay proposal.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add publishable candidate miner.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-publishable-candidate-miner.ts, tools/automation/unified-positive-held-local-preview-publishable-candidate-miner.test.ts, docs/PROJECT_STATUS.md.
 Reason: The Sweep invalid-stop provenance branch closed the runtime-filter/source-fix path, so the desk needed to return to the broader reviewed-positive set and identify complete scanner-owned human-review candidates by model, session, proof state, and current DeskPublishDecision shape.
