@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add Sweep morning LONG outcome drilldown for the weakest raw OHLC scanner artifact pocket.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-outcome-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-outcome-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the model/session/direction rollup identified SweepMssFvgRetrace|morning|LONG as the weakest pocket, so the next safe step was to classify its outcome path before proposing any runtime ranking change.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-outcome-drilldown.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-morning-long-outcome-drilldown -- --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784503584511.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-outcome-drilldown-1784509024912.json. Status pass. Filtered rows: 80. Resolved/unresolved: 46/34. Winners/problems: 33/47. Stopped/no-fill/no-target-or-stop rows: 13/13/21. Gross resolved one-MES P/L: 4891.25. Average risk: 20.22 points. Average MFE/MAE-to-risk: 1.36/0.77. Dominant problem: no_target_or_stop_hit. Rows with >=1.5R MFE were cleanly positive: 37 rows, 33 winners, 5585 gross one-MES P/L. Low-MFE and no-fill rows carried the problem set. runtimeRankConsumerAllowedByThisReport remains false.
+Trading logic changed: No. This is a local/read-only saved-outcome drilldown. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: MFE/MAE are outcome-known fields and must not become live selectors. The report is useful for diagnosing the weak pocket, not for direct runtime filtering.
+Next recommended action: Build a pre-entry-only scanner-field drilldown for the SweepMssFvgRetrace morning LONG rows, especially late 11:00/wide-risk/no-fill/no-target rows, to find a supported field that predicts low-MFE/no-fill behavior without lookahead.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add model/session/direction rollup for raw OHLC scanner artifact outcomes.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-model-session-direction-rollup.ts, tools/automation/raw-ohlc-scanner-artifact-model-session-direction-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: proofSelectionSignal penalty/boost research produced no runtime-worthy separator, so the next safe step was to pick the next research target from model/session/direction outcome data instead of forcing that dead path.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: The package is still a research-row set, not independent live trades. This rollup selects the next research target; it is not a rank consumer.
 Next recommended action: Drill into SweepMssFvgRetrace morning LONG to separate no-fill, stopped, and no-target/no-stop rows by proof-time and pre-entry context.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add supported-field outcome miner for proofSelectionSignal research.
