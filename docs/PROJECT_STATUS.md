@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Build AfterLunch proof-time proxy validation package.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-validation-package.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-validation-package.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the no-lookahead separator diagnostic found proof-time proxy candidates, but those candidates needed a fresh validation package rather than a live-facing rank/filter install.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-validation-package.test.ts; npm run diagnostic:held-local-preview-afterlunch-proof-time-proxy-validation-package -- --separator tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-adverse-no-lookahead-separator-1784523651409.json --proof-context-enrichment tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-context-enrichment-1784523153760.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-validation-package-1784524168409.json and .md. Status pass. Source rows: 138. Research proxy candidates: 8. Package rows: 30. Package W/L/U: 30/0/0. One-MES P/L: +2783.22. Top proxy packages: risk:10.25-12 10/0/0 +1081.92; changedSlate:true 9/0/0 +896.92; risk+rank:10.25-12|later 8/0/0 +862.54.
+Trading logic changed: No. This is a local/read-only validation package. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This package is still in-sample packaging from saved reports. It is not a fresh replay result and must not be treated as scanner-ready.
+Next recommended action: Run fresh replay validation on the 30-row proof-time proxy package and compare selected-package P/L against the full AfterLunch source set before any scanner-visible proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Build AfterLunch adverse-path no-lookahead separator diagnostic.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-adverse-no-lookahead-separator.ts, tools/automation/unified-positive-held-local-preview-afterlunch-adverse-no-lookahead-separator.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the AfterLunch enrichment showed an attractive adverse:no bucket, but adverse/no-adverse is future path evidence. The desk needed a diagnostic that rejects lookahead labels and tests only proof-time proxy fields before any scanner-visible behavior can be discussed.
