@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive low-risk comparison simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-comparison-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-comparison-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The new `low_risk_lt_4` selector needed to be compared against the existing tight-long/fine-risk OpeningDrive lanes before any scanner-visible proposal. The comparison must prove whether low-risk is a replacement, an additive priority lane, or too small and needs broader research.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-comparison-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-low-risk-comparison-simulation -- --low-risk-contract tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-low-risk-approval-contract-1784557284935.json --fresh-replay-package tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package-1784556402040.json --combined-clean-pocket-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-simulation-1784459301092.json --out-dir tools/automation/diagnostic-reports/openingdrive-fresh-20260720 --json.
+Result: Focused test, TypeScript, and real saved-report comparison passed. Report generated tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-low-risk-comparison-simulation-1784558067894.json. Current fresh package: 3 rows, 2 winners, 0 losses, 1 unresolved, +101.26 one-MES P/L, 0 collisions. Low-risk-only: 1 row, 1 winner, 0 losses, +36.88, avg risk 3.63. Tight-long current: 2 rows, 1 winner, 0 losses, 1 unresolved, +64.38. Prior best combined clean-pocket baseline remains strongest: 44 rows, 38 winners, 0 losses, 3 other-resolved, 3 unresolved, +6726.38. Recommendation=broaden_low_risk_research_before_any_proposal; low-risk is additive priority research, not a replacement.
+Trading logic changed: No. This is saved-report-only comparison tooling. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner runtime, change canExecute, install live ranking, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Fresh low-risk sample may be clean but small; do not use it as a replacement filter unless broader replay evidence supports that.
+Next recommended action: Broaden low-risk validation across additional saved OpeningDrive same-bar/fresh reports and compare it against the installed/approved combined clean-pocket lineage before proposal work.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive low-risk research approval contract.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-approval-contract.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: OpeningDrive `risk_lt_4` showed a clean saved-report research lane, but it needed an explicit read-only approval contract so the evidence cannot drift into scanner-visible behavior without future gated approval.
