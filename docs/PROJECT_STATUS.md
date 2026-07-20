@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add SweepMssFvgRetrace slate-based model edge audit.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-slate-edge-audit.ts, tools/automation/unified-positive-held-local-preview-sweep-slate-edge-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: The desk needed to stop treating one selected Sweep pocket as a full model answer. This phase audits all available saved SweepMssFvgRetrace rows from the session-bounded report, collapses repeated 5M rows into realistic slates, and breaks results down by session, direction, risk band, standalone versus collision, and OpeningDrive overlap.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-slate-edge-audit.test.ts; npm run diagnostic:held-local-preview-sweep-slate-edge-audit -- --session-bounded-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-session-bounded-profit-validation-1784586800588.json --json.
+Result: Focused test passed. Real audit tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-slate-edge-audit-1784589602405.json passed with sourceRows=2154, sweepRawRows=715, sweepSlateRows=94, duplicateRowsSuppressed=621, rawSweepOneMesPl=23318.75, slateSweepOneMesPl=1848.75, slateSweepWinRateResolved=0.64, livePromotionAllowedRows=0, recommendation=advance_best_pocket_to_local_preview_only. All Sweep slate-based result was 27W/15L/32U/20B across 23 dates. Best meaningful with-collision pocket remained SweepMssFvgRetrace morning SHORT risk_8_to_16 with 5 slates, 4W/1L, P/L=471.25, winRate=0.80, avgRisk=12.5, avgMFE=5.71R, avgMAE=0.27R, and 5/5 OpeningDrive overlaps. Best standalone pocket was smaller: lunch SHORT risk_4_to_8 with 3 standalone slates, 2W/0L/1U, P/L=145. This indicates Sweep has model edge after slate de-duplication, but the strongest morning short pocket is confirmation-dependent rather than purely standalone.
+Trading logic changed: No. This is local saved-report analysis only. It does not run setupScanner, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This audit uses saved session-bounded rows, not a fresh raw-OHLC replay from every possible historical day. The correct conclusion is research edge by slate, not live eligibility.
+Next recommended action: Run the same slate-based model edge audit for OpeningDriveFvgContinuation, then compare OpeningDrive standalone versus Sweep overlap before building any local-preview proposal.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add scanner-owned selector dry-run contract.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-scanner-owned-selector-dry-run-contract.ts, tools/automation/unified-positive-held-local-preview-scanner-owned-selector-dry-run-contract.test.ts, docs/PROJECT_STATUS.md.
 Reason: The selector proposal audit proved SweepMssFvgRetrace morning SHORT risk_8_to_16 was the strongest same-session pocket, but repeated 5M proof rows could inflate the result. The desk needed a dry-run contract that simulates one scanner-owned proposal per identical setup/entry/stop/target slate, stale duplicate suppression, and collision notes before any local-preview or runtime proposal.

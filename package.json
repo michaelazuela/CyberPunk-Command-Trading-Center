@@ -118,6 +118,7 @@
     "diagnostic:held-local-preview-session-bounded-profit-validation": "tsx tools/automation/unified-positive-held-local-preview-session-bounded-profit-validation.ts",
     "diagnostic:held-local-preview-scanner-owned-selector-proposal-audit": "tsx tools/automation/unified-positive-held-local-preview-scanner-owned-selector-proposal-audit.ts",
     "diagnostic:held-local-preview-scanner-owned-selector-dry-run-contract": "tsx tools/automation/unified-positive-held-local-preview-scanner-owned-selector-dry-run-contract.ts",
+    "diagnostic:held-local-preview-sweep-slate-edge-audit": "tsx tools/automation/unified-positive-held-local-preview-sweep-slate-edge-audit.ts",
     "diagnostic:held-local-preview-afterlunch-timing-field-miner": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.ts",
     "diagnostic:held-local-preview-afterlunch-timing-selection-simulation": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.ts",
     "diagnostic:held-local-preview-afterlunch-changed-slate-drilldown": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.ts",
