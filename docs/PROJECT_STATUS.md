@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add supported-field inventory for proofSelectionSignal fresh artifact research.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-inventory.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-inventory.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Broader validation rejected the current problem-only combo path, so the next safe step was to inventory which richer deterministic fields are actually present on saved scanner artifacts before mining any new separator.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-inventory.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-inventory -- --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-inventory-1784507133343.json. Status pass. Artifacts read: 38. Events scanned: 2684. keep_later_sweep_proof rows with valid levels: 397. Fields inventoried: 19. Supported fields: 13. Supported fields include detectedStatus, confidence, riskAdvisoryStatus, proximityScore, levelContextScore, rankScore, targetRoom status/clean-path/T2-obstruction, timeframeMss status, htfLineInSand status, evidence count, and missing-evidence count. runtimeRankConsumerAllowedByThisReport remains false. Recommendation is mine_supported_fields_against_outcomes.
+Trading logic changed: No. This is a local/read-only saved-artifact field inventory. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This only proves field availability, not trading value. It is a prerequisite for a new outcome separator, not an approval to change runtime behavior.
+Next recommended action: Mine these supported fields against the 343-row outcome set, then validate any candidate separator before proposing scanner-visible behavior.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add broader validation for problem-only proofSelectionSignal quality combos.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-broader-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-broader-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The problem-only quality miner found narrow clean combos in one retained overlay set, but those combos needed broader validation before any runtime rank or exclusion proposal. This validation applies only supported proof-time fields to the 343-row broader outcome report and marks unsupported row-count combos as unsupported instead of inferring missing fields.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: The smaller clean combos were overfit to one retained overlay set and become contaminated on the broader row set.
 Next recommended action: Reject the current problem-only combo path for runtime use. If continuing this research family, mine richer supported fields from fresh scanner artifacts rather than forcing a proofSelectionSignal penalty.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add problem-only quality miner for proofSelectionSignal research.
