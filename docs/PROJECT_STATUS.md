@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Validate Sweep lunch LONG stable-field candidates with no-lookahead slate selection simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-selection-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the stable-field miner found strong feature buckets for SweepMssFvgRetrace lunch LONG, but bucket quality alone does not prove top-selection improvement. The next safe step was a research-only slate selection simulation.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-selection-simulation.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-selection-simulation -- --full-day-rollup tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup-1784513767173.json --stable-field-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-field-miner-1784514150590.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-selection-simulation-1784514604488.json. Status pass. Target rows: 107. Slates: 11. Changed slates: 1. Baseline/simulated top one-MES P/L: 423.75/473.75, but resolved top-selection delta is 0 because the changed 2026-06-26 lunch slate replaced stopped_before_t1 -50 with no_fill unresolved. Recommendation: keep_research_only.
+Trading logic changed: No. This is a local/read-only saved-report selection simulation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The simulation validates that stable buckets are descriptive but not yet a selection-improvement rule. Do not promote these buckets to scanner-visible behavior.
+Next recommended action: Keep stable lunch LONG buckets as research context only. Next narrow research should validate scanner-owned fields inside the lunch LONG strong pocket, or broaden to the lunch SHORT mixed-watch group to search for selection-changing separators.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Mine Sweep lunch LONG full-day strong pocket using stable pre-entry fields.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the broad full-day model/session/direction rollup identified SweepMssFvgRetrace lunch LONG as the strongest group. The next safe step was to mine stable no-lookahead pre-entry fields before any scanner-field or live-facing proposal.
