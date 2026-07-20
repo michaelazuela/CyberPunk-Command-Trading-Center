@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add no-chase Intraday residual retest-swing drilldown.
+Files changed: tools/automation/no-chase-intraday-residual-retest-swing-drilldown.ts, tools/automation/no-chase-intraday-residual-retest-swing-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The disposition rollup left three Intraday MSS Micro Continuation rows blocked by residual retest-swing-stop proof, so the desk needed a local saved-OHLC drilldown before considering any source-builder change.
+Tests run: npx tsx tools/automation/no-chase-intraday-residual-retest-swing-drilldown.test.ts; npm run research:no-chase-intraday-residual-retest-swing-drilldown -- --disposition-rollup tools/automation/diagnostic-reports/no-chase-intraday-blocker-disposition-rollup-1784571201512.json --omission-report tools/automation/diagnostic-reports/no-chase-protected-geometry-omission-diagnostic-1784565920471.json --audit-dir tools/automation/discord-audit --market-bars-json tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-06-01-to-2026-07-02-1784561833535.json --json.
+Result: Residual retest-swing drilldown report tools/automation/diagnostic-reports/no-chase-intraday-residual-retest-swing-drilldown-1784572696951.json passed. Summary: rowsChecked=3, noConfirmedRetestSwingRows=1, riskValidProbeRows=0, wideOrLosingProbeOnlyRows=2, winningRiskValidRows=0, oneMesGrossRiskValid=0, canExecuteTrueRows=0, livePromotionAllowedRows=0, recommendation=keep_blocked. June 17 lunch SHORT found no later completed protected retest swing. June 25 lunch LONG found a later swing but risk was 8.75 points and replay stopped for -$43.75. July 2 lunch LONG found a later swing but risk was 9.00 points and replay stopped for -$45.00.
+Trading logic changed: No. This is local saved-report/OHLC research tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for runtime behavior. The retest-swing residual family does not support a live-facing source-builder fix from this evidence.
+Next recommended action: Move to the two invalid-stop-location rows from the disposition rollup. Keep residual retest-swing-stop rows blocked unless a separate narrower entry-source study produces <=5 point risk without lookahead.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add no-chase Intraday blocker disposition rollup.
 Files changed: tools/automation/no-chase-intraday-blocker-disposition-rollup.ts, tools/automation/no-chase-intraday-blocker-disposition-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After the timestamp fallback and protected-stop fallback simulation, the desk needed a durable saved-report rollup showing which Intraday no-chase blocker rows were converted, rejected, intentionally held, or still need research.
