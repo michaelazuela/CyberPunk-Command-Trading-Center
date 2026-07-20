@@ -114,6 +114,7 @@
     "diagnostic:held-local-preview-sweep-invalid-stop-provenance-audit": "tsx tools/automation/unified-positive-held-local-preview-sweep-invalid-stop-provenance-audit.ts",
     "diagnostic:held-local-preview-publishable-candidate-miner": "tsx tools/automation/unified-positive-held-local-preview-publishable-candidate-miner.ts",
     "diagnostic:held-local-preview-publishable-candidate-replay-outcome-package": "tsx tools/automation/unified-positive-held-local-preview-publishable-candidate-replay-outcome-package.ts",
+    "diagnostic:held-local-preview-profit-source-audit": "tsx tools/automation/unified-positive-held-local-preview-profit-source-audit.ts",
     "diagnostic:held-local-preview-afterlunch-timing-field-miner": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.ts",
     "diagnostic:held-local-preview-afterlunch-timing-selection-simulation": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.ts",
     "diagnostic:held-local-preview-afterlunch-changed-slate-drilldown": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.ts",

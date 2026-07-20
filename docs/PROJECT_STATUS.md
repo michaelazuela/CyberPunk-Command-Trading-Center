@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add profit-source audit for high-gross research reports.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-profit-source-audit.ts, tools/automation/unified-positive-held-local-preview-profit-source-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: Earlier broad replay research showed very large gross one-MES P/L, and the desk needed a focused attribution pass to identify which model/session/direction/risk/entry-stop-target pockets produced those numbers without suppressing profitable model evidence or trusting duplicated raw totals.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-profit-source-audit.test.ts; npm run diagnostic:held-local-preview-profit-source-audit -- --outcome-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784419740441.json --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real audit tools/automation/diagnostic-reports/unified-positive-held-local-preview-profit-source-audit-1784585580979.json passed with sourceRows=2154, resolvedRows=2144, unresolvedRows=10, grossOneMesPl=130785.88, uniqueCampaignRows=437, uniqueCampaignGrossOneMesPl=30706.70, onePerSlateRows=1159, onePerSlateGrossOneMesPl=117926.14, topModel=SweepMssFvgRetrace, topModelGrossOneMesPl=42776.25, topDedupeModel=SweepMssFvgRetrace, topDedupeModelGrossOneMesPl=42735, livePromotionAllowedRows=0, recommendation=audit_positive_selectors_before_runtime_changes.
+Trading logic changed: No. This is local saved-report attribution tooling only. It does not run setupScanner, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The raw high-gross report double-counts overlapping 5M candidates and some top tickets resolve across later sessions/days, so this audit identifies promising method pockets but is not a live trading claim. Session-bounded validation is required before any scanner-owned rank proposal.
+Next recommended action: Run a session-bounded profit-source validation on the strongest pockets, starting with SweepMssFvgRetrace lunch short risk_16_to_24, SweepMssFvgRetrace morning short risk_8_to_16, OpeningDriveFvgContinuation morning long risk_gte_32, and IntradayMssMicroContinuation morning short risk_16_to_24/risk_24_to_32.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add publishable candidate replay outcome package.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-publishable-candidate-replay-outcome-package.ts, tools/automation/unified-positive-held-local-preview-publishable-candidate-replay-outcome-package.test.ts, docs/PROJECT_STATUS.md.
 Reason: The publishable candidate miner found 60 complete scanner-owned human-review candidates, but most lacked joined outcome coverage. The desk needed a local-only selected-24 replay/outcome package using saved scanner decision-tape completed 5M bars before considering any rank-overlay research.
