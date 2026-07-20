@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Intraday MSS full-window stop replay probe.
+Files changed: tools/automation/no-chase-intraday-full-window-stop-replay.ts, tools/automation/no-chase-intraday-full-window-stop-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After installing the guarded full-window protected stop fallback, the desk needed a fast targeted replay over the 4 timestamp-alignment validation rows to prove whether the fallback creates useful human-review tickets without touching live behavior.
+Tests run: npx tsx tools/automation/no-chase-intraday-full-window-stop-replay.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-intraday-full-window-stop-replay -- --validation-report tools/automation/diagnostic-reports/no-chase-mss-timestamp-alignment-validation-1784566848392.json --market-bars-json tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-06-01-to-2026-07-02-1784561833535.json --json.
+Result: Targeted replay report tools/automation/diagnostic-reports/no-chase-intraday-full-window-stop-replay-1784569268167.json passed. Summary: rowsChecked=4, humanReviewRows=1, stillBlockedRows=3, missingEntryRowsStillBlocked=1, canExecuteTrueRows=0, publishDiscordEligibleRows=1, livePromotionAllowedRows=0, oneMesGross=$235.00, recommendation=fallback_helped_guarded_rows. The moved row was 2026-06-17 morning IntradayMssMicroContinuation SHORT at 11:55, entry 7575.75, stop 7599.25, T1 7540.50, T2 7528.75, outcome T2_HIT at 14:10 for +$235.00 one-MES gross.
+Trading logic changed: No. This is local saved-report replay tooling only. It runs setupScanner in targeted replay mode from local OHLC, but does not create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None. Local controlled OHLC artifact only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Runtime risk is none because this phase is read-only tooling. Research risk is that 3 rows remain blocked, so the fallback should not be broadened into trigger/entry creation.
+Next recommended action: Keep the June 25 missing-entry row blocked. Investigate the two remaining proof-present blockers narrowly: June 15 needs FVG/retest entry alignment around the 7643 line-in-the-sand, and June 18 needs retest swing stop versus protected MSS stop conflict analysis. Do not loosen canExecute or broaden full-window history into entry detection.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Intraday MSS full-window protected stop fallback.
 Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
 Reason: The read-only MSS timestamp validation proved 3 of 4 timestamp-blocked Intraday MSS rows had valid protected 5M MSS swing stops available in completed full-window 5M OHLC. The source builder needed a narrow fallback that can recover the protected stop without letting historical bars create entries.
