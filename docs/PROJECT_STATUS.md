@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add no-chase protected 5M geometry miner.
+Files changed: tools/automation/no-chase-protected-geometry-miner.ts, tools/automation/no-chase-protected-geometry-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Missing-plan drilldown proved the 15 proof-positive no-chase rows cannot be recovered by target derivation alone because every row is missing entry or stop. The desk needed a research-only miner that proposes entry from completed 5M proof close, protected stop from the 5M window extreme plus offset, deterministic 1.5R/2R targets from app trade rules, and replay outcomes without making any row live.
+Tests run: npx tsx tools/automation/no-chase-protected-geometry-miner.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-protected-geometry-miner -- --proof-report tools/automation/diagnostic-reports/no-chase-ohlc-proof-extractor-1784561861777.json --market-bars-json tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-06-01-to-2026-07-02-1784561833535.json --json.
+Result: Protected geometry miner report tools/automation/diagnostic-reports/no-chase-protected-geometry-miner-1784565046203.json passed. Summary: missingPlanRows=15, geometryCompleteRows=7, geometryBlockedRows=8, maxRiskPassRows=7, maxRiskBlockedRows=7, replayedRows=7, replayWins=0, replayLosses=4, replayNoFill=1, replayFilledOpen=0, replayAmbiguous=2, replayGrossOneMes=-$65.00, canExecuteChangedRows=0, publishDiscordRows=0, livePromotionAllowedRows=0, recommendation=do_not_use_geometry.
+Trading logic changed: No. This is local saved-report research tooling only. It does not create tickets, wire scanner behavior, run setupScanner, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for runtime behavior; the miner is local/read-only and the proposed geometry was negative in replay, so it must not be used for ticket creation.
+Next recommended action: Do not install automatic missing-plan entry/stop reconstruction from proof close/window extreme. Keep the three disabled preview cards as the only current no-chase rebuilt positives, and redirect next research to why the scanner omitted protected geometry on those 15 rows instead of deriving new trades from them.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add no-chase missing plan field drilldown.
 Files changed: tools/automation/no-chase-missing-plan-field-drilldown.ts, tools/automation/no-chase-missing-plan-field-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The no-chase proof extractor found 15 completed-5M-proof cases still blocked because deterministic plan fields were incomplete. The desk needed a saved-report drilldown to prove whether target derivation alone can recover them or whether protected 5M entry/stop geometry must be mined first.
