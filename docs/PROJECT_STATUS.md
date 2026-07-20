@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Sweep scanner-owned snapshot export.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-owned-snapshot-export.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-owned-snapshot-export.test.ts, docs/PROJECT_STATUS.md.
+Reason: The changed-event drilldown proved raw packages lacked selected-candidate, DeskTicket, and DeskPublishDecision fields, so the desk needed to replay those four changed events through the existing scanner-owned builders before deciding whether a runtime Sweep exclusion proposal was justified.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-owned-snapshot-export.test.ts; npm run diagnostic:held-local-preview-sweep-primary-exclusion-scanner-owned-snapshot-export -- --changed-event-drilldown tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-current-changed-event-drilldown-1784582121170.json --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real scanner-owned snapshot export tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-owned-snapshot-export-1784582607155.json passed with changedEventsRead=4, snapshotRows=8, baselineRows=4, simulatedReplacementRows=4, selectedCandidateSnapshotRows=8, deskTicketSnapshotRows=8, publishDecisionSnapshotRows=8, publishShouldPostRows=0, publishCompletePlanRows=0, publishCanExecuteTrueRows=0, runtimeProposalReadyRows=0, canExecuteDriftRows=0, entryStopTargetDriftRows=0, runtimeInstallAllowed=false.
+Trading logic changed: No. This is local scanner-owned builder snapshot tooling only. It does not run setupScanner, install runtime selection behavior, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The 4 changed raw-rank events are non-publishable under current scanner-owned builders. Baseline invalid-stop Sweep rows become trigger-pending/no-display snapshots, and replacement TurtleSoup rows become watch/no-display snapshots. This argues against installing a live Sweep exclusion from these four events.
+Next recommended action: Search current raw scanner packages for exact invalid-stop Sweep top rows where the same-slate replacement already has complete entry, stop, T1, and T2. Only those cases could support a future runtime proposal.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add current raw-package Sweep changed-event drilldown.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-changed-event-drilldown.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-changed-event-drilldown.test.ts, docs/PROJECT_STATUS.md.
 Reason: The current selection-impact simulation found 4 changed top-candidate events, but the desk needed to know whether those changes were backed by scanner-owned selected-candidate, DeskTicket, or DeskPublishDecision artifacts before any runtime proposal.
