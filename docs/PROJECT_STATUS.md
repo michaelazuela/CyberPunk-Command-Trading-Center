@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add same-session competition inventory for proofSelectionSignal positive-lane research.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-same-session-competition-inventory.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-same-session-competition-inventory.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Positive-lane top-selection validation had zero changed selections, so the next check needed to prove whether same-session candidate competition exists before any runtime rank consumer. This inventory groups overlay rows by trade date/session and classifies whether positive-lane rows can replace earlier problem rows.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-same-session-competition-inventory.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-same-session-competition-inventory -- --overlay-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-overlay-simulation-1784504818812.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-same-session-competition-inventory-1784505691252.json. Status pass. Date/session groups: 25. Single/multi-slate groups: 22/3. Mixed competition groups: 0. Actionable mixed competition groups: 0. Problem-only groups: 7. Already-clean winner groups: 2. Groups with positive lane and earlier problem: 0. runtimeRankConsumerAllowedByThisReport remains false. Recommendation is no_runtime_rank_consumer_from_current_set.
+Trading logic changed: No. This is a local/read-only saved-report competition inventory. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The positive lane is still useful as descriptive research, but this saved set has no actionable same-session mixed competition where a positive-lane boost would replace an earlier problem slate.
+Next recommended action: Mine the seven problem-only groups for a pre-entry quality or exclusion signal, or broaden the candidate source before any scanner-visible rank consumer.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add positive-lane top-selection validation for proofSelectionSignal research.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-top-selection-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-top-selection-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The positive-lane overlay improved precision but had low recall, so it needed a same date/session top-selection simulation before any runtime rank proposal. This validation compares earliest retained slate selection against an overlay that prefers the earliest positive-lane slate when present.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: The positive lane remains useful as a diagnostic description but has no measured top-selection impact on this saved set.
 Next recommended action: Mine richer same-session competition fields or validate on a dataset where multiple retained candidates actually compete for top selection before any scanner-visible rank consumer.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add positive-lane overlay simulation for proofSelectionSignal research.
