@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Mine Sweep lunch LONG full-day strong pocket using scanner-owned saved artifact fields.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the stable-field validation showed descriptive buckets but no resolved top-selection improvement. The next safe step was to inspect scanner-owned fields captured in saved artifacts inside the same SweepMssFvgRetrace lunch LONG full-day strong pocket before any runtime proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner -- --full-day-rollup tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup-1784513767173.json --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-broader-daily-replay-package-1784503558665.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner-1784515244249.json. Status pass. Outcome rows: 343. Filtered lunch LONG rows: 107. Joined scanner rows: 107. Feature stats: 57. Positive/negative candidates: 14/7. Best positive candidate: hasNoChaseMissingEvidence=false, 67 rows, 67 winners, 0 problems, 0 unresolved, +9417.5 gross one-MES P/L. Matching clean companion: htfLineInSandStatus=not_applicable, 67 rows, 67 winners, 0 problems, +9417.5. Other strong positives: riskAdvisoryStatus=RISK_WITHIN_STANDARD_LIMIT, 33 rows, 33 winners, +1532.5; rankScoreBucket=lt_150, 28 rows, 28 winners, +1487.5; riskBucket<=8, 49 rows, 48 winners, 1 problem, +2346.25. Best negative candidate: levelContextBucket=20_to_29, 12 rows, 5 winners, 7 problems, 2 unresolved, -58.75. Stronger caution pockets: hasNoChaseMissingEvidence=true and htfLineInSandStatus=blocked, each 40 rows, 8 winners, 32 problems, 22 unresolved, +1558.75; evidenceCountBucket=gte_40, 27 rows, 1 winner, 26 problems, 18 unresolved, -141.25; riskBucket=8.25-12, 12 rows, 0 winners, 12 problems, 8 unresolved, -200.
+Trading logic changed: No. This is a local/read-only saved-artifact scanner-field miner. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Scanner-owned field buckets are still research labels, not a proven selection rule. Some top signals may be overlapping aliases of the same underlying no-chase/HTF-line-in-sand state. Do not install runtime behavior from this report alone.
+Next recommended action: Validate hasNoChaseMissingEvidence=false / htfLineInSandStatus=not_applicable as a no-lookahead top-selection overlay for Sweep lunch LONG slates before any scanner-visible proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Validate Sweep lunch LONG stable-field candidates with no-lookahead slate selection simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-selection-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the stable-field miner found strong feature buckets for SweepMssFvgRetrace lunch LONG, but bucket quality alone does not prove top-selection improvement. The next safe step was a research-only slate selection simulation.
