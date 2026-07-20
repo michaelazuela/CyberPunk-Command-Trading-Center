@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Intraday MSS remaining blocker drilldown.
+Files changed: tools/automation/no-chase-intraday-remaining-blocker-drilldown.ts, tools/automation/no-chase-intraday-remaining-blocker-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The full-window stop replay moved one row to a clean human-review ticket and left three blocked. The desk needed a narrow diagnostic for the two proof-present blocked rows before considering another source-builder fix.
+Tests run: npx tsx tools/automation/no-chase-intraday-remaining-blocker-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-intraday-remaining-blocker-drilldown -- --replay-report tools/automation/diagnostic-reports/no-chase-intraday-full-window-stop-replay-1784569268167.json --validation-report tools/automation/diagnostic-reports/no-chase-mss-timestamp-alignment-validation-1784566848392.json --market-bars-json tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-06-01-to-2026-07-02-1784561833535.json --json.
+Result: Drilldown report tools/automation/diagnostic-reports/no-chase-intraday-remaining-blocker-drilldown-1784570138821.json passed. Summary: rowsChecked=2, fvgRetestEntryPendingRows=0, retestSwingStopNotConfirmedRows=2, missingEntryProtectedStopOnlyRows=0, humanReviewRows=0, canExecuteTrueRows=0. June 15 and June 18 both remained MSS_CONTINUATION_RETEST_PENDING because the preferred retest swing stop was not a confirmed protected 5M swing, even though validation had recovered older protected MSS swing stops.
+Trading logic changed: No. This is local saved-report replay tooling only. It runs setupScanner in targeted probe mode from local OHLC, but does not create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None. Local controlled OHLC artifact only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Runtime risk is none because this phase is read-only tooling. Research risk is that the next candidate fix touches protected stop source selection, which is trading logic and must stay narrow.
+Next recommended action: Build a research-only comparison for Intraday MSS close-through retest stop selection: preferred retest swing stop versus recovered protected MSS swing stop for June 15 and June 18. Only if that proves clean should the source-builder consider using the older protected MSS swing as a fallback when the retest swing is unconfirmed and entry already exists.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Intraday MSS full-window stop replay probe.
 Files changed: tools/automation/no-chase-intraday-full-window-stop-replay.ts, tools/automation/no-chase-intraday-full-window-stop-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After installing the guarded full-window protected stop fallback, the desk needed a fast targeted replay over the 4 timestamp-alignment validation rows to prove whether the fallback creates useful human-review tickets without touching live behavior.
