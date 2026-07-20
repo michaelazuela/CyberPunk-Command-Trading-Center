@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Build AfterLunch adverse-path no-lookahead separator diagnostic.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-adverse-no-lookahead-separator.ts, tools/automation/unified-positive-held-local-preview-afterlunch-adverse-no-lookahead-separator.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the AfterLunch enrichment showed an attractive adverse:no bucket, but adverse/no-adverse is future path evidence. The desk needed a diagnostic that rejects lookahead labels and tests only proof-time proxy fields before any scanner-visible behavior can be discussed.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-adverse-no-lookahead-separator.test.ts; npm run diagnostic:held-local-preview-afterlunch-adverse-no-lookahead-separator -- --proof-context-enrichment tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-context-enrichment-1784523153760.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-adverse-no-lookahead-separator-1784523651409.json and .md. Status pass. Source rows: 138. Adverse no/yes rows: 9/129. Separators evaluated: 47. Research candidates: 8. Lookahead-rejected separators: 1. Top proof-time research candidate: risk:10.25-12, 10 rows, 10/0/0, +1081.92. Second candidate: changedSlate:true, 9 rows, 9/0/0, +896.92. Direct futurePath:adverse_no was rejected as lookahead even though it was 9/0/0, +2080.64.
+Trading logic changed: No. This is a local/read-only saved-report diagnostic. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The top proxy candidates are still in-sample research only. The report explicitly says adverse:no is not identifiable without lookahead, so it must not become a live filter.
+Next recommended action: Build a fresh replay validation package for the proof-time candidates, starting with risk:10.25-12 and changedSlate:true, and measure whether those survive outside this enrichment slice.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Build AfterLunch-specific proof-context enrichment from the saved queue.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-context-enrichment.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-context-enrichment.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the AfterLunch queue identified 138 saved-report rows, including 9 changed-slate rows, but the desk needed a joined proof/context enrichment layer before deciding whether first-proof preservation or adverse-path evidence is a real separator.
