@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add problem-only quality miner for proofSelectionSignal research.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-quality-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-quality-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Same-session competition inventory found no actionable mixed groups but did identify seven problem-only date/session groups. This miner tests proof-time/live-usable compound feature combinations against retained winner groups to see whether problem-only exclusion candidates exist before any runtime rank consumer.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-quality-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-quality-miner -- --overlay-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-positive-lane-overlay-simulation-1784504818812.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-quality-miner-1784506165909.json. Status pass. Date/session groups: 25. Problem-only groups: 7. Feature combos tested: 257. Clean problem-only combos: 46. Broad clean problem-only combos: 11. Top clean combo: direction=LONG&proofWindow=proof_10_to_12&rowCountBucket=rows_6_to_10, matching 2 problem-only groups and 0 non-problem groups. runtimeRankConsumerAllowedByThisReport remains false. Recommendation is validate_clean_problem_only_combos_against_broader_source.
+Trading logic changed: No. This is a local/read-only saved-report feature miner. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The clean combos are promising but narrow and still from one saved overlay set; using them live now would be overfit.
+Next recommended action: Validate the broad clean problem-only combos against a broader source before proposing any scanner-visible penalty or exclusion.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add same-session competition inventory for proofSelectionSignal positive-lane research.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-same-session-competition-inventory.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-same-session-competition-inventory.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Positive-lane top-selection validation had zero changed selections, so the next check needed to prove whether same-session candidate competition exists before any runtime rank consumer. This inventory groups overlay rows by trade date/session and classifies whether positive-lane rows can replace earlier problem rows.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: The positive lane is still useful as descriptive research, but this saved set has no actionable same-session mixed competition where a positive-lane boost would replace an earlier problem slate.
 Next recommended action: Mine the seven problem-only groups for a pre-entry quality or exclusion signal, or broaden the candidate source before any scanner-visible rank consumer.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add positive-lane top-selection validation for proofSelectionSignal research.
