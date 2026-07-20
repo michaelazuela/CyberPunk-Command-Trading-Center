@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add no-chase Intraday invalid-stop-location drilldown.
+Files changed: tools/automation/no-chase-intraday-invalid-stop-location-drilldown.ts, tools/automation/no-chase-intraday-invalid-stop-location-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After residual retest-swing rows failed to justify a source-builder fix, the remaining Intraday no-chase blocker family was two invalid-stop-location rows that needed saved-OHLC proof before the desk moved on.
+Tests run: npx tsx tools/automation/no-chase-intraday-invalid-stop-location-drilldown.test.ts; npm run research:no-chase-intraday-invalid-stop-location-drilldown -- --disposition-rollup tools/automation/diagnostic-reports/no-chase-intraday-blocker-disposition-rollup-1784571201512.json --omission-report tools/automation/diagnostic-reports/no-chase-protected-geometry-omission-diagnostic-1784565920471.json --audit-dir tools/automation/discord-audit --market-bars-json tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-06-01-to-2026-07-02-1784561833535.json --json.
+Result: Invalid-stop-location drilldown report tools/automation/diagnostic-reports/no-chase-intraday-invalid-stop-location-drilldown-1784573177701.json passed. Summary: rowsChecked=2, confirmedStaleInvalidatedStopRows=2, stopWrongSideOfZoneRows=2, stopAlreadyTradedThroughRows=1, lineBlockedRows=2, canExecuteTrueRows=0, livePromotionAllowedRows=0, recommendation=keep_invalid_stop_rows_blocked. June 24 lunch LONG stop 7476.00 was above the 7468.00-7471.75 long zone and price was already below it. July 1 morning LONG stop 7532.00 sat inside the 7530.50-7532.75 long zone, so it cannot be reused as a valid protected long stop or synthetic entry source.
+Trading logic changed: No. This is local saved-report/OHLC research tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for runtime behavior. The invalid-stop-location family does not support a live-facing fix from this evidence.
+Next recommended action: Stop chasing the current Intraday no-chase blocker families. Return to broader candidate intake or a separate narrowed entry-source study; do not remove canExecute, do not reuse stale stops, and do not promote missing-entry rows.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add no-chase Intraday residual retest-swing drilldown.
 Files changed: tools/automation/no-chase-intraday-residual-retest-swing-drilldown.ts, tools/automation/no-chase-intraday-residual-retest-swing-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The disposition rollup left three Intraday MSS Micro Continuation rows blocked by residual retest-swing-stop proof, so the desk needed a local saved-OHLC drilldown before considering any source-builder change.
