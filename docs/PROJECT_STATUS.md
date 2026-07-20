@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Validate AfterLunch proof-time proxy selectors on out-of-sample July scanner artifacts.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-validation.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the in-sample AfterLunch proxy package survived fresh replay reconstruction, but the desk needed to test the same discovered proxy IDs against the separate July 3-July 17 saved scanner-artifact source/proof timing set before any scanner-visible proposal.
+Tests run: npm run research:raw-ohlc-scanner-artifact-replay-package -- --scanner-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-03-to-2026-07-17-1784476403453.json --json; npm run diagnostic:held-local-preview-replay-package-outcome -- --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784525915111.json --json; npm run diagnostic:held-local-preview-replay-package-source-proof-timing -- --replay-package-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784526024979.json --json; npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-validation.test.ts; npm run diagnostic:held-local-preview-afterlunch-proof-time-proxy-oos-validation -- --validation-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-validation-package-1784524168409.json --oos-source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784526031044.json --json.
+Result: July 3-July 17 replay package produced 848 ready rows with 0 blocked and 0 invalid geometry. Outcome resolved 827 rows with +48764.66 gross one-MES; AfterLunchDriveFvgContinuation had 43 rows, 43 resolved, 0 blocked, +2477.61 one-MES. Source/proof timing passed on 848 rows. OOS validation generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-validation-1784526226703.json and .md. AfterLunch source rows: 43 with 39 winners, 4 losses, 0 unresolved, +2477.61. Proxy-selected rows: 6 with 6 winners, 0 losses, 0 unresolved, +447.52. Rejected rows: 37, including all 4 losses, +2030.09. Supported/unsupported proxy IDs: 7/1. Unsupported proxy: changedSlate:true because this timing-only OOS source does not include changed-slate simulation context. Recommendation: oos_selector_survives_research_only.
+Trading logic changed: No. This is local/read-only OOS source/proof validation over saved scanner artifacts and saved reports. It does not run live setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The selector is clean on row quality, but this is not yet a slate-level top-candidate comparison. changedSlate:true was not validated in this OOS report because changed-slate context was unavailable from timing rows alone.
+Next recommended action: Run a slate-level OOS comparison for AfterLunch rows to prove whether the surviving proof-time selector improves or safely filters the top candidate per date/session before any live-facing rank overlay.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Build and validate the AfterLunch proof-time proxy fresh replay package.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-replay-package.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-replay-package.test.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-outcome-comparison.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-outcome-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the proxy package needed a machine-checkable fresh replay package using saved source replay rows with explicit entry/stop/T1/T2/source tape geometry, followed by ticket-by-ticket outcome comparison before any scanner-visible proposal.
