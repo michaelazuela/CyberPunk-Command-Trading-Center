@@ -2844,6 +2844,152 @@ const tests: Array<[string, () => void]> = [
     assert.ok(!micro.missingEvidence.some((item) => item.includes('timestamp does not align')));
   }],
 
+  ['Intraday MSS Micro Continuation recovers protected stop from completed 5M full-window history', () => {
+    const baseMtf = withBigPictureStructure(htfMssContext('LONG'), 'LONG').multiTimeframeContext!;
+    const fullWindowCandles = [
+      { index: 0, timestamp: '2026-06-15T09:45:00-04:00', open: 7594, high: 7597.5, low: 7588, close: 7591, direction: 'bearish' as const, confidence: 'High' as const },
+      { index: 1, timestamp: '2026-06-15T09:50:00-04:00', open: 7591, high: 7593, low: 7582.75, close: 7586, direction: 'bearish' as const, confidence: 'High' as const },
+      { index: 2, timestamp: '2026-06-15T09:55:00-04:00', open: 7586, high: 7599, low: 7587, close: 7596, direction: 'bullish' as const, confidence: 'High' as const },
+      { index: 3, timestamp: '2026-06-15T10:00:00-04:00', open: 7596, high: 7604.25, low: 7593, close: 7601, direction: 'bullish' as const, confidence: 'High' as const },
+      { index: 4, timestamp: '2026-06-15T10:05:00-04:00', open: 7601, high: 7612, low: 7598, close: 7609.75, direction: 'bullish' as const, confidence: 'High' as const, isExpansion: true },
+    ];
+    const activeCandles = [
+      { index: 5, timestamp: '2026-06-15T10:10:00-04:00', open: 7609.75, high: 7610.5, low: 7603.75, close: 7604, direction: 'bearish' as const, confidence: 'High' as const },
+      { index: 6, timestamp: '2026-06-15T10:15:00-04:00', open: 7604, high: 7612.25, low: 7603.5, close: 7609.75, direction: 'bullish' as const, confidence: 'High' as const, isReclaim: true },
+    ];
+    const context = htfMssContext('LONG', {
+      sessionType: 'morning',
+      chartTimestamp: '2026-06-15T10:15:00-04:00',
+      keyLevels: {
+        ...htfMssContext('LONG').keyLevels,
+        currentPrice: 7609.75,
+        activeSwingLow: 7582.75,
+        activeSwingHigh: 7612.25,
+      },
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+      timeframeMssEvidence: timeframeMssEvidenceLayer('bullish', {
+        '5M': {
+          evidenceTimestamp: '2026-06-15T10:05:00-04:00',
+          barTimestampMode: 'open',
+          structureBreak: {
+            type: 'mss',
+            brokenLevel: 7605,
+            brokenSwingTimestamp: '2026-06-15T10:00:00-04:00',
+            priorStructureDirection: 'bearish',
+            closeThroughPoints: 4.75,
+            wickOnlyBreak: false,
+          },
+        },
+      }),
+      fvgZones: [{
+        direction: 'LONG',
+        lower: 7602,
+        upper: 7605,
+        midpoint: 7603.5,
+        formedAt: '2026-06-15T10:05:00-04:00',
+        formedCandleIndex: 4,
+        impulseQualified: true,
+        impulseBodyRatio: 1.5,
+        impulseRangeRatio: 1.5,
+        confidence: 'High',
+      }],
+      candles: activeCandles,
+      multiTimeframeContext: {
+        ...baseMtf,
+        fiveMinute: {
+          ...baseMtf.fiveMinute,
+          candles: activeCandles,
+          fullWindowCandles,
+        },
+      },
+      targetObjectives: [{
+        label: 'Morning buy-side liquidity',
+        price: 7645,
+        direction: 'LONG',
+        source: 'ninjatrader',
+        type: 'liquidity_pool',
+        confidence: 'High',
+        score: 90,
+        reason: 'Buy-side liquidity above the recovered close-through entry.',
+      }],
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const micro = result.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation);
+
+    assert.ok(micro);
+    assert.equal(micro.candidateState, 'HUMAN_REVIEW_READY');
+    assert.equal(micro.humanReview?.canExecute, false);
+    assert.equal(micro.entry, 7609.75);
+    assert.equal(micro.stop, 7582.5);
+    assert.equal(micro.target1, 7650.75);
+    assert.equal(micro.target2, 7664.25);
+    assert.ok(micro.evidence.some((item) => item.includes('Protected 5M MSS swing stop: 7582.50')));
+    assert.ok(!micro.missingEvidence.some((item) => item.includes('timestamp does not align')));
+  }],
+
+  ['Intraday MSS Micro Continuation keeps full-window stop recovery blocked when entry is missing', () => {
+    const baseMtf = withBigPictureStructure(htfMssContext('SHORT'), 'SHORT').multiTimeframeContext!;
+    const fullWindowCandles = [
+      { index: 0, timestamp: '2026-06-25T07:00:00-04:00', open: 7478, high: 7482, low: 7474, close: 7480, direction: 'bullish' as const, confidence: 'High' as const },
+      { index: 1, timestamp: '2026-06-25T07:05:00-04:00', open: 7480, high: 7487.25, low: 7478.5, close: 7485, direction: 'bullish' as const, confidence: 'High' as const },
+      { index: 2, timestamp: '2026-06-25T07:10:00-04:00', open: 7485, high: 7486, low: 7472, close: 7475, direction: 'bearish' as const, confidence: 'High' as const },
+      { index: 3, timestamp: '2026-06-25T07:15:00-04:00', open: 7475, high: 7476, low: 7458, close: 7462, direction: 'bearish' as const, confidence: 'High' as const, isExpansion: true },
+    ];
+    const context = htfMssContext('SHORT', {
+      sessionType: 'lunch',
+      chartTimestamp: '2026-06-25T12:05:00-04:00',
+      keyLevels: {
+        ...htfMssContext('SHORT').keyLevels,
+        currentPrice: 7461,
+        activeSwingHigh: 7487.25,
+        activeSwingLow: 7458,
+      },
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+      timeframeMssEvidence: timeframeMssEvidenceLayer('bearish', {
+        '5M': {
+          evidenceTimestamp: '2026-06-25T07:15:00-04:00',
+          barTimestampMode: 'open',
+          structureBreak: {
+            type: 'mss',
+            brokenLevel: 7470,
+            brokenSwingTimestamp: '2026-06-25T07:10:00-04:00',
+            priorStructureDirection: 'bullish',
+            closeThroughPoints: 8,
+            wickOnlyBreak: false,
+          },
+        },
+      }),
+      fvgZones: [],
+      candles: [],
+      multiTimeframeContext: {
+        ...baseMtf,
+        fiveMinute: {
+          ...baseMtf.fiveMinute,
+          candles: [],
+          fullWindowCandles,
+        },
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'lunch', chartContext: context, result: null });
+    const micro = result.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation);
+
+    assert.ok(micro);
+    assert.equal(micro.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
+    assert.equal(micro.humanReview?.discordTradePlanEligible, false);
+    assert.equal(micro.entry, null);
+    assert.equal(micro.stop, null);
+    assert.equal(micro.target1, null);
+    assert.equal(micro.target2, null);
+    assert.equal(micro.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.ok(micro.missingEvidence.some((item) => item.includes('Defined 5M FVG retest/rejection entry or MSS close-through reclaim entry')));
+  }],
+
   ['Intraday MSS Micro Continuation derives named line from structured 5M FVG when HTF obstacle map is empty', () => {
     const context = htfMssContext('LONG', {
       sessionType: 'lunch',

@@ -2430,14 +2430,34 @@ type IntradayMssEvidenceResolution = {
   dataQualityBlockers: string[];
 };
 
-function readableCompletedFiveMinuteCandles(chartContext: ChartContext) {
-  return (chartContext.candles || []).filter((candle) =>
+function readableCompletedFiveMinuteCandles(
+  chartContext: ChartContext,
+  options: { includeFullWindow?: boolean } = {},
+) {
+  const seen = new Set<string>();
+  const candles = [
+    ...(options.includeFullWindow ? chartContext.multiTimeframeContext?.fiveMinute.fullWindowCandles || [] : []),
+    ...(chartContext.candles || []),
+  ];
+  return candles.filter((candle) => {
+    const timestamp = String(candle.timestamp || '').trim();
+    const dedupeKey = timestamp || `${candle.index ?? ''}:${candle.open}:${candle.high}:${candle.low}:${candle.close}`;
+    if (seen.has(dedupeKey)) return false;
+    const readable =
     isReadableConfidence(candle.confidence) &&
     Number.isFinite(parsePrice(candle.open)) &&
     Number.isFinite(parsePrice(candle.high)) &&
     Number.isFinite(parsePrice(candle.low)) &&
-    Number.isFinite(parsePrice(candle.close))
-  );
+      Number.isFinite(parsePrice(candle.close));
+    if (!readable) return false;
+    seen.add(dedupeKey);
+    return true;
+  }).sort((a, b) => {
+    const left = Date.parse(String(a.timestamp || ''));
+    const right = Date.parse(String(b.timestamp || ''));
+    if (Number.isFinite(left) && Number.isFinite(right) && left !== right) return left - right;
+    return Number(a.index ?? 0) - Number(b.index ?? 0);
+  });
 }
 
 function chartCandleToBridgeBar(candle: ReturnType<typeof readableCompletedFiveMinuteCandles>[number]): NinjaBridgeBar | null {
@@ -2632,8 +2652,12 @@ type ProtectedMssStopResult = {
 
 const FIVE_MINUTE_MS = 5 * 60 * 1000;
 
-function confirmedFiveMinuteSwings(chartContext: ChartContext, strength = 1): FiveMinuteSwing[] {
-  const candles = readableCompletedFiveMinuteCandles(chartContext);
+function confirmedFiveMinuteSwings(
+  chartContext: ChartContext,
+  strength = 1,
+  options: { includeFullWindow?: boolean } = {},
+): FiveMinuteSwing[] {
+  const candles = readableCompletedFiveMinuteCandles(chartContext, options);
   const swings: FiveMinuteSwing[] = [];
   if (candles.length < (strength * 2) + 1) return swings;
 
@@ -2738,7 +2762,7 @@ function protectedFiveMinuteMssStopResult(chartContext: ChartContext, direction:
     return { stop: null, reason: `Protected 5M MSS swing stop blocked: 5M MSS direction is ${evidence.direction}, not ${directionLabelText}.` };
   }
 
-  const candles = readableCompletedFiveMinuteCandles(chartContext);
+  const candles = readableCompletedFiveMinuteCandles(chartContext, { includeFullWindow: true });
   if (!Number.isFinite(Date.parse(String(evidence.evidenceTimestamp || '')))) {
     return { stop: null, reason: 'Protected 5M MSS swing stop blocked: 5M MSS evidence timestamp is missing or invalid.' };
   }
@@ -2751,7 +2775,7 @@ function protectedFiveMinuteMssStopResult(chartContext: ChartContext, direction:
     return { stop: null, reason: 'Protected 5M MSS swing stop blocked: 5M MSS evidence timestamp does not align to a completed 5M candle in open-time or close-time mode.' };
   }
   const swingType: FiveMinuteSwing['type'] = direction === 'LONG' ? 'low' : 'high';
-  const protectedSwing = confirmedFiveMinuteSwings(chartContext)
+  const protectedSwing = confirmedFiveMinuteSwings(chartContext, 1, { includeFullWindow: true })
     .filter((swing) => swing.type === swingType && swing.index < fallbackEvidenceIndex)
     .at(-1);
   if (!protectedSwing) {

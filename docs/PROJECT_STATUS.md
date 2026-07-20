@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Intraday MSS full-window protected stop fallback.
+Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
+Reason: The read-only MSS timestamp validation proved 3 of 4 timestamp-blocked Intraday MSS rows had valid protected 5M MSS swing stops available in completed full-window 5M OHLC. The source builder needed a narrow fallback that can recover the protected stop without letting historical bars create entries.
+Tests run: npx tsx src/lib/setupScanner.test.ts.
+Result: Focused scanner regression passed across 178 setupScanner cases. New coverage proves completed 5M full-window history can recover a protected MSS swing stop when active proof already supplies an entry, and proves full-window history cannot create an entry when active 5M proof is missing.
+Trading logic changed: Yes. File: src/lib/setupScanner.ts. Function: protectedFiveMinuteMssStopResult via readableCompletedFiveMinuteCandles/confirmedFiveMinuteSwings. Behavior changed: protected 5M MSS stop recovery may read already-loaded multiTimeframeContext.fiveMinute.fullWindowCandles, while trigger/entry detection still reads active chartContext.candles only. Reason: preserve completed 5M bar-close proof while avoiding false no-chase blocks caused by truncated active-window candles. Approval basis: user authorized the narrow source-builder fix and repeated permission to keep installing phases.
+Bridge impact: None. No bridge reads, writes, contract changes, or repair behavior changed.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This can promote previously stop-blocked Intraday MSS human-review candidates when entry already exists and full-window completed 5M history contains the protected swing. It does not set canExecute true, does not post Discord by itself, and does not create entry from historical bars.
+Next recommended action: Run the guarded scanner replay/research package over the June 1-July 2 no-chase set to measure which rows now become human-review tickets and whether the 1 missing-entry case remains blocked.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add no-chase MSS timestamp alignment validation.
 Files changed: tools/automation/no-chase-mss-timestamp-alignment-validation.ts, tools/automation/no-chase-mss-timestamp-alignment-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The Intraday blocker classifier found 4 timestamp-alignment stop blockers. The desk needed to prove whether canonical completed 5M OHLC can recover protected MSS swing stops without weakening bar-close proof or deriving trades from proof-close geometry.
