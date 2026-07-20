@@ -199,6 +199,7 @@
     "research:raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-selection-simulation": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-selection-simulation.ts",
     "research:raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown.ts",
     "research:raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner.ts",
+    "research:raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-selection-simulation": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-selection-simulation.ts",
     "research:raw-ohlc-scanner-artifact-comparison": "tsx tools/automation/raw-ohlc-scanner-artifact-comparison.ts",
     "research:raw-ohlc-scanner-artifact-replay-package": "tsx tools/automation/raw-ohlc-scanner-artifact-replay-package.ts",
     "research:raw-ohlc-scanner-artifact-dedupe-timing-filter": "tsx tools/automation/raw-ohlc-scanner-artifact-dedupe-timing-filter.ts",

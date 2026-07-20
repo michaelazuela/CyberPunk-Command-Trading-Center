@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Validate Sweep lunch SHORT stable-field candidates with no-lookahead slate selection simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-selection-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the lunch SHORT stable-field miner found clean descriptive buckets, but bucket quality alone does not prove better top selection. The next safe step was a research-only slate simulation.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-selection-simulation.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-selection-simulation -- --full-day-rollup tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup-1784513767173.json --stable-field-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner-1784516528992.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-selection-simulation-1784516916849.json. Status pass. Target rows: 156. Slates: 12. Changed slates: 1. Baseline/simulated top one-MES P/L: 933.75/933.75. Top-selection delta: 0. The only changed slate was 2026-06-25 lunch, replacing no_target_or_stop_hit unresolved with another no_target_or_stop_hit unresolved. Recommendation: keep_research_only.
+Trading logic changed: No. This is a local/read-only saved-report selection simulation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The stable buckets are descriptive but do not improve top selection in this validation pass.
+Next recommended action: Do not install lunch SHORT stable geometry buckets. Next narrow research should mine scanner-owned fields for lunch SHORT, or move to unresolved drilldown for the 2026-06-25 no_target_or_stop_hit slate.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Mine Sweep lunch SHORT mixed-watch group using stable pre-entry fields.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: lunch LONG research found descriptive buckets but no top-selection install. The next fresh target was the SweepMssFvgRetrace lunch SHORT mixed-watch group from the full-day rollup, starting with stable no-lookahead time/risk/target-geometry fields.
