@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Validate Sweep lunch LONG scanner-field candidates with no-lookahead slate selection simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-selection-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the scanner-field miner found a very clean lunch LONG pocket, but bucket quality alone does not prove better scanner-visible top selection. The next safe step was a research-only slate simulation using saved scanner-owned fields.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-selection-simulation.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-selection-simulation -- --scanner-field-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner-1784515244249.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-selection-simulation-1784515760706.json. Status pass. Joined rows: 107. Slates: 11. Changed slates: 3. Baseline/simulated top one-MES P/L: 423.75/455. Top-selection delta on resolved paired changes: 0. The 2026-06-09 and 2026-07-15 changed slates replaced winners with equal-P/L winners. The 2026-06-23 changed slate replaced stopped_before_t1 -31.25 with no_fill unresolved, so it does not prove resolved P/L improvement. Recommendation: keep_research_only.
+Trading logic changed: No. This is a local/read-only saved-artifact selection simulation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: hasNoChaseMissingEvidence=false remains a strong descriptive bucket, but it did not improve resolved top selection in this slate simulation. Do not install it as a runtime rank consumer.
+Next recommended action: Move to a different separator target instead of looping lunch LONG no-chase: mine the 40-row lunch LONG blocked/no-chase caution pocket for why 8 winners still exist, or move to the lunch SHORT mixed-watch group for a fresh scanner-field separator.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Mine Sweep lunch LONG full-day strong pocket using scanner-owned saved artifact fields.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the stable-field validation showed descriptive buckets but no resolved top-selection improvement. The next safe step was to inspect scanner-owned fields captured in saved artifacts inside the same SweepMssFvgRetrace lunch LONG full-day strong pocket before any runtime proposal.
