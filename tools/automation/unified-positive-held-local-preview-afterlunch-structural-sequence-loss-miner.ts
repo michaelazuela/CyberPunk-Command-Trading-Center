@@ -28,6 +28,8 @@ interface SequenceRow {
   targetObstacleDistanceR: number | null;
   htfLineDistanceR: number | null;
   htfLineBehindPrice: boolean;
+  htfLineCleared: boolean | null;
+  htfLineTouched: boolean;
   joinStatus: 'matched_scanner_candidate' | 'missing_replay_row' | 'missing_scanner_event' | 'missing_scanner_candidate';
 }
 
@@ -176,6 +178,15 @@ function parseFirstPrice(text: unknown): number | null {
   return match ? Number(match[1]) : null;
 }
 
+function parseLatestClose(evidence: unknown): number | null {
+  const items = Array.isArray(evidence) ? evidence.map(String) : [];
+  for (const item of items) {
+    const match = item.match(/Latest structured completed 5M close:\s*(\d+(?:\.\d+)?)/);
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
 function signedDistance(direction: string, fromEntry: number, level: number | null): number | null {
   if (level === null) return null;
   return direction === 'SHORT' ? fromEntry - level : level - fromEntry;
@@ -184,6 +195,11 @@ function signedDistance(direction: string, fromEntry: number, level: number | nu
 function distanceR(direction: string, entry: number, riskPoints: number, level: number | null): number | null {
   if (level === null || riskPoints <= 0) return null;
   return round((signedDistance(direction, entry, level) ?? 0) / riskPoints);
+}
+
+function lineCleared(direction: string, close: number | null, line: number | null): boolean | null {
+  if (close === null || line === null) return null;
+  return direction === 'SHORT' ? close < line : close > line;
 }
 
 function eventByProofTime(scannerArtifact: any, proofTime: string): any | null {
@@ -219,6 +235,7 @@ function buildRows(sourceRows: TimingRow[], replayRows: ReplayRow[], scannerArti
       const htfLineLevel = typeof candidate?.activeRuleset?.htfLineInSand?.lineInSand === 'number'
         ? candidate.activeRuleset.htfLineInSand.lineInSand
         : null;
+      const htfLineClose = parseLatestClose(candidate?.activeRuleset?.htfLineInSand?.evidence);
       const fvgFormedAt = typeof candidate?.tacticalZone?.formedAt === 'string' ? candidate.tacticalZone.formedAt : null;
       const htfLineDistanceR = Number.isFinite(entry) ? distanceR(timing.direction, entry, riskPoints, htfLineLevel) : null;
       return {
@@ -239,6 +256,8 @@ function buildRows(sourceRows: TimingRow[], replayRows: ReplayRow[], scannerArti
         targetObstacleDistanceR: Number.isFinite(entry) ? distanceR(timing.direction, entry, riskPoints, targetObstacleLevel) : null,
         htfLineDistanceR,
         htfLineBehindPrice: htfLineDistanceR !== null && htfLineDistanceR < 0,
+        htfLineCleared: lineCleared(timing.direction, htfLineClose, htfLineLevel),
+        htfLineTouched: htfLineClose !== null && htfLineLevel !== null && Math.abs(htfLineClose - htfLineLevel) <= 0.01,
         joinStatus: !replay
           ? 'missing_replay_row' as const
           : !event
@@ -272,6 +291,9 @@ function selectorMap(): Array<{ id: string; select: (row: SequenceRow) => boolea
     { id: 'proofAgeMinutes>30+htfLineBehindPrice', select: (row) => (row.proofAgeMinutes ?? 0) > 30 && row.htfLineBehindPrice },
     { id: 'proofAgeMinutes>60+htfLineBehindPrice', select: (row) => (row.proofAgeMinutes ?? 0) > 60 && row.htfLineBehindPrice },
     { id: 'proofAgeMinutes<=0+candidateReady+riskPoints<=10', select: (row) => (row.proofAgeMinutes ?? 0) <= 0 && row.candidateState === 'HUMAN_REVIEW_READY' && row.riskPoints <= 10 },
+    { id: 'riskPoints>5<=6+htfLineNotCleared', select: (row) => row.riskPoints > 5 && row.riskPoints <= 6 && row.htfLineCleared === false },
+    { id: 'riskPoints>5<=6+targetBlockedBeforeT1', select: (row) => row.riskPoints > 5 && row.riskPoints <= 6 && row.targetRoomStatus === 'blocked_before_t1' },
+    { id: 'riskPoints>5<=6+htfLineTouched', select: (row) => row.riskPoints > 5 && row.riskPoints <= 6 && row.htfLineTouched },
   ];
 }
 

@@ -141,6 +141,7 @@ function scannerCandidate(direction: 'LONG' | 'SHORT', lineInSand: number, forme
       htfLineInSand: {
         status: 'blocked',
         lineInSand,
+        evidence: [`Latest structured completed 5M close: ${lineInSand}.`],
       },
     },
     tacticalZone: {
@@ -192,6 +193,8 @@ assert.equal(top.selectorId, 'riskPoints<=10+htfLineBehindPrice');
 assert.equal(top.decision, 'research_candidate');
 assert.equal(top.winners, 0);
 assert.equal(top.losses, 2);
+assert.equal(report.rows.find((row) => row.ticketId === 'loss-long-line-behind')?.htfLineCleared, false);
+assert.equal(report.rows.find((row) => row.ticketId === 'loss-long-line-behind')?.htfLineTouched, true);
 
 const missing = buildUnifiedPositiveHeldLocalPreviewAfterLunchStructuralSequenceLossMinerReport({
   reportDir: 'reports',

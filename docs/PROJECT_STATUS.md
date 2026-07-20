@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add AfterLunch line-clear structural fields and reject July-only risk/line selector.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner.ts, tools/automation/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner.test.ts, docs/PROJECT_STATUS.md.
+Reason: The July OOS four-loss bucket looked tied to a 5-6 point risk band plus an uncleared HTF/session line, but that needed the same formal miner to evaluate both July OOS and broader June-July context.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner.test.ts; npm run diagnostic:held-local-preview-afterlunch-structural-sequence-loss-miner -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784419066591.json --scanner-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-06-01-to-2026-07-02-combined-1784419058783.json --json; npm run diagnostic:held-local-preview-afterlunch-structural-sequence-loss-miner -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784526031044.json --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784525915111.json --scanner-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-03-to-2026-07-17-1784476403453.json --json.
+Result: Reports generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner-1784530105130.json and tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner-1784530104980.json. July OOS riskPoints>5<=6+htfLineNotCleared selected 4 rows, 0 winners, 4 losses, -117.48 one-MES, and 100% July loss coverage. Broader June-July validation rejected the same selector as too broad: 4 rows, 2 winners, 2 losses, +41.89 one-MES. The July risk/line selector must not be installed.
+Trading logic changed: No. This is local/read-only saved-report research only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The AfterLunch loss bucket still has no transferable no-lookahead selector. The model remains positive overall; the safest current action is no runtime change.
+Next recommended action: Stop trying to penalize AfterLunch from these fields unless new unseen data supplies a transferable separator; shift the next research chunk to another model family or a cross-model slate-selection audit.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Validate AfterLunch structural sequence selector on July OOS replay context.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The June-July structural sequence miner found riskPoints<=10+htfLineBehindPrice as a clean research candidate, but the desk must reject non-transferable selectors before any scanner-visible review note or rank penalty.
