@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add model-family valid-only same-slate simulation.
+Files changed: tools/automation/unified-positive-held-local-preview-model-family-valid-slate-simulation.ts, tools/automation/unified-positive-held-local-preview-model-family-valid-slate-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After the Sweep geometry drilldown and source trace, the desk needed to prove whether excluding row-level invalid geometry from research selection improves or worsens same-slate top selection before any Sweep rank proposal or source-builder repair.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-model-family-valid-slate-simulation.test.ts; npm run diagnostic:held-local-preview-model-family-valid-slate-simulation -- --model-family-broad-replay tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-broad-replay-1784575285131.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784574093106.json --json; npm run diagnostic:held-local-preview-model-family-valid-slate-simulation -- --model-family-broad-replay tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-broad-replay-1784575329461.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784574093106.json --json; npm run diagnostic:held-local-preview-model-family-valid-slate-simulation -- --model-family-broad-replay tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-broad-replay-1784575324215.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784574093106.json --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Combined Sweep+AfterLunch report tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-valid-slate-simulation-1784576783219.json passed with 185 joined rows, 87 slates, 7 changed slates, 7 baseline blocked-geometry top slates, 4 changed from blocked geometry to valid candidate, baseline top P/L +$2018.80, valid-only top P/L +$2112.55, delta +$93.75. Sweep-only report tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-valid-slate-simulation-1784576783314.json matched the +$93.75 improvement. AfterLunch-only report tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-valid-slate-simulation-1784576783363.json was neutral with zero changed slates and +$678.80 both ways because AfterLunch had no geometry blocks.
+Trading logic changed: No. This is local saved-report same-slate simulation tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The simulation proves row-level invalid geometry contaminates Sweep research selection, but it is not enough by itself to install a live filter. Three changed slates had no resolved replacement P/L, and any live repair must be validated against full scanner output.
+Next recommended action: Continue research-side by inspecting the Sweep candidate builder's InvalidStopLocation source and by building a scanner-output dry-run/approval contract for preserving valid candidates while suppressing only directionally impossible wrong-side stops. Keep AfterLunch separate and valid; do not remove Sweep or loosen canExecute.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add model-family geometry source trace for blocked Sweep rows.
 Files changed: tools/automation/unified-positive-held-local-preview-model-family-geometry-source-trace.ts, tools/automation/unified-positive-held-local-preview-model-family-geometry-source-trace.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The model-family geometry drilldown proved 10 SweepMssFvgRetrace rows had wrong-side entry/stop geometry, but the desk needed to know whether the bad levels came from replay/intake mapping or were already present in scanner decision tape setup status.
