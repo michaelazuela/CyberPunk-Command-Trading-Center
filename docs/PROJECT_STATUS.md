@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Mine known-at-plan timing fields for AfterLunchDriveFvgContinuation held-local positives.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.ts, tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Sweep lunch LONG/SHORT research branches did not prove a live-worthy top-selection improvement, while the saved source/proof timing package showed AfterLunchDriveFvgContinuation as a positive family that needed isolated known-at-plan timing/risk buckets before any rank-overlay proposal.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.test.ts; npm run diagnostic:held-local-preview-afterlunch-timing-field-miner -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-timing-field-miner-1784520368050.json. Status pass. Rows: 138. Winners/losses/unresolved: 110/27/1. Gross resolved one-MES P/L: 7990.97. Field buckets: 10. Positive candidates: proofHour=12 with 56 rows, 51 winners, 5 losses, P/L 3584.53; riskBucket=10.25-12 with 10 rows, 10 winners, 0 losses, P/L 1081.92; riskBucket=6.25-8 with 10 rows, 9 winners, 1 loss, P/L 563.76. Caution candidates: proofHour=13 with 82 rows, 59 winners, 22 losses, 1 unresolved, P/L 4406.44; riskBucket=8.25-10 with 27 rows, 19 winners, 8 losses, P/L 1372.55. Recommendation: validate_candidates_in_selection_simulation.
+Trading logic changed: No. This is a local/read-only saved-report field miner. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The buckets are promising but not selection-proof yet. Do not promote AfterLunch ranking until a no-lookahead slate simulation proves the candidates improve or preserve top selection against the full held-local set.
+Next recommended action: Build a read-only AfterLunch timing selection simulation that applies the positive/caution buckets to saved slates and compares baseline versus simulated top candidate P/L before any live-facing rank overlay.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Validate Sweep lunch LONG blocked/no-chase caution-pocket separator in slate selection.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-caution-pocket-selection-validation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-caution-pocket-selection-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Sweep lunch LONG had a broader caution pocket than the low-coverage lunch SHORT unresolved branch, but the caution candidate still needed no-lookahead slate validation before any live-facing rank behavior.
