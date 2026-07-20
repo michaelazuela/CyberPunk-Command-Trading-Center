@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Run all-date Sweep lunch SHORT unresolved slate drilldown.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: the 2026-06-25 unresolved drilldown showed a mixed near-T1/no-target pattern, so the same read-only tool was rerun across all unresolved Sweep lunch SHORT rows before considering any separator or rank behavior.
+Tests run: npm run research:raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-slate-drilldown -- --scanner-field-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner-1784517279035.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-slate-drilldown-1784518682515.json. Status pass. Unresolved rows: 40 across 6 plan signatures. Missing input/no-fill/weak/near-T1/no-stop-no-target/adverse-near-stop: 0/0/1/6/15/18. Keep-as-review-note rows: 24. Exclude-from-positive-training rows: 16. No missing saved replay inputs were found. Main review-note clusters were 2026-06-25 adverse-near-stop near-T1 rows and 2026-07-08 near-T1 rows. True positive-training exclusions were 2026-06-19 weak follow-through, late 2026-06-25, 2026-07-07, and 2026-07-15 no-stop/no-target rows. Recommendation: keep_unresolved_as_review_note.
+Trading logic changed: No. This is a local/read-only saved-report research rerun using an already-installed diagnostic. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Unresolved rows remain unresolved; they must not be counted as wins. However, broad rank penalties are also not supported because 24 of 40 unresolved rows were near-T1/review-note style rather than failed setup evidence.
+Next recommended action: Add a small all-date unresolved separator miner that compares scanner-owned fields for keep-as-review-note rows versus exclude-from-positive-training rows, then validate any candidate separator in a no-lookahead selection simulation before any live-facing proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Drill down the unresolved 2026-06-25 Sweep lunch SHORT no-target/no-stop slate.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-slate-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the lunch SHORT scanner-field selection simulation worsened top selection, so the next narrow evidence target was the unresolved 2026-06-25 slate rather than another broad rank overlay.
