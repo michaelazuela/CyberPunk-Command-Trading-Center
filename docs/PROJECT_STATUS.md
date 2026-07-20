@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Validate AfterLunch first-valid-proof preservation conclusion.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-first-proof-preservation.ts, tools/automation/unified-positive-held-local-preview-afterlunch-first-proof-preservation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the AfterLunch changed-slate drilldown showed the timing/risk selector replaced earlier completed-proof winners with later tighter-risk winners, so the desk needed a formal read-only preservation validator before deciding the next research branch.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-first-proof-preservation.test.ts; npm run diagnostic:held-local-preview-afterlunch-first-proof-preservation -- --selection-simulation tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-timing-selection-simulation-1784520848680.json --changed-slate-drilldown tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown-1784521259502.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-first-proof-preservation-1784521642111.json. Status pass. Selection changed slates: 2. Selection delta: -25. Drilldown rows: 9. Baseline/simulated winner rows: 2/2. Baseline-better winner slates: 2. Later tighter winner replacement rows: 2. Recommendation: preserve_first_valid_proof_research_only.
+Trading logic changed: No. This is a local/read-only saved-report preservation validator. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This validates the research conclusion, not a runtime rule. Do not install any live-facing AfterLunch timing/risk selector from this package.
+Next recommended action: Stop the AfterLunch timing/risk boost branch. If continuing AfterLunch, mine structural proof-quality fields around the first completed proof instead of ranking later tighter entries above the first valid proof.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Drill down AfterLunch timing selector changed slates.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.ts, tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the AfterLunch timing selection simulation worsened top selection by 25 one-MES dollars, so the changed slates needed a read-only row-level drilldown before any further scoring idea.
