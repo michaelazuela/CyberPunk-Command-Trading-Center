@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Mine scanner-owned separators for Sweep lunch SHORT unresolved rows.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the all-date unresolved drilldown found mixed unresolved behavior, so scanner-owned fields needed to be compared between keep-as-review-note rows and exclude-from-positive-training rows before any no-lookahead validation.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-miner -- --unresolved-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-slate-drilldown-1784518682515.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-miner-1784519032002.json. Status pass. Source rows: 40. Review-note/exclusion/inspect-input rows: 24/16/0. Field buckets: 56. Candidate review-note separators: 1. Candidate exclusion separators: 3. Best review-note candidate: proofHour=12, 5 rows, 5 review notes, 0 exclusions, all 2026-06-25 adverse-near-stop rows. Best exclusion candidate: evidenceCountBucket=35_to_39, 3 rows, 0 review notes, 3 exclusions, dates 2026-06-19 and 2026-07-15. Other exclusion candidates: hasNoChaseMissingEvidence=false and htfLineInSandStatus=not_applicable. Recommendation: validate_candidates_in_selection_simulation.
+Trading logic changed: No. This is a local/read-only saved-report scanner-field miner. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Candidate buckets are thin and partly date-clustered. They are research candidates only until a no-lookahead selection simulation proves they improve top selection without false rejecting usable rows.
+Next recommended action: Run a no-lookahead unresolved selection simulation using proofHour=12 as a review-note protection candidate and evidenceCountBucket=35_to_39 as an exclusion candidate. Do not install live-facing behavior unless the simulation improves selection quality.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Run all-date Sweep lunch SHORT unresolved slate drilldown.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: the 2026-06-25 unresolved drilldown showed a mixed near-T1/no-target pattern, so the same read-only tool was rerun across all unresolved Sweep lunch SHORT rows before considering any separator or rank behavior.
