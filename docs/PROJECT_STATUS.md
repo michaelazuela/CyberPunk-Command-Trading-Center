@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Intraday MSS protected-stop fallback simulation.
+Files changed: tools/automation/no-chase-intraday-protected-mss-stop-fallback-simulation.ts, tools/automation/no-chase-intraday-protected-mss-stop-fallback-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The remaining-blocker drilldown showed June 15 and June 18 were both blocked by preferred retest swing stop confirmation while older protected MSS swing stops existed. The desk needed to prove whether using those older protected MSS stops would improve the set before any source-builder change.
+Tests run: npx tsx tools/automation/no-chase-intraday-protected-mss-stop-fallback-simulation.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-intraday-protected-mss-stop-fallback-simulation -- --drilldown-report tools/automation/diagnostic-reports/no-chase-intraday-remaining-blocker-drilldown-1784570138821.json --validation-report tools/automation/diagnostic-reports/no-chase-mss-timestamp-alignment-validation-1784566848392.json --market-bars-json tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-06-01-to-2026-07-02-1784561833535.json --json.
+Result: Fallback simulation report tools/automation/diagnostic-reports/no-chase-intraday-protected-mss-stop-fallback-simulation-1784570602185.json passed. Summary: rowsChecked=2, directionallyValidRows=2, maxRiskPassRows=0, wideRiskRows=2, winningRows=0, losingRows=1, oneMesGross=-$35.00, canExecuteTrueRows=0, recommendation=do_not_install_as_live_fallback. June 15 LONG entry 7609.75 / recovered stop 7582.50 produced 27.25 points risk and stayed FILLED_OPEN. June 18 SHORT entry 7558.25 / recovered stop 7565.25 produced 7.00 points risk and hit STOP at 12:25 for -$35.00 one-MES gross.
+Trading logic changed: No. This is local saved-report hypothetical simulation only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None. Local controlled OHLC artifact only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for runtime behavior. The research result argues against installing the recovered protected MSS stop as a live fallback because both tested plans exceed max risk and the set is net negative.
+Next recommended action: Do not broaden stop fallback live. Next narrow research should inspect whether a no-lookahead entry source can move closer to protected structure on these rows; if not, keep these rows blocked and move to the next no-chase blocker family.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Intraday MSS remaining blocker drilldown.
 Files changed: tools/automation/no-chase-intraday-remaining-blocker-drilldown.ts, tools/automation/no-chase-intraday-remaining-blocker-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The full-window stop replay moved one row to a clean human-review ticket and left three blocked. The desk needed a narrow diagnostic for the two proof-present blocked rows before considering another source-builder fix.
