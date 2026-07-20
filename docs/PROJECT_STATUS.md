@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add no-chase MSS timestamp alignment validation.
+Files changed: tools/automation/no-chase-mss-timestamp-alignment-validation.ts, tools/automation/no-chase-mss-timestamp-alignment-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The Intraday blocker classifier found 4 timestamp-alignment stop blockers. The desk needed to prove whether canonical completed 5M OHLC can recover protected MSS swing stops without weakening bar-close proof or deriving trades from proof-close geometry.
+Tests run: npx tsx tools/automation/no-chase-mss-timestamp-alignment-validation.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-mss-timestamp-alignment-validation -- --classifier-report tools/automation/diagnostic-reports/no-chase-intraday-geometry-blocker-classifier-1784566384445.json --omission-report tools/automation/diagnostic-reports/no-chase-protected-geometry-omission-diagnostic-1784565920471.json --market-bars-json tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-06-01-to-2026-07-02-1784561833535.json --audit-dir tools/automation/discord-audit --json.
+Result: Timestamp alignment validation report tools/automation/diagnostic-reports/no-chase-mss-timestamp-alignment-validation-1784566848392.json passed. Summary: timestampBlockedRows=4, mssTimestampMatchedRows=4, protectedSwingFoundRows=4, validStopRecoveredRows=3, stillMissingEntryRows=1, stillBlockedRows=1, canExecuteChangedRows=0, publishDiscordRows=0, livePromotionAllowedRows=0, recommendedNextFix=validate_source_builder_ohlc_alignment_fallback.
+Trading logic changed: No. This is local saved-report research tooling only. It does not create tickets, wire scanner behavior, run setupScanner, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for runtime behavior; a future source-builder fallback must still preserve completed 5M bar-close proof, require existing entry, and leave rows with missing entry blocked.
+Next recommended action: Validate a source-builder OHLC alignment fallback for protected MSS stop recovery in focused setupScanner tests. The fallback should use canonical completed 5M OHLC only when the MSS timestamp is outside the scanner window but present in loaded 5M history, and it must not create entry or canExecute.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add no-chase Intraday geometry blocker classifier.
 Files changed: tools/automation/no-chase-intraday-geometry-blocker-classifier.ts, tools/automation/no-chase-intraday-geometry-blocker-classifier.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The omission diagnostic proved missing no-chase geometry originates in the Intraday MSS source candidate path. The desk needed a read-only blocker-family classifier before choosing any source-builder fix.
