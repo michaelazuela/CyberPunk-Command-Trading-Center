@@ -216,6 +216,19 @@ assert.match(afterLunch?.reason || '', /losses remain/);
 assert.ok(report.rows.some((row) => row.ticketId === 'sweep-1' && row.boostApplied));
 assert.match(report.markdown, /Positive Family Boost Validation/);
 
+const sweepOnly = buildUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationReport({
+  reportDir: 'reports',
+  sourceProofTimingPath: 'timing.json',
+  sourceProofTimingReport: timingReport,
+  selectedSetupTypes: ['SweepMssFvgRetrace'],
+}, '2026-07-17T00:01:30.000Z');
+
+assert.deepEqual(sweepOnly.source.selectedSetupTypes, ['SweepMssFvgRetrace']);
+assert.equal(sweepOnly.summary.positiveFamilyRows, 3);
+assert.equal(sweepOnly.summary.boostCandidateModels, 1);
+assert.equal(sweepOnly.models.some((row) => row.setupType === 'AfterLunchDriveFvgContinuation'), false);
+assert.equal(sweepOnly.rows.find((row) => row.ticketId === 'after-1')?.boostApplied, false);
+
 const missing = buildUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationReport({
   reportDir: 'reports',
   sourceProofTimingPath: null,

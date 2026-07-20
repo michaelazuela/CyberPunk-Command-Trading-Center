@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add isolated setup-family boost validation and compare Sweep versus AfterLunch.
+Files changed: tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.ts, tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.test.ts, docs/PROJECT_STATUS.md.
+Reason: The combined positive-family boost was a proxy for grouping trade ideas together, but the desk needed to separate SweepMssFvgRetrace from AfterLunchDriveFvgContinuation to avoid hiding model-family collisions.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.test.ts; npm run diagnostic:held-local-preview-positive-family-boost-validation -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --setup-types SweepMssFvgRetrace --json; npm run diagnostic:held-local-preview-positive-family-boost-validation -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --setup-types AfterLunchDriveFvgContinuation --json; npm run diagnostic:held-local-preview-positive-family-boost-validation -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784526031044.json --setup-types SweepMssFvgRetrace --json; npm run diagnostic:held-local-preview-positive-family-boost-validation -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784526031044.json --setup-types AfterLunchDriveFvgContinuation --json.
+Result: Reports generated 1784530505989, 1784530506115, 1784530506171, and 1784530506200. Sweep-only boost improved broad top selection by +561.20 one-MES and July OOS by +211.85, but it worsened 17 broad changed slates and 4 July changed slates. AfterLunch-only boost improved broad by +78.13 and July by only +0.63, with 2 broad worsened slates and 0 July worsened slates. Combined family boost remains unsuitable as a blanket live ranking change.
+Trading logic changed: No. This is local/read-only saved-report research only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Sweep has real positive selection lift, but unresolved collision risk against OpeningDrive/HTF/Intraday winners means it needs a guard before any scanner-visible boost. AfterLunch should not receive a standalone boost from this evidence.
+Next recommended action: Mine the worsened Sweep-only changed slates to identify a collision guard, especially cases where Sweep replaces profitable OpeningDriveFvgContinuation, HtfDisplacementMssContinuation, HtfDisplacementFvgContinuation, or IntradayMssMicroContinuation top picks.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add AfterLunch line-clear structural fields and reject July-only risk/line selector.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner.ts, tools/automation/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner.test.ts, docs/PROJECT_STATUS.md.
 Reason: The July OOS four-loss bucket looked tied to a 5-6 point risk band plus an uncleared HTF/session line, but that needed the same formal miner to evaluate both July OOS and broader June-July context.

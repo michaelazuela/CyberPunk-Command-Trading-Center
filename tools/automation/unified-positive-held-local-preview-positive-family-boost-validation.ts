@@ -79,6 +79,7 @@ export interface UnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationRep
   source: {
     reportDir: string;
     sourceProofTimingPath: string | null;
+    selectedSetupTypes: string[];
   };
   assumptions: {
     validationIsResearchOnly: true;
@@ -116,7 +117,7 @@ export interface UnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationRep
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const POSITIVE_FAMILIES = new Set(['SweepMssFvgRetrace', 'AfterLunchDriveFvgContinuation']);
+const DEFAULT_POSITIVE_FAMILIES = ['SweepMssFvgRetrace', 'AfterLunchDriveFvgContinuation'];
 const POSITIVE_FAMILY_BOOST_POINTS = 12;
 
 function readFlag(args: string[], flag: string): string | null {
@@ -211,9 +212,9 @@ function summarizeModel(setupType: string, rows: TimingRow[]): ModelSummary {
   };
 }
 
-function buildModelSummaries(rows: TimingRow[]): ModelSummary[] {
+function buildModelSummaries(rows: TimingRow[], positiveFamilies: Set<string>): ModelSummary[] {
   const grouped = new Map<string, TimingRow[]>();
-  for (const row of rows.filter((item) => POSITIVE_FAMILIES.has(item.setupType))) {
+  for (const row of rows.filter((item) => positiveFamilies.has(item.setupType))) {
     grouped.set(row.setupType, [...(grouped.get(row.setupType) || []), row]);
   }
   return [...grouped.entries()]
@@ -345,9 +346,12 @@ export function buildUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidatio
   reportDir: string;
   sourceProofTimingPath: string | null;
   sourceProofTimingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport | null;
+  selectedSetupTypes?: string[];
 }, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationReport {
   const sourceRows = args.sourceProofTimingReport?.rows || [];
-  const models = buildModelSummaries(sourceRows);
+  const selectedSetupTypes = args.selectedSetupTypes?.length ? args.selectedSetupTypes : DEFAULT_POSITIVE_FAMILIES;
+  const positiveFamilies = new Set(selectedSetupTypes);
+  const models = buildModelSummaries(sourceRows, positiveFamilies);
   const boostModels = new Set(models.filter((model) => model.decision !== 'reject_boost_for_now').map((model) => model.setupType));
   const simulation = buildSimulation(sourceRows, boostModels);
   const topBeforeOneMesPl = sum(simulation.slates.map((row) => row.topBeforeOneMesPl));
@@ -369,6 +373,7 @@ export function buildUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidatio
     source: {
       reportDir: args.reportDir,
       sourceProofTimingPath: args.sourceProofTimingPath,
+      selectedSetupTypes,
     },
     assumptions: {
       validationIsResearchOnly: true,
@@ -385,7 +390,7 @@ export function buildUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidatio
     },
     summary: {
       sourceRows: sourceRows.length,
-      positiveFamilyRows: sourceRows.filter((row) => POSITIVE_FAMILIES.has(row.setupType)).length,
+      positiveFamilyRows: sourceRows.filter((row) => positiveFamilies.has(row.setupType)).length,
       boostCandidateModels: boostModels.size,
       slates: simulation.slates.length,
       topChangedSlates: simulation.slates.filter((row) => row.topChanged).length,
@@ -436,12 +441,17 @@ export function runUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationC
   const outDir = readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR;
   const sourceProofTimingPath = readFlag(args, '--source-proof-timing') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-replay-package-source-proof-timing-\d+\.json$/);
+  const selectedSetupTypes = (readFlag(args, '--setup-types') || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
   const report = buildUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationReport({
     reportDir: outDir,
     sourceProofTimingPath,
     sourceProofTimingReport: sourceProofTimingPath && fs.existsSync(sourceProofTimingPath)
       ? JSON.parse(fs.readFileSync(sourceProofTimingPath, 'utf8')) as UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport
       : null,
+    selectedSetupTypes,
   });
   const paths = writeUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationReport(report, outDir);
   if (args.includes('--json')) {
