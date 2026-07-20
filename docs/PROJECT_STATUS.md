@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add Sweep morning LONG extended-horizon outcome replay over saved full-day scanner artifacts.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-extended-horizon-outcome.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-extended-horizon-outcome.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the unresolved top-slate drilldown showed ranking could not replace four unresolved/no-fill tops inside the current outcome package. The next safe step was to determine whether the issue was the model/rank logic or the shorter morning decision-tape outcome source.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-extended-horizon-outcome.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-morning-long-extended-horizon-outcome -- --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-broader-daily-replay-package-1784503558665.json --unresolved-top-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-unresolved-top-slate-drilldown-1784510867440.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-extended-horizon-outcome-1784511541087.json. Status pass. Target rows: 4. Resolved/unresolved/blocked: 3/1/0. Converted rows: 3. Gross extended one-MES P/L: 480. 2026-06-04 converted from no_target_or_stop_hit to t1_hit_only (+202.5). 2026-06-11 converted from no_fill to t1_and_t2_hit (+185). 2026-07-07 converted from no_target_or_stop_hit to t1_and_t2_hit (+92.5). 2026-07-01 remained no_target_or_stop_hit through the saved full-day artifact, with MFE 7.5 and MAE 28.5. runtimeRankConsumerAllowedByThisReport remains false.
+Trading logic changed: No. This is a local/read-only saved-artifact outcome replay. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The report uses saved full-day scanner artifacts only. It proves the prior unresolved bucket was partly an outcome-source horizon issue, but it does not install full-day outcome sourcing into any runtime path.
+Next recommended action: Recompute the broader Sweep morning LONG outcome/rank research using full-day saved scanner artifact bars before making any ranking or model-quality conclusion. Separately inspect 2026-07-01 as the one remaining low-MFE unresolved top.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add Sweep morning LONG unresolved top-slate drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-unresolved-top-slate-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-unresolved-top-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the no-chase rank simulation did not improve top selection, so the next safe step was to inspect unresolved/no-fill top slates and determine whether rank replacement was even possible inside the saved slate.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: This confirms ranking cannot replace the unresolved tops inside the current saved slate. It does not prove whether those rows would resolve with a longer replay horizon or a richer outcome source.
 Next recommended action: Broaden the read-only replay horizon/outcome source for the four unresolved/no-fill top slates before touching rank behavior: 2026-06-04, 2026-06-11, 2026-07-01, and 2026-07-07.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add Sweep morning LONG no-chase rank simulation.
