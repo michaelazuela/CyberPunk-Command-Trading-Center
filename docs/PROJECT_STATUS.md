@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Rerun Sweep morning LONG no-chase diagnostics with full-day outcomes.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-nochase-rerun.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-nochase-rerun.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the no-chase/rank hypothesis had been evaluated on stale short-horizon outcome labels. After full-day saved scanner artifact outcomes resolved 68 of 80 rows and classified the remaining 12 unresolved rows, the existing no-chase split/rank diagnostics needed an apples-to-apples rerun using corrected labels.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-nochase-rerun.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-morning-long-full-day-nochase-rerun -- --full-day-comparison tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-outcome-comparison-1784512029623.json --unresolved-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-unresolved-drilldown-1784512836903.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-nochase-rerun-1784513270220.json. Status pass. Joined rows: 80. Full-day resolved/unresolved: 68/12. Weak-follow-through/near-T1/no-fill: 5/7/0. Split recommendation: keep_as_review_note. Rank recommendation: keep_research_only. Changed slates: 3. Baseline/simulated top one-MES P/L: 1081.25/1081.25. Top-selection delta: 0. Changed slates were 2026-06-26, 2026-06-29, and 2026-07-17, each replacing with the same outcome/P&L. Segment evidence: blocked_no_chase 56 rows, 22 winners, 34 problems, 12 unresolved, +2263.75 gross, winner/problem rate 0.39/0.61; not_applicable_no_no_chase 24 rows, 23 winners, 1 problem, 0 unresolved, +4388.75 gross, winner/problem rate 0.96/0.04.
+Trading logic changed: No. This is a local/read-only saved-report rerun. It overlays corrected full-day outcome labels onto existing pre-entry scanner rows and reruns research diagnostics only. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The clean no-chase bucket remains strong as a review note, but the rank simulation did not improve top-selection P/L after full-day correction. Do not install no-chase rank behavior from this evidence.
+Next recommended action: Keep no-chase as research-only review context. Next narrow research should mine the 23-of-24 clean no-chase winner bucket for a stronger pre-entry separator that changes selection P/L, or move back to model-family full-day outcome rollups before any live-facing proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add Sweep morning LONG full-day unresolved drilldown.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-unresolved-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-unresolved-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the full-day outcome comparison resolved 68 of 80 SweepMssFvgRetrace morning LONG reviewed rows but left 12 unresolved. The next safe step was to classify those remaining rows from saved full-day scanner artifact bars before feeding any rank/no-chase recommendation.

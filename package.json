@@ -191,6 +191,7 @@
     "research:raw-ohlc-scanner-artifact-sweep-morning-long-extended-horizon-outcome": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-extended-horizon-outcome.ts",
     "research:raw-ohlc-scanner-artifact-sweep-morning-long-full-day-outcome-comparison": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-outcome-comparison.ts",
     "research:raw-ohlc-scanner-artifact-sweep-morning-long-full-day-unresolved-drilldown": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-unresolved-drilldown.ts",
+    "research:raw-ohlc-scanner-artifact-sweep-morning-long-full-day-nochase-rerun": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-nochase-rerun.ts",
     "research:raw-ohlc-scanner-artifact-comparison": "tsx tools/automation/raw-ohlc-scanner-artifact-comparison.ts",
     "research:raw-ohlc-scanner-artifact-replay-package": "tsx tools/automation/raw-ohlc-scanner-artifact-replay-package.ts",
     "research:raw-ohlc-scanner-artifact-dedupe-timing-filter": "tsx tools/automation/raw-ohlc-scanner-artifact-dedupe-timing-filter.ts",
