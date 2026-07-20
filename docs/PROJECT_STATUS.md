@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add broader validation for problem-only proofSelectionSignal quality combos.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-broader-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-broader-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The problem-only quality miner found narrow clean combos in one retained overlay set, but those combos needed broader validation before any runtime rank or exclusion proposal. This validation applies only supported proof-time fields to the 343-row broader outcome report and marks unsupported row-count combos as unsupported instead of inferring missing fields.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-broader-validation.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-broader-validation -- --miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-quality-miner-1784506165909.json --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784503584511.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-broader-validation-1784506620811.json. Status pass. Broader outcome rows: 343. Clean miner combos read: 46. Supported/unsupported combos: 18/28. Surviving/failed supported combos: 0/18. Top surviving combo: none. runtimeRankConsumerAllowedByThisReport remains false. Recommendation is reject_problem_only_combos_for_runtime.
+Trading logic changed: No. This is a local/read-only saved-outcome validation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The smaller clean combos were overfit to one retained overlay set and become contaminated on the broader row set.
+Next recommended action: Reject the current problem-only combo path for runtime use. If continuing this research family, mine richer supported fields from fresh scanner artifacts rather than forcing a proofSelectionSignal penalty.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add problem-only quality miner for proofSelectionSignal research.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-quality-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-problem-only-quality-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Same-session competition inventory found no actionable mixed groups but did identify seven problem-only date/session groups. This miner tests proof-time/live-usable compound feature combinations against retained winner groups to see whether problem-only exclusion candidates exist before any runtime rank consumer.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: The clean combos are promising but narrow and still from one saved overlay set; using them live now would be overfit.
 Next recommended action: Validate the broad clean problem-only combos against a broader source before proposing any scanner-visible penalty or exclusion.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add same-session competition inventory for proofSelectionSignal positive-lane research.
