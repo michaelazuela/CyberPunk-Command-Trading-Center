@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Sweep complete-replacement miner.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-complete-replacement-miner.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-complete-replacement-miner.test.ts, docs/PROJECT_STATUS.md.
+Reason: The scanner-owned snapshot export showed the 4 changed raw-rank events were non-publishable, so the desk needed a current-package scan to prove whether any exact invalid-stop Sweep top row had a same-slate replacement with complete entry, stop, T1, and T2.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-complete-replacement-miner.test.ts; npm run diagnostic:held-local-preview-sweep-primary-exclusion-complete-replacement-miner -- --exact-proof-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-current-exact-proof-package-1784581148082.json --scanner-package-dir tools/automation/diagnostic-reports --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real miner tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-complete-replacement-miner-1784583021678.json passed with packageFilesRead=64, candidateRows=25664, events=2771, eventsWithExactInvalidStopSweep=69, baselineTopExactInvalidStopSweepEvents=4, baselineTopEventsWithReplacement=4, completeReplacementEvents=0, completeReplacementCanExecuteTrueEvents=0, runtimeProposalCandidateEvents=0, runtimeInstallAllowed=false, recommendation=no_runtime_filter_supported.
+Trading logic changed: No. This is local current raw scanner package mining only. It does not run setupScanner, install runtime selection behavior, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The current evidence supports source-quality repair research, not a runtime primary-selection exclusion. No exact invalid-stop Sweep top event has a complete same-slate replacement, so a live filter would not create clean human-review tickets from this set.
+Next recommended action: Stop pursuing a runtime Sweep primary-selection exclusion for this data package. Move to source-geometry repair research for Sweep invalid stops or return to the broader reviewed positive set to find complete-plan candidates by model/session/proof state.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep scanner-owned snapshot export.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-owned-snapshot-export.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-owned-snapshot-export.test.ts, docs/PROJECT_STATUS.md.
 Reason: The changed-event drilldown proved raw packages lacked selected-candidate, DeskTicket, and DeskPublishDecision fields, so the desk needed to replay those four changed events through the existing scanner-owned builders before deciding whether a runtime Sweep exclusion proposal was justified.
