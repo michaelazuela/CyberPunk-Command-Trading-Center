@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Sweep guarded boost fresh-package plan.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh-validation readiness audit proved no unseen package exists yet, but the desk needed a machine-checkable plan that names the locked date boundary, required artifacts, and allowed next commands without reusing July OOS as fresh proof.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.test.ts; npm run diagnostic:held-local-preview-sweep-boost-fresh-package-plan -- --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-fresh-package-plan-1784533854322.json. Status pass. Fresh validation ready: false. Requirements satisfied: 0/4. Missing requirements: fresh raw scanner artifact ending after 2026-07-17, fresh replay package, fresh outcome report, fresh source/proof timing report. Recommendation: build_fresh_unseen_package. Live promotion allowed rows: 0.
+Trading logic changed: No. This is local/read-only package planning only. It does not generate data, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The guarded Sweep boost remains research-only until a later unseen package exists and the locked validation sequence passes.
+Next recommended action: Build or wait for a fresh raw scanner artifact ending after 2026-07-17, then run the replay package, outcome, source/proof timing, and readiness sequence named by the planner.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep guarded boost fresh-validation readiness audit.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-validation-readiness.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-validation-readiness.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The guarded Sweep boost contract required a fresh unseen saved scanner artifact/outcome package, but the repo needed a machine-checkable audit so July OOS cannot be accidentally reused as fresh proof.

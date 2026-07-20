@@ -131,6 +131,7 @@
     "diagnostic:held-local-preview-sweep-boost-guarded-selection-simulation": "tsx tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-selection-simulation.ts",
     "diagnostic:held-local-preview-sweep-boost-guarded-validation-contract": "tsx tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-validation-contract.ts",
     "diagnostic:held-local-preview-sweep-boost-fresh-validation-readiness": "tsx tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-validation-readiness.ts",
+    "diagnostic:held-local-preview-sweep-boost-fresh-package-plan": "tsx tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.ts",
     "diagnostic:replay-validation": "tsx tools/automation/replay-validation-audit.ts",
     "diagnostic:htf-fvg-decision-zone-alert": "tsx tools/automation/htf-fvg-decision-zone-alert-audit.ts",
     "diagnostic:live-observation-proof": "tsx tools/automation/live-observation-proof-audit.ts",
