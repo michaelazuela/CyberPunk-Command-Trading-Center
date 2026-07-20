@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add model-family geometry source trace for blocked Sweep rows.
+Files changed: tools/automation/unified-positive-held-local-preview-model-family-geometry-source-trace.ts, tools/automation/unified-positive-held-local-preview-model-family-geometry-source-trace.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The model-family geometry drilldown proved 10 SweepMssFvgRetrace rows had wrong-side entry/stop geometry, but the desk needed to know whether the bad levels came from replay/intake mapping or were already present in scanner decision tape setup status.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-model-family-geometry-source-trace.test.ts; npm run diagnostic:held-local-preview-model-family-geometry-source-trace -- --geometry-drilldown tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-geometry-drilldown-1784575918884.json --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real source trace report tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-geometry-source-trace-1784576348964.json passed with drilldownRowsRead=10, tracedRows=10, sourceTapeFoundRows=10, badGeometryPresentInSetupStatusRows=10, badGeometryNotFoundRows=0, missingSourceTapeRows=0, rowsWithLaterValidSameDirectionCandidate=6, livePromotionAllowedRows=0. All 10 bad Sweep rows were already present in saved scanner setup status; replay did not invent them. Six rows later had at least one valid same-direction candidate in the same saved tape.
+Trading logic changed: No. This is local saved-tape source-trace tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The source trace identifies the likely upstream source family but does not yet patch the Sweep candidate builder. Any builder repair would touch trading-rule-adjacent entry/stop validation and must stay narrow with same-slate replay proof before scanner-visible behavior changes.
+Next recommended action: Inspect the SweepMssFvgRetrace candidate builder path that emits InvalidStopLocation with wrong-side stops. Separately, run valid-only same-slate research before any Sweep rank proposal. Do not remove Sweep, do not loosen canExecute, and do not treat blocked source-quality rows as model-removal evidence.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add model-family invalid geometry drilldown for Sweep broad replay.
 Files changed: tools/automation/unified-positive-held-local-preview-model-family-geometry-drilldown.ts, tools/automation/unified-positive-held-local-preview-model-family-geometry-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The broad Sweep replay was strongly positive but included 10 blocked rows with directionally invalid entry-to-stop geometry. The desk needed a local saved-report drilldown to isolate those rows before any Sweep ranking or boost decision.
