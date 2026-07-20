@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Validate Sweep lunch SHORT unresolved separator candidates.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-validation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the unresolved separator miner found clean but thin scanner-owned candidates, so they needed validation against all unresolved rows before any behavior proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-validation.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-validation -- --unresolved-drilldown tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-slate-drilldown-1784518682515.json --separator-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-miner-1784519032002.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-validation-1784519421570.json. Status pass. Candidates: review-note proofHour=12; exclusion evidenceCountBucket=35_to_39. Rows: 40. Classified/unclassified: 8/32. Correct classified rows: 8. False review/false exclusion rows: 0/0. Coverage share: 0.20. Classified accuracy share: 1.00. Recommendation: keep_research_only_low_coverage.
+Trading logic changed: No. This is a local/read-only saved-report separator validation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The candidates are accurate on classified rows but cover only 20 percent of unresolved rows, so they are not strong enough for scanner-visible rank behavior.
+Next recommended action: Stop this unresolved-separator branch from going live. Next narrow research should either validate the same candidates on broader/fresher history or pivot to a different unresolved-positive family with stronger coverage.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Mine scanner-owned separators for Sweep lunch SHORT unresolved rows.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-separator-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the all-date unresolved drilldown found mixed unresolved behavior, so scanner-owned fields needed to be compared between keep-as-review-note rows and exclude-from-positive-training rows before any no-lookahead validation.
