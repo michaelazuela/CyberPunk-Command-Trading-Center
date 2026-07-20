@@ -74,6 +74,9 @@ globalThis.fetch = originalFetch;
 
 assert.equal(zeroReport.reportType, 'bridge_history_smoke');
 assert.equal(zeroReport.liveRecentBarsAvailable, true);
+assert.equal(zeroReport.liveRecentResult.rawBarCount, 1);
+assert.equal(zeroReport.liveRecentResult.completedBarCount, 1);
+assert.equal(zeroReport.liveRecentResult.firstReturnedBarTimestamp, '2026-05-29T10:00:00');
 assert.equal(zeroReport.historicalBarsAvailable, false);
 assert.equal(zeroReport.completedBarsAvailable, false);
 assert.equal(zeroReport.likelyCause, 'ninjatrader_history_not_loaded');

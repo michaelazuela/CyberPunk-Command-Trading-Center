@@ -102,6 +102,7 @@ export interface BridgeHistorySmokeReport {
   fallbackResults: BridgeHistoryTimeframeResult[];
   bestWorkingTimeframe: string | null;
   bestWorkingRequestShape: BridgeHistoryRequestShape | null;
+  liveRecentResult: BridgeHistoryTimeframeResult;
   liveRecentBarsAvailable: boolean;
   historicalBarsAvailable: boolean;
   completedBarsAvailable: boolean;
@@ -619,6 +620,7 @@ export async function runBridgeHistorySmoke(options: BridgeHistorySmokeCliOption
     fallbackResults: fallback,
     bestWorkingTimeframe: best?.timeframe || null,
     bestWorkingRequestShape: best?.request || null,
+    liveRecentResult: liveRecent,
     liveRecentBarsAvailable: liveRecent.rawBarCount > 0,
     historicalBarsAvailable: [...primary, ...fallback].some((result) => result.rawBarCount > 0),
     completedBarsAvailable: [...primary, ...fallback].some((result) => result.completedBarCount > 0),
@@ -667,6 +669,9 @@ export function formatBridgeHistorySmokeReport(report: BridgeHistorySmokeReport)
     '',
     'Fallback results:',
     ...(report.fallbackResults.length ? report.fallbackResults.flatMap(formatResult) : ['- none']),
+    '',
+    'Live recent result:',
+    ...(report.liveRecentResult ? formatResult(report.liveRecentResult) : ['- not captured']),
     '',
     `Live/recent bars available: ${report.liveRecentBarsAvailable ? 'yes' : 'no'}`,
     `Historical bars available: ${report.historicalBarsAvailable ? 'yes' : 'no'}`,

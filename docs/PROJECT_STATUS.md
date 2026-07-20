@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add live recent buffer detail to bridge fresh-package boundary.
+Files changed: tools/automation/bridge-history-smoke.ts, tools/automation/bridge-history-smoke.test.ts, tools/automation/bridge-fresh-package-data-boundary-audit.ts, tools/automation/bridge-fresh-package-data-boundary-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: The prior boundary audit showed live recent bars exist but did not preserve the recent buffer count and range. The desk needed exact evidence proving why the available live buffer is not a complete morning/lunch fresh validation package.
+Tests run: npx tsx tools/automation/bridge-history-smoke.test.ts; npx tsx tools/automation/bridge-fresh-package-data-boundary-audit.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:bridge-fresh-package-data-boundary -- --instrument MES --bridge-instrument "MES 09-26" --date 2026-07-20 --from 09:15 --to 16:00 --timeframes 5m,15m,60m,120m,240m --json.
+Result: Report generated tools/automation/diagnostic-reports/bridge-fresh-package-data-boundary-audit-1784535016157.json. Status pass. Live recent buffer: 100 raw / 98 completed 5M bars, range 2026-07-19T20:00:00.0000000 to 2026-07-20T04:15:00.0000000. Historical bars available: false. Completed historical bars available: false. Ready for market-bars JSON export: false. Likely cause: ninjatrader_history_not_loaded. Recommendation: load_ninjatrader_history. Live promotion allowed rows: 0.
+Trading logic changed: No. This is read-only bridge diagnostics and saved-report boundary evidence only. It does not post Discord, write Supabase, change bridge behavior, change scanner behavior, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: Read-only live bridge diagnostic only. No bridge behavior changed.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Fresh Sweep guarded validation still cannot run from the overnight live buffer because it lacks the required completed historical morning/lunch validation window and HTF package coverage.
+Next recommended action: Load NinjaTrader historical data for MES 09-26 after 2026-07-17, rerun the boundary audit, then proceed only if all requested timeframes return completed bars.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add bridge fresh-package data-boundary audit.
 Files changed: tools/automation/bridge-fresh-package-data-boundary-audit.ts, tools/automation/bridge-fresh-package-data-boundary-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Sweep guarded boost fresh validation is blocked by missing post-July-17 market-bars package data. The desk needed a repeatable audit that distinguishes active-contract mismatch from unavailable NinjaTrader historical bars before any replay package is attempted.

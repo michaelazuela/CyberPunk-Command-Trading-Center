@@ -39,6 +39,31 @@ const baseSmoke: BridgeHistorySmokeReport = {
   fallbackResults: [],
   bestWorkingTimeframe: '5m',
   bestWorkingRequestShape: null,
+  liveRecentResult: {
+    timeframe: '5m',
+    request: {
+      label: 'live_recent_bars',
+      endpoint: 'bars',
+      bridgeUrl: 'http://127.0.0.1:8765',
+      bridgeInstrument: 'MES 09-26',
+      timeframe: '5m',
+      from: null,
+      to: null,
+      timestampMode: 'open',
+      timeZoneMode: 'eastern',
+    },
+    succeeded: true,
+    bridgeOk: true,
+    errorMessage: null,
+    rawBarCount: 100,
+    firstReturnedBarTimestamp: '2026-07-19T19:45:00',
+    lastReturnedBarTimestamp: '2026-07-20T04:00:00',
+    completedBarCount: 100,
+    filteredIncompleteCount: 0,
+    invalidTimestampCount: 0,
+    invalidOhlcCount: 0,
+    aliasAttempts: [],
+  },
   liveRecentBarsAvailable: true,
   historicalBarsAvailable: true,
   completedBarsAvailable: true,
@@ -64,6 +89,8 @@ const ready = buildBridgeFreshPackageDataBoundaryAuditReport({
 assert.equal(ready.status, 'pass');
 assert.equal(ready.summary.readyForMarketBarsJsonExport, true);
 assert.equal(ready.summary.allRequestedTimeframesCompleted, true);
+assert.equal(ready.summary.liveRecentRawBars, 100);
+assert.equal(ready.summary.liveRecentRangeStart, '2026-07-19T19:45:00');
 assert.equal(ready.summary.recommendation, 'run_raw_scanner_artifact_generator');
 assert.equal(ready.summary.livePromotionAllowedRows, 0);
 assert.equal(ready.authority.readsLiveBridge, false);

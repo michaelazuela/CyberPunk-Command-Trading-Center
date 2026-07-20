@@ -60,6 +60,10 @@ export interface BridgeFreshPackageDataBoundaryAuditReport {
   };
   summary: {
     liveRecentBarsAvailable: boolean;
+    liveRecentRawBars: number;
+    liveRecentCompletedBars: number;
+    liveRecentRangeStart: string | null;
+    liveRecentRangeEnd: string | null;
     historicalBarsAvailable: boolean;
     completedBarsAvailable: boolean;
     allRequestedTimeframesCompleted: boolean;
@@ -137,6 +141,7 @@ function buildMarkdown(report: Omit<BridgeFreshPackageDataBoundaryAuditReport, '
     '',
     '## Summary',
     `- Live recent bars available: ${report.summary.liveRecentBarsAvailable}.`,
+    `- Live recent range: ${report.summary.liveRecentRangeStart || '-'} to ${report.summary.liveRecentRangeEnd || '-'} (${report.summary.liveRecentCompletedBars}/${report.summary.liveRecentRawBars} completed/raw).`,
     `- Historical bars available: ${report.summary.historicalBarsAvailable}.`,
     `- Completed bars available: ${report.summary.completedBarsAvailable}.`,
     `- All requested timeframes completed: ${report.summary.allRequestedTimeframesCompleted}.`,
@@ -205,6 +210,10 @@ export function buildBridgeFreshPackageDataBoundaryAuditReport(args: {
     },
     summary: {
       liveRecentBarsAvailable: Boolean(smoke?.liveRecentBarsAvailable),
+      liveRecentRawBars: smoke?.liveRecentResult?.rawBarCount || 0,
+      liveRecentCompletedBars: smoke?.liveRecentResult?.completedBarCount || 0,
+      liveRecentRangeStart: smoke?.liveRecentResult?.firstReturnedBarTimestamp || null,
+      liveRecentRangeEnd: smoke?.liveRecentResult?.lastReturnedBarTimestamp || null,
       historicalBarsAvailable: Boolean(smoke?.historicalBarsAvailable),
       completedBarsAvailable: Boolean(smoke?.completedBarsAvailable),
       allRequestedTimeframesCompleted,
