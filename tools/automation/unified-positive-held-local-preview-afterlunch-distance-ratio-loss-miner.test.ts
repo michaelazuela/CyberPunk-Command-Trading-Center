@@ -149,7 +149,7 @@ function scannerCandidate(overrides: Record<string, unknown>) {
 
 const scannerArtifactReport = {
   events: {
-    '2026-07-09T13:20:00': {
+    '2026-07-09 2026-07-09T13:20:00': {
       setupCandidateStatus: { statuses: [scannerCandidate({})] },
     },
     '2026-07-10T13:20:00': {

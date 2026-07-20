@@ -202,7 +202,12 @@ function closeBeyondLine(direction: string, close: number | null, line: number |
 }
 
 function eventByProofTime(scannerArtifact: any, proofTime: string): any | null {
-  return scannerArtifact?.events?.[proofTime] || scannerArtifact?.events?.[`${proofTime}:00`] || null;
+  const tradeDate = proofTime.slice(0, 10);
+  return scannerArtifact?.events?.[proofTime] ||
+    scannerArtifact?.events?.[`${proofTime}:00`] ||
+    scannerArtifact?.events?.[`${tradeDate} ${proofTime}`] ||
+    scannerArtifact?.events?.[`${tradeDate} ${proofTime}:00`] ||
+    null;
 }
 
 function findCandidate(event: any, timing: TimingRow, replay: ReplayRow | null): any | null {
