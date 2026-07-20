@@ -44,7 +44,7 @@ interface OutcomeReport {
   rows?: OutcomeRow[];
 }
 
-interface JoinedRow extends OutcomeRow {
+export interface JoinedRow extends OutcomeRow {
   fields: Record<string, string>;
 }
 
@@ -117,6 +117,7 @@ export interface RawOhlcScannerArtifactSweepMorningLongPreentryFieldMinerReport 
     recommendation: 'validate_preentry_field_candidates' | 'no_preentry_field_candidate' | 'fix_inputs';
   };
   featureStats: FeatureStatRow[];
+  joinedRows: JoinedRow[];
   blockers: string[];
   recommendations: string[];
   markdown: string;
@@ -442,6 +443,7 @@ export function buildRawOhlcScannerArtifactSweepMorningLongPreentryFieldMinerRep
           : 'no_preentry_field_candidate',
     },
     featureStats: featureStats.slice(0, 100),
+    joinedRows,
     blockers,
     recommendations: blockers.length
       ? ['Fix saved outcome/replay inputs before pre-entry field mining.']
