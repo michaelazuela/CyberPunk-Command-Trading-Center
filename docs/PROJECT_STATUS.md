@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Sweep guarded boost fresh-validation readiness audit.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-validation-readiness.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-validation-readiness.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The guarded Sweep boost contract required a fresh unseen saved scanner artifact/outcome package, but the repo needed a machine-checkable audit so July OOS cannot be accidentally reused as fresh proof.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-validation-readiness.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-boost-fresh-validation-readiness -- --validation-contract tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-guarded-validation-contract-1784532501814.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-fresh-validation-readiness-1784533021027.json. Status pass. Raw artifacts scanned: 60. Candidate artifacts after locked July 17 OOS end date: 0. Complete candidate packages: 0. Fresh validation ready: false. Recommendation: generate_fresh_unseen_saved_package. Live promotion allowed rows: 0.
+Trading logic changed: No. This is local/read-only saved-report readiness auditing only. It does not generate data, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The guarded Sweep boost cannot advance to scanner-visible proposal until a later unseen saved scanner artifact, replay package, outcome report, and source/proof timing report exist.
+Next recommended action: Generate a fresh unseen saved package from a later trading date when data is available, then run the locked validation contract sequence.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep guarded boost fresh-validation contract.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-validation-contract.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-validation-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Guarded Sweep selection improved the saved broad and July packages, but the feature was mined from those same packages. The desk needed a locked proof contract for the next unseen scanner artifact before any live-facing proposal.
