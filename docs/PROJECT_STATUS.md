@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Compare AfterLunch proof-time proxy package against the full source/proof timing set.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-source-comparison.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-source-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the proof-time proxy package was promising, but the desk needed to prove package/source alignment and explicitly mark that no fresh replay validation had happened yet.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-source-comparison.test.ts; npm run diagnostic:held-local-preview-afterlunch-proof-time-proxy-source-comparison -- --validation-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-validation-package-1784524168409.json --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-source-comparison-1784524710592.json and .md. Status pass. Package/full source rows: 30/138. Matched package rows: 30. Missing source rows: 0. Package W/L/U: 30/0/0, +2783.22 one-MES. Full source W/L/U: 110/27/1, +7990.97 one-MES. Excluded source rows/losses/P&L: 108/27/+5207.75. Package coverage: 21.74%. Fresh replay validated: false. Recommendation: build_fresh_outcome_replay_for_package.
+Trading logic changed: No. This is a local/read-only saved-report comparison. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The package remains in-sample and not fresh replay validated. It proves alignment with the saved source set, not out-of-sample transfer or scanner readiness.
+Next recommended action: Build an actual fresh outcome replay for the 30 package rows, then compare fresh outcomes against this package before any scanner-visible proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Build AfterLunch proof-time proxy validation package.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-validation-package.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-validation-package.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the no-lookahead separator diagnostic found proof-time proxy candidates, but those candidates needed a fresh validation package rather than a live-facing rank/filter install.
