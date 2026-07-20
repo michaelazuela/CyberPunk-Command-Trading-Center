@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add scanner-owned selector dry-run contract.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-scanner-owned-selector-dry-run-contract.ts, tools/automation/unified-positive-held-local-preview-scanner-owned-selector-dry-run-contract.test.ts, docs/PROJECT_STATUS.md.
+Reason: The selector proposal audit proved SweepMssFvgRetrace morning SHORT risk_8_to_16 was the strongest same-session pocket, but repeated 5M proof rows could inflate the result. The desk needed a dry-run contract that simulates one scanner-owned proposal per identical setup/entry/stop/target slate, stale duplicate suppression, and collision notes before any local-preview or runtime proposal.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-scanner-owned-selector-dry-run-contract.test.ts; npm run diagnostic:held-local-preview-scanner-owned-selector-dry-run-contract -- --session-bounded-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-session-bounded-profit-validation-1784586800588.json --json.
+Result: Focused test passed. Real dry-run tools/automation/diagnostic-reports/unified-positive-held-local-preview-scanner-owned-selector-dry-run-contract-1784588005803.json passed with sourceRows=2154, selectorRawRows=75, dryRunSlateRows=6, duplicateRowsSuppressed=69, staleRowsSuppressed=54, collisionRows=27, collisionWinningRows=16, rawSelectorOneMesPl=7510, dryRunOneMesPl=405, dryRunVsRawDeltaOneMesPl=-7105, dryRunWinRateResolved=0.67, dryRunAverageMfeR=5.27, dryRunAverageMaeR=0.49, livePromotionAllowedRows=0, recommendation=advance_to_scanner_owned_local_preview_contract. The one-ticket-per-slate dry run produced 4W/2L/0U/0B. This proves the raw pocket was heavily inflated by repeated scanner rows, but a stricter scanner-owned slate contract remained positive. OpeningDriveFvgContinuation was the most common winning collision family around the same short slates.
+Trading logic changed: No. This is local saved-report dry-run tooling only. It does not run setupScanner, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The dry run uses saved session-bounded rows and selects by identical entry/stop/targets, not by a live scanner slate id. Before any runtime behavior is considered, a local-preview contract must prove the same one-ticket-per-slate behavior from current scanner-owned candidate state.
+Next recommended action: Build a local-preview scanner-owned proposal package for this exact short-slate selector with live promotion disabled, preserving collision notes and requiring one proposal per slate before any Discord/ranking/canExecute change.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add scanner-owned selector proposal audit for the strongest same-session pocket.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-scanner-owned-selector-proposal-audit.ts, tools/automation/unified-positive-held-local-preview-scanner-owned-selector-proposal-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: Session-bounded validation showed SweepMssFvgRetrace morning SHORT risk_8_to_16 was the cleanest surviving pocket. The desk needed a research-only selector audit against same-session non-target winners and blocked/unresolved rows before any scanner-owned dry-run or runtime ranking proposal.
