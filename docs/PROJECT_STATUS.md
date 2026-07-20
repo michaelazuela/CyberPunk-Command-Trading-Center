@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Mine AfterLunch structural sequence loss candidates from broader June-July replay context.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner.ts, tools/automation/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Broader validation rejected the same-slice distance/risk separator, so the desk needed richer known-at-proof sequence fields around line-in-sand position, proof age, same-side sequence, and target-room state before any live-facing proposal.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner.test.ts; npm run diagnostic:held-local-preview-afterlunch-structural-sequence-loss-miner -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784419066591.json --scanner-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-06-01-to-2026-07-02-combined-1784419058783.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner-1784529622444.json. Status pass. AfterLunch rows matched: 138/138. W/L/U: 110/27/1. Gross one-MES P/L: +7990.97. Research candidates: 6. Top candidate riskPoints<=10+htfLineBehindPrice selected 5 rows, 0 winners, 5 losses, 0 unresolved, -242.50 one-MES, 19% loss coverage, and 0 winner collisions. Bare htfLineBehindPrice was too broad because it selected 1 winner and 5 losses.
+Trading logic changed: No. This is local/read-only saved-report research only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The selector is still mined from the June-July package and covers only a minority of losses. It is not eligible for scanner-visible use until it survives fresh OOS scanner-artifact validation.
+Next recommended action: Validate riskPoints<=10+htfLineBehindPrice against a later unseen scanner artifact/replay package before proposing any AfterLunch review note or rank penalty.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Validate AfterLunch distance/ratio loss separator on broader June-July replay context.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-distance-ratio-loss-miner.ts, tools/automation/unified-positive-held-local-preview-afterlunch-distance-ratio-loss-miner.test.ts, docs/PROJECT_STATUS.md.
 Reason: The July OOS distance/ratio miner found a same-slice compound separator, but scanner-visible behavior needs broader validation before any review note, rank penalty, or model change.

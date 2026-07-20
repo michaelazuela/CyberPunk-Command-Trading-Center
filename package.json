@@ -110,6 +110,7 @@
     "diagnostic:held-local-preview-afterlunch-proof-time-proxy-source-comparison": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-source-comparison.ts",
     "diagnostic:held-local-preview-afterlunch-scanner-context-loss-miner": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-scanner-context-loss-miner.ts",
     "diagnostic:held-local-preview-afterlunch-distance-ratio-loss-miner": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-distance-ratio-loss-miner.ts",
+    "diagnostic:held-local-preview-afterlunch-structural-sequence-loss-miner": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-structural-sequence-loss-miner.ts",
     "diagnostic:held-local-preview-broad-proof-context-enrichment": "tsx tools/automation/unified-positive-held-local-preview-broad-proof-context-enrichment.ts",
     "diagnostic:held-local-preview-preentry-adverse-path-classifier": "tsx tools/automation/unified-positive-held-local-preview-preentry-adverse-path-classifier.ts",
     "diagnostic:held-local-preview-structural-field-inventory": "tsx tools/automation/unified-positive-held-local-preview-structural-field-inventory.ts",
