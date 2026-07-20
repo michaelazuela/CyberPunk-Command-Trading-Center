@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive low-risk loss drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Recursive low-risk broad validation found 2 stopped-before-T1 losses inside `risk_lt_4`. The desk needs exact loss rows, timing, MFE/MAE, risk buckets, and separator tags before deciding whether a no-lookahead exclusion exists.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-drilldown -- --report-dir tools/automation/diagnostic-reports --out-dir tools/automation/diagnostic-reports/openingdrive-fresh-20260720 --json.
+Result: Focused test, TypeScript, and real recursive saved-report loss drilldown passed. Report generated tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-drilldown-1784559124557.json. Low-risk lane remains 31 rows, 29 winners, 2 losses, +688.21 one-MES P/L. Both losses are June 1 morning LONG OpeningDrive rows at 10:35 and 10:40, risk_2_to_3, first replay bar stopped, intrabar ambiguity. The 10:35 row also tagged first_replay_bar_t1, meaning stop/T1 ordering is ambiguous inside the replay bar. Direction LONG has 25 rows, 23 winners, 2 losses, +560.06; SHORT has 6 rows, 6 winners, 0 losses, +128.15. Recommendation=mine_loss_separator; do not promote low-risk broadly.
+Trading logic changed: No. This is saved-report-only loss drilldown tooling. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner runtime, change canExecute, install live ranking, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Loss drilldown explains residue only; it does not prove a reusable exclusion until a separate no-lookahead separator simulation validates it.
+Next recommended action: Build a no-lookahead low-risk loss-separator miner that tests whether the two June 1 LONG losses can be isolated without using outcome tags, date-only filters, or post-entry replay fields.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive low-risk broad validation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-broad-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-broad-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The low-risk comparison showed `low_risk_lt_4` is clean but too small in the fresh package. The desk needed a recursive saved-report validation pass to broaden the low-risk evidence against all available OpeningDrive same-bar diagnostics before any proposal path.
