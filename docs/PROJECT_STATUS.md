@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add bridge ready gate to Sweep fresh-package planner.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.test.ts, docs/PROJECT_STATUS.md.
+Reason: The fresh-package planner named the raw scanner artifact generator directly. Now that a bridge readiness gate exists, the generated command chain should require that gate before any fresh package generation attempt.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.test.ts; npm run diagnostic:held-local-preview-sweep-boost-fresh-package-plan -- --json; direct report inspection of nextCommands.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-fresh-package-plan-1784535962976.json. Status pass. Fresh validation ready: false. Requirements satisfied: 0/4. The nextCommands sequence now starts with npm run diagnostic:bridge-fresh-package-ready-gate before npm run research:raw-ohlc-scanner-artifacts.
+Trading logic changed: No. This is local/read-only package planning only. It does not generate data, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Fresh Sweep guarded validation remains blocked until the ready gate passes on completed historical bars.
+Next recommended action: Run the planner and confirm the next command sequence gates raw scanner generation behind diagnostic:bridge-fresh-package-ready-gate.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add bridge fresh-package ready gate.
 Files changed: tools/automation/bridge-fresh-package-ready-gate.ts, tools/automation/bridge-fresh-package-ready-gate.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The bridge data-boundary audit can pass as a diagnostic while still reporting that the fresh market-bars JSON package is not ready. The desk needed a fail-fast local gate that blocks the raw scanner artifact generator until completed historical bars exist for every requested timeframe.

@@ -76,6 +76,7 @@ assert.equal(noCandidate.authority.postsDiscord, false);
 assert.equal(noCandidate.authority.writesSupabase, false);
 assert.equal(noCandidate.authority.readsLiveBridge, false);
 assert.equal(noCandidate.authority.changesTradingLogic, false);
+assert.ok(noCandidate.nextCommands.some((item) => item.includes('diagnostic:bridge-fresh-package-ready-gate')));
 assert.ok(noCandidate.nextCommands.some((item) => item.includes('research:raw-ohlc-scanner-artifacts')));
 assert.ok(noCandidate.nextCommands.some((item) => item.includes('--market-bars-json <fresh-market-bars-json>')));
 assert.ok(noCandidate.nextCommands.some((item) => item.includes('--sessions morning,lunch')));

@@ -121,6 +121,7 @@ function commandPlan(report: UnifiedPositiveHeldLocalPreviewSweepBoostFreshValid
     ];
   }
   return [
+    'npm run diagnostic:bridge-fresh-package-ready-gate -- --boundary-audit <fresh-bridge-boundary-audit> --json',
     `npm run research:raw-ohlc-scanner-artifacts -- --market-bars-json <fresh-market-bars-json> --start-date <date-after-${report?.lockedEvidence.latestLockedEndDate || 'locked-end'}> --end-date <fresh-date> --instrument MES --sessions morning,lunch --json`,
     'npm run diagnostic:held-local-preview-replay-package -- --raw-scanner-artifact <fresh-raw-scanner-artifact> --json',
     'npm run diagnostic:held-local-preview-replay-package-outcome -- --replay-package <fresh-replay-package> --json',
