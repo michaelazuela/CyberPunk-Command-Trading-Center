@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add bridge fresh-package ready gate.
+Files changed: tools/automation/bridge-fresh-package-ready-gate.ts, tools/automation/bridge-fresh-package-ready-gate.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The bridge data-boundary audit can pass as a diagnostic while still reporting that the fresh market-bars JSON package is not ready. The desk needed a fail-fast local gate that blocks the raw scanner artifact generator until completed historical bars exist for every requested timeframe.
+Tests run: npx tsx tools/automation/bridge-fresh-package-ready-gate.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:bridge-fresh-package-ready-gate -- --boundary-audit tools/automation/diagnostic-reports/bridge-fresh-package-data-boundary-audit-1784535016157.json --json.
+Result: Report generated tools/automation/diagnostic-reports/bridge-fresh-package-ready-gate-1784535540624.json. Status fail as expected. Boundary audit status: pass. Ready for market-bars JSON export: false. All requested timeframes completed: false. Generator allowed: false. Next allowed command: none. Likely cause: ninjatrader_history_not_loaded. Recommendation: load_ninjatrader_history. Live promotion allowed rows: 0.
+Trading logic changed: No. This is saved-report-only local diagnostics and command gating. It does not read the live bridge, post Discord, write Supabase, change bridge behavior, change scanner behavior, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None. The gate consumes saved boundary audit reports only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Fresh Sweep guarded validation remains blocked until NinjaTrader historical bars are available for the active rollover contract and requested morning/lunch validation window.
+Next recommended action: Run the ready gate against the latest boundary audit; if it fails as expected, load NinjaTrader historical data for MES 09-26 after 2026-07-17, rerun the boundary audit, then rerun this gate before generating raw scanner artifacts.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add live recent buffer detail to bridge fresh-package boundary.
 Files changed: tools/automation/bridge-history-smoke.ts, tools/automation/bridge-history-smoke.test.ts, tools/automation/bridge-fresh-package-data-boundary-audit.ts, tools/automation/bridge-fresh-package-data-boundary-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: The prior boundary audit showed live recent bars exist but did not preserve the recent buffer count and range. The desk needed exact evidence proving why the available live buffer is not a complete morning/lunch fresh validation package.

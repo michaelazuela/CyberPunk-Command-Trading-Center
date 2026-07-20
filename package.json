@@ -188,6 +188,7 @@
     "quant-desk:discord-scheduler": "tsx tools/automation/quant-desk-discord-scheduler.ts",
     "bridge:history-smoke": "tsx tools/automation/bridge-history-smoke.ts",
     "diagnostic:bridge-fresh-package-data-boundary": "tsx tools/automation/bridge-fresh-package-data-boundary-audit.ts",
+    "diagnostic:bridge-fresh-package-ready-gate": "tsx tools/automation/bridge-fresh-package-ready-gate.ts",
     "audit:repair-targets": "tsx tools/automation/audit-target-repair.ts",
     "test": "node scripts/run-test-suite.cjs",
     "test:components": "vitest run src/components src/App.test.tsx",
