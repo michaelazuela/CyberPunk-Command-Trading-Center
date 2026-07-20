@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Compare AfterLunch proof-time proxy selectors at OOS slate level.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-slate-comparison.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-slate-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the July OOS row-quality validation was clean, but the desk still needed to prove whether the proof-time proxy should affect top-candidate selection before any scanner-visible rank overlay.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-slate-comparison.test.ts; npm run diagnostic:held-local-preview-afterlunch-proof-time-proxy-oos-slate-comparison -- --validation-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-validation-package-1784524168409.json --oos-source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784526031044.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-slate-comparison-1784526667856.json and .md. Status pass. Rows/slates: 43/7. Slates with proxy match: 3. Changed slates: 2. Baseline/selector top one-MES P/L: +539.40/+456.90. Top-selection delta: -82.50. Changed resolved delta: -82.50. Selector matched losses: 0. Selector chosen losses: 1, caused by fallback to baseline on a slate with no proxy match, not by a matched proxy row. Unsupported proxy: changedSlate:true because timing-only OOS rows do not include changed-slate simulation context. Recommendation: do_not_install_rank_boost.
+Trading logic changed: No. This is local/read-only OOS slate comparison over saved reports. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The proxy remains useful as row-quality/review evidence, but OOS slate math rejects it as a top-selection rank boost. changedSlate:true still needs a separate OOS changed-slate source before it can be validated.
+Next recommended action: Stop the AfterLunch proof-time proxy rank-boost path. If continuing AfterLunch, mine structural/context fields that explain the four July OOS losses without replacing earlier winning proofs.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Validate AfterLunch proof-time proxy selectors on out-of-sample July scanner artifacts.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-validation.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the in-sample AfterLunch proxy package survived fresh replay reconstruction, but the desk needed to test the same discovered proxy IDs against the separate July 3-July 17 saved scanner-artifact source/proof timing set before any scanner-visible proposal.
