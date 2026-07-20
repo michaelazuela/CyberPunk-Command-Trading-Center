@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add disabled local adapter preview for approved no-chase rebuilt review cards.
+Files changed: tools/automation/no-chase-rebuilt-review-disabled-local-adapter-preview.ts, tools/automation/no-chase-rebuilt-review-disabled-local-adapter-preview.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The no-chase rebuilt review proposal and approval contract were both passing for exactly three complete human-review-only candidates. The desk needed a disabled local preview surface that proves card shape and boundaries before any scanner-visible wiring is considered.
+Tests run: npx tsx tools/automation/no-chase-rebuilt-review-disabled-local-adapter-preview.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-rebuilt-review-disabled-local-adapter-preview -- --proposal tools/automation/diagnostic-reports/no-chase-rebuilt-review-live-proposal-1784562239795.json --approval-contract tools/automation/diagnostic-reports/no-chase-rebuilt-review-approval-contract-1784562895456.json --json.
+Result: Disabled local adapter preview report tools/automation/diagnostic-reports/no-chase-rebuilt-review-disabled-local-adapter-preview-1784563606130.json passed. Summary: proposalTickets=3, previewCards=3, disabledPreviewCards=3, humanReviewOnlyCards=3, completePlanCards=3, htfSufficientCards=3, canExecuteFalseCards=3, publishDiscordFalseCards=3, scannerVisibleRows=0, livePromotionAllowedRows=0, replayGrossOneMes=+$270.00, failedGateCount=0, recommendation=keep_disabled_local_preview.
+Trading logic changed: No. This is local saved-report preview tooling only. It does not wire scanner runtime, run setupScanner, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, change entry/stop/target/risk math, or change trading logic.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The preview is intentionally disabled and must not be treated as approval for live scanner visibility.
+Next recommended action: Run full repository checks, commit, push, then add a second disabled readiness audit or broaden research for more no-chase rebuild candidates before any scanner-visible implementation.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add no-chase rebuilt review approval contract.
 Files changed: tools/automation/no-chase-rebuilt-review-approval-contract.ts, tools/automation/no-chase-rebuilt-review-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The no-chase rebuilt review proposal passed with three complete human-review-only artifacts. The desk needed a separate approval contract that keeps implementation disabled while proving a future adapter cannot silently loosen canExecute, publish Discord, broaden model families, or use HTF as execution authority.
