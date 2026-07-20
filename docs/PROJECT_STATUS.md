@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Sweep primary-exclusion evidence-boundary audit.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-evidence-boundary-audit.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-evidence-boundary-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: The nonreproduction drilldown proved some held-local changed slates do not reproduce in current raw scanner package output, so the desk needed a machine-readable boundary before any runtime ranking proposal could use held-local evidence.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-evidence-boundary-audit.test.ts; npm run diagnostic:held-local-preview-sweep-primary-exclusion-evidence-boundary-audit -- --package-metadata-audit tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-package-metadata-audit-1784579779233.json --nonreproduction-drilldown tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-nonreproduction-drilldown-1784580232335.json --json.
+Result: Focused test passed. Real audit report tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-evidence-boundary-audit-1784580713276.json passed with changedSlates=5, exactPackageInvalidStopProofSlates=1, packageCoveredButNotExactInvalidStopProofSlates=2, heldLocalOnlyExcludedUntilReproducedSlates=2, unsupportedEveningReplaySessionSlates=1, currentScannerDirectionOrDetectionMismatchSlates=1, runtimeEvidenceEligibleSlates=1, runtimeInstallAllowed=false. Policy: nonreproduced held-local rows are excluded from runtime evidence until reproduced; package-covered rows without exact InvalidStopLocation remain research caution only.
+Trading logic changed: No. This is local saved-report boundary audit tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Runtime primary-selection exclusion remains unapproved because only 1 of 5 changed slates has exact current raw-package InvalidStopLocation proof.
+Next recommended action: Build the next research-only exact-proof package for current raw scanner rows with InvalidStopLocation and exclude nonreproduced held-local rows from runtime proposal evidence.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep primary-exclusion approval contract.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-approval-contract.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The installed penalty audit proved invalid-stop Sweep rows are blocked and non-executable, but 5 still became primary desk ideas. The desk needed a no-runtime-change approval contract before building a stricter primary-selection dry-run.
