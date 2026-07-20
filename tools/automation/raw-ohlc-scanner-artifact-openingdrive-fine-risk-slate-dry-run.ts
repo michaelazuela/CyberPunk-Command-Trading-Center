@@ -8,7 +8,7 @@ import type {
   RawOhlcScannerArtifactOpeningDriveFineRiskApprovalContractReport,
 } from './raw-ohlc-scanner-artifact-openingdrive-fine-risk-approval-contract';
 
-type Selector = 'fine_risk_24_to_32' | 'tight_long_risk_4_to_8';
+type Selector = 'low_risk_lt_4' | 'fine_risk_24_to_32' | 'tight_long_risk_4_to_8';
 
 interface CliOptions {
   freshReplayPackage: string;
@@ -96,6 +96,7 @@ export interface RawOhlcScannerArtifactOpeningDriveFineRiskSlateDryRunReport {
     proposedDeltaOneMesPl: number | null;
     removedLosses: number;
     removedWinners: number;
+    removedLowRiskRows: number;
     removedTightLongRows: number;
     removedFineRiskRows: number;
     livePromotionAllowedRows: 0;
@@ -326,15 +327,18 @@ export function buildRawOhlcScannerArtifactOpeningDriveFineRiskSlateDryRunReport
       proposedDeltaOneMesPl,
       removedLosses: removedSummary.losses,
       removedWinners: removedSummary.winners,
+      removedLowRiskRows: removedRows.filter((row) => row.selector === 'low_risk_lt_4').length,
       removedTightLongRows: removedRows.filter((row) => row.selector === 'tight_long_risk_4_to_8').length,
       removedFineRiskRows: removedRows.filter((row) => row.selector === FINE_SELECTOR).length,
       livePromotionAllowedRows: 0,
       recommendation: blockers.length ? 'fix_inputs' : ready ? 'approval_candidate_but_keep_research_only' : 'do_not_advance',
     },
     selectorSummaries: [
+      selectorSummary(rows, 'low_risk_lt_4', 'baseline'),
       selectorSummary(rows, 'tight_long_risk_4_to_8', 'baseline'),
       selectorSummary(rows, FINE_SELECTOR, 'baseline'),
       selectorSummary(proposedRows, FINE_SELECTOR, 'proposed'),
+      selectorSummary(removedRows, 'low_risk_lt_4', 'removed'),
       selectorSummary(removedRows, 'tight_long_risk_4_to_8', 'removed'),
       selectorSummary(removedRows, FINE_SELECTOR, 'removed'),
     ],

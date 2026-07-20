@@ -103,6 +103,7 @@ const replayReport = buildRawOhlcScannerArtifactOpeningDriveFreshReplayPackageRe
       report: report([
         row({ ticketId: 'duplicate-ticket', proofTime: '2026-07-10T09:35:00', direction: 'LONG', riskPoints: 5, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 50 }),
         row({ ticketId: 'wide-win', proofTime: '2026-07-10T09:50:00', direction: 'SHORT', riskPoints: 26, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 260 }),
+        row({ ticketId: 'low-risk-win', proofTime: '2026-07-10T10:05:00', direction: 'SHORT', riskPoints: 3, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 30 }),
         row({ ticketId: 'same-event-wide', proofTime: '2026-07-10T09:35:00', direction: 'SHORT', riskPoints: 26, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 260 }),
         row({ ticketId: 'rejected-loss', proofTime: '2026-07-10T10:15:00', direction: 'SHORT', riskPoints: 12, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -60 }),
       ]) as any,
@@ -115,16 +116,18 @@ assert.equal(replayReport.status, 'pass');
 assert.equal(replayReport.authority.changesTradingLogic, false);
 assert.equal(replayReport.assumptions.savedReportsOnly, true);
 assert.equal(replayReport.summary.sourceReports, 2);
-assert.equal(replayReport.summary.sourceRows, 5);
-assert.equal(replayReport.summary.dedupedRows, 4);
-assert.equal(replayReport.summary.proofEvents, 3);
-assert.equal(replayReport.summary.selectedRows, 2);
+assert.equal(replayReport.summary.sourceRows, 6);
+assert.equal(replayReport.summary.dedupedRows, 5);
+assert.equal(replayReport.summary.proofEvents, 4);
+assert.equal(replayReport.summary.selectedRows, 3);
 assert.equal(replayReport.summary.rejectedRows, 2);
 assert.equal(replayReport.summary.collisionEvents, 1);
 assert.equal(replayReport.summary.selectedSummary.losses, 0);
 assert.equal(replayReport.summary.sampleSizeReady, false);
 assert.equal(replayReport.summary.recommendation, 'mine_openingdrive_separator');
-assert.deepEqual(replayReport.selectedRows.map((item) => item.ticketId), ['duplicate-ticket', 'wide-win']);
+assert.deepEqual(replayReport.selectedRows.map((item) => item.ticketId), ['duplicate-ticket', 'wide-win', 'low-risk-win']);
+assert.equal(replayReport.selectedRows.find((item) => item.ticketId === 'low-risk-win')?.selector, 'low_risk_lt_4');
+assert.deepEqual(replayReport.selectorSummaries.map((item) => item.selector), ['low_risk_lt_4', 'tight_long_risk_4_to_8', 'fine_risk_24_to_32']);
 assert.match(replayReport.markdown, /OpeningDrive Fresh Replay Package/);
 
 const parsed = parseRawOhlcScannerArtifactOpeningDriveFreshReplayPackageArgs([

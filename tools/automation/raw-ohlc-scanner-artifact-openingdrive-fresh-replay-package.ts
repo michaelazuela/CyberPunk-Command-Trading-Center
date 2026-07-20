@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import type { RawOhlcScannerArtifactSameBarSeparatorDrilldownReport, RawOhlcScannerArtifactSameBarSeparatorRow } from './raw-ohlc-scanner-artifact-samebar-separator-drilldown';
 
 type SameBarRow = RawOhlcScannerArtifactSameBarSeparatorRow;
-type Selector = 'tight_long_risk_4_to_8' | 'fine_risk_24_to_32';
+type Selector = 'low_risk_lt_4' | 'tight_long_risk_4_to_8' | 'fine_risk_24_to_32';
 
 interface CliOptions {
   reportDir: string;
@@ -79,8 +79,9 @@ export interface RawOhlcScannerArtifactOpeningDriveFreshReplayPackageReport {
   };
   selectorPolicy: {
     proofEventKey: 'tradeDate|session|proofTime';
-    firstPriority: 'tight_long_risk_4_to_8';
-    secondPriority: 'fine_risk_24_to_32';
+    firstPriority: 'low_risk_lt_4';
+    secondPriority: 'tight_long_risk_4_to_8';
+    thirdPriority: 'fine_risk_24_to_32';
     tieBreak: 'lowest_risk_points';
     minReadySelectedRows: 5;
   };
@@ -203,13 +204,17 @@ function fineRiskBucket(row: SameBarRow): string {
 }
 
 function selector(row: SameBarRow): Selector | null {
+  if (riskBucket(row) === 'risk_lt_4') return 'low_risk_lt_4';
   if (row.direction.toUpperCase() === 'LONG' && riskBucket(row) === 'risk_4_to_8') return 'tight_long_risk_4_to_8';
   if (fineRiskBucket(row) === 'risk_24_to_32') return 'fine_risk_24_to_32';
   return null;
 }
 
 function priority(row: SameBarRow): number {
-  return selector(row) === 'tight_long_risk_4_to_8' ? 1 : 2;
+  const selected = selector(row);
+  if (selected === 'low_risk_lt_4') return 1;
+  if (selected === 'tight_long_risk_4_to_8') return 2;
+  return 3;
 }
 
 function proofEventKey(row: SameBarRow): string {
@@ -350,8 +355,9 @@ export function buildRawOhlcScannerArtifactOpeningDriveFreshReplayPackageReport(
     },
     selectorPolicy: {
       proofEventKey: 'tradeDate|session|proofTime',
-      firstPriority: 'tight_long_risk_4_to_8',
-      secondPriority: 'fine_risk_24_to_32',
+      firstPriority: 'low_risk_lt_4',
+      secondPriority: 'tight_long_risk_4_to_8',
+      thirdPriority: 'fine_risk_24_to_32',
       tieBreak: 'lowest_risk_points',
       minReadySelectedRows: MIN_READY_SELECTED_ROWS,
     },
@@ -369,7 +375,7 @@ export function buildRawOhlcScannerArtifactOpeningDriveFreshReplayPackageReport(
       livePromotionAllowedRows: 0,
       recommendation: blockers.length ? 'fix_inputs' : ready ? 'prepare_research_only_proposal_update' : 'mine_openingdrive_separator',
     },
-    selectorSummaries: (['tight_long_risk_4_to_8', 'fine_risk_24_to_32'] as Selector[]).map((item) => ({
+    selectorSummaries: (['low_risk_lt_4', 'tight_long_risk_4_to_8', 'fine_risk_24_to_32'] as Selector[]).map((item) => ({
       selector: item,
       ...summarize(selection.selectedRows.filter((row) => selector(row) === item)),
     })),

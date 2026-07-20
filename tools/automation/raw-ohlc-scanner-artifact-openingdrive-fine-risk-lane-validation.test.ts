@@ -29,7 +29,7 @@ const authority = {
 function selectedRow(args: {
   ticketId: string;
   tradeDate: string;
-  selector: 'fine_risk_24_to_32' | 'tight_long_risk_4_to_8';
+  selector: 'low_risk_lt_4' | 'fine_risk_24_to_32' | 'tight_long_risk_4_to_8';
   outcomeLabel: 't1_and_t2_hit' | 'stopped_before_t1' | 'unresolved';
   outcomeStatus?: 'resolved' | 'unresolved';
   oneMesPl: number | null;
@@ -40,7 +40,7 @@ function selectedRow(args: {
     session: 'morning',
     proofTime: `${args.tradeDate}T10:25:00`,
     direction: args.selector === 'fine_risk_24_to_32' ? 'SHORT' : 'LONG',
-    riskPoints: args.selector === 'fine_risk_24_to_32' ? 26 : 5,
+    riskPoints: args.selector === 'fine_risk_24_to_32' ? 26 : args.selector === 'low_risk_lt_4' ? 3 : 5,
     selector: args.selector,
     outcomeLabel: args.outcomeLabel === 'unresolved' ? 'unresolved' as any : args.outcomeLabel,
     outcomeStatus: args.outcomeStatus || 'resolved',
@@ -73,8 +73,9 @@ const freshReplayPackage: RawOhlcScannerArtifactOpeningDriveFreshReplayPackageRe
   },
   selectorPolicy: {
     proofEventKey: 'tradeDate|session|proofTime',
-    firstPriority: 'tight_long_risk_4_to_8',
-    secondPriority: 'fine_risk_24_to_32',
+    firstPriority: 'low_risk_lt_4',
+    secondPriority: 'tight_long_risk_4_to_8',
+    thirdPriority: 'fine_risk_24_to_32',
     tieBreak: 'lowest_risk_points',
     minReadySelectedRows: 5,
   },

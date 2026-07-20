@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add low-risk OpeningDrive research selector to fresh replay packaging.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package.test.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-slate-dry-run.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-lane-validation.test.ts, docs/PROJECT_STATUS.md.
+Reason: The 2026-07-20 fresh OpeningDrive package rejected a same-bar `risk_lt_4` winner even though the broader saved July same-bar report showed OpeningDrive `risk_lt_4` at 15 winners, 0 losses, +350.64 one-MES P/L. The research-only package now keeps that low-risk bucket before the existing `tight_long_risk_4_to_8` and `fine_risk_24_to_32` selectors.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package.test.ts; npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-lane-validation.test.ts; npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-fine-risk-slate-dry-run.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-fresh-replay-package -- --report-dir tools/automation/diagnostic-reports/openingdrive-fresh-20260720 --json.
+Result: Focused tests and TypeScript passed. Fresh 2026-07-20 package now selects 3/3 OpeningDrive rows instead of 2/3: 2 winners, 0 losses, 1 unresolved, +101.26 one-MES selected P/L, and livePromotionAllowedRows remains 0.
+Trading logic changed: No. This is saved-report-only research packaging. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner runtime, change canExecute, install live ranking, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is not a live-facing approval. The sample-size gate remains false on the isolated 2026-07-20 package, so broader validation is still required before any scanner-visible behavior proposal.
+Next recommended action: Build a broader research-only OpeningDrive low-risk validation package across saved July/current same-bar reports and compare it against `LONG risk_4_to_8` before drafting any live proposal.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Correct fresh-package planner raw-artifact replay command.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.test.ts, docs/PROJECT_STATUS.md.
 Reason: The fresh-package planner emitted diagnostic:held-local-preview-replay-package -- --raw-scanner-artifact, but that command ignores raw scanner artifacts and consumes the older triage-report path. The correct raw-artifact replay builder is tools/automation/raw-ohlc-scanner-artifact-replay-package.ts with --scanner-artifact.
