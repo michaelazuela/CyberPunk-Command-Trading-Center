@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Drill down AfterLunch timing selector changed slates.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.ts, tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the AfterLunch timing selection simulation worsened top selection by 25 one-MES dollars, so the changed slates needed a read-only row-level drilldown before any further scoring idea.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.test.ts; npm run diagnostic:held-local-preview-afterlunch-changed-slate-drilldown -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --selection-simulation tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-timing-selection-simulation-1784520848680.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown-1784521259502.json. Status pass. Changed slates: 2. AfterLunch rows: 9. Baseline/simulated winner rows: 2/2. Total changed delta: -25. Both changed slates replaced the earliest completed 13:00/13:15 proof winner with a later tighter-risk winner: 2026-06-29 baseline 13:15 risk >12 P/L 124.38 versus simulated 13:20 risk 10.25-12 P/L 106.88; 2026-07-01 baseline 13:00 risk >12 P/L 125.63 versus simulated 13:05 risk 10.25-12 P/L 118.13. Recommendation: inspect_first_proof_preservation.
+Trading logic changed: No. This is a local/read-only saved-report changed-slate drilldown. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The drilldown explains the negative delta but does not prove a new selector by itself. Do not install broad AfterLunch timing/risk boosts.
+Next recommended action: Build a read-only first-valid-proof preservation simulation for AfterLunchDriveFvgContinuation and compare baseline versus any later-entry/tighter-risk selector before live-facing behavior.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Validate AfterLunchDriveFvgContinuation timing buckets in top-selection simulation.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.ts, tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the AfterLunch timing field miner found strong known-at-plan positive and caution buckets, but bucket strength needed slate-level top-selection validation before any scanner-visible rank overlay.
