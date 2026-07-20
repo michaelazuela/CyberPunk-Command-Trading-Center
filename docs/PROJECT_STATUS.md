@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Correct Sweep fresh-package generator command plan.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.test.ts, docs/PROJECT_STATUS.md.
+Reason: The fresh-package planner needed to emit the actual raw OHLC scanner artifact generator flags so the next package sequence is executable from the generated report.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.test.ts; npm run diagnostic:held-local-preview-sweep-boost-fresh-package-plan -- --json.
+Result: Planner command now uses --market-bars-json, --start-date, --end-date, --instrument MES, and --sessions morning,lunch. The live bridge health check showed the active rollover contract is MES 09-26, while historical RTH/evening bridge requests returned zero bars; recent /bars data is available but only through the overnight live buffer and is not a complete RTH/lunch fresh validation package.
+Trading logic changed: No. This is local/read-only package planning only. It does not generate data, run setupScanner, post Discord, write Supabase, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: Read-only live checks only: /health and historical smoke. No bridge behavior changed.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The next validation package still needs a fresh local market-bars JSON with morning/lunch bars after 2026-07-17; the current NinjaTrader historical endpoint did not return those bars.
+Next recommended action: Once NinjaTrader history has the MES 09-26 RTH/lunch data loaded, run the planner's corrected raw artifact command sequence.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep guarded boost fresh-package plan.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fresh-validation readiness audit proved no unseen package exists yet, but the desk needed a machine-checkable plan that names the locked date boundary, required artifacts, and allowed next commands without reusing July OOS as fresh proof.

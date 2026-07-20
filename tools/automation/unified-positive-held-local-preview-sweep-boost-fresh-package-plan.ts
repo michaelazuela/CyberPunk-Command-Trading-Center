@@ -121,7 +121,7 @@ function commandPlan(report: UnifiedPositiveHeldLocalPreviewSweepBoostFreshValid
     ];
   }
   return [
-    `npm run research:raw-ohlc-scanner-artifacts -- --from <date-after-${report?.lockedEvidence.latestLockedEndDate || 'locked-end'}> --to <fresh-date> --symbol MES --json`,
+    `npm run research:raw-ohlc-scanner-artifacts -- --market-bars-json <fresh-market-bars-json> --start-date <date-after-${report?.lockedEvidence.latestLockedEndDate || 'locked-end'}> --end-date <fresh-date> --instrument MES --sessions morning,lunch --json`,
     'npm run diagnostic:held-local-preview-replay-package -- --raw-scanner-artifact <fresh-raw-scanner-artifact> --json',
     'npm run diagnostic:held-local-preview-replay-package-outcome -- --replay-package <fresh-replay-package> --json',
     'npm run diagnostic:held-local-preview-replay-package-source-proof-timing -- --replay-package-outcome <fresh-outcome-report> --json',
