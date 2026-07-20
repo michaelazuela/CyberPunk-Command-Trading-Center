@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Drill down Sweep lunch LONG blocked/no-chase caution pocket.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the scanner-field selection simulation did not improve resolved top-selection P/L, and the clean no-chase bucket should not be installed. The next narrow research step was to inspect the opposite 40-row blocked/no-chase caution pocket to see whether the 8 winners had a rescue separator.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown -- --scanner-field-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-miner-1784515244249.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown-1784516143134.json. Status pass. Joined rows: 107. Blocked/no-chase caution rows: 40. Winner/problem/unresolved rows: 8/32/22. Feature stats: 46. Winner-rescue candidates: 0. Caution candidates: 32. Best caution candidate: hasTierBDisplacementEvidence=true, 21 rows, 6 winners, 15 problems, 6 unresolved, +1490 gross one-MES P/L, winner/problem rate 0.29/0.71. Broad caution aliases include blockReason=EntryTriggerPending, cleanPathToT1=false, confidence=Medium, detectedStatus=Possible, executionStatus=Conditional, hasOpposingHtfMssMissingEvidence=true, and occurrenceBucket=1, each covering all 40 caution rows with 8 winners, 32 problems, and 22 unresolved. Recommendation: validate_caution_pocket_separator.
+Trading logic changed: No. This is a local/read-only saved-artifact drilldown. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The pocket still has positive gross P/L because a few winners are large, but no scanner-owned rescue separator was found. Do not promote blocked/no-chase rows from this evidence.
+Next recommended action: Validate the caution pocket as an exclusion/review-note lane, or move to the Sweep lunch SHORT mixed-watch group for a fresh separator search.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Validate Sweep lunch LONG scanner-field candidates with no-lookahead slate selection simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-selection-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-scanner-field-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the scanner-field miner found a very clean lunch LONG pocket, but bucket quality alone does not prove better scanner-visible top selection. The next safe step was a research-only slate simulation using saved scanner-owned fields.
