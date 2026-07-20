@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Validate AfterLunchDriveFvgContinuation timing buckets in top-selection simulation.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.ts, tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the AfterLunch timing field miner found strong known-at-plan positive and caution buckets, but bucket strength needed slate-level top-selection validation before any scanner-visible rank overlay.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.test.ts; npm run diagnostic:held-local-preview-afterlunch-timing-selection-simulation -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --field-miner tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-timing-field-miner-1784520368050.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-timing-selection-simulation-1784520848680.json. Status pass. Positive candidates applied: proofHour=12, riskBucket=10.25-12, riskBucket=6.25-8. Caution candidates applied: proofHour=13, riskBucket=8.25-10. Rows: 138. Slates: 18. Changed slates: 2. Baseline/simulated top one-MES P/L: 1060.66/1035.66. Top-selection delta: -25. Changed resolved delta: -25. Changed slates were 2026-06-29 lunch and 2026-07-01 lunch, both replacing T1/T2 winners with slightly lower-P/L T1/T2 winners. Recommendation: keep_research_only.
+Trading logic changed: No. This is a local/read-only saved-report top-selection simulation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: AfterLunch remains a valid research family, but these timing buckets do not improve slate selection. Do not promote the timing selector or apply these boosts/penalties live.
+Next recommended action: Drill down the two negative changed slates to identify whether the actual separator is first proof/earliest completed 5M proof quality rather than broad proof-hour or risk-bucket scoring.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Mine known-at-plan timing fields for AfterLunchDriveFvgContinuation held-local positives.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.ts, tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Sweep lunch LONG/SHORT research branches did not prove a live-worthy top-selection improvement, while the saved source/proof timing package showed AfterLunchDriveFvgContinuation as a positive family that needed isolated known-at-plan timing/risk buckets before any rank-overlay proposal.
