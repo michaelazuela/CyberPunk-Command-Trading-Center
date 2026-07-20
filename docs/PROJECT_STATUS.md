@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Build AfterLunch-specific proof-context enrichment queue.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-context-queue.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-context-queue.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the broad structural inventory had zero AfterLunch rows, so the desk needed a dedicated saved-report queue from the 138 AfterLunch source/proof timing rows before any structural proof-quality enrichment or separator mining.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-proof-context-queue.test.ts; npm run diagnostic:held-local-preview-afterlunch-proof-context-queue -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --changed-slate-drilldown tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown-1784521259502.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-context-queue-1784522224261.json. Status pass. Source/queue rows: 138/138. Slates: 18. First-valid-proof rows: 18. Changed-slate rows: 9. High-priority rows: 9. Priority split: first_valid_proof_in_changed_slate 2, changed_slate_comparison_row 7, first_valid_proof_in_slate 16, later_afterlunch_proof_context 113. Recommendation: run_afterlunch_specific_proof_context_enrichment.
+Trading logic changed: No. This is a local/read-only saved-report enrichment queue. It does not fetch data, install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The queue only identifies rows for enrichment. It does not prove a structural selector and must not be used as live ranking input.
+Next recommended action: Build AfterLunch-specific proof-context enrichment from this queue, prioritizing the 9 changed-slate rows before broader structural separator mining.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Probe existing structural inventory coverage for AfterLunch proof-quality mining.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: first-proof preservation was validated for AfterLunch, and the next possible research branch was structural proof-quality mining. Before adding new tooling, the desk checked whether the existing structural inventory source already covered AfterLunch rows.
