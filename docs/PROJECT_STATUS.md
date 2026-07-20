@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Sweep primary-exclusion approval contract.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-approval-contract.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The installed penalty audit proved invalid-stop Sweep rows are blocked and non-executable, but 5 still became primary desk ideas. The desk needed a no-runtime-change approval contract before building a stricter primary-selection dry-run.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-approval-contract.test.ts; npm run diagnostic:held-local-preview-sweep-primary-exclusion-approval-contract -- --installed-penalty-audit tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-installed-penalty-audit-1784577356237.json --valid-slate-simulation tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-valid-slate-simulation-1784576783219.json --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real approval contract tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-approval-contract-1784577769050.json passed with invalidStopSweepRows=38, invalidStopSweepRowsBlocked=38, invalidStopSweepCanExecuteTrueRows=0, invalidStopSweepPrimaryRows=5, entryStopTargetRiskDriftRows=0, validOnlyChangedSlates=7, validOnlyTopSelectionDeltaOneMesPl=+$93.75, livePromotionAllowedRows=0, failedGateCount=0. Decision: approved_for_research_dry_run_only.
+Trading logic changed: No. This is a local saved-report approval contract only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This contract approves only a future research dry-run. It explicitly does not approve live scanner-visible behavior. Any runtime primary-selection exclusion would affect model ranking/selection behavior and still needs scanner-output dry-run proof plus explicit approval.
+Next recommended action: Build the research-only scanner-output dry-run for excluding only SweepMssFvgRetrace rows with executionStatus=Blocked and blockReason=InvalidStopLocation from primary desk idea selection, while preserving blocked audit visibility and proving zero changes to canExecute, entry/stop/target/risk, Discord, Supabase, and bridge behavior.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add installed penalty audit for broad model-family Sweep invalid-stop rows.
 Files changed: tools/automation/unified-positive-held-local-preview-model-family-installed-penalty-audit.ts, tools/automation/unified-positive-held-local-preview-model-family-installed-penalty-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The source trace showed invalid-stop Sweep rows were already present in saved scanner setup status, and valid-only same-slate research improved selection by +$93.75. The desk needed to verify whether the already-installed unified candidate book invalid-stop Sweep rank penalty protects current selection before considering builder or ranking changes.
