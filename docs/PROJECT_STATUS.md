@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Mine AfterLunch distance/ratio separators for July OOS losses.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-distance-ratio-loss-miner.ts, tools/automation/unified-positive-held-local-preview-afterlunch-distance-ratio-loss-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: presence-only scanner context was too broad, so the desk needed to test known-at-proof obstacle/line distance and risk-ratio fields before proposing any review note, rank penalty, or model change.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-distance-ratio-loss-miner.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-afterlunch-distance-ratio-loss-miner -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784526031044.json --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784525915111.json --scanner-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-03-to-2026-07-17-1784476403453.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-distance-ratio-loss-miner-1784528455311.json. Status pass. AfterLunch rows matched: 43/43. W/L/U: 39/4/0. Gross one-MES P/L: +2477.61. One research candidate emerged: htfLineBlocked+riskPoints<=6+targetObstacleDistanceR<=0.35 selected 4 rows, 0 winners, 4 losses, 0 unresolved, -117.48 one-MES, 100% loss coverage, 0 winner collisions. Simpler selectors were too broad.
+Trading logic changed: No. This is local/read-only research over saved reports and saved scanner artifacts. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The clean compound separator was mined on the same July OOS slice, so it is not eligible for live behavior yet.
+Next recommended action: Validate the compound distance separator on a broader replay package before proposing any scanner-visible review note or rank penalty.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Mine AfterLunch scanner-context fields for July OOS loss separation.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-scanner-context-loss-miner.ts, tools/automation/unified-positive-held-local-preview-afterlunch-scanner-context-loss-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the AfterLunch proof-time proxy rank boost failed OOS slate selection, so the desk needed a richer research-only read of known-at-proof scanner context around the four July OOS losses before touching any live-facing behavior.
