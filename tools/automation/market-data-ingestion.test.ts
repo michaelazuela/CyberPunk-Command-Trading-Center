@@ -9,6 +9,7 @@ import {
 } from './market-data-ingestion';
 import {
   buildMarketBarTimeframeIntegrityReport,
+  buildMarketBarsUpsertIntegrityReport,
   countMarketBarTimeframeIntervalMismatches,
   filterBarsToRequestedTimeframe,
   marketDataCachePageRanges,
@@ -227,6 +228,28 @@ const fourHourBadShortIntervalBars = [
 ];
 assert.equal(countMarketBarTimeframeIntervalMismatches(fourHourBadShortIntervalBars, '240m') > 0, true);
 assert.equal(countTimeframeIntervalMismatches(fourHourBadShortIntervalBars, '240m') > 0, true);
+const standaloneTwoHourOpenLooksValid = buildMarketBarTimeframeIntegrityReport([
+  bar('2026-07-20T18:00:00-04:00'),
+], '120m');
+assert.equal(standaloneTwoHourOpenLooksValid.valid, true);
+const joinedTwoHourOpenIsInvalid = buildMarketBarsUpsertIntegrityReport({
+  existingContextBars: [bar('2026-07-20T17:00:00-04:00')],
+  bars: [bar('2026-07-20T18:00:00-04:00')],
+  timeframe: '120m',
+});
+assert.equal(joinedTwoHourOpenIsInvalid.valid, false);
+assert.equal(joinedTwoHourOpenIsInvalid.invalidShortIntervalRows, 1);
+const standaloneFourHourTwoHourFeedLooksValid = buildMarketBarTimeframeIntegrityReport([
+  bar('2026-07-20T22:00:00-04:00'),
+], '240m');
+assert.equal(standaloneFourHourTwoHourFeedLooksValid.valid, true);
+const joinedFourHourTwoHourFeedIsInvalid = buildMarketBarsUpsertIntegrityReport({
+  existingContextBars: [bar('2026-07-20T20:00:00-04:00')],
+  bars: [bar('2026-07-20T22:00:00-04:00')],
+  timeframe: '240m',
+});
+assert.equal(joinedFourHourTwoHourFeedIsInvalid.valid, false);
+assert.equal(joinedFourHourTwoHourFeedIsInvalid.invalidShortIntervalRows, 1);
 assert.deepEqual(filterBarsToRequestedTimeframe(fourHourCmeSessionBoundaryBars, '240m').map((item) => item.time), [
   '2026-06-02T10:00:00-04:00',
   '2026-06-02T14:00:00-04:00',

@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Harden market_bars HTF upserts against adjacent-row interval pollution.
+Files changed: tools/automation/market-data-store.ts, tools/automation/market-data-ingestion.test.ts, docs/PROJECT_STATUS.md.
+Reason: After the first MES 09-26 120M/240M repair, a fresh integrity audit showed the malformed rows returned almost immediately. Root cause: `upsertMarketBars` validated the incoming batch by itself, but incremental HTF writes can look valid alone while creating invalid short intervals when joined to the existing cached neighbor rows.
+Tests run: npx tsx tools/automation/market-data-ingestion.test.ts; npx tsx tools/automation/repair-market-bars-timeframe.test.ts; npx tsc --noEmit --pretty false; git diff --check; second repair apply for MES 09-26 120m/240m; post-fix npx tsx tools/automation/market-bars-timeframe-integrity-audit.ts -- --bridge-instrument "MES 09-26" --json; npm run supervisor:stop; final repair apply for MES 09-26 120m/240m; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; npm run supervisor:start; npm run supervisor:status; post-restart npx tsx tools/automation/market-bars-timeframe-integrity-audit.ts -- --bridge-instrument "MES 09-26" --json.
+Result: Added a shared `buildMarketBarsUpsertIntegrityReport` path and adjacent-cache context read inside `upsertMarketBars`. New regression proves a standalone-valid 120M 18:00 row is rejected when an existing 17:00 row would create a bad 60-minute join, and a standalone-valid 240M 22:00 row is rejected when an existing 20:00 row would create a bad 120-minute join. Second repair removed reintroduced MES 09-26 HTF pollution: 120M raw rows=268 with 16 mismatches rebuilt to 247 rows with 0 mismatches; 240M raw rows=252 with 241 mismatches rebuilt to 128 rows with 0 mismatches. After stopping old scanner/recorder processes and repairing again, final quiet-state integrity report tools/automation/diagnostic-reports/market_bars_timeframe_integrity-2026-07-20T15-28-14-147Z.json returned riskStatus=ready. Restarted supervisor-owned scanner/recorder from the fixed code; after one recorder cycle, post-restart integrity report tools/automation/diagnostic-reports/market_bars_timeframe_integrity-2026-07-20T15-32-51-481Z.json stayed riskStatus=ready. 5M advanced to 2026-07-20T11:35:00 ET and 15M advanced to 2026-07-20T11:45:00 ET while 120M/240M remained valid.
+Trading logic changed: No. This is market data cache write validation only. It does not change setup ranking, canExecute, entry/stop/target/risk math, Discord posting, schema, or automated execution.
+Bridge impact: No bridge contract change. Recorder/backfill/scanner market_bars writes now inherit the shared adjacent-context HTF integrity guard.
+Journal/RAG impact: None.
+Supabase impact: Yes. Repaired MES 09-26 120M/240M market_bars again after detecting live re-pollution; future shared upserts should skip batches that would recreate invalid HTF intervals against adjacent cached rows.
+Known risks: The guard prevents adjacent-row interval pollution on future shared upserts. Existing historical bad rows for other contracts/timeframes, if any, still require the same integrity-audit/repair path before HTF replay uses them.
+Next recommended action: Continue HTF-dependent replay research from the now-clean MES 09-26 cache, starting with OpeningDrive/Sweep/HTF collision checks and then the prior missed/no-chase positive set.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Repair MES 09-26 HTF market_bars cache from trusted 5M.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: Live Supabase coverage showed MES 09-26 5M/15M/60M were interval-valid, but 120M had 8 short-interval rows and 240M had 239 short-interval rows in the active 30-day cache window. The desk needed HTF cache integrity restored before trusting rollover-period HTF replay research.

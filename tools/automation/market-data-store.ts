@@ -188,6 +188,38 @@ export interface MarketBarTimeframeIntegrityReport {
   valid: boolean;
 }
 
+function dedupeBarsByNormalizedTime(newBars: NinjaBridgeBar[], existingBars: NinjaBridgeBar[]): NinjaBridgeBar[] {
+  const byTime = new Map<string, NinjaBridgeBar>();
+  for (const bar of existingBars) {
+    const time = normalizeCandleTimeEt(bar.time);
+    if (time) byTime.set(time, { ...bar, time });
+  }
+  for (const bar of newBars) {
+    const time = normalizeCandleTimeEt(bar.time);
+    if (time) byTime.set(time, { ...bar, time });
+  }
+  return [...byTime.values()]
+    .map((bar) => ({ bar, ms: marketBarTimeMs(bar.time) }))
+    .filter((item): item is { bar: NinjaBridgeBar; ms: number } => item.ms !== null)
+    .sort((a, b) => a.ms - b.ms)
+    .map((item) => item.bar);
+}
+
+export function buildMarketBarsUpsertIntegrityReport({
+  bars,
+  existingContextBars = [],
+  timeframe,
+}: {
+  bars: NinjaBridgeBar[];
+  existingContextBars?: NinjaBridgeBar[];
+  timeframe: MarketBarTimeframe;
+}): MarketBarTimeframeIntegrityReport {
+  return buildMarketBarTimeframeIntegrityReport(
+    dedupeBarsByNormalizedTime(bars, existingContextBars),
+    timeframe,
+  );
+}
+
 export function buildMarketBarTimeframeIntegrityReport(
   bars: NinjaBridgeBar[],
   timeframe: MarketBarTimeframe,
@@ -325,7 +357,26 @@ export async function upsertMarketBars({
   timeframe: MarketBarTimeframe;
   config: MarketDataConfig;
 }): Promise<MarketBarsUpsertResult> {
-  const integrity = buildMarketBarTimeframeIntegrityReport(bars, timeframe);
+  const initialIntegrity = buildMarketBarTimeframeIntegrityReport(bars, timeframe);
+  if (!initialIntegrity.valid) {
+    return {
+      upserted: 0,
+      skipped: true,
+      skipReason: 'timeframe_interval_mismatch',
+      integrity: initialIntegrity,
+    };
+  }
+  const existingContextBars = await fetchMarketBarsUpsertContext({
+    bridgeInstrument,
+    timeframe,
+    bars,
+    config,
+  });
+  const integrity = buildMarketBarsUpsertIntegrityReport({
+    bars,
+    existingContextBars,
+    timeframe,
+  });
   if (!integrity.valid) {
     return {
       upserted: 0,
@@ -353,6 +404,75 @@ export async function upsertMarketBars({
 
   if (error) throw error;
   return { upserted: records.length, skipped: false, skipReason: null, integrity };
+}
+
+async function fetchMarketBarsUpsertContext({
+  bridgeInstrument,
+  timeframe,
+  bars,
+  config,
+}: {
+  bridgeInstrument: string;
+  timeframe: MarketBarTimeframe;
+  bars: NinjaBridgeBar[];
+  config: MarketDataConfig;
+}): Promise<NinjaBridgeBar[]> {
+  const times = bars
+    .map((bar) => normalizeCandleTimeEt(bar.time))
+    .filter(Boolean)
+    .sort();
+  const first = times[0];
+  const last = times[times.length - 1];
+  if (!first || !last) return [];
+
+  const supabase = createMarketDataClient(config);
+  const select = 'candle_time_et, open, high, low, close, volume';
+  const contextRows: any[] = [];
+  const before = await supabase
+    .from('market_bars')
+    .select(select)
+    .eq('user_id', config.userId)
+    .eq('bridge_instrument', bridgeInstrument)
+    .eq('timeframe', timeframe)
+    .lt('candle_time_et', first)
+    .order('candle_time_et', { ascending: false })
+    .limit(1);
+  if (before.error) throw before.error;
+  contextRows.push(...(before.data || []));
+
+  const within = await supabase
+    .from('market_bars')
+    .select(select)
+    .eq('user_id', config.userId)
+    .eq('bridge_instrument', bridgeInstrument)
+    .eq('timeframe', timeframe)
+    .gte('candle_time_et', first)
+    .lte('candle_time_et', last)
+    .order('candle_time_et', { ascending: true })
+    .limit(5000);
+  if (within.error) throw within.error;
+  contextRows.push(...(within.data || []));
+
+  const after = await supabase
+    .from('market_bars')
+    .select(select)
+    .eq('user_id', config.userId)
+    .eq('bridge_instrument', bridgeInstrument)
+    .eq('timeframe', timeframe)
+    .gt('candle_time_et', last)
+    .order('candle_time_et', { ascending: true })
+    .limit(1);
+  if (after.error) throw after.error;
+  contextRows.push(...(after.data || []));
+
+  return contextRows.map((row: any) => ({
+    time: String(row.candle_time_et),
+    open: Number(row.open),
+    high: Number(row.high),
+    low: Number(row.low),
+    close: Number(row.close),
+    volume: Number(row.volume || 0),
+  }));
 }
 
 export function toMarketDataGapEventRecord({
