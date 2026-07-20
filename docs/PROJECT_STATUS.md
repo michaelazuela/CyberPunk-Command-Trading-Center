@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive low-risk no-promotion guard.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-no-promotion-guard.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-no-promotion-guard.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The low-risk separator miner proved no live-usable zero-winner-cost separator exists. The desk needed a machine-readable guard so future proposal work cannot accidentally promote `low_risk_lt_4` broadly or install a low-risk exclusion from the available fields.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-no-promotion-guard.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-low-risk-no-promotion-guard -- --separator-miner tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-separator-miner-1784559594900.json --combined-live-proposal tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-combined-clean-pocket-live-proposal-1784460005364.json --out-dir tools/automation/diagnostic-reports/openingdrive-fresh-20260720 --json.
+Result: Focused test, TypeScript, and actual saved-report guard passed. Report generated tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-low-risk-no-promotion-guard-1784560113391.json. Decision: lowRiskBroadPromotion=blocked, lowRiskExclusion=blocked, lowRiskAllowedUse=research_context_only, preserveProposalLineage=combined_clean_pocket_without_low_risk_selector. Guard inputs: low-risk separator miner passed with 29 winners, 2 losses, 0 zero-winner-cost live-usable separators; combined clean-pocket proposal does not include low-risk. failedGateCount=0, livePromotionAllowedRows=0, recommendation=preserve_no_promotion_guard.
+Trading logic changed: No. This is saved-report-only guard tooling. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner runtime, change canExecute, install live ranking, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Guard relies on the current saved separator-miner evidence. Future low-risk promotion would require a separate, cleaner approval chain with live-usable fields.
+Next recommended action: Continue with combined clean-pocket lineage only. If low-risk is revisited, require a new independent approval chain with live-usable fields and no winner-cost separator.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive low-risk loss separator miner.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-separator-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-loss-separator-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The low-risk loss drilldown showed two June 1 LONG losses, but the desk needed to know whether live-usable pre-entry fields can isolate them without date-only, source-report, outcome-tag, or post-entry replay leakage.
