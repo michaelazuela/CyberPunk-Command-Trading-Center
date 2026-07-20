@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Build and validate the AfterLunch proof-time proxy fresh replay package.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-replay-package.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-replay-package.test.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-outcome-comparison.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-outcome-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the proxy package needed a machine-checkable fresh replay package using saved source replay rows with explicit entry/stop/T1/T2/source tape geometry, followed by ticket-by-ticket outcome comparison before any scanner-visible proposal.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-replay-package.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-outcome-comparison.test.ts; npm run diagnostic:held-local-preview-afterlunch-proof-time-proxy-fresh-replay-package -- --validation-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-validation-package-1784524168409.json --source-replay-packages tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784419066591.json --json; npm run diagnostic:held-local-preview-replay-package-outcome -- --replay-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-replay-package-1784525428999.json --json; npm run diagnostic:held-local-preview-afterlunch-proof-time-proxy-fresh-outcome-comparison -- --validation-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-validation-package-1784524168409.json --fresh-outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784525444544.json --json.
+Result: Fresh replay package generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-replay-package-1784525428999.json and .md. Package rows/readiness: 30 selected, 30 replay rows, 30 ready, 0 blocked, 0 invalid geometry. Fresh outcome report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784525444544.json and .md. Outcome: 30 resolved, 0 unresolved, 0 blocked, 0 no-fill, 0 stopped-before-T1, 30 T1-and-T2, +2783.22 one-MES. Fresh comparison generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-proof-time-proxy-fresh-outcome-comparison-1784525607088.json and .md. Comparison: 30 validation rows, 30 fresh rows, 30 matched, 0 missing, 30 exact matches, 0 divergences. Recommendation: ready_for_out_of_sample_replay.
+Trading logic changed: No. This is local/read-only research packaging and comparison only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The proof is still in-sample against saved June/early-July source artifacts. It validates package reconstruction and fresh outcome replay integrity, not out-of-sample transfer or scanner-visible readiness.
+Next recommended action: Run an out-of-sample/latest scanner-artifact replay for the same AfterLunch proof-time proxy selectors before proposing any live-facing rank overlay.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Compare AfterLunch proof-time proxy package against the full source/proof timing set.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-source-comparison.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-source-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the proof-time proxy package was promising, but the desk needed to prove package/source alignment and explicitly mark that no fresh replay validation had happened yet.
