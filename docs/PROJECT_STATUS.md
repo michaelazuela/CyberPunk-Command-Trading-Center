@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Sweep invalid-stop provenance audit.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-invalid-stop-provenance-audit.ts, tools/automation/unified-positive-held-local-preview-sweep-invalid-stop-provenance-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: The complete-replacement miner closed the runtime-filter path, but the desk still needed to know whether invalid SweepMssFvgRetrace rows were reproducible from current `conditionalPlanBuilder` source or should be treated as saved package/provenance evidence.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-invalid-stop-provenance-audit.test.ts; npm run diagnostic:held-local-preview-sweep-invalid-stop-provenance-audit -- --exact-proof-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-current-exact-proof-package-1784581148082.json --scanner-package-dir tools/automation/diagnostic-reports --source-file src/lib/conditionalPlanBuilder.ts --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real provenance audit tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-invalid-stop-provenance-audit-1784583661873.json passed with exactProofRows=69, rowsWithStopMissing=50, rowsWithDirectionallyInvalidStopGeometry=19, sourcePackageFiles=25, sourcePackageFirstGeneratedAt=2026-07-18T20:22:58.916Z, sourcePackageLastGeneratedAt=2026-07-20T13:37:29.598Z, currentSourceLatestCommit=5c1f6ee4c16736b607249f31e911580f0be3120f, currentSourceLatestCommitDate=2026-06-30T07:52:09-07:00, currentSourceHasDetectIctModelOne=true, currentSourceRequiresSweepExtreme=true, currentSourceComputesDirectionalStop=true, currentSourceRequiresTargets=true, currentSourceHasMakeCandidateDirectionalGuard=true, currentSourceCanReturnMissingStopIctModelOne=false, currentSourceCanReturnWrongSideStopIctModelOne=false, runtimeFixJustified=false, recommendation=close_runtime_filter_and_refresh_replay_packages.
+Trading logic changed: No. This is local provenance audit tooling only. It does not run setupScanner, install runtime selection behavior, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is source-inspection provenance evidence, not a fresh full replay. It proves current `detectIctModelOne` has strict guard signatures and should not be changed from the saved invalid rows alone. If the desk needs stronger proof, refresh the raw scanner packages under current code and compare.
+Next recommended action: Close the Sweep runtime-filter/source-fix branch for now. Return to the broader reviewed-positive set and mine complete scanner-owned publishable review candidates by model/session/proof state.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep complete-replacement miner.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-complete-replacement-miner.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-complete-replacement-miner.test.ts, docs/PROJECT_STATUS.md.
 Reason: The scanner-owned snapshot export showed the 4 changed raw-rank events were non-publishable, so the desk needed a current-package scan to prove whether any exact invalid-stop Sweep top row had a same-slate replacement with complete entry, stop, T1, and T2.

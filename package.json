@@ -111,6 +111,7 @@
     "diagnostic:held-local-preview-sweep-primary-exclusion-current-changed-event-drilldown": "tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-changed-event-drilldown.ts",
     "diagnostic:held-local-preview-sweep-primary-exclusion-scanner-owned-snapshot-export": "tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-owned-snapshot-export.ts",
     "diagnostic:held-local-preview-sweep-primary-exclusion-complete-replacement-miner": "tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-complete-replacement-miner.ts",
+    "diagnostic:held-local-preview-sweep-invalid-stop-provenance-audit": "tsx tools/automation/unified-positive-held-local-preview-sweep-invalid-stop-provenance-audit.ts",
     "diagnostic:held-local-preview-afterlunch-timing-field-miner": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.ts",
     "diagnostic:held-local-preview-afterlunch-timing-selection-simulation": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.ts",
     "diagnostic:held-local-preview-afterlunch-changed-slate-drilldown": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.ts",
