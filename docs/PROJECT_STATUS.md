@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add publishable candidate miner.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-publishable-candidate-miner.ts, tools/automation/unified-positive-held-local-preview-publishable-candidate-miner.test.ts, docs/PROJECT_STATUS.md.
+Reason: The Sweep invalid-stop provenance branch closed the runtime-filter/source-fix path, so the desk needed to return to the broader reviewed-positive set and identify complete scanner-owned human-review candidates by model, session, proof state, and current DeskPublishDecision shape.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-publishable-candidate-miner.test.ts; npm run diagnostic:held-local-preview-publishable-candidate-miner -- --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784574093106.json --broad-replay tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-broad-replay-1784575285131.json --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real miner tools/automation/diagnostic-reports/unified-positive-held-local-preview-publishable-candidate-miner-1784584133975.json passed with intakeRowsRead=502, replayRowsRead=185, completeGeometryRows=502, positiveProofRows=131, scannerPublishCompleteRows=491, scannerPublishShouldPostRows=371, publishCanExecuteTrueRows=0, publishableReviewCandidates=60, publishableWinners=4, publishableLosses=1, publishableUnresolved=55, publishableResolvedOneMesPl=191.89, modelGroups AfterLunchDriveFvgContinuation=5 IntradayMssMicroContinuation=50 OpeningDriveFvgContinuation=5, sessionGroups lunch=32 morning=28, livePromotionAllowedRows=0, recommendation=build_replay_package_for_publishable_candidates.
+Trading logic changed: No. This is local saved-artifact scanner-owned publishability mining only. It does not run setupScanner, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Outcome coverage is partial because the broad replay artifact covers AfterLunchDriveFvgContinuation and SweepMssFvgRetrace, while most publishable candidates are IntradayMssMicroContinuation and need a dedicated replay/outcome package before any rank or promotion proposal.
+Next recommended action: Build a replay/outcome package for the selected 24 publishable review candidates, preserving scanner-owned DeskState and DeskPublishDecision boundaries and keeping Discord/Supabase/canExecute/live behavior untouched.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep invalid-stop provenance audit.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-invalid-stop-provenance-audit.ts, tools/automation/unified-positive-held-local-preview-sweep-invalid-stop-provenance-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: The complete-replacement miner closed the runtime-filter path, but the desk still needed to know whether invalid SweepMssFvgRetrace rows were reproducible from current `conditionalPlanBuilder` source or should be treated as saved package/provenance evidence.
