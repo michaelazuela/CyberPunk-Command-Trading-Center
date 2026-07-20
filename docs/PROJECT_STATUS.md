@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add model/session/direction rollup for raw OHLC scanner artifact outcomes.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-model-session-direction-rollup.ts, tools/automation/raw-ohlc-scanner-artifact-model-session-direction-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: proofSelectionSignal penalty/boost research produced no runtime-worthy separator, so the next safe step was to pick the next research target from model/session/direction outcome data instead of forcing that dead path.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-model-session-direction-rollup.test.ts; npm run research:raw-ohlc-scanner-artifact-model-session-direction-rollup -- --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784503584511.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-model-session-direction-rollup-1784508332761.json. Status pass. Outcome rows: 343. Groups: 3. Weakest group: SweepMssFvgRetrace|morning|LONG with problem rate 0.59. Strongest group: SweepMssFvgRetrace|lunch|LONG with gross resolved one-MES P/L 10976.25. runtimeRankConsumerAllowedByThisReport remains false. Recommendation is focus_weakest_model_session_direction.
+Trading logic changed: No. This is a local/read-only saved-outcome rollup. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The package is still a research-row set, not independent live trades. This rollup selects the next research target; it is not a rank consumer.
+Next recommended action: Drill into SweepMssFvgRetrace morning LONG to separate no-fill, stopped, and no-target/no-stop rows by proof-time and pre-entry context.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add supported-field outcome miner for proofSelectionSignal research.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-outcome-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-outcome-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Supported-field inventory proved richer deterministic scanner fields were present, so the next safe step was to join those fields to the 343-row broader outcome set and mine simple separator candidates before any runtime proposal.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: This only tests simple single-field supported separators. It does not rule out richer model-family research, but it does reject this proofSelectionSignal supported-field path for runtime use.
 Next recommended action: Stop the proofSelectionSignal penalty/boost path for now. Move to a different evidence family or create a compound supported-field validation only if a new hypothesis is specific and non-overfit.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add supported-field inventory for proofSelectionSignal fresh artifact research.

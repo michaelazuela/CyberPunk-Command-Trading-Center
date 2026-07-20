@@ -182,6 +182,7 @@
     "research:raw-ohlc-source-loader": "tsx tools/automation/raw-ohlc-source-loader.ts",
     "research:raw-ohlc-scanner-cycle": "tsx tools/automation/raw-ohlc-scanner-cycle-replay.ts",
     "research:raw-ohlc-scanner-artifacts": "tsx tools/automation/raw-ohlc-scanner-artifact-generator.ts",
+    "research:raw-ohlc-scanner-artifact-model-session-direction-rollup": "tsx tools/automation/raw-ohlc-scanner-artifact-model-session-direction-rollup.ts",
     "research:raw-ohlc-scanner-artifact-comparison": "tsx tools/automation/raw-ohlc-scanner-artifact-comparison.ts",
     "research:raw-ohlc-scanner-artifact-replay-package": "tsx tools/automation/raw-ohlc-scanner-artifact-replay-package.ts",
     "research:raw-ohlc-scanner-artifact-dedupe-timing-filter": "tsx tools/automation/raw-ohlc-scanner-artifact-dedupe-timing-filter.ts",
