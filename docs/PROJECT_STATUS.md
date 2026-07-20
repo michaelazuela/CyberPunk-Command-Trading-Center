@@ -8858,6 +8858,23 @@ Next recommended action: Observe the next live high-confidence conditional revie
 ## Previous Change
 
 Date: 2026-07-20
+Task: Add Sweep primary-exclusion nonreproduction drilldown.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-nonreproduction-drilldown.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-nonreproduction-drilldown.test.ts, docs/PROJECT_STATUS.md.
+Reason: The targeted backfill did not clear the two missing raw package slates, so the desk needed a repeatable explanation before deciding whether to support evening replay artifacts or discard nonreproduced held-local evidence.
+Real run: npm run diagnostic:held-local-preview-sweep-primary-exclusion-nonreproduction-drilldown -- --package-metadata-audit tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-package-metadata-audit-1784579779233.json --scanner-package-dir tools/automation/diagnostic-reports --json.
+Report: tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-nonreproduction-drilldown-1784580232335.json.
+Result: Passed. The drilldown explained 2 missing slates: 1 unsupported_evening_replay_session and 1 current_scanner_direction_or_detection_mismatch. Missing package events: 0. Runtime install allowed: false.
+Trading logic changed: No. This is a local read-only nonreproduction drilldown only.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Runtime primary-selection exclusion remains unapproved because the held-local evidence does not fully reproduce in current raw scanner package output.
+Next recommended action: Keep research-only. Do not install the Sweep primary-selection exclusion until a separate policy says nonreproduced held-local rows can be excluded from runtime evidence, or until evening replay support is explicitly designed and validated.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Run targeted raw scanner package backfill for missing Sweep primary-exclusion slates.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The package metadata audit showed 2 of 5 changed dry-run slates were missing raw package coverage, so the desk attempted a local saved-OHLC replay backfill for only those dates/sessions before considering any runtime ranking change.
