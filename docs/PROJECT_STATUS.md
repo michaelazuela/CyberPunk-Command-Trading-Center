@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Repair MES 09-26 HTF market_bars cache from trusted 5M.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: Live Supabase coverage showed MES 09-26 5M/15M/60M were interval-valid, but 120M had 8 short-interval rows and 240M had 239 short-interval rows in the active 30-day cache window. The desk needed HTF cache integrity restored before trusting rollover-period HTF replay research.
+Tests run: npx tsx tools/automation/market-bars-timeframe-integrity-audit.ts -- --bridge-instrument "MES 09-26" --json; npx tsx tools/automation/repair-market-bars-timeframe.ts -- --instrument MES --bridge-instrument "MES 09-26" --target-timeframe 120m --from "2026-06-20T00:00:00-04:00" --to "2026-07-20T23:59:59-04:00" --limit 20000; npx tsx tools/automation/repair-market-bars-timeframe.ts -- --instrument MES --bridge-instrument "MES 09-26" --target-timeframe 240m --from "2026-06-20T00:00:00-04:00" --to "2026-07-20T23:59:59-04:00" --limit 20000; same repair commands with --apply; post-repair npx tsx tools/automation/market-bars-timeframe-integrity-audit.ts -- --bridge-instrument "MES 09-26" --json.
+Result: Initial integrity audit was blocked for HTF cache quality: 120M rows=258 with 8 interval mismatches; 240M rows=251 with 239 interval mismatches. Dry-run rebuild from trusted 5M produced 120M rebuiltRows=247 and 240M rebuiltRows=128 with rebuiltIntervalMismatches=0 for both. Applied repair deleted/replaced only MES 09-26 120M/240M rows in the requested cache window. Post-repair audit generated tools/automation/diagnostic-reports/market_bars_timeframe_integrity-2026-07-20T15-19-03-270Z.json with riskStatus=ready: 5M rows=5680 valid through 2026-07-20T11:20:00 ET, 15M rows=1901 valid through 2026-07-20T11:30:00 ET, 60M rows=494 valid through 2026-07-20T12:00:00 ET, 120M rows=247 valid through 2026-07-20T10:00:00 ET, 240M rows=128 valid through 2026-07-20T08:00:00 ET.
+Trading logic changed: No. This repaired durable Supabase OHLC cache rows only. It did not change setup ranking code, canExecute, entry/stop/target/risk math, Discord posting, bridge behavior, schema, or automated execution.
+Bridge impact: No bridge contract change. Repair rebuilt HTF cache rows from trusted 5M historical bars for MES 09-26.
+Journal/RAG impact: None.
+Supabase impact: Yes. Replaced malformed MES 09-26 120M/240M market_bars rows for 2026-06-20 through 2026-07-20 with 5M-derived HTF rows and verified zero interval mismatches.
+Known risks: 5M cache freshness still ended at 2026-07-20T11:20:00 ET during this audit, so rebuilt 120M/240M stop at the last complete aggregate available from trusted 5M. Future replay should treat later HTF bars as unavailable until fresh 5M cache catches up.
+Next recommended action: Rerun the targeted replay/research diagnostics that depend on HTF context now that MES 09-26 120M/240M cache integrity is clean, starting with OpeningDrive/Sweep/HTF collision checks and then the prior missed/no-chase positive set.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive low-risk no-promotion guard.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-no-promotion-guard.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-no-promotion-guard.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The low-risk separator miner proved no live-usable zero-winner-cost separator exists. The desk needed a machine-readable guard so future proposal work cannot accidentally promote `low_risk_lt_4` broadly or install a low-risk exclusion from the available fields.
