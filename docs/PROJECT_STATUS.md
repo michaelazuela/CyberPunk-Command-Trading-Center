@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add model-family broad replay for Sweep and AfterLunch validation.
+Files changed: tools/automation/unified-positive-held-local-preview-model-family-broad-replay.ts, tools/automation/unified-positive-held-local-preview-model-family-broad-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The fresh July 20 Sweep validation package contained only OpeningDrive rows, so the desk needed a local read-only replay tool that can evaluate specific model families across the broader reviewed intake instead of relying on a small selected package.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-model-family-broad-replay.test.ts; npm run diagnostic:held-local-preview-model-family-broad-replay -- --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784574093106.json --setup-types SweepMssFvgRetrace,AfterLunchDriveFvgContinuation --json; npm run diagnostic:held-local-preview-model-family-broad-replay -- --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784574093106.json --setup-types SweepMssFvgRetrace --json; npm run diagnostic:held-local-preview-model-family-broad-replay -- --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784574093106.json --setup-types AfterLunchDriveFvgContinuation --json.
+Result: Focused test passed. Combined report tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-broad-replay-1784575285131.json passed with targetRows=185, blockedRows=10, winners=84, losses=43, unresolved=48, grossResolvedOneMesPl=+$4365.69, livePromotionAllowedRows=0. Separate Sweep report tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-broad-replay-1784575329461.json passed with rows=155, winners=63, losses=36, unresolved=46, blockedRows=10, grossResolvedOneMesPl=+$3620.00. Separate AfterLunch report tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-broad-replay-1784575324215.json passed with rows=30, winners=21, losses=7, unresolved=2, blockedRows=0, grossResolvedOneMesPl=+$745.69. The 10 blocked Sweep rows had directionally invalid entry/stop geometry and were excluded from resolved P/L rather than scored.
+Trading logic changed: No. This is local saved-report replay tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install boosts or penalties, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The broad replay is research-only and still needs same-slate selection simulation before any live-facing rank proposal. The invalid Sweep geometry rows point to a source-quality drilldown need, not a reason to remove Sweep.
+Next recommended action: Run same-slate selection and source-geometry drilldowns for Sweep and AfterLunch separately. AfterLunch is clean enough for focused same-slate selection research. Sweep remains net positive, but the 10 invalid-geometry rows should be isolated before any boost/penalty proposal.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Run broader unified held-local candidate intake and model-family research chain.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The closed Intraday no-chase blocker loop recommended a fresh broader candidate intake instead of reprocessing the same blocked rows. This phase needed to prove whether a unified candidate slate, TurtleSoup handling, Sweep boost, or AfterLunch boost had enough evidence for a next narrow action before touching live scanner behavior.
