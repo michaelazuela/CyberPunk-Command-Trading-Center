@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Sweep guarded boost fresh-validation contract.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-validation-contract.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-validation-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Guarded Sweep selection improved the saved broad and July packages, but the feature was mined from those same packages. The desk needed a locked proof contract for the next unseen scanner artifact before any live-facing proposal.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-validation-contract.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-sweep-boost-guarded-validation-contract -- --train-simulation tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-guarded-selection-simulation-1784532088551.json --test-simulation tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-guarded-selection-simulation-1784532088583.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-guarded-validation-contract-1784532501814.json. Status pass. Guard feature locked for future validation: session_direction=morning|SHORT&&txt_rth_morning. Train/test guarded deltas: +697.45/+418.10 one-MES. Train/test improvement over raw Sweep-only boost: +136.25/+206.25. Contract recommendation: wait_for_fresh_unseen_artifact. Live promotion allowed rows: 0.
+Trading logic changed: No. This is local/read-only contract-only research. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: No fresh unseen artifact exists in the current saved-report set. The next proof must be generated from a later scanner artifact/outcome package before any live proposal.
+Next recommended action: Wait for or generate a fresh unseen saved scanner artifact/outcome package, then run the contract command sequence. Do not install the Sweep guarded boost until that fresh validation passes.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep guarded selection simulation.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-selection-simulation.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-guarded-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The collision snapshot guard miner found a promising caution candidate, but the desk needed a saved-report selection simulation to prove whether applying that caution to raw Sweep boost replacements improves or worsens slate-level P/L.
