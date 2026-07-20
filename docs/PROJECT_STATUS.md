@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add no-chase rebuilt review approval contract.
+Files changed: tools/automation/no-chase-rebuilt-review-approval-contract.ts, tools/automation/no-chase-rebuilt-review-approval-contract.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The no-chase rebuilt review proposal passed with three complete human-review-only artifacts. The desk needed a separate approval contract that keeps implementation disabled while proving a future adapter cannot silently loosen canExecute, publish Discord, broaden model families, or use HTF as execution authority.
+Tests run: npx tsx tools/automation/no-chase-rebuilt-review-approval-contract.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-rebuilt-review-approval-contract -- --proposal tools/automation/diagnostic-reports/no-chase-rebuilt-review-live-proposal-1784562239795.json --json.
+Result: Approval contract report tools/automation/diagnostic-reports/no-chase-rebuilt-review-approval-contract-1784562895456.json passed. Summary: proposalReady=true, simulatedArtifacts=3, htfSufficientArtifacts=3, completePlanArtifacts=3, canExecuteFalseArtifacts=3, publishDiscordFalseArtifacts=3, htfPromotionEvidenceAllowed=0, livePromotionAllowedRows=0, replayGrossOneMes=+$270.00, failedGateCount=0, recommendation=await_explicit_approval_or_broaden_research. Required future implementation invariants lock the scope to the proposal-approved IntradayMssMicroContinuation and AfterLunchDriveFvgContinuation rebuilt rows, preserve canExecute=false and publishDiscord=false until separately approved, keep 5M deterministic gates unchanged, and keep HTF context as support/caution only.
+Trading logic changed: No. This is saved-proposal-only contract tooling. It does not install scanner-visible ranking, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This contract authorizes no implementation by itself. A future scanner-visible adapter still needs explicit approval and regression proof.
+Next recommended action: Either broaden research to find more no-chase rebuild candidates with complete deterministic plans, or install a disabled local adapter preview that surfaces only the three approved human-review candidates without Discord/Supabase/canExecute changes.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add no-chase rebuilt review proposal guard.
 Files changed: tools/automation/no-chase-rebuilt-review-live-proposal.ts, tools/automation/no-chase-rebuilt-review-live-proposal.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After the repaired HTF cache was available, the desk needed to rerun the June 1 through July 2 missed/no-chase research and produce a machine-readable approval checkpoint before any scanner-visible behavior. The goal was to identify only cases that have completed 5M proof, complete deterministic entry/stop/T1/T2, sufficient structured HTF context, and preserved review-only boundaries.
