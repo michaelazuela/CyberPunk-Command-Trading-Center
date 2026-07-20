@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add full-day model/session/direction outcome rollup from saved scanner artifacts.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup.ts, tools/automation/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: after correcting Sweep morning LONG outcomes, broader model/session conclusions still needed a full-day saved-artifact outcome source instead of stale short-horizon decision-tape labels.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup.test.ts; npm run research:raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup -- --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-broader-daily-replay-package-1784503558665.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup-1784513767173.json. Status pass. Replay rows: 343. Resolved/unresolved/blocked: 269/74/0. Groups: 3. Gross resolved one-MES P/L: 25382.5. No true weak_pocket met the >=20 rows and >=0.50 problem-rate threshold. Weakest group was SweepMssFvgRetrace|morning|LONG at 0.44 problem rate, but priority is mixed_watch, not a weak-pocket install target. Strongest group was SweepMssFvgRetrace|lunch|LONG at +10976.25 gross resolved one-MES P/L. Group details: lunch LONG 107 rows, 75 winners, 32 problems, 22 unresolved, +10976.25, winner/problem rate 0.70/0.30, strong_pocket; morning LONG 80 rows, 45 winners, 35 problems, 12 unresolved, +6652.5, winner/problem rate 0.56/0.44, mixed_watch; lunch SHORT 156 rows, 108 winners, 48 problems, 40 unresolved, +7753.75, winner/problem rate 0.69/0.31, mixed_watch.
+Trading logic changed: No. This is a local/read-only saved-artifact full-day outcome rollup. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Repeated rows are research rows, not independent live trades. The rollup chooses the next research target only and is not a rank consumer.
+Next recommended action: Mine the strongest full-day group, SweepMssFvgRetrace lunch LONG, for a stable no-lookahead pre-entry separator before any live-facing proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Rerun Sweep morning LONG no-chase diagnostics with full-day outcomes.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-nochase-rerun.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-nochase-rerun.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the no-chase/rank hypothesis had been evaluated on stale short-horizon outcome labels. After full-day saved scanner artifact outcomes resolved 68 of 80 rows and classified the remaining 12 unresolved rows, the existing no-chase split/rank diagnostics needed an apples-to-apples rerun using corrected labels.
