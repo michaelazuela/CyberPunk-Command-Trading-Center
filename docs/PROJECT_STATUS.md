@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add supported-field outcome miner for proofSelectionSignal research.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-outcome-miner.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-outcome-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Supported-field inventory proved richer deterministic scanner fields were present, so the next safe step was to join those fields to the 343-row broader outcome set and mine simple separator candidates before any runtime proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-outcome-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-outcome-miner -- --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-broader-daily-replay-package-1784503558665.json --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784503584511.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-outcome-miner-1784507607459.json. Status pass. Outcome rows: 343. Joined rows: 343. Feature stats: 37. Negative candidates: 0. Positive candidates: 0. runtimeRankConsumerAllowedByThisReport remains false. Recommendation is no_supported_field_candidate.
+Trading logic changed: No. This is a local/read-only saved-artifact/outcome miner. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This only tests simple single-field supported separators. It does not rule out richer model-family research, but it does reject this proofSelectionSignal supported-field path for runtime use.
+Next recommended action: Stop the proofSelectionSignal penalty/boost path for now. Move to a different evidence family or create a compound supported-field validation only if a new hypothesis is specific and non-overfit.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add supported-field inventory for proofSelectionSignal fresh artifact research.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-inventory.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-supported-field-inventory.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Broader validation rejected the current problem-only combo path, so the next safe step was to inventory which richer deterministic fields are actually present on saved scanner artifacts before mining any new separator.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: This only proves field availability, not trading value. It is a prerequisite for a new outcome separator, not an approval to change runtime behavior.
 Next recommended action: Mine these supported fields against the 343-row outcome set, then validate any candidate separator before proposing scanner-visible behavior.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add broader validation for problem-only proofSelectionSignal quality combos.
