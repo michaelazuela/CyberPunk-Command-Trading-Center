@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add current raw-package Sweep exact-proof selection-impact simulation.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-selection-impact-simulation.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-selection-impact-simulation.test.ts, docs/PROJECT_STATUS.md.
+Reason: The exact-proof package identified current raw scanner SweepMssFvgRetrace InvalidStopLocation evidence, but the desk needed to know whether excluding only those exact rows would affect top candidate selection before any runtime proposal.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-selection-impact-simulation.test.ts; npm run diagnostic:held-local-preview-sweep-primary-exclusion-current-selection-impact-simulation -- --exact-proof-package tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-current-exact-proof-package-1784581148082.json --scanner-package-dir tools/automation/diagnostic-reports --json.
+Result: Focused test passed. Real simulation tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-current-selection-impact-simulation-1784581571114.json passed with packageFilesRead=64, candidateRows=25664, events=2771, eventsWithExactInvalidStopSweep=69, baselineTopExactInvalidStopSweepEvents=4, changedTopEvents=4, changedTopEventsWithReplacement=4, changedTopEventsWithoutReplacement=0, canExecuteChangedEvents=0, tradeMathChangedEvents=4, livePromotionAllowedRows=0, runtimeInstallAllowed=false.
+Trading logic changed: No. This is local current raw scanner package rankScore simulation tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The simulation uses local rankScore top selection, not the scanner-owned runtime selected-candidate path. The 4 changed events need scanner-owned selection-path validation before any runtime proposal.
+Next recommended action: Drill down the 4 changed events and validate them against scanner-owned selected-candidate/DeskTicket fields before considering a runtime exclusion proposal.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add current raw-package Sweep InvalidStopLocation exact-proof package.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-exact-proof-package.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-exact-proof-package.test.ts, docs/PROJECT_STATUS.md.
 Reason: The evidence-boundary audit established that held-local-only nonreproduced rows cannot be used for runtime proposal evidence, so the desk needed a current raw scanner package proof set containing only exact SweepMssFvgRetrace InvalidStopLocation rows.

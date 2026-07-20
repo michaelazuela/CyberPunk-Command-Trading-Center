@@ -107,6 +107,7 @@
     "diagnostic:held-local-preview-sweep-primary-exclusion-nonreproduction-drilldown": "tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-nonreproduction-drilldown.ts",
     "diagnostic:held-local-preview-sweep-primary-exclusion-evidence-boundary-audit": "tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-evidence-boundary-audit.ts",
     "diagnostic:held-local-preview-sweep-primary-exclusion-current-exact-proof-package": "tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-exact-proof-package.ts",
+    "diagnostic:held-local-preview-sweep-primary-exclusion-current-selection-impact-simulation": "tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-selection-impact-simulation.ts",
     "diagnostic:held-local-preview-afterlunch-timing-field-miner": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.ts",
     "diagnostic:held-local-preview-afterlunch-timing-selection-simulation": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.ts",
     "diagnostic:held-local-preview-afterlunch-changed-slate-drilldown": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.ts",
