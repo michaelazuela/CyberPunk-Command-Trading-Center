@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add no-chase Intraday blocker disposition rollup.
+Files changed: tools/automation/no-chase-intraday-blocker-disposition-rollup.ts, tools/automation/no-chase-intraday-blocker-disposition-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: After the timestamp fallback and protected-stop fallback simulation, the desk needed a durable saved-report rollup showing which Intraday no-chase blocker rows were converted, rejected, intentionally held, or still need research.
+Tests run: npx tsx tools/automation/no-chase-intraday-blocker-disposition-rollup.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-intraday-blocker-disposition-rollup -- --classifier-report tools/automation/diagnostic-reports/no-chase-intraday-geometry-blocker-classifier-1784566384445.json --full-window-replay-report tools/automation/diagnostic-reports/no-chase-intraday-full-window-stop-replay-1784569268167.json --remaining-drilldown-report tools/automation/diagnostic-reports/no-chase-intraday-remaining-blocker-drilldown-1784570138821.json --protected-stop-fallback-simulation tools/automation/diagnostic-reports/no-chase-intraday-protected-mss-stop-fallback-simulation-1784570602185.json --json.
+Result: Disposition rollup report tools/automation/diagnostic-reports/no-chase-intraday-blocker-disposition-rollup-1784571201512.json passed. Summary: rowsChecked=15, convertedToHumanReviewRows=1, rejectedByWideRiskRows=2, keepPendingTriggerBlockedRows=6, keepMissingEntryBlockedRows=1, needsRetestSwingResidualResearchRows=3, needsInvalidStopLocationResearchRows=2, unresolvedRows=0, canExecuteTrueRows=0, livePromotionAllowedRows=0, nextRecommendedFamily=retest_swing_stop_not_confirmed.
+Trading logic changed: No. This is local saved-report rollup tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for runtime behavior. The rollup proves residual retest-swing-stop rows still need research before invalid-stop rows.
+Next recommended action: Run a narrow residual retest-swing-stop drilldown for 2026-06-17 lunch SHORT, 2026-06-25 lunch LONG, and 2026-07-02 lunch LONG. Keep pending-trigger and missing-entry rows blocked.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Intraday MSS protected-stop fallback simulation.
 Files changed: tools/automation/no-chase-intraday-protected-mss-stop-fallback-simulation.ts, tools/automation/no-chase-intraday-protected-mss-stop-fallback-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The remaining-blocker drilldown showed June 15 and June 18 were both blocked by preferred retest swing stop confirmation while older protected MSS swing stops existed. The desk needed to prove whether using those older protected MSS stops would improve the set before any source-builder change.
