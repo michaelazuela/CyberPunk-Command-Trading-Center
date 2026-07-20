@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add scanner-owned selector proposal audit for the strongest same-session pocket.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-scanner-owned-selector-proposal-audit.ts, tools/automation/unified-positive-held-local-preview-scanner-owned-selector-proposal-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: Session-bounded validation showed SweepMssFvgRetrace morning SHORT risk_8_to_16 was the cleanest surviving pocket. The desk needed a research-only selector audit against same-session non-target winners and blocked/unresolved rows before any scanner-owned dry-run or runtime ranking proposal.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-scanner-owned-selector-proposal-audit.test.ts; npm run diagnostic:held-local-preview-scanner-owned-selector-proposal-audit -- --session-bounded-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-session-bounded-profit-validation-1784586800588.json --json.
+Result: Focused test passed. Real audit tools/automation/diagnostic-reports/unified-positive-held-local-preview-scanner-owned-selector-proposal-audit-1784587488668.json passed with sourceRows=2154, selectorRows=75, selectorResolvedRows=64, selectorSessionGrossOneMesPl=7510, selectorWinRateResolved=0.92, selectorAverageMfeR=4.91, selectorAverageMaeR=0.13, sameSessionSideNonTargetWinnerRows=157, sameSessionSideBlockedUnresolvedRows=289, selectorVsNonTargetWinnerPlRank=1, selectorOutperformsBlockedUnresolved=true, livePromotionAllowedRows=0, recommendation=advance_to_scanner_owned_dry_run_selector_contract. Selector cohort was 59W/5L/8U/3B across 5 distinct dates with 58 T2 hits and 1 T1-only hit. Losing rows still showed favorable movement before stop, so the next dry-run should test one-ticket-per-slate timing and stale-candidate expiry rather than a live boost.
+Trading logic changed: No. This is local saved-report analysis only. It does not run setupScanner, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The selector audit proves research quality, not live scanner ownership. Rows repeat across nearby proof times, so a dry-run contract must enforce one scanner-owned proposal per slate and expire stale repeated candidates before any runtime behavior is considered.
+Next recommended action: Build a dry-run scanner-owned selector contract for only SweepMssFvgRetrace morning SHORT risk_8_to_16 that simulates one ticket per slate, stale expiry, and collision handling while keeping live promotion disabled.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add session-bounded profit validation.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-session-bounded-profit-validation.ts, tools/automation/unified-positive-held-local-preview-session-bounded-profit-validation.test.ts, docs/PROJECT_STATUS.md.
 Reason: The profit-source audit identified large profitable model pockets but some top examples resolved across later sessions/days. The desk needed a same-session-only validation using saved scanner decision-tape completed 5M bars before treating any pocket as realistic review-ticket evidence.
