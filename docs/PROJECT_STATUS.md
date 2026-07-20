@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add current raw-package Sweep changed-event drilldown.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-changed-event-drilldown.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-changed-event-drilldown.test.ts, docs/PROJECT_STATUS.md.
+Reason: The current selection-impact simulation found 4 changed top-candidate events, but the desk needed to know whether those changes were backed by scanner-owned selected-candidate, DeskTicket, or DeskPublishDecision artifacts before any runtime proposal.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-changed-event-drilldown.test.ts; npm run diagnostic:held-local-preview-sweep-primary-exclusion-current-changed-event-drilldown -- --selection-impact-simulation tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-current-selection-impact-simulation-1784581571114.json --scanner-package-dir tools/automation/diagnostic-reports --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real drilldown tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-current-changed-event-drilldown-1784582121170.json passed with changedEventsRead=4, changedEventsFoundInRawPackages=4, scannerOwnedSelectedCandidateFieldEvents=0, deskTicketFieldEvents=0, publishDecisionFieldEvents=0, runtimeProposalReadyEvents=0, turtleSoupEntryTriggerMissingReplacementEvents=4, canExecuteChangedEvents=0, tradeMathChangedEvents=4, runtimeInstallAllowed=false.
+Trading logic changed: No. This is local current raw scanner package changed-event artifact drilldown tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Raw scanner packages prove rankScore replacement behavior but do not contain scanner-owned selected-candidate, DeskTicket, or DeskPublishDecision fields for these changed events. All 4 changes alter top trade math, so runtime exclusion cannot be proposed from raw rankScore simulation alone.
+Next recommended action: Build the scanner-owned selection artifact join for the 4 June 23 lunch changed events, or add a local scanner snapshot export that records selected candidate, DeskTicket, and DeskPublishDecision fields without changing live behavior.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add current raw-package Sweep exact-proof selection-impact simulation.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-selection-impact-simulation.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-selection-impact-simulation.test.ts, docs/PROJECT_STATUS.md.
 Reason: The exact-proof package identified current raw scanner SweepMssFvgRetrace InvalidStopLocation evidence, but the desk needed to know whether excluding only those exact rows would affect top candidate selection before any runtime proposal.
