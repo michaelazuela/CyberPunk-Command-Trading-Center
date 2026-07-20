@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Drill down the unresolved 2026-06-25 Sweep lunch SHORT no-target/no-stop slate.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-slate-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the lunch SHORT scanner-field selection simulation worsened top selection, so the next narrow evidence target was the unresolved 2026-06-25 slate rather than another broad rank overlay.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-slate-drilldown.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-slate-drilldown -- --scanner-field-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner-1784517279035.json --target-date 2026-06-25 --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-unresolved-slate-drilldown-1784518350339.json. Status pass. The target date had 29 unresolved rows across 2 plan signatures. Missing input/no-fill/weak follow-through: 0/0/0. Main repeated plan: 28 rows from 12:35-15:20, entry 7438.50, stop 7459.25, T1 7407.50, T2 7397.00, risk 20.75. It reached max MFE 1.46R and missed T1 by 0.75 points, but also reached 0.88R adverse excursion. Classification: 18 adverse-near-stop near-T1 review-note rows and 10 no-stop/no-target positive-training exclusions for that signature. Late 15:45 signature: 1 no-stop/no-target positive-training exclusion. Overall recommendation: keep_unresolved_as_review_note.
+Trading logic changed: No. This is a local/read-only saved-report drilldown. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Near-T1 unresolved rows are not resolved wins or losses. They should not train positive ranking until a later validated outcome pass proves them, and they should not become rank penalties by themselves because the main 6/25 plan nearly reached T1.
+Next recommended action: Mine unresolved Sweep lunch SHORT rows across all dates for pre-entry separators that distinguish near-T1 review-note slates from true no-stop/no-target exclusions before any live-facing rank proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Validate Sweep lunch SHORT scanner-field candidates with no-lookahead slate selection simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-selection-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the lunch SHORT scanner-field miner found clean descriptive buckets, but scanner-owned field quality still needed a no-lookahead slate simulation before any live-facing proposal.
