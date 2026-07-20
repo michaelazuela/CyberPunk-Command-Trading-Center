@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add current raw-package Sweep InvalidStopLocation exact-proof package.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-exact-proof-package.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-exact-proof-package.test.ts, docs/PROJECT_STATUS.md.
+Reason: The evidence-boundary audit established that held-local-only nonreproduced rows cannot be used for runtime proposal evidence, so the desk needed a current raw scanner package proof set containing only exact SweepMssFvgRetrace InvalidStopLocation rows.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-current-exact-proof-package.test.ts; npm run diagnostic:held-local-preview-sweep-primary-exclusion-current-exact-proof-package -- --evidence-boundary-audit tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-evidence-boundary-audit-1784580713276.json --scanner-package-dir tools/automation/diagnostic-reports --json.
+Result: Focused test passed. Real proof package tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-current-exact-proof-package-1784581148082.json passed with packageFilesRead=64, rawExactInvalidStopRows=183, dedupedExactProofRows=69, sessions lunch=59/morning=10, directions LONG=54/SHORT=15, rowsWithStopMissing=50, rowsWithDirectionallyInvalidStopGeometry=19, rowsOverlappingEvidenceBoundarySlates=1, heldLocalOnlyRowsIncluded=0, runtimeInstallAllowed=false.
+Trading logic changed: No. This is local current raw scanner package proof tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This package is evidence only. A future runtime proposal still needs selected-candidate impact proof, canExecute stability proof, and entry/stop/target/risk stability proof from current scanner output.
+Next recommended action: Build a current raw-package selection-impact simulation that excludes only exact Sweep InvalidStopLocation proof rows and proves selected-candidate, canExecute, and trade-math stability before any runtime proposal.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep primary-exclusion evidence-boundary audit.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-evidence-boundary-audit.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-evidence-boundary-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: The nonreproduction drilldown proved some held-local changed slates do not reproduce in current raw scanner package output, so the desk needed a machine-readable boundary before any runtime ranking proposal could use held-local evidence.
