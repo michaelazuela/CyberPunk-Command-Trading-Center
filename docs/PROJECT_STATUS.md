@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Mine Sweep lunch SHORT mixed-watch group using stable pre-entry fields.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: lunch LONG research found descriptive buckets but no top-selection install. The next fresh target was the SweepMssFvgRetrace lunch SHORT mixed-watch group from the full-day rollup, starting with stable no-lookahead time/risk/target-geometry fields.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner -- --full-day-rollup tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup-1784513767173.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-field-miner-1784516528992.json. Status pass. Target rows: 156. Feature stats: 23. Positive/negative candidates: 10/3. Best positive candidate: t1PointsBucket=20_to_29, 34 rows, 34 winners, 0 problems, 0 unresolved, +4162.5 gross one-MES P/L. Other strong positives: riskBucket=12.25-18, 30 rows, 29 winners, 1 problem, +3200; t1ToRiskBucket=1_5_to_1_74r, 66 rows, 59 winners, 7 problems, +4055; t2PointsBucket=20_to_29, 51 rows, 45 winners, 6 problems, +4467.5. Best negative candidate: riskBucket=18.25-25, 33 rows, 5 winners, 28 problems, 28 unresolved, +962.5, winner/problem rate 0.15/0.85. Strongest negative geometry bucket: t1PointsBucket=30_to_44, 28 rows, 0 winners, 28 problems, 28 unresolved, 0 gross one-MES P/L.
+Trading logic changed: No. This is a local/read-only saved-report stable-field miner. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: These are repeated research rows, not independent live trades. Bucket quality does not prove top-selection improvement.
+Next recommended action: Run a no-lookahead lunch SHORT stable-selection simulation using t1PointsBucket=20_to_29 and riskBucket=18.25-25 before any scanner-field or live-facing proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Drill down Sweep lunch LONG blocked/no-chase caution pocket.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-blocked-caution-pocket-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the scanner-field selection simulation did not improve resolved top-selection P/L, and the clean no-chase bucket should not be installed. The next narrow research step was to inspect the opposite 40-row blocked/no-chase caution pocket to see whether the 8 winners had a rescue separator.
