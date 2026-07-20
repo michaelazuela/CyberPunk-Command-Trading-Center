@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add Sweep boost collision snapshot guard miner.
+Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-collision-snapshot-guard-miner.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-collision-snapshot-guard-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The Sweep-only collision drilldown proved raw model-family boosting is too blunt. The desk needed a no-lookahead scanner-snapshot miner that focuses specifically on Sweep replacements that worsened the top slate selection.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-sweep-boost-collision-snapshot-guard-miner.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-sweep-snapshot-field-miner -- --train-artifacts tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-06-01-to-2026-07-02-combined-1784419058783.json --train-outcome-reports tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784419740441.json --test-artifacts tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-03-to-2026-07-17-1784476403453.json --test-outcome-reports tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784526024979.json --min-rows-per-period 3 --json; npm run diagnostic:held-local-preview-sweep-boost-collision-snapshot-guard-miner -- --train-collision tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-collision-drilldown-1784531089680.json --train-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-06-01-to-2026-07-02-combined-1784419058783.json --test-collision tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-collision-drilldown-1784531089686.json --test-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-03-to-2026-07-17-1784476403453.json --json.
+Result: Reports generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-snapshot-field-miner-1784531403598.json and tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-boost-collision-snapshot-guard-miner-1784531701913.json. The general snapshot miner found positive Sweep snapshot segments, but they were not collision-aware. The collision-specific miner matched 34/34 broad Sweep replacement rows and 14/14 July OOS rows. It found 18 research-only caution candidates. Top candidate: session_direction=morning|SHORT&&txt_rth_morning, with train improved/worsened/same 0/2/0, test 1/2/0, total 1/4/0, and total delta -342.50 one-MES. Other candidates included OpeningDrive replacement with opposing 5M caution and RTH Morning/Asian context combinations.
+Trading logic changed: No. This is local/read-only saved-report and saved scanner-artifact research only. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The top caution candidate is still mined from the same broad plus July collision package and would suppress one improved July Sweep replacement. It is not eligible for live ranking until a fresh validation proves the tradeoff.
+Next recommended action: Validate the top Sweep collision caution candidate in a saved-report selection simulation that applies the caution only to Sweep boost replacement rows, then compare whether it preserves the broad and July net positive lift without burying stronger model tops.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep-only boost collision drilldown before any rank boost proposal.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-collision-drilldown.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-collision-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Sweep-only model-family boost improved total slate selection, but it also replaced better top candidates on some slates. The desk needed a repeatable saved-report drilldown before considering any no-lookahead collision guard.

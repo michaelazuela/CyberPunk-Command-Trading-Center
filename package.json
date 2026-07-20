@@ -127,6 +127,7 @@
     "diagnostic:held-local-preview-turtlesoup-review-note-placement-simulation": "tsx tools/automation/unified-positive-held-local-preview-turtlesoup-review-note-placement-simulation.ts",
     "diagnostic:held-local-preview-positive-family-boost-validation": "tsx tools/automation/unified-positive-held-local-preview-positive-family-boost-validation.ts",
     "diagnostic:held-local-preview-sweep-boost-collision-drilldown": "tsx tools/automation/unified-positive-held-local-preview-sweep-boost-collision-drilldown.ts",
+    "diagnostic:held-local-preview-sweep-boost-collision-snapshot-guard-miner": "tsx tools/automation/unified-positive-held-local-preview-sweep-boost-collision-snapshot-guard-miner.ts",
     "diagnostic:replay-validation": "tsx tools/automation/replay-validation-audit.ts",
     "diagnostic:htf-fvg-decision-zone-alert": "tsx tools/automation/htf-fvg-decision-zone-alert-audit.ts",
     "diagnostic:live-observation-proof": "tsx tools/automation/live-observation-proof-audit.ts",
