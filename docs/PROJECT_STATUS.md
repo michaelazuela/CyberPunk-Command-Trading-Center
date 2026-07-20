@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add no-chase Intraday geometry blocker classifier.
+Files changed: tools/automation/no-chase-intraday-geometry-blocker-classifier.ts, tools/automation/no-chase-intraday-geometry-blocker-classifier.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The omission diagnostic proved missing no-chase geometry originates in the Intraday MSS source candidate path. The desk needed a read-only blocker-family classifier before choosing any source-builder fix.
+Tests run: npx tsx tools/automation/no-chase-intraday-geometry-blocker-classifier.test.ts; npx tsc --noEmit --pretty false; npm run research:no-chase-intraday-geometry-blocker-classifier -- --omission-report tools/automation/diagnostic-reports/no-chase-protected-geometry-omission-diagnostic-1784565920471.json --audit-dir tools/automation/discord-audit --json.
+Result: Classifier report tools/automation/diagnostic-reports/no-chase-intraday-geometry-blocker-classifier-1784566384445.json passed. Summary: rowsClassified=15, pendingFvgRetestEntryRows=5, pendingCloseThroughRetestEntryRows=1, mssTimestampAlignmentStopBlockedRows=4, retestSwingStopNotConfirmedRows=3, invalidStopLocationRows=2, unclassifiedRows=0, entryOnlyRows=6, stopOnlyRows=6, noEntryStopRows=3, canExecuteChangedRows=0, publishDiscordRows=0, livePromotionAllowedRows=0, recommendedNextFix=validate_mss_timestamp_alignment_repair.
+Trading logic changed: No. This is local saved-report research tooling only. It does not create tickets, wire scanner behavior, run setupScanner, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for runtime behavior; the dominant actionable bucket is MSS timestamp alignment, but pending-trigger rows should remain blocked and invalid-stop rows should not be promoted.
+Next recommended action: Validate whether the 4 MSS timestamp-alignment stop blockers can be repaired from completed 5M OHLC/open-close timestamp tolerance without weakening bar-close proof. Do not change live builder behavior until that validation replay passes.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add no-chase protected geometry omission diagnostic.
 Files changed: tools/automation/no-chase-protected-geometry-omission-diagnostic.ts, tools/automation/no-chase-protected-geometry-omission-diagnostic.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Protected geometry reconstruction replay was negative, so the desk needed to identify whether the 15 proof-positive no-chase rows lost entry/stop/target fields in unified ranking or never received scanner-owned geometry from the source candidate.
