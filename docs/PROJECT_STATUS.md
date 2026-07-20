@@ -8858,6 +8858,23 @@ Next recommended action: Observe the next live high-confidence conditional revie
 ## Previous Change
 
 Date: 2026-07-20
+Task: Add raw scanner package metadata audit for Sweep primary exclusion.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-package-metadata-audit.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-package-metadata-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: The reduced scanner reports lacked exact InvalidStopLocation/executionStatus proof, so the desk needed to check full raw scanner artifact packages before deciding whether to change any generator or live selector behavior.
+Real run: npm run diagnostic:held-local-preview-sweep-primary-exclusion-scanner-artifact-package-metadata-audit -- --dry-run tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-dry-run-1784578184042.json --scanner-package-dir tools/automation/diagnostic-reports --json.
+Report: tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-package-metadata-audit-1784579356928.json.
+Result: Audit failed as a runtime-readiness gate. It read 62 raw package files, matched 150 package candidate rows, covered 3 of 5 changed dry-run slates, found executionStatus and blockReason on all 3 covered slates, found InvalidStopLocation on 1 covered slate, and found 2 changed slates still missing raw package coverage.
+Trading logic changed: No. This is a local read-only package metadata audit only.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Runtime primary-selection exclusion remains unapproved. Full package coverage and exact InvalidStopLocation proof are not complete for every changed slate.
+Next recommended action: Backfill/regenerate raw scanner artifact packages only for the missing changed slates, then rerun the package metadata audit.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add scanner-artifact coverage audit for Sweep primary exclusion.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-coverage.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-coverage.test.ts, docs/PROJECT_STATUS.md.
 Reason: The dry-run supported excluding blocked InvalidStopLocation Sweep rows from primary selection, but runtime behavior must not be installed until saved scanner artifacts independently expose enough proof to recognize the same condition.
