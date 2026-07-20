@@ -78,6 +78,8 @@ assert.equal(noCandidate.authority.readsLiveBridge, false);
 assert.equal(noCandidate.authority.changesTradingLogic, false);
 assert.ok(noCandidate.nextCommands.some((item) => item.includes('diagnostic:bridge-fresh-package-ready-gate')));
 assert.ok(noCandidate.nextCommands.some((item) => item.includes('research:raw-ohlc-scanner-artifacts')));
+assert.ok(noCandidate.nextCommands.some((item) => item.includes('raw-ohlc-scanner-artifact-replay-package.ts -- --scanner-artifact <fresh-raw-scanner-artifact>')));
+assert.equal(noCandidate.nextCommands.some((item) => item.includes('--raw-scanner-artifact')), false);
 assert.ok(noCandidate.nextCommands.some((item) => item.includes('--market-bars-json <fresh-market-bars-json>')));
 assert.ok(noCandidate.nextCommands.some((item) => item.includes('--sessions morning,lunch')));
 assert.ok(noCandidate.recommendations.some((item) => item.includes('Do not reuse')));
