@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add bridge fresh-package data-boundary audit.
+Files changed: tools/automation/bridge-fresh-package-data-boundary-audit.ts, tools/automation/bridge-fresh-package-data-boundary-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Sweep guarded boost fresh validation is blocked by missing post-July-17 market-bars package data. The desk needed a repeatable audit that distinguishes active-contract mismatch from unavailable NinjaTrader historical bars before any replay package is attempted.
+Tests run: npx tsx tools/automation/bridge-fresh-package-data-boundary-audit.test.ts; npm run diagnostic:bridge-fresh-package-data-boundary -- --instrument MES --bridge-instrument "MES 09-26" --date 2026-07-20 --from 09:15 --to 16:00 --timeframes 5m,15m,60m,120m,240m --json.
+Result: Report generated tools/automation/diagnostic-reports/bridge-fresh-package-data-boundary-audit-1784534678180.json. Status pass. Active contract tested: MES 09-26. Live recent bars available: true. Historical bars available: false. Completed historical bars available: false. All requested timeframes completed: false. Ready for market-bars JSON export: false. Likely cause: ninjatrader_history_not_loaded. Recommendation: load_ninjatrader_history. Live promotion allowed rows: 0.
+Trading logic changed: No. This is local/read-only bridge data-boundary auditing only. It does not post Discord, write Supabase, change bridge behavior, change scanner behavior, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: Read-only live bridge diagnostic only. No bridge behavior changed.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Fresh Sweep guarded validation still cannot run until NinjaTrader historical bars are available for the active rollover contract and requested morning/lunch validation window.
+Next recommended action: Load or backfill NinjaTrader history for MES 09-26 after 2026-07-17, rerun the bridge data-boundary audit, then generate the fresh market-bars JSON and scanner artifact package only if all requested timeframes have completed historical bars.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Correct Sweep fresh-package generator command plan.
 Files changed: tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.ts, tools/automation/unified-positive-held-local-preview-sweep-boost-fresh-package-plan.test.ts, docs/PROJECT_STATUS.md.
 Reason: The fresh-package planner needed to emit the actual raw OHLC scanner artifact generator flags so the next package sequence is executable from the generated report.
