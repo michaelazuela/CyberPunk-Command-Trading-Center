@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Mine AfterLunch scanner-context fields for July OOS loss separation.
+Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-scanner-context-loss-miner.ts, tools/automation/unified-positive-held-local-preview-afterlunch-scanner-context-loss-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the AfterLunch proof-time proxy rank boost failed OOS slate selection, so the desk needed a richer research-only read of known-at-proof scanner context around the four July OOS losses before touching any live-facing behavior.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-afterlunch-scanner-context-loss-miner.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-afterlunch-scanner-context-loss-miner -- --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784526031044.json --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784525915111.json --scanner-artifact tools/automation/diagnostic-reports/raw-ohlc-scanner-artifacts-MES-2026-07-03-to-2026-07-17-1784476403453.json --json.
+Result: Report generated tools/automation/diagnostic-reports/unified-positive-held-local-preview-afterlunch-scanner-context-loss-miner-1784527348349.json. Status pass. AfterLunch rows matched: 43/43. W/L/U: 39/4/0. Gross one-MES P/L: +2477.61. Target-room blocked-before-T1 covered all 4 losses but also 34 winners. HTF line blocked covered all 4 losses but also 9 winners. Opposing HTF MSS caution covered all 4 losses but also all 39 winners. No selective scanner-context separator survived this pass.
+Trading logic changed: No. This is local/read-only research over saved reports and saved scanner artifacts. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, install ranking behavior, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Presence-only fields are too broad for filtering. A useful next separator likely needs distance/ratio context, such as obstacle distance to entry, obstacle distance to T1, line-in-sand distance, and whether the required close was exactly at/through the line.
+Next recommended action: Add a research-only distance/ratio miner for AfterLunch OOS rows before any scanner-visible review note, rank penalty, or model change.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Compare AfterLunch proof-time proxy selectors at OOS slate level.
 Files changed: tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-slate-comparison.ts, tools/automation/unified-positive-held-local-preview-afterlunch-proof-time-proxy-oos-slate-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the July OOS row-quality validation was clean, but the desk still needed to prove whether the proof-time proxy should affect top-candidate selection before any scanner-visible rank overlay.
