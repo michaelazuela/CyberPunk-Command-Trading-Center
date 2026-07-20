@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add Sweep morning LONG full-day unresolved drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-unresolved-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-unresolved-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the full-day outcome comparison resolved 68 of 80 SweepMssFvgRetrace morning LONG reviewed rows but left 12 unresolved. The next safe step was to classify those remaining rows from saved full-day scanner artifact bars before feeding any rank/no-chase recommendation.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-unresolved-drilldown.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-morning-long-full-day-unresolved-drilldown -- --full-day-comparison tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-outcome-comparison-1784512029623.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-unresolved-drilldown-1784512836903.json. Status pass. Unresolved rows: 12. No-fill rows: 0. Weak-follow-through rows: 5. Near-T1 unresolved rows: 7. No-stop/no-target rows: 0. Blocked rows: 0. Average MFE/MAE R: 0.90/0.38. The 2026-06-04 cluster was near-T1 unresolved, 1.37R MFE and 3.75 points short of T1, so keep as unresolved review notes. The 2026-07-01 cluster was weak-follow-through, 0.24R MFE and 0.90R MAE, so exclude from positive rank-training research.
+Trading logic changed: No. This is a local/read-only saved-artifact unresolved drilldown. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This report classifies only unresolved research rows. It does not rerun the rank/no-chase simulation yet and does not change runtime selection behavior.
+Next recommended action: Rerun Sweep morning LONG rank/no-chase diagnostics with full-day resolved rows separated from unresolved review notes and weak-follow-through exclusions.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add Sweep morning LONG full-day outcome comparison across all reviewed rows.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-outcome-comparison.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-full-day-outcome-comparison.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the extended-horizon top-slate replay proved the shorter morning decision-tape outcome source was creating false unresolved/no-fill rows. The next safe step was to recompute the entire SweepMssFvgRetrace morning LONG research subset using saved full-day scanner artifact bars before drawing rank/model conclusions.
