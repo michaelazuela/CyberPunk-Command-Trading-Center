@@ -8857,6 +8857,23 @@ Next recommended action: Observe the next live high-confidence conditional revie
 
 ## Previous Change
 
+Date: 2026-07-20
+Task: Add Sweep primary exclusion dry-run for invalid-stop blocked rows.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-dry-run.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-dry-run.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove whether blocked SweepMssFvgRetrace rows with InvalidStopLocation can be excluded from primary desk-idea selection without removing them from audit visibility or changing executable trade math.
+Real run: npm run diagnostic:held-local-preview-sweep-primary-exclusion-dry-run -- --approval-contract tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-approval-contract-1784577769050.json --installed-penalty-audit tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-installed-penalty-audit-1784577356237.json --json.
+Report: tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-dry-run-1784578184042.json.
+Result: Passed. The dry-run read 185 audit rows across 87 slates, found 38 invalid-stop Sweep rows, reduced baseline invalid-stop Sweep primary slates from 5 to 0 in simulation, preserved all 38 blocked audit rows, and produced 0 entry/stop/target/risk drift rows.
+Trading logic changed: No. This is a local read-only research dry-run only.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Live scanner behavior is not changed. Runtime installation still needs scanner-output artifact validation before touching primary selection behavior.
+Next recommended action: Validate the same exclusion contract against scanner-output artifacts before considering any live-facing ranking change.
+
+## Previous Change
+
 Date: 2026-06-29
 Task: Fix false morning scanner data-quality notice after trusted 5M-derived HTF repair.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
