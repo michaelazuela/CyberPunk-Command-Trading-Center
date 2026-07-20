@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Mine Sweep lunch LONG full-day strong pocket using stable pre-entry fields.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the broad full-day model/session/direction rollup identified SweepMssFvgRetrace lunch LONG as the strongest group. The next safe step was to mine stable no-lookahead pre-entry fields before any scanner-field or live-facing proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-field-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-field-miner -- --full-day-rollup tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup-1784513767173.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-long-full-day-stable-field-miner-1784514150590.json. Status pass. Target rows: 107. Feature stats: 23. Positive candidates: 10. Negative candidates: 3. Best positive candidate: t2PointsBucket=lt_12, 41 rows, 41 winners, 0 problems, 0 unresolved, +1940 gross one-MES P/L. Other strong buckets: riskBucket<=8, 49 rows, 48 winners, 1 problem, +2346.25; t1PointsBucket=lt_12, 49 rows, 48 winners, 1 problem, +2346.25; proofHour=14, 49 rows, 37 winners, 12 problems, +5146.25. Best negative candidate: riskBucket=8.25-12, 12 rows, 0 winners, 12 problems, 8 unresolved, -200. Other negative buckets: t1PointsBucket=12_to_19, 14 rows, 0 winners, 14 problems; t2PointsBucket=20_to_29, 20 rows, 0 winners, 20 problems.
+Trading logic changed: No. This is a local/read-only saved-report field miner using stable pre-entry time/risk/target-geometry fields only. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The miner finds feature buckets, not top-selection impact. These are repeated research rows, not independent live trades. Do not install from this report alone.
+Next recommended action: Validate the best positive and negative stable-field candidates in a separate no-lookahead selection simulation over lunch LONG slates before any scanner-visible proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add full-day model/session/direction outcome rollup from saved scanner artifacts.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup.ts, tools/automation/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: after correcting Sweep morning LONG outcomes, broader model/session conclusions still needed a full-day saved-artifact outcome source instead of stale short-horizon decision-tape labels.
