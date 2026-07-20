@@ -187,6 +187,7 @@
     "research:raw-ohlc-scanner-artifact-sweep-morning-long-preentry-field-miner": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-preentry-field-miner.ts",
     "research:raw-ohlc-scanner-artifact-sweep-morning-long-nochase-split-validation": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-nochase-split-validation.ts",
     "research:raw-ohlc-scanner-artifact-sweep-morning-long-nochase-rank-simulation": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-nochase-rank-simulation.ts",
+    "research:raw-ohlc-scanner-artifact-sweep-morning-long-unresolved-top-slate-drilldown": "tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-unresolved-top-slate-drilldown.ts",
     "research:raw-ohlc-scanner-artifact-comparison": "tsx tools/automation/raw-ohlc-scanner-artifact-comparison.ts",
     "research:raw-ohlc-scanner-artifact-replay-package": "tsx tools/automation/raw-ohlc-scanner-artifact-replay-package.ts",
     "research:raw-ohlc-scanner-artifact-dedupe-timing-filter": "tsx tools/automation/raw-ohlc-scanner-artifact-dedupe-timing-filter.ts",

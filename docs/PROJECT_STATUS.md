@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add Sweep morning LONG unresolved top-slate drilldown.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-unresolved-top-slate-drilldown.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-unresolved-top-slate-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the no-chase rank simulation did not improve top selection, so the next safe step was to inspect unresolved/no-fill top slates and determine whether rank replacement was even possible inside the saved slate.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-unresolved-top-slate-drilldown.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-morning-long-unresolved-top-slate-drilldown -- --rank-simulation tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-nochase-rank-simulation-1784510413651.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-unresolved-top-slate-drilldown-1784510867440.json. Status pass. Slates: 10. Unresolved/no-fill top slates: 4. Replacement-available slates: 0. All-unresolved-or-no-fill slates: 4. Only-resolved-loss slates: 0. Recommendation: broaden_replay_horizon_or_outcome_source. runtimeRankConsumerAllowedByThisReport remains false.
+Trading logic changed: No. This is a local/read-only saved-report drilldown. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This confirms ranking cannot replace the unresolved tops inside the current saved slate. It does not prove whether those rows would resolve with a longer replay horizon or a richer outcome source.
+Next recommended action: Broaden the read-only replay horizon/outcome source for the four unresolved/no-fill top slates before touching rank behavior: 2026-06-04, 2026-06-11, 2026-07-01, and 2026-07-07.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add Sweep morning LONG no-chase rank simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-nochase-rank-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-nochase-rank-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the no-chase split validated as a weak/strong row classifier, but it still needed a top-selection simulation before any scanner-visible ranking proposal.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: The simulation uses rankScoreBucket as a proxy for scanner rank because the saved joined rows expose buckets, not raw scanner score. Even with that limitation, it did not improve top-selection P/L, so it is not a live proposal.
 Next recommended action: Do not install the no-chase split as a rank penalty. Keep it as research/review context and drill into unresolved/no-fill top slates for 2026-06-04, 2026-06-11, 2026-07-01, and 2026-07-07 to find why ranking cannot replace those tops.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add Sweep morning LONG no-chase split validation.
