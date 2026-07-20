@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Add Sweep morning LONG no-chase rank simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-nochase-rank-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-nochase-rank-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the no-chase split validated as a weak/strong row classifier, but it still needed a top-selection simulation before any scanner-visible ranking proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-nochase-rank-simulation.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-morning-long-nochase-rank-simulation -- --outcome tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-outcome-1784503584511.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-morning-long-nochase-rank-simulation-1784510413651.json. Status pass. Joined rows: 80. Slates: 10. Changed slates: 3. Baseline top one-MES P/L: 601.25. Simulated top one-MES P/L: 601.25. Top-selection delta: 0. Recommendation: keep_research_only. runtimeRankConsumerAllowedByThisReport remains false.
+Trading logic changed: No. This is a local/read-only saved-artifact rank simulation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The simulation uses rankScoreBucket as a proxy for scanner rank because the saved joined rows expose buckets, not raw scanner score. Even with that limitation, it did not improve top-selection P/L, so it is not a live proposal.
+Next recommended action: Do not install the no-chase split as a rank penalty. Keep it as research/review context and drill into unresolved/no-fill top slates for 2026-06-04, 2026-06-11, 2026-07-01, and 2026-07-07 to find why ranking cannot replace those tops.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Add Sweep morning LONG no-chase split validation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-nochase-split-validation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-nochase-split-validation.test.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-morning-long-preentry-field-miner.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the pre-entry miner found that htfLineInSandStatus/no-chase evidence separated weak and strong SweepMssFvgRetrace morning LONG rows, so the next safe step was to validate that split as a composite rather than a one-field coincidence.
@@ -15,7 +30,7 @@ Supabase impact: None.
 Known risks: This validates a composite split inside one reviewed research package. It still needs a rank simulation to prove that demoting blocked/no-chase rows improves top selection instead of merely describing lower-quality rows.
 Next recommended action: Run a research-only rank simulation that demotes SweepMssFvgRetrace morning LONG blocked/no-chase rows and prefers not-applicable/no-no-chase rows inside the same saved candidate slate. Do not install scanner-visible ranking unless that simulation improves selected outcomes without hiding valid review tickets.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-07-19
 Task: Add Sweep morning LONG pre-entry scanner-field miner.
