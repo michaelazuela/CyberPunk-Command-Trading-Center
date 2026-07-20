@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add model-family invalid geometry drilldown for Sweep broad replay.
+Files changed: tools/automation/unified-positive-held-local-preview-model-family-geometry-drilldown.ts, tools/automation/unified-positive-held-local-preview-model-family-geometry-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The broad Sweep replay was strongly positive but included 10 blocked rows with directionally invalid entry-to-stop geometry. The desk needed a local saved-report drilldown to isolate those rows before any Sweep ranking or boost decision.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-model-family-geometry-drilldown.test.ts; npm run diagnostic:held-local-preview-model-family-geometry-drilldown -- --model-family-broad-replay tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-broad-replay-1784575329461.json --intake-triage tools/automation/diagnostic-reports/unified-positive-held-local-preview-intake-triage-1784574093106.json --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real drilldown report tools/automation/diagnostic-reports/unified-positive-held-local-preview-model-family-geometry-drilldown-1784575918884.json passed with replayRowsRead=155, blockedRows=10, rowsWithIntakeMatch=10, rowsMissingIntakeMatch=0, longStopNotBelowEntryRows=7, shortStopNotAboveEntryRows=3, targetDirectionIssueRows=0, livePromotionAllowedRows=0. The invalid rows are all SweepMssFvgRetrace source-geometry quality rows: 4 long lunch, 3 long morning, 2 short lunch, and 1 short morning.
+Trading logic changed: No. This is local saved-report drilldown tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The drilldown explains why 10 Sweep rows were excluded from broad replay scoring, but it does not yet identify the upstream scanner/intake source that produced wrong-side stops. This is not model-removal evidence.
+Next recommended action: Trace the source geometry path for these 10 Sweep rows or run same-slate validation using only directionally valid Sweep rows before considering any Sweep rank proposal. Keep AfterLunch separate because its broad replay had zero geometry blocks.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add model-family broad replay for Sweep and AfterLunch validation.
 Files changed: tools/automation/unified-positive-held-local-preview-model-family-broad-replay.ts, tools/automation/unified-positive-held-local-preview-model-family-broad-replay.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The fresh July 20 Sweep validation package contained only OpeningDrive rows, so the desk needed a local read-only replay tool that can evaluate specific model families across the broader reviewed intake instead of relying on a small selected package.

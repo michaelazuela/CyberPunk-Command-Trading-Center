@@ -96,6 +96,7 @@
     "diagnostic:held-local-preview-broad-risk-cap-validation": "tsx tools/automation/unified-positive-held-local-preview-broad-risk-cap-validation.ts",
     "diagnostic:held-local-preview-broad-feature-search": "tsx tools/automation/unified-positive-held-local-preview-broad-feature-search.ts",
     "diagnostic:held-local-preview-model-family-broad-replay": "tsx tools/automation/unified-positive-held-local-preview-model-family-broad-replay.ts",
+    "diagnostic:held-local-preview-model-family-geometry-drilldown": "tsx tools/automation/unified-positive-held-local-preview-model-family-geometry-drilldown.ts",
     "diagnostic:held-local-preview-afterlunch-timing-field-miner": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.ts",
     "diagnostic:held-local-preview-afterlunch-timing-selection-simulation": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.ts",
     "diagnostic:held-local-preview-afterlunch-changed-slate-drilldown": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.ts",
