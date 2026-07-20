@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Mine Sweep lunch SHORT scanner-owned fields.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: lunch SHORT stable geometry buckets did not improve top selection, so the next narrow research step was to mine scanner-owned fields from saved artifacts before deciding whether there is a better no-lookahead separator.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner -- --full-day-rollup tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-full-day-model-session-direction-rollup-1784513767173.json --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-real-row-broader-daily-replay-package-1784503558665.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner-1784517279035.json. Status pass. Outcome rows: 343. Filtered lunch SHORT rows: 156. Joined scanner rows: 156. Feature stats: 61. Positive/negative candidates: 16/3. Best positive candidate: levelContextBucket=20_to_29, 20 rows, 20 winners, 0 problems, 0 unresolved, +981.25 gross one-MES P/L. Other strong positives: riskBucket=12.25-18, 30 rows, 29 winners, 1 problem, +3200; rankScoreBucket=200_to_249, 62 rows, 58 winners, 4 problems, +3965; hasTierBDisplacementEvidence=false, 54 rows, 49 winners, 5 problems, +4575. Best negative candidate: rankScoreBucket=gte_250, 17 rows, 7 winners, 10 problems, 6 unresolved, +193.75. Repeated caution bucket: riskBucket=18.25-25, 33 rows, 5 winners, 28 problems, 28 unresolved, +962.5. Session-chop caution: hasSessionChopEvidence=true, 15 rows, 4 winners, 11 problems, 11 unresolved, +226.25.
+Trading logic changed: No. This is a local/read-only saved-artifact scanner-field miner. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Scanner-owned buckets are descriptive until a slate selection simulation proves top-selection improvement.
+Next recommended action: Run a lunch SHORT scanner-field selection simulation using levelContextBucket=20_to_29 and rankScoreBucket=gte_250 before any scanner-visible proposal.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Validate Sweep lunch SHORT stable-field candidates with no-lookahead slate selection simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-selection-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-stable-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: the lunch SHORT stable-field miner found clean descriptive buckets, but bucket quality alone does not prove better top selection. The next safe step was a research-only slate simulation.
