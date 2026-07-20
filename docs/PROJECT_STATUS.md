@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-19
+Task: Validate Sweep lunch SHORT scanner-field candidates with no-lookahead slate selection simulation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-selection-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-selection-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: the lunch SHORT scanner-field miner found clean descriptive buckets, but scanner-owned field quality still needed a no-lookahead slate simulation before any live-facing proposal.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-selection-simulation.test.ts; npm run research:raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-selection-simulation -- --scanner-field-miner tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner-1784517279035.json --json.
+Result: Report generated tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-selection-simulation-1784517648371.json. Status pass. Joined rows: 156. Slates: 12. Changed slates: 3. Baseline/simulated top one-MES P/L: 933.75/853.75. Top-selection delta: -80. The 2026-07-01 changed slate replaced a t1_and_t2_hit +100 winner with a t1_and_t2_hit +20 winner. The 2026-07-08 and 2026-07-13 changed slates were equal-P/L replacements. Recommendation: keep_research_only.
+Trading logic changed: No. This is a local/read-only saved-artifact selection simulation. It does not install ranking behavior, run setupScanner, post Discord, write Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The best scanner-field buckets are descriptive but worsen top selection in this simulation. Do not install them as a rank consumer.
+Next recommended action: Stop pursuing broad Sweep lunch SHORT rank overlays from these buckets. The next narrow research target should be the unresolved 2026-06-25 no_target_or_stop_hit slate or a different model family with unresolved positives.
+
+## Previous Change
+
+Date: 2026-07-19
 Task: Mine Sweep lunch SHORT scanner-owned fields.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner.ts, tools/automation/raw-ohlc-scanner-artifact-sweep-lunch-short-full-day-scanner-field-miner.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: lunch SHORT stable geometry buckets did not improve top selection, so the next narrow research step was to mine scanner-owned fields from saved artifacts before deciding whether there is a better no-lookahead separator.
