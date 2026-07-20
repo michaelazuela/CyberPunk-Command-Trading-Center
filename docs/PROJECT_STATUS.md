@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive low-risk broad validation.
+Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-broad-validation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-broad-validation.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The low-risk comparison showed `low_risk_lt_4` is clean but too small in the fresh package. The desk needed a recursive saved-report validation pass to broaden the low-risk evidence against all available OpeningDrive same-bar diagnostics before any proposal path.
+Tests run: npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-broad-validation.test.ts; npx tsc --noEmit --pretty false; npm run research:raw-ohlc-scanner-artifact-openingdrive-low-risk-broad-validation -- --report-dir tools/automation/diagnostic-reports --out-dir tools/automation/diagnostic-reports/openingdrive-fresh-20260720 --json.
+Result: Focused test, TypeScript, and real recursive saved-report validation passed. Report generated tools/automation/diagnostic-reports/openingdrive-fresh-20260720/raw-ohlc-scanner-artifact-openingdrive-low-risk-broad-validation-1784558588456.json. Recursive saved sample: 20 same-bar reports, 510 source rows, 246 deduped OpeningDrive rows. Low-risk lane: 31 rows, 29 winners, 2 losses, 0 unresolved, +688.21 one-MES P/L, avg risk 2.47. Tight-long risk_4_to_8: 35 rows, 26 winners, 7 losses, 1 other-resolved, 1 unresolved, +1250.76. Fine-risk risk_24_to_32 remains clean: 22 rows, 20 winners, 0 losses, 2 other-resolved, +5728.80. Recommendation=broaden_more; low-risk is not clean as a broad standalone lane.
+Trading logic changed: No. This is saved-report-only validation tooling. It does not run setupScanner, post Discord, write Supabase, read live bridge data, change scanner runtime, change canExecute, install live ranking, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Recursive saved-report validation can include overlapping diagnostic generations; the tool dedupes by ticketId and keeps the newest source report, but any proposal still needs a separate collision/priority contract.
+Next recommended action: Run a low-risk loss drilldown on the 2 broad-validation low-risk losses before any proposal work. Do not promote low-risk broadly.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive low-risk comparison simulation.
 Files changed: tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-comparison-simulation.ts, tools/automation/raw-ohlc-scanner-artifact-openingdrive-low-risk-comparison-simulation.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The new `low_risk_lt_4` selector needed to be compared against the existing tight-long/fine-risk OpeningDrive lanes before any scanner-visible proposal. The comparison must prove whether low-risk is a replacement, an additive priority lane, or too small and needs broader research.
