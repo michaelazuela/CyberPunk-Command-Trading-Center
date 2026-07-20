@@ -8858,6 +8858,23 @@ Next recommended action: Observe the next live high-confidence conditional revie
 ## Previous Change
 
 Date: 2026-07-20
+Task: Add scanner-artifact coverage audit for Sweep primary exclusion.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-coverage.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-coverage.test.ts, docs/PROJECT_STATUS.md.
+Reason: The dry-run supported excluding blocked InvalidStopLocation Sweep rows from primary selection, but runtime behavior must not be installed until saved scanner artifacts independently expose enough proof to recognize the same condition.
+Real run: npm run diagnostic:held-local-preview-sweep-primary-exclusion-scanner-artifact-coverage -- --dry-run tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-dry-run-1784578184042.json --scanner-report-dir tools/automation/diagnostic-reports --json.
+Report: tools/automation/diagnostic-reports/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-coverage-1784578805010.json.
+Result: Audit failed as a safety gate, which is the correct outcome for runtime readiness. It found all 5 changed dry-run slates in 413 saved scanner artifacts with 430 matching scanner rows, but only 3 changed slates had entry/stop geometry, only 1 changed slate independently showed directionally invalid stop geometry, and 0 changed slates carried exact InvalidStopLocation/block-reason or executionStatus fields.
+Trading logic changed: No. This is a local read-only scanner-artifact coverage audit only.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Runtime primary-selection exclusion is not approved because scanner artifacts do not yet preserve exact blocked reason/executionStatus proof for these rows.
+Next recommended action: Add audit-only scanner-output metadata capture for executionStatus and blockReason/InvalidStopLocation, then rerun this coverage audit before considering any live-facing ranking change.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add Sweep primary exclusion dry-run for invalid-stop blocked rows.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-dry-run.ts, tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-dry-run.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove whether blocked SweepMssFvgRetrace rows with InvalidStopLocation can be excluded from primary desk-idea selection without removing them from audit visibility or changing executable trade math.

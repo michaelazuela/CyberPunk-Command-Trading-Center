@@ -102,6 +102,7 @@
     "diagnostic:held-local-preview-model-family-installed-penalty-audit": "tsx tools/automation/unified-positive-held-local-preview-model-family-installed-penalty-audit.ts",
     "diagnostic:held-local-preview-sweep-primary-exclusion-approval-contract": "tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-approval-contract.ts",
     "diagnostic:held-local-preview-sweep-primary-exclusion-dry-run": "tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-dry-run.ts",
+    "diagnostic:held-local-preview-sweep-primary-exclusion-scanner-artifact-coverage": "tsx tools/automation/unified-positive-held-local-preview-sweep-primary-exclusion-scanner-artifact-coverage.ts",
     "diagnostic:held-local-preview-afterlunch-timing-field-miner": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.ts",
     "diagnostic:held-local-preview-afterlunch-timing-selection-simulation": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.ts",
     "diagnostic:held-local-preview-afterlunch-changed-slate-drilldown": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.ts",
