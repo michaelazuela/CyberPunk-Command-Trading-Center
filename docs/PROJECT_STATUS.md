@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add no-chase Intraday blocker closure rollup.
+Files changed: tools/automation/no-chase-intraday-blocker-closure-rollup.ts, tools/automation/no-chase-intraday-blocker-closure-rollup.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The Intraday no-chase blocker research loop needed a final saved-report closure so future phases do not keep reprocessing the same retest-swing and invalid-stop families after they were researched.
+Tests run: npx tsx tools/automation/no-chase-intraday-blocker-closure-rollup.test.ts; npm run research:no-chase-intraday-blocker-closure-rollup -- --disposition-rollup tools/automation/diagnostic-reports/no-chase-intraday-blocker-disposition-rollup-1784571201512.json --residual-retest-swing-drilldown tools/automation/diagnostic-reports/no-chase-intraday-residual-retest-swing-drilldown-1784572696951.json --invalid-stop-location-drilldown tools/automation/diagnostic-reports/no-chase-intraday-invalid-stop-location-drilldown-1784573177701.json --json.
+Result: Closure rollup report tools/automation/diagnostic-reports/no-chase-intraday-blocker-closure-rollup-1784573626268.json passed. Summary: rowsChecked=15, humanReviewPositiveRows=1, rejectedWideRiskRows=2, keepPendingTriggerBlockedRows=6, keepMissingEntryBlockedRows=1, keepRetestSwingBlockedRows=3, keepInvalidStopBlockedRows=2, unresolvedRows=0, openResearchRows=0, canExecuteTrueRows=0, livePromotionAllowedRows=0, liveFixRecommended=false, nextRecommendedPhase=broader_candidate_intake.
+Trading logic changed: No. This is local saved-report closure tooling only. It does not run setupScanner, create tickets, wire scanner behavior, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, or change entry/stop/target/risk math.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None for runtime behavior. The current Intraday no-chase blocker loop is closed; the evidence does not support removing canExecute, reusing stale stops, or promoting missing-entry rows.
+Next recommended action: Start a fresh broader candidate intake package rather than reprocessing these same blockers. Use this closure as the guardrail: one researched human-review positive, fourteen rows intentionally blocked/rejected, no live fix from this set.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add no-chase Intraday invalid-stop-location drilldown.
 Files changed: tools/automation/no-chase-intraday-invalid-stop-location-drilldown.ts, tools/automation/no-chase-intraday-invalid-stop-location-drilldown.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: After residual retest-swing rows failed to justify a source-builder fix, the remaining Intraday no-chase blocker family was two invalid-stop-location rows that needed saved-OHLC proof before the desk moved on.
