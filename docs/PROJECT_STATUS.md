@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive/Sweep winner-vs-unresolved comparison.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-winner-unresolved-comparison.ts, tools/automation/unified-positive-held-local-preview-openingdrive-winner-unresolved-comparison.test.ts, docs/PROJECT_STATUS.md.
+Reason: After proving the June 17 10:05 path-order loss was real, the desk needed to compare the later June 17 winner plus mixed/caution winners against unresolved rows before any scanner-owned selector proposal.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-openingdrive-winner-unresolved-comparison.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-openingdrive-winner-unresolved-comparison -- --htf-story-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-htf-story-audit-1784594529711.json --json.
+Result: Focused test passed. Real comparison report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-winner-unresolved-comparison-1784595980794.json passed with sourceSlates=30, comparisonSlates=30, winners=18, losses=1, unresolved=11, mixedCautionWinnerSlates=12, mixedCautionWinnerOneMesPl=2383.77, unresolvedNoFillSlates=4, unresolvedNoTargetSlates=7, livePromotionAllowedRows=0. Mixed/caution HTF winners averaged 21.17 risk points, 4.04R MFE, 0.05R MAE, 0.62 ETH entry percentile, 2.17 HTF support counts, and 1.67 HTF caution counts. Unresolved no-fill rows averaged 13.31 risk points, all broke NY premarket low and swept premarket high, and all had supported HTF context, indicating timing/missed-price evidence rather than failed direction. Unresolved no-target rows averaged 25.02 risk points, 0.76R MFE, 0.26R MAE, and 0.45 ETH entry percentile, indicating filled-but-low-delivery cases rather than no-fill cases.
+Trading logic changed: No. This is a local-only research diagnostic and npm alias. It does not change setupScanner, ranking, canExecute, Discord, Supabase, bridge behavior, or entry/stop/target/risk math.
+Bridge impact: None. The diagnostic reads saved HTF story artifacts only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The comparison is descriptive and uses unresolved rows as non-win/non-loss evidence. It should not be used as a live selector without a separate timing/proof audit.
+Next recommended action: Run a no-fill versus later-valid-entry timing audit to identify whether first-proof no-fill rows should wait for a later pullback/re-entry proof before becoming scanner-owned selector candidates.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive/Sweep June 17 path-order drilldown.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-path-order-drilldown.ts, tools/automation/unified-positive-held-local-preview-openingdrive-path-order-drilldown.test.ts, docs/PROJECT_STATUS.md.
 Reason: The repaired HTF story audit flagged the 2026-06-17 10:05 OpeningDrive/Sweep short as a loss with large MFE, so the desk needed completed-5M path-order proof before trusting the selector results.
@@ -15,8 +31,6 @@ Journal/RAG impact: None.
 Supabase impact: None.
 Known risks: The drilldown is based on completed 5M bars only. It proves no 5M same-bar ambiguity; it does not reconstruct tick-level intrabar sequencing inside a 5M candle.
 Next recommended action: Keep the June 17 10:05 loss in the selector validation as a real loser, then compare the 10:40 later winner and the mixed/caution winners against unresolved rows before proposing any scanner-owned selector behavior.
-
-## Previous Change
 
 Date: 2026-07-20
 Task: Resolve OpeningDrive/Sweep HTF data-limited finding.
