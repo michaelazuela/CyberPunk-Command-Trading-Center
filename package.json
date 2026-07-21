@@ -124,6 +124,7 @@
     "diagnostic:held-local-preview-openingdrive-path-order-drilldown": "tsx tools/automation/unified-positive-held-local-preview-openingdrive-path-order-drilldown.ts",
     "diagnostic:held-local-preview-openingdrive-winner-unresolved-comparison": "tsx tools/automation/unified-positive-held-local-preview-openingdrive-winner-unresolved-comparison.ts",
     "diagnostic:held-local-preview-openingdrive-no-fill-timing-audit": "tsx tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-timing-audit.ts",
+    "diagnostic:held-local-preview-openingdrive-no-fill-source-semantics-drilldown": "tsx tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-source-semantics-drilldown.ts",
     "diagnostic:held-local-preview-afterlunch-timing-field-miner": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-field-miner.ts",
     "diagnostic:held-local-preview-afterlunch-timing-selection-simulation": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-timing-selection-simulation.ts",
     "diagnostic:held-local-preview-afterlunch-changed-slate-drilldown": "tsx tools/automation/unified-positive-held-local-preview-afterlunch-changed-slate-drilldown.ts",

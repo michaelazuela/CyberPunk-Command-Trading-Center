@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive/Sweep no-fill source-semantics drilldown.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-source-semantics-drilldown.ts, tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-source-semantics-drilldown.test.ts, docs/PROJECT_STATUS.md.
+Reason: The no-fill timing audit proved all four June 3 OpeningDrive/Sweep short no-fill rows touched the original entry on completed 5M OHLC. The desk needed to close whether this was proof-bar exclusion, stale/no-chase invalidation, or a real source-label conflict before any selector/ranking work.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-source-semantics-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-openingdrive-no-fill-source-semantics-drilldown -- --no-fill-timing-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-no-fill-timing-audit-1784596555315.json --json.
+Result: Focused test passed. Real drilldown report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-no-fill-source-semantics-drilldown-1784597585190.json passed with sourceRows=4, drilldownRows=4, proofBarEntryTouchRows=2, afterProofBarEntryTouchRows=4, sameProofBarEntryOnlyRows=0, sourceLabelConflictRows=4, stopBeforeInclusiveEntryRows=0, stopBeforeAfterProofBarEntryRows=0, livePromotionAllowedRows=0. All four June 3 no-fill rows are source-label conflicts: 09:55 first touched entry at 10:05, 10:20 touched on proof and again at 10:25, 10:25 touched on proof and again at 10:30, and 10:35 first touched at 10:40. None had stop touched before the later entry touch. This closes the no-fill timing branch: the evidence does not justify a later-entry selector; it points to outcome replay/no-fill label semantics.
+Trading logic changed: No. This is a local-only research diagnostic and npm alias. It does not change setupScanner, ranking, canExecute, Discord, Supabase, bridge behavior, or entry/stop/target/risk math.
+Bridge impact: None. The diagnostic reads saved canonical 5M OHLC only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The diagnostic uses completed 5M OHLC, not tick-level intrabar order flow. It proves the no-fill label conflicts with completed-bar entry-touch semantics; it does not say what fill model should be used for live orders.
+Next recommended action: Stop OpeningDrive selector work here and fix/reconcile the research outcome-label contract so `no_fill` cannot be assigned when completed 5M OHLC touches entry after proof unless a documented order-type/proof-bar/stale-invalidation reason is recorded.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive/Sweep no-fill timing audit.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-timing-audit.ts, tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-timing-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: The winner-vs-unresolved comparison showed four no-fill rows that looked like timing/missed-price cases. The desk needed to prove whether those first-proof no-fills should wait for later pullback/re-entry proof or whether the no-fill label itself was suspect.
@@ -15,8 +31,6 @@ Journal/RAG impact: None.
 Supabase impact: None.
 Known risks: The audit proves completed 5M bars touched the entry price; it does not know whether the original replay treated entry as a limit, stop, already-triggered stale line, or excluded the proof candle. That source semantics must be reconciled before using no-fill rows in selector proposals.
 Next recommended action: Build a no-fill source-semantics drilldown for the June 3 rows, comparing outcome replay fill rules, proof-candle inclusion, entry order type assumption, and stale/no-chase state before any scanner-owned selector proposal.
-
-## Previous Change
 
 Date: 2026-07-20
 Task: Add OpeningDrive/Sweep winner-vs-unresolved comparison.
