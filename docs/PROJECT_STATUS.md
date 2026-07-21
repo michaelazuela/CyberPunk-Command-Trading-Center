@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Resolve OpeningDrive/Sweep HTF data-limited finding.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: The prior HTF story pass reported 120m/240m as data-limited. This phase investigated whether that was a true rollover/coverage defect, a validation bug, or a source-selection issue.
+Tests run: Inspected tools/automation/diagnostic-reports/controlled-htf-ohlc-acquisition-MES-2026-06-01-to-2026-07-02-1784561833556.json; compared older repaired acquisition tools/automation/diagnostic-reports/controlled-htf-ohlc-acquisition-MES-2026-06-01-to-2026-07-02-1784223004552.json; ran npx tsx tools/automation/controlled-htf-ohlc-acquisition.ts --source market-bars-then-bridge --instrument MES --bridge-instrument "MES 09-26" --start-date 2026-06-01 --end-date 2026-07-02 --lookback-days 30 --rollover-aware --chunk-days 7 --json; reran npm run diagnostic:held-local-preview-openingdrive-htf-story-audit -- --openingdrive-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-slate-edge-audit-1784592672354.json --htf-acquisition-report tools/automation/diagnostic-reports/controlled-htf-ohlc-acquisition-MES-2026-06-01-to-2026-07-02-1784594514801.json --json.
+Result: Root cause found. The data-limited HTF story used a cache-only market_bars acquisition artifact. Cache alone had enough 15m/60m but not enough 120m/240m after wrong-timeframe quarantine. Re-running the same date range with market-bars-then-bridge produced a repaired canonical package with all HTF frames sufficient: 5m, 15m, 60m, 120m, and 240m. Corrected HTF story report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-htf-story-audit-1784594529711.json passed with dataLimitedSlates=0, targetMorningShortSweepSlates=30, targetOneMesPl=3080.05, W/L/U/B=18/1/11/0, supportedShortSlates=15, mixedShortSlates=8, cautionShortSlates=7. Full-HTF supported bucket: 15 slates, 6W/1L/8U, P/L=696.28. Full-HTF mixed bucket: 8 slates, 6W/0L/2U, P/L=783.14. Full-HTF caution bucket: 7 slates, 6W/0L/1U, P/L=1600.63. The biggest winners still came from the caution/mixed buckets, so HTF story remains context, not a hard selector.
+Trading logic changed: No. This was a research/data-source correction only. It does not run setupScanner, create live tickets, post Discord, write Supabase, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: Read-only historical NinjaTrader bridge repair was used to generate local canonical research artifacts. No bridge behavior changed and no data was written back.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: Read-only market_bars cache read only; no writes or schema changes.
+Known risks: Formal HTF story/replay work must use repaired canonical HTF packages when cache-only artifacts mark 120m/240m data-limited. Also, the 2026-06-17 10:05 loss still has a path-ordering warning because it reached 2.85R MFE while labeled stopped_before_t1.
+Next recommended action: Rerun the June 17 path-ordering drilldown against the repaired canonical package, then compare caution/mixed winners against unresolved rows before any selector proposal.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive/Sweep morning SHORT HTF story audit.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-htf-story-audit.ts, tools/automation/unified-positive-held-local-preview-openingdrive-htf-story-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: The desk needed a trade-by-trade story for the strongest OpeningDrive/Sweep morning short pocket instead of another raw P/L rollup. This phase reads the saved OpeningDrive slate audit and saved canonical HTF OHLC package, then explains each morning SHORT Sweep-overlap slate with 5M session ranges, 15M/60M/120M/240M context, HTF sufficiency, opening-drive direction, NY premarket low break, result, entry, stop, targets, and path-warning flags.
@@ -15,8 +31,6 @@ Journal/RAG impact: None.
 Supabase impact: None.
 Known risks: The 120M/240M data-limited state prevents full HTF structural confirmation. The 15M/60M tactical context is useful for story and proposal research, but not enough to promote live behavior. The single loss needs intrabar/path-ordering review because target-side MFE conflicts with the stopped-before-T1 label.
 Next recommended action: Run a path-ordering drilldown on the June 17 10:05 loss and the nearby June 17 10:40 winner before any selector proposal. If path ordering validates the loss as ambiguous or target-first, then compare the mixed 15M/60M context winners against unresolved rows.
-
-## Previous Change
 
 Date: 2026-07-20
 Task: Add OpeningDriveFvgContinuation slate-based model edge audit.
