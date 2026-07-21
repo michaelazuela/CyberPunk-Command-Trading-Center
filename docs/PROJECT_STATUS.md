@@ -2,6 +2,20 @@
 
 ## Latest Change
 
+Date: 2026-07-21
+Task: Add Desk Playbook Selector Phase 1 preview.
+Files changed: tools/automation/desk-playbook-selector-preview.ts, tools/automation/desk-playbook-selector-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved a small first phase to clean the messy model pile into one coherent research-only desk ticket per morning/lunch window before any Discord, Supabase, runtime scanner, or canExecute behavior changes. The preview consumes the existing proof-grade YTD day-by-day scanner report, keeps only drive/raid movement states with matching completed 5M deterministic proof, and emits one primary plan plus opposing/failure scenario language while suppressing competing model noise.
+Tests run: npx tsx tools/automation/desk-playbook-selector-preview.test.ts; npx tsx tools/automation/desk-playbook-selector-preview.ts --day-by-day-report tools/automation/diagnostic-reports/ytd-full-scanner-day-by-day-market-move-best-model-map-1784671041320.json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real preview report tools/automation/diagnostic-reports/desk-playbook-selector-preview-1784676569809.json passed with sourceWindows=344, previewTickets=181, noTradeWindows=163, shortTickets=84, longTickets=97, currentRunArtifacts=172, staleArtifacts=0. The preview emits one human-review-only desk ticket per qualifying window, with entry/stop/T1/T2, market story, continuation plan, failure plan, and explicit authority flags showing canExecute/Discord eligibility are unchanged.
+Trading logic changed: No. This is a local-only saved-diagnostic preview. It does not run setupScanner, change ranking, change canExecute, post Discord, write Supabase, read live bridge data, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None. Preview output is local only.
+Journal/RAG impact: None in Phase 1. Phase 2 should add read-only RAG/outcome weighting after approval.
+Supabase impact: None.
+Known risks: The preview currently consumes the selected candidate already present in the day-by-day research report. It proves the one-ticket desk-contract shape, not a live scanner selector adapter. No-fill/noisy outcomes are not yet penalized by RAG; that belongs in Phase 2.
+Next recommended action: Phase 2 should add read-only Supabase/RAG outcome weighting to the preview so trader feedback can penalize trashy alert patterns and favor useful ones without approving trades or changing runtime behavior.
+
 Date: 2026-07-20
 Task: Add symmetric OpeningDrive overnight-low dry-run research and scanner-owned overnight raid metadata.
 Files changed: package.json, src/types.ts, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-low-raid-dry-run-proposal.ts, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-low-raid-dry-run-proposal.test.ts, docs/PROJECT_STATUS.md.
