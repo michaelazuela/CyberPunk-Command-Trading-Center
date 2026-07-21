@@ -374,35 +374,42 @@ async function readSupabaseRagRows(args: {
   const client = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data, error } = await client
+  const { data: idRows, error: idError } = await client
     .from('trade_embeddings')
-    .select([
-      'id',
-      'session_type',
-      'trade_date',
-      'instrument',
-      'trade_result',
-      'outcome',
-      'pnl_dollars',
-      'pnl_ticks',
-      'entry_price',
-      'stop_price',
-      'target_1_price',
-      'target_2_price',
-      'risk_points',
-      'plan_source',
-      'embedding_text',
-      'notes',
-      'trade_plan_json',
-      'source',
-      'analysis_mode',
-    ].join(','))
+    .select('id')
     .eq('user_id', userId)
     .eq('instrument', args.instrument)
+    .in('trade_result', ['win', 'loss', 'scratch', 'no_trade', 'missed_trade'])
     .order('created_at', { ascending: false })
     .limit(args.limit);
-  if (error) return { rows: [], error: error.message };
-  return { rows: (data || []) as RawRagMemoryRow[], error: null };
+  if (idError) return { rows: [], error: idError.message };
+  const ids = (idRows || []).map((row) => row.id).filter(Boolean);
+  const rows: RawRagMemoryRow[] = [];
+  for (let index = 0; index < ids.length; index += 25) {
+    const batchIds = ids.slice(index, index + 25);
+    const { data, error } = await client
+      .from('trade_embeddings')
+      .select([
+        'id',
+        'session_type',
+        'trade_date',
+        'instrument',
+        'trade_result',
+        'outcome',
+        'pnl_dollars',
+        'pnl_ticks',
+        'plan_source',
+        'embedding_text',
+        'notes',
+        'trade_plan_json',
+        'source',
+        'analysis_mode',
+      ].join(','))
+      .in('id', batchIds);
+    if (error) return { rows, error: error.message };
+    rows.push(...((data || []) as RawRagMemoryRow[]));
+  }
+  return { rows, error: null };
 }
 
 function buildMarkdown(report: Omit<DeskPlaybookRagWeightingPreviewReport, 'markdown'>): string {
