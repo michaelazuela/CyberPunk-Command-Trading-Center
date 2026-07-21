@@ -1189,6 +1189,30 @@ export interface SetupCandidateProofSelectionSignal {
   scannerVisibleInstallAllowed: false;
 }
 
+export interface SetupCandidateOvernightRaidDryRunSignal {
+  metadataSource: 'scanner_owned_overnight_raid_displacement_context';
+  status: 'eligible_dry_run_review' | 'blocked' | 'not_applicable';
+  laneId:
+    | 'overnight_high_raid_bearish_displacement_openingdrive_short'
+    | 'overnight_low_raid_bullish_displacement_openingdrive_long';
+  overnightLevel: number | null;
+  raidTime: string | null;
+  displacementTime: string | null;
+  displacementScore: number | null;
+  blockers: string[];
+  changesCanExecute: false;
+  changesEntryStopTargets: false;
+  changesRiskRules: false;
+  changesRanking: false;
+  publishesDiscord: false;
+  writesSupabase: false;
+  usesOutcomeData: false;
+  usesResearchLabels: false;
+  usesGeminiAdvisoryText: false;
+  usesLiveBridgeReadsInsideRanker: false;
+  scannerVisibleInstallAllowed: false;
+}
+
 export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
@@ -1260,6 +1284,7 @@ export interface SetupCandidate {
   decisionQualityHardBlocker?: string | null;
   executionRefinement1m?: OneMinuteExecutionRefinement | null;
   proofSelectionSignal?: SetupCandidateProofSelectionSignal | null;
+  overnightRaidDryRunSignal?: SetupCandidateOvernightRaidDryRunSignal | null;
   rankingOverlays?: Array<{
     name: 'openingdrive_combined_clean_pocket_preference' | string;
     scoreAdjustment: number;

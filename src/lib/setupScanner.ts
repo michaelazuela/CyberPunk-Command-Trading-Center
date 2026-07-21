@@ -4887,6 +4887,124 @@ function attachCompletedFiveMinuteProofSelectionSignals(
   });
 }
 
+function candleTime(candle: NonNullable<ChartContext['candles']>[number]): string | null {
+  return candle.timestamp || null;
+}
+
+function overnightDryRunCandleRange(candle: NonNullable<ChartContext['candles']>[number]): number {
+  const high = parsePrice(candle.high);
+  const low = parsePrice(candle.low);
+  return high !== null && low !== null ? Math.max(0, high - low) : 0;
+}
+
+function candleDisplacementScore(
+  candle: NonNullable<ChartContext['candles']>[number],
+  averageRange: number,
+  direction: Exclude<Direction, 'NO TRADE'>,
+): number {
+  const open = parsePrice(candle.open);
+  const high = parsePrice(candle.high);
+  const low = parsePrice(candle.low);
+  const close = parsePrice(candle.close);
+  if (open === null || high === null || low === null || close === null || averageRange <= 0) return 0;
+  const range = Math.max(0, high - low);
+  if (range <= 0) return 0;
+  const body = Math.abs(close - open);
+  const bodyToRange = body / range;
+  const rangeMultiple = range / averageRange;
+  const closeLocation = direction === 'SHORT'
+    ? (close - low) / range
+    : (high - close) / range;
+  const directionOk = direction === 'SHORT' ? close < open : close > open;
+  if (!directionOk || bodyToRange < 0.55 || closeLocation > 0.35 || rangeMultiple < 1.15) return 0;
+  return Math.round(((bodyToRange * 2) + rangeMultiple + (1 - closeLocation)) * 100) / 100;
+}
+
+function strongestCandidateDisplacement(
+  candles: NonNullable<ChartContext['candles']>,
+  direction: Exclude<Direction, 'NO TRADE'>,
+): { time: string | null; score: number | null } {
+  const ranges = candles.map(overnightDryRunCandleRange).filter((range) => range > 0);
+  const averageRange = ranges.length ? ranges.reduce((total, range) => total + range, 0) / ranges.length : 0;
+  let best = { time: null as string | null, score: null as number | null };
+  for (const candle of candles) {
+    const score = candleDisplacementScore(candle, averageRange, direction);
+    if (score > (best.score || 0)) best = { time: candleTime(candle), score };
+  }
+  return best;
+}
+
+function firstOvernightRaidTime(
+  candles: NonNullable<ChartContext['candles']>,
+  direction: Exclude<Direction, 'NO TRADE'>,
+  overnightLevel: number | null,
+): string | null {
+  if (overnightLevel === null) return null;
+  for (const candle of candles) {
+    const high = parsePrice(candle.high);
+    const low = parsePrice(candle.low);
+    if (direction === 'SHORT' && high !== null && high > overnightLevel) return candleTime(candle);
+    if (direction === 'LONG' && low !== null && low < overnightLevel) return candleTime(candle);
+  }
+  return null;
+}
+
+function buildOvernightRaidDryRunSignal(
+  candidate: SetupCandidate,
+  chartContext?: ChartContext | null,
+): SetupCandidate['overnightRaidDryRunSignal'] {
+  if (candidate.setupType !== SetupType.OpeningDriveFvgContinuation || (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT')) {
+    return null;
+  }
+  const candles = chartContext?.candles || [];
+  const overnightLevel = candidate.direction === 'SHORT'
+    ? parsePrice(chartContext?.keyLevels.overnightHigh)
+    : parsePrice(chartContext?.keyLevels.overnightLow);
+  const raidTime = firstOvernightRaidTime(candles, candidate.direction, overnightLevel);
+  const displacement = strongestCandidateDisplacement(candles, candidate.direction);
+  const laneId = candidate.direction === 'SHORT'
+    ? 'overnight_high_raid_bearish_displacement_openingdrive_short'
+    : 'overnight_low_raid_bullish_displacement_openingdrive_long';
+  const blockers = [
+    !chartContext ? 'missing chart context' : null,
+    !candles.length ? 'missing completed 5M candles' : null,
+    overnightLevel === null ? (candidate.direction === 'SHORT' ? 'missing overnight high level' : 'missing overnight low level') : null,
+    !raidTime ? (candidate.direction === 'SHORT' ? 'missing overnight high raid' : 'missing overnight low raid') : null,
+    !displacement.time ? (candidate.direction === 'SHORT' ? 'missing bearish displacement before proof' : 'missing bullish displacement before proof') : null,
+  ].filter((item): item is string => Boolean(item));
+  return {
+    metadataSource: 'scanner_owned_overnight_raid_displacement_context',
+    status: blockers.length ? 'blocked' : 'eligible_dry_run_review',
+    laneId,
+    overnightLevel,
+    raidTime,
+    displacementTime: displacement.time,
+    displacementScore: displacement.score,
+    blockers,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesRiskRules: false,
+    changesRanking: false,
+    publishesDiscord: false,
+    writesSupabase: false,
+    usesOutcomeData: false,
+    usesResearchLabels: false,
+    usesGeminiAdvisoryText: false,
+    usesLiveBridgeReadsInsideRanker: false,
+    scannerVisibleInstallAllowed: false,
+  };
+}
+
+function attachOvernightRaidDryRunSignals(
+  candidates: SetupCandidate[],
+  chartContext?: ChartContext | null,
+): SetupCandidate[] {
+  return candidates.map((candidate) => {
+    const signal = buildOvernightRaidDryRunSignal(candidate, chartContext);
+    return signal ? { ...candidate, overnightRaidDryRunSignal: signal } : candidate;
+  });
+}
+
 export function rankSetupCandidate(candidate: SetupCandidate): number {
   const executionScore =
     candidate.executionStatus === ExecutionStatus.Executable ? 100 :
@@ -5885,7 +6003,10 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
       .map((candidate) => attachActiveCampaign(candidate, input.chartContext))
       .map((candidate) => applyCandidateGeometryValidation(candidate)),
   ];
-  const candidates = attachCompletedFiveMinuteProofSelectionSignals(scannerCandidates, input.sessionType, input.chartContext)
+  const candidates = attachOvernightRaidDryRunSignals(
+    attachCompletedFiveMinuteProofSelectionSignals(scannerCandidates, input.sessionType, input.chartContext),
+    input.chartContext
+  )
     .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a));
 
   const bestExecutableCandidate = candidates.find((candidate) => candidate.executionStatus === ExecutionStatus.Executable) || null;

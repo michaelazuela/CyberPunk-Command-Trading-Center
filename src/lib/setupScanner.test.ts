@@ -4424,6 +4424,193 @@ const tests: Array<[string, () => void]> = [
     assert.deepEqual(order, rerankedWithoutSignals);
   }],
 
+  ['Opening Drive overnight raid dry-run metadata marks short high-raid displacement without changing gates', () => {
+    const context = htfDisplacementContinuationContext('SHORT', {
+      chartTimestamp: '2026-06-05T10:20:00-04:00',
+      keyLevels: {
+        ...htfDisplacementContinuationContext('SHORT').keyLevels,
+        overnightHigh: 7597,
+        overnightLow: 7568,
+      },
+      candles: [
+        {
+          index: 0,
+          timestamp: '2026-06-05T09:35:00-04:00',
+          open: 7592,
+          high: 7598.25,
+          low: 7591.5,
+          close: 7597.25,
+          direction: 'bullish',
+          bodyQuality: 'normal',
+          confidence: 'High',
+        },
+        {
+          index: 1,
+          timestamp: '2026-06-05T10:05:00-04:00',
+          open: 7596,
+          high: 7597,
+          low: 7584,
+          close: 7585,
+          direction: 'bearish',
+          bodyQuality: 'large',
+          isExpansion: true,
+          confidence: 'High',
+        },
+        {
+          index: 2,
+          timestamp: '2026-06-05T10:20:00-04:00',
+          open: 7586,
+          high: 7588,
+          low: 7582,
+          close: 7584,
+          direction: 'bearish',
+          bodyQuality: 'normal',
+          confidence: 'High',
+        },
+      ],
+      fvgZones: [{
+        direction: 'SHORT',
+        upper: 7589,
+        lower: 7584,
+        midpoint: 7586.5,
+        formedAt: '2026-06-05T10:05:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 50,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.overnightRaidDryRunSignal?.metadataSource, 'scanner_owned_overnight_raid_displacement_context');
+    assert.equal(candidate.overnightRaidDryRunSignal?.status, 'eligible_dry_run_review');
+    assert.equal(candidate.overnightRaidDryRunSignal?.laneId, 'overnight_high_raid_bearish_displacement_openingdrive_short');
+    assert.equal(candidate.overnightRaidDryRunSignal?.overnightLevel, 7597);
+    assert.equal(candidate.overnightRaidDryRunSignal?.raidTime, '2026-06-05T09:35:00-04:00');
+    assert.equal(candidate.overnightRaidDryRunSignal?.displacementTime, '2026-06-05T10:05:00-04:00');
+    assert.equal(candidate.overnightRaidDryRunSignal?.changesCanExecute, false);
+    assert.equal(candidate.overnightRaidDryRunSignal?.changesEntryStopTargets, false);
+    assert.equal(candidate.overnightRaidDryRunSignal?.changesRiskRules, false);
+    assert.equal(candidate.overnightRaidDryRunSignal?.changesRanking, false);
+    assert.equal(candidate.overnightRaidDryRunSignal?.publishesDiscord, false);
+    assert.equal(candidate.overnightRaidDryRunSignal?.writesSupabase, false);
+    assert.equal(candidate.overnightRaidDryRunSignal?.scannerVisibleInstallAllowed, false);
+  }],
+
+  ['Opening Drive overnight raid dry-run metadata supports symmetric long low-raid displacement', () => {
+    const context = htfDisplacementContinuationContext('LONG', {
+      chartTimestamp: '2026-06-05T10:20:00-04:00',
+      keyLevels: {
+        ...htfDisplacementContinuationContext('LONG').keyLevels,
+        overnightHigh: 7626,
+        overnightLow: 7598,
+      },
+      candles: [
+        {
+          index: 0,
+          timestamp: '2026-06-05T09:35:00-04:00',
+          open: 7603,
+          high: 7604,
+          low: 7596.75,
+          close: 7598.75,
+          direction: 'bearish',
+          bodyQuality: 'normal',
+          confidence: 'High',
+        },
+        {
+          index: 1,
+          timestamp: '2026-06-05T10:05:00-04:00',
+          open: 7599,
+          high: 7612,
+          low: 7598,
+          close: 7611,
+          direction: 'bullish',
+          bodyQuality: 'large',
+          isExpansion: true,
+          confidence: 'High',
+        },
+        {
+          index: 2,
+          timestamp: '2026-06-05T10:20:00-04:00',
+          open: 7609,
+          high: 7613,
+          low: 7608,
+          close: 7611,
+          direction: 'bullish',
+          bodyQuality: 'normal',
+          confidence: 'High',
+        },
+      ],
+      fvgZones: [{
+        direction: 'LONG',
+        upper: 7610,
+        lower: 7604,
+        midpoint: 7607,
+        formedAt: '2026-06-05T10:05:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 45,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.overnightRaidDryRunSignal?.status, 'eligible_dry_run_review');
+    assert.equal(candidate.overnightRaidDryRunSignal?.laneId, 'overnight_low_raid_bullish_displacement_openingdrive_long');
+    assert.equal(candidate.overnightRaidDryRunSignal?.overnightLevel, 7598);
+    assert.equal(candidate.overnightRaidDryRunSignal?.raidTime, '2026-06-05T09:35:00-04:00');
+    assert.equal(candidate.overnightRaidDryRunSignal?.displacementTime, '2026-06-05T10:05:00-04:00');
+    assert.equal(candidate.overnightRaidDryRunSignal?.usesOutcomeData, false);
+    assert.equal(candidate.overnightRaidDryRunSignal?.usesResearchLabels, false);
+    assert.equal(candidate.overnightRaidDryRunSignal?.usesGeminiAdvisoryText, false);
+    assert.equal(candidate.overnightRaidDryRunSignal?.usesLiveBridgeReadsInsideRanker, false);
+  }],
+
+  ['Opening Drive overnight raid dry-run metadata is rank neutral', () => {
+    const context = htfDisplacementContinuationContext('SHORT', {
+      chartTimestamp: '2026-06-05T10:20:00-04:00',
+      keyLevels: {
+        ...htfDisplacementContinuationContext('SHORT').keyLevels,
+        overnightHigh: 7597,
+      },
+      candles: [
+        {
+          index: 0,
+          timestamp: '2026-06-05T09:35:00-04:00',
+          open: 7592,
+          high: 7598.25,
+          low: 7591.5,
+          close: 7597.25,
+          direction: 'bullish',
+          confidence: 'High',
+        },
+        {
+          index: 1,
+          timestamp: '2026-06-05T10:05:00-04:00',
+          open: 7596,
+          high: 7597,
+          low: 7584,
+          close: 7585,
+          direction: 'bearish',
+          confidence: 'High',
+        },
+      ],
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const order = result.candidates.map((candidate) => `${candidate.setupType}:${candidate.direction}:${candidate.executionStatus}:${candidate.blockReason ?? 'none'}`);
+    const rerankedWithoutSignals = result.candidates
+      .map((candidate) => ({ ...candidate, overnightRaidDryRunSignal: null }))
+      .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a))
+      .map((candidate) => `${candidate.setupType}:${candidate.direction}:${candidate.executionStatus}:${candidate.blockReason ?? 'none'}`);
+
+    assert.deepEqual(order, rerankedWithoutSignals);
+  }],
+
   ['Opening Drive FVG continuation arms during observation but does not become human-review ready before 10:00 ET', () => {
     const context = htfDisplacementContinuationContext('SHORT', {
       chartTimestamp: '2026-06-05T09:50:00-04:00',

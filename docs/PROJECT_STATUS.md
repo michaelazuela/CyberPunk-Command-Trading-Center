@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add symmetric OpeningDrive overnight-low dry-run research and scanner-owned overnight raid metadata.
+Files changed: package.json, src/types.ts, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-low-raid-dry-run-proposal.ts, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-low-raid-dry-run-proposal.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved doing both next steps: mirror the overnight-high bearish dry-run story for overnight-low bullish displacement, and install a scanner-owned dry-run metadata lane only. The install had to preserve no live publish, no canExecute change, no ranking change, no entry/stop/target/risk change, and 5M execution authority.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-openingdrive-overnight-low-raid-dry-run-proposal.test.ts; npx tsx tools/automation/unified-positive-held-local-preview-openingdrive-overnight-high-raid-dry-run-proposal.test.ts; npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-openingdrive-overnight-low-raid-dry-run-proposal -- --overnight-audit-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-overnight-raid-displacement-audit-1784599682270.json --json.
+Result: Focused tests passed. Scanner now attaches optional `overnightRaidDryRunSignal` metadata to OpeningDrive candidates when scanner-owned completed 5M candle facts show either overnight-high raid plus bearish displacement for shorts or overnight-low raid plus bullish displacement for longs. The metadata is explicitly rank-neutral and disabled for scanner-visible install/live publish. Real bullish dry-run report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-overnight-low-raid-dry-run-proposal-1784601791211.json passed with sourceRows=30, eligibleRows=0, blockedRows=30, winners=0, losses=0, unresolved=0, noFills=0, oneMesPl=null, winRateResolved=null, livePromotionAllowedRows=0, recommendation=insufficient_bullish_source_rows. All 30 source rows were blocked as not long direction, confirming the current research package does not prove a bullish overnight-low OpeningDrive edge.
+Trading logic changed: No. This adds dry-run metadata and a local-only research diagnostic. It does not change setup eligibility, ranking score, canExecute, Discord, Supabase, bridge behavior, or entry/stop/target/risk math.
+Bridge impact: None. The diagnostic reads saved research artifacts only. Scanner metadata uses already-provided chart context; it does not read the live bridge.
+Discord impact: None. Metadata includes `publishesDiscord=false` and `scannerVisibleInstallAllowed=false`.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The scanner metadata depends on the chart context containing enough completed 5M candle facts plus overnight high/low levels. Missing facts become blockers, not approvals. The bullish lane is structurally supported in code but not supported by the current short-only research package.
+Next recommended action: Keep live behavior unchanged. The evidence-supported lane remains the bearish overnight-high raid plus bearish displacement pocket. If continuing, run a true long-side OpeningDrive source package before discussing any bullish lane beyond metadata.
+
+Date: 2026-07-20
 Task: Add OpeningDrive overnight-high raid dry-run proposal.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-high-raid-dry-run-proposal.ts, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-high-raid-dry-run-proposal.test.ts, docs/PROJECT_STATUS.md.
 Reason: The overnight raid/displacement audit found the cleanest pocket was RTH raiding overnight high followed by bearish displacement before proof. The desk needed a dry-run candidate-lane proposal that selects from pre-proof/context facts only, reports outcomes separately, and does not implement live behavior.
