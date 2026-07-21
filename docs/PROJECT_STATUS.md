@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDriveFvgContinuation slate-based model edge audit.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-slate-edge-audit.ts, tools/automation/unified-positive-held-local-preview-openingdrive-slate-edge-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: The desk needed a model-level OpeningDrive story after Sweep showed its strongest morning short pocket often overlapped OpeningDrive. This phase audits all saved OpeningDriveFvgContinuation rows from the session-bounded report, collapses repeated 5M rows into realistic slates, and compares standalone, collision, Sweep-overlap, session/direction, risk-band, daily, winner, and loser views.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-openingdrive-slate-edge-audit.test.ts; npm run diagnostic:held-local-preview-openingdrive-slate-edge-audit -- --session-bounded-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-session-bounded-profit-validation-1784586800588.json --json.
+Result: Focused test passed. Real audit tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-slate-edge-audit-1784592602995.json passed with sourceRows=2154, openingDriveRawRows=158, openingDriveSlateRows=79, duplicateRowsSuppressed=79, rawOpeningDriveOneMesPl=8137.83, slateOpeningDriveOneMesPl=5332.07, slateOpeningDriveWinRateResolved=0.77, livePromotionAllowedRows=0, recommendation=advance_best_overlap_story_to_htf_daily_review. All OpeningDrive slate-based result was 41W/12L/23U/3B across 17 dates. Morning SHORT was the cleanest lane at 35 slates, 22W/1L/12U, P/L=3426.94, winRate=0.96, averageRisk=18.5, averageMFE=3.84R, averageMAE=0.48R, with 30/35 Sweep overlaps. Morning LONG was still positive at 44 slates, 19W/11L/11U/3B, P/L=1905.13, but carried most losses. Best Sweep-overlap group was OpeningDriveFvgContinuation morning SHORT risk_gte_32 with 5 slates, 3W/0L/2U, P/L=1110.63, winRate=1.00, avgRisk=42.05, avgMFE=1.79R, avgMAE=0.26R. Best standalone group was OpeningDriveFvgContinuation morning LONG risk_24_to_32 with 2 slates, 2W/0L, P/L=527.5, but it is too small to promote.
+Trading logic changed: No. This is local saved-report analysis only. It does not run setupScanner, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This audit uses saved session-bounded rows and only flags same-window model/HTF collisions. It does not yet rebuild the full daily 15M/60M/120M/240M market story, so the correct conclusion is model-edge research by slate, not runtime promotion.
+Next recommended action: Build an HTF daily story pass for the strongest OpeningDrive/Sweep overlap days, starting with morning SHORT winners and the June 17 loser, before any local-preview selector proposal.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add SweepMssFvgRetrace slate-based model edge audit.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-sweep-slate-edge-audit.ts, tools/automation/unified-positive-held-local-preview-sweep-slate-edge-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: The desk needed to stop treating one selected Sweep pocket as a full model answer. This phase audits all available saved SweepMssFvgRetrace rows from the session-bounded report, collapses repeated 5M rows into realistic slates, and breaks results down by session, direction, risk band, standalone versus collision, and OpeningDrive overlap.
@@ -15,8 +31,6 @@ Journal/RAG impact: None.
 Supabase impact: None.
 Known risks: This audit uses saved session-bounded rows, not a fresh raw-OHLC replay from every possible historical day. The correct conclusion is research edge by slate, not live eligibility.
 Next recommended action: Run the same slate-based model edge audit for OpeningDriveFvgContinuation, then compare OpeningDrive standalone versus Sweep overlap before building any local-preview proposal.
-
-## Previous Change
 
 Date: 2026-07-20
 Task: Add scanner-owned selector dry-run contract.
