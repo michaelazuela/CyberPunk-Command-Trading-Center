@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-21
+Task: Add Desk Playbook Selector Phase 2 RAG weighting preview.
+Files changed: tools/automation/desk-playbook-selector-rag-weighting-preview.ts, tools/automation/desk-playbook-selector-rag-weighting-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the second small phase after the Phase 1 one-ticket selector preview. This phase adds a research-only advisory overlay that can weight each Phase 1 human-review ticket against prior RAG/outcome memory by session, model, and direction without approving trades or changing live behavior.
+Tests run: npx tsx tools/automation/desk-playbook-selector-rag-weighting-preview.test.ts; npx tsx tools/automation/desk-playbook-selector-rag-weighting-preview.ts --preview-report tools/automation/diagnostic-reports/desk-playbook-selector-preview-1784676569809.json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Focused test passed. Real preview report tools/automation/diagnostic-reports/desk-playbook-selector-rag-weighting-preview-1784677461229.json passed with sourcePreviewTickets=181, weightedTickets=181, boosted=0, penalized=0, neutral=0, insufficientMemory=0, noMatchingMemory=181, ragMemoryRowsRead=0. Local environment did not expose SUPABASE_URL/VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or DISCORD_RAG_USER_ID, so the controlled Supabase read was not attempted and no database data was pulled. This is the correct safe baseline until credentials are available.
+Trading logic changed: No. This is a local diagnostic preview only. It does not run setupScanner, change ranking, change canExecute, post Discord, write Supabase, read NinjaTrader bridge data, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: Read-only/advisory only when explicitly run with local RAG JSON or `--read-supabase`; no writes and no schema changes.
+Supabase impact: Optional read-only `trade_embeddings` select when `--read-supabase` is passed and local service-role environment is present. No insert/update/delete/migration/RLS changes.
+Known risks: RAG memory quality depends on saved outcome labels and trader feedback completeness; the overlay must remain advisory until separately approved for any live-facing behavior. The current local run has no RAG memory rows, so it proves the contract and fallback behavior, not actual learned weighting.
+Next recommended action: Phase 3 should run the same tool with real read-only Supabase/RAG access or an exported RAG outcome JSON, then review which Phase 1 tickets become boosted, cautioned, neutral, or still memory-limited.
+
+Date: 2026-07-21
 Task: Add Desk Playbook Selector Phase 1 preview.
 Files changed: tools/automation/desk-playbook-selector-preview.ts, tools/automation/desk-playbook-selector-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved a small first phase to clean the messy model pile into one coherent research-only desk ticket per morning/lunch window before any Discord, Supabase, runtime scanner, or canExecute behavior changes. The preview consumes the existing proof-grade YTD day-by-day scanner report, keeps only drive/raid movement states with matching completed 5M deterministic proof, and emits one primary plan plus opposing/failure scenario language while suppressing competing model noise.
