@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive overnight-high raid dry-run proposal.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-high-raid-dry-run-proposal.ts, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-high-raid-dry-run-proposal.test.ts, docs/PROJECT_STATUS.md.
+Reason: The overnight raid/displacement audit found the cleanest pocket was RTH raiding overnight high followed by bearish displacement before proof. The desk needed a dry-run candidate-lane proposal that selects from pre-proof/context facts only, reports outcomes separately, and does not implement live behavior.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-openingdrive-overnight-high-raid-dry-run-proposal.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-openingdrive-overnight-high-raid-dry-run-proposal -- --overnight-audit-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-overnight-raid-displacement-audit-1784599682270.json --json.
+Result: Focused test passed. Real dry-run proposal report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-overnight-high-raid-dry-run-proposal-1784600456387.json passed with sourceRows=30, eligibleRows=18, blockedRows=12, winners=2, losses=0, unresolved=16, noFills=14, oneMesPl=100.63, winRateResolved=1.00, livePromotionAllowedRows=0. The lane selects rows where RTH raided overnight high, bearish displacement printed before proof, and the existing OpeningDrive/Sweep short retained deterministic 5M entry/stop/T1/T2 geometry. Selection does not use future fill/outcome data. The blocked rows, mainly missing overnight-high raid, were weaker at 1W/2L/9U and -11.87. Resolved eligible winners were June 16 10:20 +67.50 and June 18 10:15 +33.13.
+Trading logic changed: No. This is a local-only research diagnostic and npm alias. It does not change setupScanner, ranking, canExecute, Discord, Supabase, bridge behavior, or entry/stop/target/risk math.
+Bridge impact: None. The diagnostic reads saved research artifacts only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The lane is cleaner than the broad OpeningDrive/Sweep bucket, but it is still sample-thin because only two eligible rows resolved same-window and sixteen remain unresolved/no-fill. It is not enough for live implementation without user approval and a separate scanner-owned dry-run install.
+Next recommended action: User decision required. If continued, implement only as scanner-owned dry-run metadata/review lane first: no Discord publish, no canExecute change, no execution approval change, and all normal 5M trigger/stop/risk gates preserved.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive/Sweep overnight raid and displacement audit.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-raid-displacement-audit.ts, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-raid-displacement-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: After correcting the OpeningDrive/Sweep outcome labels, the desk needed a deeper market-structure read against overnight high/low raids and pre-proof displacement to see whether a better daily play exists than the broad OpeningDrive/Sweep bucket.
@@ -15,8 +31,6 @@ Journal/RAG impact: None.
 Supabase impact: None.
 Known risks: The best pocket has only two resolved same-window winners and many unresolved/no-fill rows, so it is promising but not enough for live implementation. The displacement detector is research-only and uses completed 5M body/range/close-location quality, not tick-level sequencing or a production scanner contract.
 Next recommended action: Discuss with the user before implementation. If approved later, the next phase should be a dry-run proposal for an OpeningDrive short candidate only when RTH raids overnight high and prints bearish displacement before proof, with HTF as context only and all normal 5M trigger/stop/risk/canExecute gates preserved.
-
-## Previous Change
 
 Date: 2026-07-20
 Task: Add OpeningDrive/Sweep corrected outcome closeout.
