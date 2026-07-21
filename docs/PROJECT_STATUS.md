@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive/Sweep morning SHORT HTF story audit.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-htf-story-audit.ts, tools/automation/unified-positive-held-local-preview-openingdrive-htf-story-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: The desk needed a trade-by-trade story for the strongest OpeningDrive/Sweep morning short pocket instead of another raw P/L rollup. This phase reads the saved OpeningDrive slate audit and saved canonical HTF OHLC package, then explains each morning SHORT Sweep-overlap slate with 5M session ranges, 15M/60M/120M/240M context, HTF sufficiency, opening-drive direction, NY premarket low break, result, entry, stop, targets, and path-warning flags.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-openingdrive-htf-story-audit.test.ts; npm run diagnostic:held-local-preview-openingdrive-htf-story-audit -- --openingdrive-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-slate-edge-audit-1784592672354.json --htf-acquisition-report tools/automation/diagnostic-reports/controlled-htf-ohlc-acquisition-MES-2026-06-01-to-2026-07-02-1784561833556.json --json.
+Result: Focused test passed. Real audit tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-htf-story-audit-1784593461580.json passed with openingDriveSlates=79, targetMorningShortSweepSlates=30, targetResolvedSlates=19, targetOneMesPl=3080.05, W/L/U/B=18/1/11/0, livePromotionAllowedRows=0. Full HTF stack remains data_limited for all 30 target slates because the saved acquisition report marks 120m and 240m insufficient, while 15m and 60m are sufficient. The 15M/60M tactical story split was supported=15 slates, mixed=15, caution=0. Supported context produced 6W/1L/8U, P/L=851.90. Mixed context produced 12W/0L/3U, P/L=2228.15. The only loss was 2026-06-17 10:05 ET SHORT entry=7590.125 stop=7600.5 T1=7574.5 T2=7569.5, labeled stopped_before_t1 but with MFE=2.85R, so the report flags it as a path-ordering warning before treating it as a clean model failure.
+Trading logic changed: No. This is local saved-report analysis only. It does not run setupScanner, create live tickets, post Discord, write Supabase, read live Supabase, read live bridge data, change canExecute, install filters or boosts, remove models, or change entry/stop/target/risk math.
+Bridge impact: None. The audit reads only the saved canonical HTF OHLC JSON generated earlier.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The 120M/240M data-limited state prevents full HTF structural confirmation. The 15M/60M tactical context is useful for story and proposal research, but not enough to promote live behavior. The single loss needs intrabar/path-ordering review because target-side MFE conflicts with the stopped-before-T1 label.
+Next recommended action: Run a path-ordering drilldown on the June 17 10:05 loss and the nearby June 17 10:40 winner before any selector proposal. If path ordering validates the loss as ambiguous or target-first, then compare the mixed 15M/60M context winners against unresolved rows.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDriveFvgContinuation slate-based model edge audit.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-slate-edge-audit.ts, tools/automation/unified-positive-held-local-preview-openingdrive-slate-edge-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: The desk needed a model-level OpeningDrive story after Sweep showed its strongest morning short pocket often overlapped OpeningDrive. This phase audits all saved OpeningDriveFvgContinuation rows from the session-bounded report, collapses repeated 5M rows into realistic slates, and compares standalone, collision, Sweep-overlap, session/direction, risk-band, daily, winner, and loser views.
@@ -15,8 +31,6 @@ Journal/RAG impact: None.
 Supabase impact: None.
 Known risks: This audit uses saved session-bounded rows and only flags same-window model/HTF collisions. It does not yet rebuild the full daily 15M/60M/120M/240M market story, so the correct conclusion is model-edge research by slate, not runtime promotion.
 Next recommended action: Build an HTF daily story pass for the strongest OpeningDrive/Sweep overlap days, starting with morning SHORT winners and the June 17 loser, before any local-preview selector proposal.
-
-## Previous Change
 
 Date: 2026-07-20
 Task: Add SweepMssFvgRetrace slate-based model edge audit.
