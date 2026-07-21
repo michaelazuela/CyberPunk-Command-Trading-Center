@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive/Sweep overnight raid and displacement audit.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-raid-displacement-audit.ts, tools/automation/unified-positive-held-local-preview-openingdrive-overnight-raid-displacement-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: After correcting the OpeningDrive/Sweep outcome labels, the desk needed a deeper market-structure read against overnight high/low raids and pre-proof displacement to see whether a better daily play exists than the broad OpeningDrive/Sweep bucket.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-openingdrive-overnight-raid-displacement-audit.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-openingdrive-overnight-raid-displacement-audit -- --corrected-closeout-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-corrected-outcome-closeout-1784598366690.json --json.
+Result: Focused test passed. Real audit report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-overnight-raid-displacement-audit-1784599682270.json passed with sourceRows=30, auditRows=30, rowsWithOvernightContext=30, buySideRaidBearishDisplacementRows=15, sellSideRaidBearishContinuationRows=11, twoSidedRaidBearishResolutionRows=3, bearishDisplacementWithoutRaidRows=1, correctedOneMesPl=88.76, bestGroupKey=play_buy_side_raid_bearish_displacement_short, livePromotionAllowedRows=0. Best pocket was overnight high raid plus bearish displacement short: 15 rows, 2 winners, 0 losses, 13 unresolved/no-fill, corrected one-MES P/L +100.63, resolved win rate 1.00. The sell-side overnight low raid plus bearish continuation bucket was weaker: 11 rows, 1 winner, 2 losses, 8 unresolved/no-fill, corrected one-MES P/L -11.87. Resolved winners in the best pocket were June 16 10:20 +67.50 and June 18 10:15 +33.13. This suggests the cleaner idea is not generic OpeningDrive/Sweep; it is buy-side overnight high raid into bearish displacement, with 5M execution still required.
+Trading logic changed: No. This is a local-only research diagnostic and npm alias. It does not change setupScanner, ranking, canExecute, Discord, Supabase, bridge behavior, or entry/stop/target/risk math.
+Bridge impact: None. The diagnostic reads saved canonical 5M OHLC only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The best pocket has only two resolved same-window winners and many unresolved/no-fill rows, so it is promising but not enough for live implementation. The displacement detector is research-only and uses completed 5M body/range/close-location quality, not tick-level sequencing or a production scanner contract.
+Next recommended action: Discuss with the user before implementation. If approved later, the next phase should be a dry-run proposal for an OpeningDrive short candidate only when RTH raids overnight high and prints bearish displacement before proof, with HTF as context only and all normal 5M trigger/stop/risk/canExecute gates preserved.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive/Sweep corrected outcome closeout.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-corrected-outcome-closeout.ts, tools/automation/unified-positive-held-local-preview-openingdrive-corrected-outcome-closeout.test.ts, docs/PROJECT_STATUS.md.
 Reason: The no-fill source-semantics drilldown proved the saved outcome labels were not trustworthy enough for implementation decisions. The desk needed a corrected June 1-July 2 OpeningDrive/Sweep replay using completed 5M OHLC, bounded to the canonical Morning Setup Scan window, with original vs corrected outcomes side by side.
@@ -15,8 +31,6 @@ Journal/RAG impact: None.
 Supabase impact: None.
 Known risks: The closeout uses completed 5M bars and conservative post-entry-bar target/stop evaluation; it does not reconstruct tick-level intrabar order flow. It is a research closeout, not a production fill simulator.
 Next recommended action: Stop implementation work until the user decides whether OpeningDrive/Sweep should become a scanner-owned dry-run candidate lane. If continued, the next phase should be a user-approved design for exactly what would be implemented, using this corrected report as the evidence baseline.
-
-## Previous Change
 
 Date: 2026-07-20
 Task: Add OpeningDrive/Sweep no-fill source-semantics drilldown.
