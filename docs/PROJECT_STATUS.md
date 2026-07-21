@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive/Sweep June 17 path-order drilldown.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-path-order-drilldown.ts, tools/automation/unified-positive-held-local-preview-openingdrive-path-order-drilldown.test.ts, docs/PROJECT_STATUS.md.
+Reason: The repaired HTF story audit flagged the 2026-06-17 10:05 OpeningDrive/Sweep short as a loss with large MFE, so the desk needed completed-5M path-order proof before trusting the selector results.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-openingdrive-path-order-drilldown.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-openingdrive-path-order-drilldown -- --htf-story-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-htf-story-audit-1784594529711.json --trade-date 2026-06-17 --json.
+Result: Focused test passed. Real drilldown report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-path-order-drilldown-1784595474546.json passed with sourceSlates=30, selectedSlates=2, pathWarningSlates=1, cleanStopBeforeTargets=1, cleanTargetBeforeStop=1, sameBarAmbiguous=0, unresolvedOrNoFill=0, livePromotionAllowedRows=0. The 2026-06-17 10:05 SHORT entry=7590.125 stop=7600.5 T1=7574.5 T2=7569.5 filled at 10:05, stopped at 10:25, reached T1 at 10:45, and reached T2 at 10:50. Before-stop MFE was only 0.76R, so the later large MFE was post-stop and must not reclassify the row as a winner. The nearby 10:40 SHORT was a separate clean target-before-stop winner, not proof that the earlier stopped slate survived.
+Trading logic changed: No. This is a local-only research diagnostic and npm alias. It does not change setupScanner, ranking, canExecute, Discord, Supabase, bridge behavior, or entry/stop/target/risk math.
+Bridge impact: None. The diagnostic reads saved canonical 5M OHLC only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The drilldown is based on completed 5M bars only. It proves no 5M same-bar ambiguity; it does not reconstruct tick-level intrabar sequencing inside a 5M candle.
+Next recommended action: Keep the June 17 10:05 loss in the selector validation as a real loser, then compare the 10:40 later winner and the mixed/caution winners against unresolved rows before proposing any scanner-owned selector behavior.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Resolve OpeningDrive/Sweep HTF data-limited finding.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: The prior HTF story pass reported 120m/240m as data-limited. This phase investigated whether that was a true rollover/coverage defect, a validation bug, or a source-selection issue.
@@ -15,8 +31,6 @@ Journal/RAG impact: None.
 Supabase impact: Read-only market_bars cache read only; no writes or schema changes.
 Known risks: Formal HTF story/replay work must use repaired canonical HTF packages when cache-only artifacts mark 120m/240m data-limited. Also, the 2026-06-17 10:05 loss still has a path-ordering warning because it reached 2.85R MFE while labeled stopped_before_t1.
 Next recommended action: Rerun the June 17 path-ordering drilldown against the repaired canonical package, then compare caution/mixed winners against unresolved rows before any selector proposal.
-
-## Previous Change
 
 Date: 2026-07-20
 Task: Add OpeningDrive/Sweep morning SHORT HTF story audit.
