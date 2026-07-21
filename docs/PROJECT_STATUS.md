@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive/Sweep corrected outcome closeout.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-corrected-outcome-closeout.ts, tools/automation/unified-positive-held-local-preview-openingdrive-corrected-outcome-closeout.test.ts, docs/PROJECT_STATUS.md.
+Reason: The no-fill source-semantics drilldown proved the saved outcome labels were not trustworthy enough for implementation decisions. The desk needed a corrected June 1-July 2 OpeningDrive/Sweep replay using completed 5M OHLC, bounded to the canonical Morning Setup Scan window, with original vs corrected outcomes side by side.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-openingdrive-corrected-outcome-closeout.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-openingdrive-corrected-outcome-closeout -- --htf-story-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-htf-story-audit-1784594529711.json --json.
+Result: Focused test passed. Real closeout report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-corrected-outcome-closeout-1784598366690.json passed with sourceSlates=30, targetRows=30, originalWinners=18, originalLosses=1, originalUnresolved=11, originalNoFills=4, correctedWinners=3, correctedLosses=2, correctedUnresolved=25, correctedNoFills=18, labelChangedRows=23, noFillCorrectedRows=4, originalOneMesPl=3080.05, correctedOneMesPl=88.76, livePromotionAllowedRows=0. Same-window resolved rows were: June 3 10:25 stopped -32.50, June 3 10:35 T1/T2 +72.50, June 16 10:20 T1/T2 +67.50, June 17 10:05 stopped -51.87, and June 18 10:15 T1/T2 +33.13. This closes the inflated-profit question: OpeningDrive/Sweep is not junk, but the large prior profit number was mostly old-label/later-session resolution rather than clean same-window desk execution.
+Trading logic changed: No. This is a local-only research diagnostic and npm alias. It does not change setupScanner, ranking, canExecute, Discord, Supabase, bridge behavior, or entry/stop/target/risk math.
+Bridge impact: None. The diagnostic reads saved canonical 5M OHLC only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The closeout uses completed 5M bars and conservative post-entry-bar target/stop evaluation; it does not reconstruct tick-level intrabar order flow. It is a research closeout, not a production fill simulator.
+Next recommended action: Stop implementation work until the user decides whether OpeningDrive/Sweep should become a scanner-owned dry-run candidate lane. If continued, the next phase should be a user-approved design for exactly what would be implemented, using this corrected report as the evidence baseline.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive/Sweep no-fill source-semantics drilldown.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-source-semantics-drilldown.ts, tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-source-semantics-drilldown.test.ts, docs/PROJECT_STATUS.md.
 Reason: The no-fill timing audit proved all four June 3 OpeningDrive/Sweep short no-fill rows touched the original entry on completed 5M OHLC. The desk needed to close whether this was proof-bar exclusion, stale/no-chase invalidation, or a real source-label conflict before any selector/ranking work.
@@ -15,8 +31,6 @@ Journal/RAG impact: None.
 Supabase impact: None.
 Known risks: The diagnostic uses completed 5M OHLC, not tick-level intrabar order flow. It proves the no-fill label conflicts with completed-bar entry-touch semantics; it does not say what fill model should be used for live orders.
 Next recommended action: Stop OpeningDrive selector work here and fix/reconcile the research outcome-label contract so `no_fill` cannot be assigned when completed 5M OHLC touches entry after proof unless a documented order-type/proof-bar/stale-invalidation reason is recorded.
-
-## Previous Change
 
 Date: 2026-07-20
 Task: Add OpeningDrive/Sweep no-fill timing audit.
