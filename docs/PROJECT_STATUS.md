@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-07-20
+Task: Add OpeningDrive/Sweep no-fill timing audit.
+Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-timing-audit.ts, tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-timing-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: The winner-vs-unresolved comparison showed four no-fill rows that looked like timing/missed-price cases. The desk needed to prove whether those first-proof no-fills should wait for later pullback/re-entry proof or whether the no-fill label itself was suspect.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-openingdrive-no-fill-timing-audit.test.ts; npx tsc --noEmit --pretty false; npm run diagnostic:held-local-preview-openingdrive-no-fill-timing-audit -- --htf-story-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-htf-story-audit-1784594529711.json --json.
+Result: Focused test passed. Real audit report tools/automation/diagnostic-reports/unified-positive-held-local-preview-openingdrive-no-fill-timing-audit-1784596555315.json passed with sourceSlates=30, noFillRows=4, noFillRowsWithLaterWinner=0, noFillRowsWithOriginalEntryLaterTraded=4, noFillRowsWithoutLaterHelp=0, laterWinnerOneMesPl=null, livePromotionAllowedRows=0. All four no-fill rows were June 3 OpeningDrive/Sweep shorts at entry 7590.75. Completed 5M OHLC shows the original entry price traded after proof for all four: 09:55 proof traded at 10:05, 10:20 proof traded at 10:20, 10:25 proof traded at 10:25, and 10:35 proof traded at 10:40. There was no later same-date winning slate after those no-fill rows. This means the evidence does not support a later re-entry timing selector yet; it points to a no-fill outcome semantics/source reconciliation issue.
+Trading logic changed: No. This is a local-only research diagnostic and npm alias. It does not change setupScanner, ranking, canExecute, Discord, Supabase, bridge behavior, or entry/stop/target/risk math.
+Bridge impact: None. The diagnostic reads saved canonical 5M OHLC only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The audit proves completed 5M bars touched the entry price; it does not know whether the original replay treated entry as a limit, stop, already-triggered stale line, or excluded the proof candle. That source semantics must be reconciled before using no-fill rows in selector proposals.
+Next recommended action: Build a no-fill source-semantics drilldown for the June 3 rows, comparing outcome replay fill rules, proof-candle inclusion, entry order type assumption, and stale/no-chase state before any scanner-owned selector proposal.
+
+## Previous Change
+
+Date: 2026-07-20
 Task: Add OpeningDrive/Sweep winner-vs-unresolved comparison.
 Files changed: package.json, tools/automation/unified-positive-held-local-preview-openingdrive-winner-unresolved-comparison.ts, tools/automation/unified-positive-held-local-preview-openingdrive-winner-unresolved-comparison.test.ts, docs/PROJECT_STATUS.md.
 Reason: After proving the June 17 10:05 path-order loss was real, the desk needed to compare the later June 17 winner plus mixed/caution winners against unresolved rows before any scanner-owned selector proposal.
@@ -15,8 +31,6 @@ Journal/RAG impact: None.
 Supabase impact: None.
 Known risks: The comparison is descriptive and uses unresolved rows as non-win/non-loss evidence. It should not be used as a live selector without a separate timing/proof audit.
 Next recommended action: Run a no-fill versus later-valid-entry timing audit to identify whether first-proof no-fill rows should wait for a later pullback/re-entry proof before becoming scanner-owned selector candidates.
-
-## Previous Change
 
 Date: 2026-07-20
 Task: Add OpeningDrive/Sweep June 17 path-order drilldown.
