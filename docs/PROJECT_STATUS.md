@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add morning local scanner snapshot preview.
+Files changed: tools/automation/desk-playbook-selector-morning-local-scanner-snapshot-preview.ts, tools/automation/desk-playbook-selector-morning-local-scanner-snapshot-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: User asked to run the missing morning proof before deciding when to install unified live-facing behavior. This phase proves the existing morning selector dry-run contract, `SweepMssFvgRetrace|morning|SHORT|risk_8_to_16`, through the current scanner-owned DeskState and DeskPublishDecision builders. OpeningDrive and other same-direction collision rows remain notes only, not extra tickets.
+Tests run: npx tsx tools/automation/desk-playbook-selector-morning-local-scanner-snapshot-preview.test.ts; npx tsx tools/automation/desk-playbook-selector-morning-local-scanner-snapshot-preview.ts --dry-run-contract tools/automation/diagnostic-reports/unified-positive-held-local-preview-scanner-owned-selector-dry-run-contract-1784588038648.json --json; npx tsc --noEmit --pretty false.
+Result: Focused test passed. Real snapshot report tools/automation/diagnostic-reports/desk-playbook-selector-morning-local-scanner-snapshot-preview-1784688245629.json passed with sourceRows=2154, selectorRawRows=75, contractSlateRows=6, snapshotRows=6, selectedCandidateSnapshotRows=6, deskTicketSnapshotRows=6, publishDecisionSnapshotRows=6, publishShouldPostRows=6, publishCompletePlanRows=6, publishCanExecuteTrueRows=0, localSnapshotReadyRows=6, canExecuteDriftRows=0, entryStopTargetDriftRows=0, duplicateRowsSuppressed=69, staleRowsSuppressed=54, collisionRows=27, collisionWinningRows=16, dryRunOneMesPl=405, dryRunWinRateResolved=0.67, livePromotionAllowedRows=0, runtimeInstallAllowed=false, recommendation=ready_for_live_wiring_decision_gate. This means the current scanner-owned builders preserve entry/stop/T1/T2 for the selected morning Sweep short lane and classify the tickets as complete human-review publish decisions, while canExecute remains false and the local tool performs no Discord/Supabase/live action.
+Trading logic changed: No. This is a local-only saved-contract snapshot preview. It does not run setupScanner, change ranking, change canExecute, post Discord, write Supabase, read NinjaTrader bridge data, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None. The snapshot reports local publish-decision eligibility only; it does not post.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is not a full unified morning desk install. It proves the selected morning Sweep short selector lane only. The source contract notes many duplicated/stale rows and collision rows, so any live wiring must keep one-ticket-per-slate suppression and treat OpeningDrive collisions as context unless separately approved.
+Next recommended action: With AfterLunch and this morning lane now proven locally, the next phase should be a small unified human-review adapter proposal for morning plus lunch, still with Discord/Supabase/canExecute/live behavior behind an explicit install gate.
+
+Date: 2026-07-22
 Task: Add AfterLunch local scanner snapshot preview.
 Files changed: tools/automation/desk-playbook-selector-afterlunch-local-scanner-snapshot-preview.ts, tools/automation/desk-playbook-selector-afterlunch-local-scanner-snapshot-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved proving the AfterLunch scanner-owned dry-run contract through the current local scanner-owned DeskState and DeskPublishDecision builders before any live-facing behavior is considered. This phase verifies one dry-run review ticket per lunch slate can become a complete scanner-owned human-review snapshot without changing scanner runtime behavior.
