@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add current scanner feed adapter for Unified Desk Output.
+Files changed: tools/automation/unified-desk-output-current-scanner-feed-adapter.ts, tools/automation/unified-desk-output-current-scanner-feed-adapter.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved running the final disabled current-scanner feed phase after the fresh guarded scanner-output producer. This phase reads saved scanner decision tapes from the local Discord audit directory, converts complete scanner-owned DeskPublishDecision rows into the existing selector-preview artifact contract, and reruns the guarded output chain from that fresh current-scanner selector preview.
+Tests run: npx tsx tools/automation/unified-desk-output-current-scanner-feed-adapter.test.ts; npx tsx tools/automation/unified-desk-output-current-scanner-feed-adapter.ts --trade-date 2026-07-22 --instrument MES --json; npx tsx tools/automation/unified-desk-output-fresh-guarded-scanner-output.ts --selector-preview <current-scanner-selector-preview> --json.
+Result: Focused test passed. Current scanner feed adapter tools/automation/diagnostic-reports/unified-desk-output-current-scanner-feed-adapter-1784753878859.json passed with scannerTapeFilesRead=2, scannerEventsRead=81, completePlanEvents=65, sourceShouldPostRows=54, selectorRows=65, approvedDeskPlanRows=54, formingDeskReadRows=11, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, runtimeInstallAllowed=false, blockedRows=0. Fresh guarded producer tools/automation/diagnostic-reports/unified-desk-output-fresh-guarded-scanner-output-1784753884829.json passed against that current-scanner selector preview with selectorRows=65, builderRows=65, disabledRuntimeCards=65, readinessCandidates=65, eligibleApprovedDeskPlanRows=54, guardedSelectedRows=2, morningRows=1, lunchRows=1, suppressedRows=52, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, runtimeInstallAllowed=false, blockedRows=0. Selected current morning candidate: 2026-07-22 TurtleSoup LONG at 11:45 ET, entry 7546.5, stop 7528.5, T1 7573.5, T2 7582.5. Selected current lunch candidate: 2026-07-22 TurtleSoup SHORT at 15:50 ET, entry 7541, stop 7546.25, T1 7533.25, T2 7530.5.
+Trading logic changed: No. This is a local artifact adapter over saved scanner decision tapes only. It does not change setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The guarded current-feed chain is still disabled and artifact-only. It proves that current saved scanner state can feed the one-row-per-session Unified Desk Output chain, but production enablement still requires an explicit runtime install gate and a decision on whether latest-proof selection should remain the live selector policy.
+Next recommended action: Review the selected current-day TurtleSoup rows against the intended approved-desk-plan policy, then install the runtime gate only if the user approves the exact scanner-visible selection rule.
+
+Date: 2026-07-22
 Task: Add fresh guarded scanner-output artifact producer for Unified Desk Output.
 Files changed: tools/automation/unified-desk-output-fresh-guarded-scanner-output.ts, tools/automation/unified-desk-output-fresh-guarded-scanner-output.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the next phase after the disabled guarded local scanner-lane preview. This phase refreshes the saved selector-preview chain through scanner-owned builder preview, disabled runtime adapter preview, live-gate readiness, and guarded one-row-per-session local lane output without touching live runtime behavior.
