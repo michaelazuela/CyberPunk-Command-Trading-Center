@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output scanner surface smoke.
+Files changed: src/lib/unifiedDeskOutputScannerSurface.ts, src/lib/unifiedDeskOutputScannerSurface.test.ts, tools/automation/unified-desk-output-scanner-surface-smoke.ts, tools/automation/unified-desk-output-scanner-surface-smoke.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the next phase after installing the local scanner visibility adapter: prove the local scanner display/consumer surface can render `APPROVED_DESK_PLAN` and `FORMING_DESK_READ` rows without changing Discord, Supabase, bridge reads, canExecute, trading logic, or automated execution.
+Tests run: npx tsx src/lib/unifiedDeskOutputScannerSurface.test.ts; npx tsx tools/automation/unified-desk-output-scanner-surface-smoke.test.ts; npx tsx tools/automation/unified-desk-output-scanner-surface-smoke.ts --json.
+Result: Focused tests passed. Real scanner surface smoke tools/automation/diagnostic-reports/unified-desk-output-scanner-surface-smoke-1784730599535.json passed with renderedRows=276, approvedDeskPlanRows=105, formingDeskReadRows=171, discordPostRows=0, supabaseWriteRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, wordingViolationRows=0, blockedRows=0, recommendation=surface_ready_for_local_display_consumer.
+Trading logic changed: No. This is a local scanner-surface render contract only. It does not change setupScanner rules, ranking, canExecute, Discord, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves the local surface consumer contract from saved install-audit output. It does not yet wire a production Discord formatter, Supabase persistence, or live scanner scheduler output.
+Next recommended action: Add a local app/display preview or current scanner consumer integration for the surface rows, still with Discord/Supabase/canExecute off.
+
+Date: 2026-07-22
 Task: Install Unified Desk Output scanner visibility adapter, local scanner only.
 Files changed: src/lib/unifiedDeskOutputScannerVisibilityAdapter.ts, src/lib/unifiedDeskOutputScannerVisibilityAdapter.test.ts, tools/automation/unified-desk-output-scanner-visibility-install-audit.ts, tools/automation/unified-desk-output-scanner-visibility-install-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the scanner-visible install after the live-gate readiness audit. This installs a reusable local scanner visibility adapter that exposes only `APPROVED_DESK_PLAN` and `FORMING_DESK_READ` cards while keeping Discord, Supabase, live bridge reads, canExecute, trade math, trading logic, and automated execution off.
