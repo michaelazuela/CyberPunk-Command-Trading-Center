@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output Selector preview.
+Files changed: tools/automation/unified-desk-output-selector-preview.ts, tools/automation/unified-desk-output-selector-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved replacing the messy visible desk-output idea with a clean two-state output contract: `APPROVED_DESK_PLAN` when the proven primary lane is complete, `FORMING_DESK_READ` when a supporting setup is developing, and silent output when nothing useful exists. This is local-only and does not install live behavior.
+Tests run: npx tsx tools/automation/unified-desk-output-selector-preview.test.ts; npx tsx tools/automation/unified-desk-output-selector-preview.ts --day-by-day-report tools/automation/diagnostic-reports/ytd-full-scanner-day-by-day-market-move-best-model-map-1784695449246.json --lane-comparison-report tools/automation/diagnostic-reports/ytd-session-lane-comparison-report-1784696890429.json --json.
+Result: Focused test passed. Real preview report tools/automation/diagnostic-reports/unified-desk-output-selector-preview-1784698472012.json passed with sourceRows=346, visibleOutputRows=276, approvedDeskPlanRows=105, formingDeskReadRows=171, silentRows=70, morningApprovedRows=63, lunchApprovedRows=42, canExecuteChangedRows=0, livePromotionAllowedRows=0, runtimeInstallAllowed=false, recommendation=ready_for_local_scanner_builder_preview. The preview emits no wait/no-trade/missed/no-chase status as visible desk output; those remain internal/silent states only.
+Trading logic changed: No. This is a local-only output selector preview over saved YTD mapper and lane-comparison reports. It does not change setupScanner rules, ranking, canExecute, Discord, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This preview proves the output language and lane-selection contract from saved research reports, not live scanner wiring. The next phase must still prove scanner-owned builders can produce the same two visible states without changing runtime behavior.
+Next recommended action: Add a local scanner-builder preview for this Unified Desk Output Selector: map current scanner-owned DeskState/DeskPublishDecision outputs into `APPROVED_DESK_PLAN` and `FORMING_DESK_READ`, still with Discord/Supabase/bridge/canExecute/live behavior untouched.
+
+Date: 2026-07-22
 Task: Add YTD morning/lunch session lane comparison report.
 Files changed: tools/automation/ytd-session-lane-comparison-report.ts, tools/automation/ytd-session-lane-comparison-report.test.ts, docs/PROJECT_STATUS.md.
 Reason: User asked to run the lane comparison before any live-facing adapter install. The report compares the already-studied morning and lunch model lanes from the durable YTD day-by-day scanner map and keeps the adapter as a proposal only.
