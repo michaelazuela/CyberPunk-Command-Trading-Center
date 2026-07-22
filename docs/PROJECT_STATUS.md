@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add YTD morning/lunch session lane comparison report.
+Files changed: tools/automation/ytd-session-lane-comparison-report.ts, tools/automation/ytd-session-lane-comparison-report.test.ts, docs/PROJECT_STATUS.md.
+Reason: User asked to run the lane comparison before any live-facing adapter install. The report compares the already-studied morning and lunch model lanes from the durable YTD day-by-day scanner map and keeps the adapter as a proposal only.
+Tests run: npx tsx tools/automation/ytd-session-lane-comparison-report.test.ts; npx tsx tools/automation/ytd-session-lane-comparison-report.ts --day-by-day-report tools/automation/diagnostic-reports/ytd-full-scanner-day-by-day-market-move-best-model-map-1784695449246.json --json.
+Result: Focused test passed. Real report tools/automation/diagnostic-reports/ytd-session-lane-comparison-report-1784696890429.json passed with sourceRows=346. Morning comparison selected OpeningDriveFvgContinuation as the primary lane with count=60, one-MES P/L=$1867.58, wins=30, losses=1, noFill=23, unresolved=6, resolved win rate=0.97, story match rate=0.65. Morning support lanes were IntradayMssMicroContinuation and SweepMssFvgRetrace. Lunch comparison selected AfterLunchDriveFvgContinuation as the primary lane with count=36, one-MES P/L=$1261.93, wins=17, losses=1, noFill=15, unresolved=3, resolved win rate=0.94, story match rate=0.61. Lunch support lane was IntradayMssMicroContinuation. Adapter readiness remains proposal_ready_not_installed with morningTicketCap=1, lunchTicketCap=1, supportingModelsBecomeContextOnly=true, canExecuteUntouched=true, and Discord/Supabase/bridge untouched.
+Trading logic changed: No. This is a local-only research report over saved YTD mapper output. It does not change setupScanner rules, ranking, canExecute, Discord, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This report ranks selected saved rows from the YTD map. It does not install the runtime adapter and does not prove live publish behavior by itself; it only confirms which lanes should be used first if the adapter is approved.
+Next recommended action: Install the first local-only unified human-review adapter contract for morning plus lunch: one scanner-owned human-review ticket per session, OpeningDriveFvgContinuation primary in morning, AfterLunchDriveFvgContinuation primary at lunch, supporting models attached as notes/context, with canExecute and all live side effects still untouched.
+
+Date: 2026-07-22
 Task: Add durable YTD day-by-day scanner mapper and fold July 21.
 Files changed: tools/automation/ytd-full-scanner-day-by-day-market-move-best-model-map.ts, tools/automation/ytd-full-scanner-day-by-day-market-move-best-model-map.test.ts, tools/automation/ytd-intraday-mss-micro-htf-bias-audit.ts, tools/automation/ytd-intraday-mss-micro-htf-bias-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the next move after the Intraday MSS HTF-bias audit: restore/build the durable day-by-day best-model mapper that consumes exact raw scanner artifacts, then fold the July 21 replay artifact into the same report shape before any desk adapter decision.
