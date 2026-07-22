@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add disabled runtime-gate manifest command for Unified Desk Output.
+Files changed: tools/automation/unified-desk-output-runtime-gate-manifest.ts, tools/automation/unified-desk-output-runtime-gate-manifest.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved running the disabled runtime-gate manifest phase after the current live-readiness manifest named proven_lane_priority_then_latest_proof as the proposed selector policy. This phase adds the command named by the manifest and validates it remains disabled while proving policy, idempotency, selected-row, and no-side-effect requirements.
+Tests run: npx tsx tools/automation/unified-desk-output-runtime-gate-manifest.test.ts; npx tsx tools/automation/unified-desk-output-runtime-gate-manifest.ts --current-live-readiness-manifest <current-live-readiness-manifest> --selection-policy proven_lane_priority_then_latest_proof --idempotency-key unified-desk-output:runtime-gate:2026-07-22:proven-lane-priority:001 --disabled --json.
+Result: Focused test passed. Real disabled runtime-gate receipt tools/automation/diagnostic-reports/unified-desk-output-runtime-gate-manifest-disabled-receipt-1784756138421.json passed with manifestPassed=true, selectionPolicyMatched=true, idempotencyKeyPresent=true, disabledFlagPresent=true, selectedRows=2, morningRows=1, lunchRows=1, runtimeGateEnabled=false, scannerRuntimeChangedRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0, recommendation=ready_for_disabled_runtime_gate_validation. Selected rows remain morning HtfDisplacementFvgContinuation LONG at 09:10 ET and lunch IntradayMssMicroContinuation LONG at 15:45 ET.
+Trading logic changed: No. This is a disabled runtime-gate contract validator only. It does not install scanner runtime behavior, change default selector behavior, alter setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The runtime gate is still not wired into live scanner output. This phase only proves the disabled command and manifest contract. A separate explicit runtime validation/wiring phase is still required before production scanner-visible behavior.
+Next recommended action: Run a disabled runtime validation over fresh current scanner artifacts to prove the runtime gate can be recomputed end-to-end from current scanner tape to selector preview, live-readiness manifest, and disabled runtime-gate receipt in one command. Do not enable production posting yet.
+
+Date: 2026-07-22
 Task: Add current live-readiness manifest for Unified Desk Output runtime gate.
 Files changed: tools/automation/unified-desk-output-current-live-readiness-manifest.ts, tools/automation/unified-desk-output-current-live-readiness-manifest.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved adding the next manifest phase after the disabled selector-policy preview proved proven-lane-priority changes today's selected scanner output away from late TurtleSoup rows. This phase writes a local manifest that names proven_lane_priority_then_latest_proof as the proposed selector policy for a future disabled runtime gate.
