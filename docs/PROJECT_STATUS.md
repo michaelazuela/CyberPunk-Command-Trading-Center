@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output Discord final launch manifest.
+Files changed: tools/automation/unified-desk-output-discord-final-launch-manifest.ts, tools/automation/unified-desk-output-discord-final-launch-manifest.test.ts, docs/PROJECT_STATUS.md.
+Reason: User asked to run the next production-readiness phase after the Discord webhook target presence audit. This phase creates a no-network final launch manifest naming the proposed one-row production sender contract, approval phrase, readback checks, and rollback steps without installing or running a sender.
+Tests run: npx tsx tools/automation/unified-desk-output-discord-final-launch-manifest.test.ts; npx tsx tools/automation/unified-desk-output-discord-final-launch-manifest.ts --json.
+Result: Focused test passed. Real manifest tools/automation/diagnostic-reports/unified-desk-output-discord-final-launch-manifest-1784747733625.json passed with webhookTargetReady=true, rehearsalPlanReady=true, candidateSelectedRows=1, commandExistsNow=false, productionSendEnabledNow=false, explicitApprovalPresent=false, shouldPostRows=0, publishDiscordRows=0, realPostAllowedRows=0, webhookCallRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, readbackSteps=9, rollbackSteps=5, blockedRows=0, recommendation=ready_to_install_disabled_one_row_sender.
+Trading logic changed: No. This is a no-network Discord launch manifest. It does not change setupScanner rules, ranking, canExecute, Discord posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: Launch manifest only. No sender installed, no webhook calls, and no Discord posts.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The manifest intentionally proves the one-row production sender command does not exist yet. A separate disabled sender contract must be installed before any explicit one-row production publish approval can be executed.
+Next recommended action: Install the disabled one-row production sender contract that refuses to run unless the exact manifest, candidate id, idempotency key, webhook target, and explicit approval flag all match. Do not post until that sender is tested and a separate explicit production approval is given.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output Discord webhook target presence audit.
 Files changed: tools/automation/unified-desk-output-discord-webhook-target-presence-audit.ts, tools/automation/unified-desk-output-discord-webhook-target-presence-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the next local-only production readiness check after the disabled one-row Discord rehearsal plan. This phase verifies the production Discord webhook target variable is documented and locally configured without printing secret values or making a network call.
