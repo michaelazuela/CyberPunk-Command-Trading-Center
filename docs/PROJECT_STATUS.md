@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-21
+Task: Add Desk Playbook Selector Phase 4 camouflage separator audit.
+Files changed: tools/automation/desk-playbook-selector-camouflage-separator-audit.ts, tools/automation/desk-playbook-selector-camouflage-separator-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved isolating the 14 camouflaged positive-proof rows against the 69 candidate-present non-drive/raid rows so the desk can identify the separator without reopening every noisy balanced-range ticket.
+Tests run: npx tsx tools/automation/desk-playbook-selector-camouflage-separator-audit.test.ts; npx tsx tools/automation/desk-playbook-selector-camouflage-separator-audit.ts --camouflage-audit tools/automation/diagnostic-reports/desk-playbook-selector-camouflage-audit-1784681786161.json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Focused test passed. Real separator report tools/automation/diagnostic-reports/desk-playbook-selector-camouflage-separator-audit-1784682172856.json passed with comparisonRows=83, positiveRows=14, comparisonRowsWithoutPositive=69. Best broad research separator was direction_htf_support_and_raid: 16 matches, 11 positives, 5 negatives, precision=0.6875, recall=0.7857, selected-candidate P/L=595.65. Direction plus HTF support without requiring a raid caught 12 of 14 positives with 18 matches, precision=0.6667, recall=0.8571, P/L=610.65. Model-specific no-lookahead candidates to validate next were IntradayMssMicroContinuation lunch direction+HTF support (6 matches, 4 positives, precision=0.6667), OpeningDriveFvgContinuation morning direction+HTF support (5 matches, 3 positives, precision=0.6), and AfterLunchDriveFvgContinuation lunch direction+HTF support (5 matches, 3 positives, precision=0.6).
+Trading logic changed: No. This is a local-only saved-diagnostic separator audit. It does not run setupScanner, change ranking, change canExecute, post Discord, write Supabase, read NinjaTrader bridge data, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The best broad separator uses measured session move direction, which is after-window information. It is useful for research but not live-ready. Any live-facing rule must first be revalidated with no-lookahead inputs available before proof time.
+Next recommended action: Phase 5 should run a no-lookahead validation for the three model-specific separator candidates, using only facts available before or at the completed 5M proof time.
+
+Date: 2026-07-21
 Task: Add Desk Playbook Selector Phase 3 suppressed-window camouflage audit.
 Files changed: tools/automation/desk-playbook-selector-camouflage-audit.ts, tools/automation/desk-playbook-selector-camouflage-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: User asked whether the 163 Phase 1 suppressed windows were true noise or whether the market could be camouflaging the move inside non-drive/raid labels. The audit classifies each suppressed window using the saved proof-grade day-by-day report, measuring selected-candidate proof, session movement, active raids, HTF map alignment, and outcome without promoting execution.
