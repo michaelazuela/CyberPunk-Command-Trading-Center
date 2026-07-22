@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output disabled runtime adapter preview.
+Files changed: tools/automation/unified-desk-output-disabled-runtime-adapter-preview.ts, tools/automation/unified-desk-output-disabled-runtime-adapter-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the next phase after the scanner-builder preview: prove a disabled runtime-facing adapter contract that maps builder output to only `APPROVED_DESK_PLAN`, `FORMING_DESK_READ`, or `SILENT_INTERNAL` while every live side effect remains off.
+Tests run: npx tsx tools/automation/unified-desk-output-disabled-runtime-adapter-preview.test.ts; npx tsx tools/automation/unified-desk-output-disabled-runtime-adapter-preview.ts --builder-preview tools/automation/diagnostic-reports/unified-desk-output-local-scanner-builder-preview-1784727355969.json --json.
+Result: Focused test passed. Real disabled runtime adapter preview tools/automation/diagnostic-reports/unified-desk-output-disabled-runtime-adapter-preview-1784728327952.json passed with sourceRows=276, disabledRuntimeCards=276, approvedDeskPlanCards=105, formingDeskReadCards=171, silentInternalCards=0, completePlanCards=276, sourcePublishShouldPostRows=276, adapterShouldPostDiscordRows=0, adapterWritesSupabaseRows=0, adapterReadsLiveBridgeRows=0, adapterCanExecuteTrueRows=0, canExecuteChangedRows=0, livePromotionAllowedRows=0, noAutomatedOrderRows=276, wordingViolationRows=0, blockedCards=0, recommendation=keep_disabled_until_live_gate.
+Trading logic changed: No. This is a local-only disabled runtime adapter preview over the saved scanner-builder preview. It does not change setupScanner rules, ranking, canExecute, Discord, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: None. Adapter should-post rows are forced to zero even though the source builder preview had structurally publishable rows.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves the disabled adapter contract only. It does not wire runtime scanner output, does not post Discord, and does not persist learning records. A separate explicit live-gate phase is required before any production-visible behavior.
+Next recommended action: Run a final live-gate readiness audit comparing this disabled adapter against current scanner/Discord suppression rules, then stop for the explicit decision on whether to install scanner-visible `APPROVED_DESK_PLAN` / `FORMING_DESK_READ` output.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output local scanner-builder preview.
 Files changed: tools/automation/unified-desk-output-local-scanner-builder-preview.ts, tools/automation/unified-desk-output-local-scanner-builder-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved proving the clean `APPROVED_DESK_PLAN` / `FORMING_DESK_READ` output contract through current scanner-owned `DeskState` and `DeskPublishDecision` builders before any live runtime wiring. This phase verifies the new visible desk language can ride the existing scanner-owned builders without changing trade logic or live behavior.
