@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output local go-live rehearsal proof.
+Files changed: tools/automation/unified-desk-output-local-go-live-rehearsal.ts, tools/automation/unified-desk-output-local-go-live-rehearsal.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved continuing toward live in small locked phases. This phase adds a read-only go-live rehearsal report that consumes the saved scanner surface smoke and validates the hidden local preview path with `Approved Desk Plan` and `Forming Desk Read` rows only.
+Tests run: npx tsx tools/automation/unified-desk-output-local-go-live-rehearsal.test.ts; npx tsx tools/automation/unified-desk-output-local-go-live-rehearsal.ts --json.
+Result: Focused test passed. Real rehearsal report tools/automation/diagnostic-reports/unified-desk-output-local-go-live-rehearsal-1784731894086.json passed with previewRows=276, approvedDeskPlanRows=105, formingDeskReadRows=171, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, wordingViolationRows=0, blockedRows=0, recommendation=ready_for_local_scanner_rehearsal_only.
+Trading logic changed: No. This is a saved-report-only local rehearsal proof. It does not change setupScanner rules, ranking, canExecute, Discord, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves the hidden local preview can rehearse the scanner output contract from saved smoke data. It does not yet enable live scanner UI refresh, Discord posting, Supabase persistence, or any production side effect.
+Next recommended action: Add a guarded local runtime switch proposal that keeps the unified output disabled by default, requires explicit local flag enablement, and still blocks Discord/Supabase/canExecute/bridge side effects.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output hidden local app/display preview.
 Files changed: src/lib/unifiedDeskOutputScannerSurfacePreviewAdapter.ts, src/lib/unifiedDeskOutputScannerSurfacePreviewAdapter.test.ts, src/components/UnifiedDeskOutputPreviewPanel.tsx, src/App.tsx, src/App.test.tsx, docs/PROJECT_STATUS.md.
 Reason: User approved continuing toward live in small phases. This phase wires a hidden localhost-only app display preview for the scanner surface smoke report behind `?unifiedDeskOutputPreview=1`, proving the current app consumer can import and render `Approved Desk Plan` and `Forming Desk Read` rows without changing normal UI behavior or live side effects.
