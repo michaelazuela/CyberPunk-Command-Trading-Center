@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add disabled local scanner preview render/install proof for Unified Desk Output.
+Files changed: tools/automation/unified-desk-output-disabled-local-scanner-preview-render-proof.ts, tools/automation/unified-desk-output-disabled-local-scanner-preview-render-proof.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the next phase after the local scanner consumer probe passed. This phase converts the passing consumer-probe rows into a scanner-surface-smoke-compatible hidden preview import payload, proving the current local Unified Desk Output preview can render one morning and one lunch Approved Desk Plan without changing normal scanner runtime behavior.
+Tests run: npx tsx tools/automation/unified-desk-output-disabled-local-scanner-preview-render-proof.test.ts; npx tsx tools/automation/unified-desk-output-disabled-local-scanner-preview-render-proof.ts --json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Focused test passed. Real disabled local scanner preview render proof tools/automation/diagnostic-reports/unified-desk-output-disabled-local-scanner-preview-render-proof-1784762960666.json passed and produced hidden-preview import payload tools/automation/diagnostic-reports/unified-desk-output-disabled-local-scanner-preview-import-payload-1784762960666.json with defaultStatus=disabled, localPreviewStatus=ready, defaultScannerPreviewRows=0, renderedRows=2, approvedDeskPlanRows=2, formingDeskReadRows=0, morningRows=1, lunchRows=1, hiddenPreviewImportReady=true, normalScannerEventsRead=81, normalShouldPostRowsPreserved=54, normalCanExecuteTrueRowsPreserved=0, normalDiscordSendRowsPreserved=1, runtimeGateEnabled=false, scannerRuntimeChangedRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0, recommendation=ready_for_hidden_local_preview_import. Preview rows are morning HtfDisplacementFvgContinuation LONG at 09:10 ET and lunch IntradayMssMicroContinuation LONG at 15:45 ET.
+Trading logic changed: No. This is a local render/install proof and hidden-preview import payload only. It does not alter setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, normal scanner output, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The hidden preview can import the generated payload, but the app has not yet been updated to import consumer-probe reports directly. Production remains off until separate explicit approval.
+Next recommended action: Add direct hidden-preview import support for the new consumer-probe/render-proof payload, still local-only and behind the existing `?unifiedDeskOutputPreview=1` gate, then run the app test that renders today's two Approved Desk Plan rows.
+
+Date: 2026-07-22
 Task: Add local scanner consumer probe for Unified Desk Output.
 Files changed: src/lib/unifiedDeskOutputLocalScannerConsumerProbe.ts, src/lib/unifiedDeskOutputLocalScannerConsumerProbe.test.ts, tools/automation/unified-desk-output-local-scanner-consumer-probe.ts, tools/automation/unified-desk-output-local-scanner-consumer-probe.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the next phase after disabled scanner-runtime wiring passed. This phase proves the scanner-side consumer boundary can import the disabled runtime adapter, keep default behavior off, preserve normal scanner output counters, and expose the two-row Unified Desk Output preview only under explicit localhost preview conditions.
