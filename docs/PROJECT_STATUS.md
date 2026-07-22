@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add AfterLunch scanner-owned dry-run contract.
+Files changed: tools/automation/desk-playbook-selector-afterlunch-scanner-owned-dry-run-contract.ts, tools/automation/desk-playbook-selector-afterlunch-scanner-owned-dry-run-contract.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved running the scanner-owned dry-run contract after the earliest completed 5M AfterLunch preview proved 18 clean preview tickets. This phase turns the preview into explicit scanner-owned review-ticket contracts with one ticket per lunch slate, deterministic entry/stop/T1/T2 requirements, HTF/session context when saved, and all live side effects disabled.
+Tests run: npx tsx tools/automation/desk-playbook-selector-afterlunch-scanner-owned-dry-run-contract.test.ts; npx tsx tools/automation/desk-playbook-selector-afterlunch-scanner-owned-dry-run-contract.ts --earliest-proof-preview tools/automation/diagnostic-reports/desk-playbook-selector-afterlunch-earliest-proof-preview-1784684274431.json --json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Focused test passed. Real contract report tools/automation/diagnostic-reports/desk-playbook-selector-afterlunch-scanner-owned-dry-run-contract-1784684731105.json passed with sourcePreviewTickets=18, contractTickets=18, reviewTickets=18, blockedMissingGeometry=0, duplicateSlatesSuppressed=0, contextAttachedTickets=7, winners=13, losses=5, unresolved=0, oneMesPl=1060.66, winRateResolved=0.72, livePromotionAllowedRows=0, recommendation=advance_to_local_scanner_snapshot_preview. This proves the AfterLunch earliest-proof lane can be represented as one scanner-owned dry-run review contract per lunch slate without changing live behavior.
+Trading logic changed: No. This is a local-only saved-preview dry-run contract. It does not run setupScanner, change ranking, change canExecute, post Discord, write Supabase, read NinjaTrader bridge data, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The contract is still built from saved preview evidence, not current live scanner runtime state. Only 7 of 18 contracts have saved HTF/session context attached; rows without saved context mark HTF as data-limited rather than inventing structure.
+Next recommended action: Build a local scanner snapshot preview that proves current scanner-owned builders can emit this same one-ticket AfterLunch contract shape with Discord/Supabase/canExecute/live behavior still disabled.
+
+Date: 2026-07-22
 Task: Add AfterLunch earliest completed 5M proof preview.
 Files changed: tools/automation/desk-playbook-selector-afterlunch-earliest-proof-preview.ts, tools/automation/desk-playbook-selector-afterlunch-earliest-proof-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the recommended surgical path after closing the weaker proof-time enrichment path: build a dry-run preview that selects the first valid completed 5M AfterLunchDriveFvgContinuation candidate per lunch slate and measures whether it produces clean scanner-owned review-ticket candidates before touching live behavior.
