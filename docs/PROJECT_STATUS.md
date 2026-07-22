@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-21
+Task: Add AfterLunch proof-time enrichment closeout diagnostic.
+Files changed: tools/automation/desk-playbook-selector-afterlunch-proof-time-enrichment.ts, tools/automation/desk-playbook-selector-afterlunch-proof-time-enrichment.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved a bounded AfterLunch proof-time enrichment check, with an explicit concern about not wasting time chasing a weak edge. The diagnostic compares the current no-lookahead camouflage AfterLunch lane, prior broad AfterLunch replay, and prior proof-time proxy OOS slate comparison from saved local reports only.
+Tests run: npx tsx tools/automation/desk-playbook-selector-afterlunch-proof-time-enrichment.test.ts; npx tsx tools/automation/desk-playbook-selector-afterlunch-proof-time-enrichment.ts --json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Focused test passed. Real report tools/automation/diagnostic-reports/desk-playbook-selector-afterlunch-proof-time-enrichment-1784683625832.json passed with recommendation=stop_proof_time_enrichment. The camouflage AfterLunch HTF+raid lane remains promising but sample-thin: 4 matches, 3 positives, precision=0.75, P/L=178.14. The broader AfterLunchDriveFvgContinuation replay remains positive: 30 rows, 21 winners, 7 losses, 2 unresolved, P/L=745.69. The proof-time proxy selector failed as a selector: 7 OOS slates, earliest-proof baseline P/L=539.4, proof-time selector P/L=456.9, delta=-82.5. The correct conclusion is to stop this proof-time enrichment/rank-boost path, not to remove AfterLunch.
+Trading logic changed: No. This is a local-only saved-report diagnostic. It does not run setupScanner, change ranking, change canExecute, post Discord, write Supabase, read NinjaTrader bridge data, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The broad AfterLunch family still appears useful, but this specific enrichment selector underperformed earliest completed 5M proof. Treat the proof-time enrichment as closed unless a new structural field explains why earliest proof wins.
+Next recommended action: Park the AfterLunch proof-time enrichment selector. If continuing AfterLunch work, study earliest completed 5M proof behavior for AfterLunchDriveFvgContinuation rather than adding more proof-time filters.
+
+Date: 2026-07-21
 Task: Add Desk Playbook Selector Phase 5 no-lookahead camouflage validation.
 Files changed: tools/automation/desk-playbook-selector-camouflage-no-lookahead-validation.ts, tools/automation/desk-playbook-selector-camouflage-no-lookahead-validation.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved moving forward to see whether the Phase 4 camouflage separator still passes when final measured session direction is removed as a selector input. The validation uses saved candidate-present rows and only pre/live-plausible context fields in the artifact: selected model/session/direction, HTF support, raid context, and complete-candidate density. Outcomes are measurement only.
