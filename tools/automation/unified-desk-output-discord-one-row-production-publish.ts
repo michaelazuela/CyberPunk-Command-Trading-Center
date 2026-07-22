@@ -61,17 +61,53 @@ interface DiscordFinalLaunchManifestReport {
   blockers: string[];
 }
 
+interface DiscordOneRowPublishRehearsalPlanReport {
+  reportType: 'unified_desk_output_discord_one_row_publish_rehearsal_plan';
+  generatedAt: string;
+  status: 'pass' | 'blocked';
+  rehearsalCandidate: {
+    id: string;
+    idempotencyKey: string;
+    route: 'production_discord_trade_plan_webhook';
+    payloadPreview: string;
+    productionSendEnabled: false;
+    explicitApprovalPresent: false;
+    webhookTargetVerified: false;
+    shouldPost: false;
+    publishDiscord: false;
+    webhookCalls: 0;
+    canExecute: false;
+  } | null;
+  summary: {
+    candidateSelectedRows: number;
+    productionSendEnabled: false;
+    explicitApprovalPresent: false;
+    webhookTargetVerified: false;
+    shouldPostRows: number;
+    publishDiscordRows: number;
+    realPostAllowedRows: number;
+    webhookCallRows: number;
+    supabaseWriteRows: number;
+    liveSupabaseReadRows: number;
+    liveBridgeReadRows: number;
+    canExecuteTrueRows: number;
+    blockedRows: number;
+    recommendation: 'ready_for_explicit_one_row_discord_publish_approval' | 'hold_for_one_row_publish_rehearsal_fix';
+  };
+  blockers: string[];
+}
+
 interface DisabledSenderReceipt {
-  reportType: 'unified_desk_output_discord_one_row_production_publish_disabled_sender';
+  reportType: 'unified_desk_output_discord_one_row_production_publish_disabled_sender' | 'unified_desk_output_discord_one_row_production_publish_receipt';
   generatedAt: string;
   status: 'pass' | 'blocked';
   authority: {
-    localOnly: true;
+    localOnly: boolean;
     readsSavedFinalLaunchManifestOnly: true;
     validatesOneRowSenderContractOnly: true;
-    productionSendArmed: false;
-    postsDiscord: false;
-    webhookCalls: 0;
+    productionSendArmed: boolean;
+    postsDiscord: boolean;
+    webhookCalls: 0 | 1;
     writesSupabase: false;
     readsLiveSupabase: false;
     readsLiveBridge: false;
@@ -95,8 +131,8 @@ interface DisabledSenderReceipt {
     oneRowCap: boolean;
     route: 'production_discord_trade_plan_webhook';
     commandExistsNow: true;
-    productionSendArmed: false;
-    productionSendBlockedReason: 'disabled_sender_contract_only';
+    productionSendArmed: boolean;
+    productionSendBlockedReason: 'disabled_sender_contract_only' | null;
   };
   summary: {
     manifestPassed: boolean;
@@ -104,17 +140,23 @@ interface DisabledSenderReceipt {
     idempotencyKeyMatched: boolean;
     explicitApprovalFlagPresent: boolean;
     explicitApprovalPhrasePresent: boolean;
-    productionSendArmed: false;
+    productionSendArmed: boolean;
     shouldPostRows: number;
     publishDiscordRows: number;
     realPostAllowedRows: number;
-    webhookCallRows: 0;
+    webhookCallRows: 0 | 1;
     supabaseWriteRows: number;
     liveSupabaseReadRows: number;
     liveBridgeReadRows: number;
     canExecuteTrueRows: number;
     blockedRows: number;
     recommendation: 'ready_for_final_explicit_one_row_production_execution' | 'hold_for_disabled_sender_contract_fix';
+  };
+  receipt: {
+    discordMessageId: string | null;
+    webhookWaitReadback: boolean;
+    payloadMatchedManifestCandidate: boolean;
+    secretValuesPrinted: false;
   };
   readbackSteps: string[];
   rollbackSteps: string[];
@@ -128,6 +170,7 @@ interface CliOptions {
   idempotencyKey: string | null;
   approvalFlag: boolean;
   approvalPhrase: string | null;
+  executeProductionWebhook: boolean;
   outDir: string;
   json: boolean;
 }
@@ -151,6 +194,7 @@ function parseArgs(args = process.argv.slice(2)): CliOptions {
     idempotencyKey: readFlag(args, '--idempotency-key'),
     approvalFlag: args.includes('--i-approve-one-discord-post'),
     approvalPhrase: readFlag(args, '--approval-phrase'),
+    executeProductionWebhook: args.includes('--execute-production-webhook'),
     outDir: readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR,
     json: args.includes('--json'),
   };
@@ -168,13 +212,56 @@ function readJson<T>(filePath: string): T {
   return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
 }
 
+function parseEnvFile(filePath: string): Map<string, string> {
+  const values = new Map<string, string>();
+  if (!fs.existsSync(filePath)) return values;
+  for (const line of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(trimmed);
+    if (!match) continue;
+    values.set(match[1], match[2].trim().replace(/^['"]|['"]$/g, ''));
+  }
+  return values;
+}
+
+function loadDiscordWebhookUrl(): string {
+  const envLocal = parseEnvFile(path.resolve(__dirname, '..', '..', '.env.local'));
+  const webhookUrl = envLocal.get('DISCORD_WEBHOOK_URL') || process.env.DISCORD_WEBHOOK_URL || '';
+  if (!webhookUrl) throw new Error('DISCORD_WEBHOOK_URL is not configured.');
+  return webhookUrl;
+}
+
+async function postOneDiscordWebhook(webhookUrl: string, content: string): Promise<string | null> {
+  const url = new URL(webhookUrl);
+  url.searchParams.set('wait', 'true');
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      content,
+      allowed_mentions: { parse: [] },
+    }),
+  });
+  if (!response.ok) throw new Error(`Discord webhook failed (${response.status}).`);
+  const body = await response.text();
+  if (!body.trim()) return null;
+  const parsed = JSON.parse(body) as { id?: unknown };
+  return typeof parsed.id === 'string' ? parsed.id : null;
+}
+
 function buildMarkdown(report: Omit<DisabledSenderReceipt, 'markdown'>): string {
+  const productionReceipt = report.reportType === 'unified_desk_output_discord_one_row_production_publish_receipt';
   return [
-    '# Unified Desk Output Discord One-Row Production Publish Disabled Sender',
+    productionReceipt
+      ? '# Unified Desk Output Discord One-Row Production Publish Receipt'
+      : '# Unified Desk Output Discord One-Row Production Publish Disabled Sender',
     '',
     `Status: ${report.status}`,
     '',
-    'Authority: disabled sender contract only. It validates the manifest, candidate id, idempotency key, and approval inputs, but productionSendArmed remains false and no Discord webhook is called.',
+    productionReceipt
+      ? 'Authority: approved one-row production publish receipt. It validates the manifest, candidate id, idempotency key, and approval inputs, then records exactly one Discord webhook call with no Supabase writes, live bridge reads, canExecute changes, trading-rule changes, or automated orders.'
+      : 'Authority: disabled sender contract only. It validates the manifest, candidate id, idempotency key, and approval inputs, but productionSendArmed remains false and no Discord webhook is called.',
     '',
     '## Summary',
     `- Manifest passed: ${report.summary.manifestPassed}.`,
@@ -193,6 +280,8 @@ function buildMarkdown(report: Omit<DisabledSenderReceipt, 'markdown'>): string 
     `- canExecute true rows: ${report.summary.canExecuteTrueRows}.`,
     `- Blocked rows: ${report.summary.blockedRows}.`,
     `- Recommendation: ${report.summary.recommendation}.`,
+    `- Discord message id present: ${Boolean(report.receipt.discordMessageId)}.`,
+    `- Secret values printed: ${report.receipt.secretValuesPrinted}.`,
     '',
     '## Contract',
     `- Route: ${report.contract.route}`,
@@ -211,11 +300,14 @@ export function buildUnifiedDeskOutputDiscordOneRowProductionPublishDisabledSend
   idempotencyKey: string | null;
   explicitApprovalFlagPresent: boolean;
   approvalPhrase: string | null;
+  productionSendArmed?: boolean;
+  discordMessageId?: string | null;
 }, generatedAt = new Date().toISOString()): DisabledSenderReceipt {
   const manifest = args.manifestReport;
   const candidateMatched = Boolean(args.candidateId && args.candidateId === manifest.launchContract.candidateId);
   const idempotencyKeyMatched = Boolean(args.idempotencyKey && args.idempotencyKey === manifest.launchContract.idempotencyKey);
   const explicitApprovalPhrasePresent = args.approvalPhrase === APPROVAL_PHRASE;
+  const productionSendArmed = Boolean(args.productionSendArmed);
   const blockers = [
     manifest.reportType === 'unified_desk_output_discord_final_launch_manifest'
       ? null
@@ -246,16 +338,18 @@ export function buildUnifiedDeskOutputDiscordOneRowProductionPublishDisabledSend
     ...manifest.blockers,
   ].filter((item): item is string => Boolean(item));
   const report: Omit<DisabledSenderReceipt, 'markdown'> = {
-    reportType: 'unified_desk_output_discord_one_row_production_publish_disabled_sender',
+    reportType: productionSendArmed
+      ? 'unified_desk_output_discord_one_row_production_publish_receipt'
+      : 'unified_desk_output_discord_one_row_production_publish_disabled_sender',
     generatedAt,
     status: blockers.length ? 'blocked' : 'pass',
     authority: {
-      localOnly: true,
+      localOnly: !productionSendArmed,
       readsSavedFinalLaunchManifestOnly: true,
       validatesOneRowSenderContractOnly: true,
-      productionSendArmed: false,
-      postsDiscord: false,
-      webhookCalls: 0,
+      productionSendArmed,
+      postsDiscord: productionSendArmed,
+      webhookCalls: productionSendArmed ? 1 : 0,
       writesSupabase: false,
       readsLiveSupabase: false,
       readsLiveBridge: false,
@@ -279,8 +373,8 @@ export function buildUnifiedDeskOutputDiscordOneRowProductionPublishDisabledSend
       oneRowCap: true,
       route: 'production_discord_trade_plan_webhook',
       commandExistsNow: true,
-      productionSendArmed: false,
-      productionSendBlockedReason: 'disabled_sender_contract_only',
+      productionSendArmed,
+      productionSendBlockedReason: productionSendArmed ? null : 'disabled_sender_contract_only',
     },
     summary: {
       manifestPassed: manifest.status === 'pass',
@@ -288,11 +382,11 @@ export function buildUnifiedDeskOutputDiscordOneRowProductionPublishDisabledSend
       idempotencyKeyMatched,
       explicitApprovalFlagPresent: args.explicitApprovalFlagPresent,
       explicitApprovalPhrasePresent,
-      productionSendArmed: false,
+      productionSendArmed,
       shouldPostRows: 0,
-      publishDiscordRows: 0,
-      realPostAllowedRows: 0,
-      webhookCallRows: 0,
+      publishDiscordRows: productionSendArmed ? 1 : 0,
+      realPostAllowedRows: productionSendArmed ? 1 : 0,
+      webhookCallRows: productionSendArmed ? 1 : 0,
       supabaseWriteRows: 0,
       liveSupabaseReadRows: 0,
       liveBridgeReadRows: 0,
@@ -301,6 +395,12 @@ export function buildUnifiedDeskOutputDiscordOneRowProductionPublishDisabledSend
       recommendation: blockers.length
         ? 'hold_for_disabled_sender_contract_fix'
         : 'ready_for_final_explicit_one_row_production_execution',
+    },
+    receipt: {
+      discordMessageId: args.discordMessageId || null,
+      webhookWaitReadback: productionSendArmed,
+      payloadMatchedManifestCandidate: candidateMatched,
+      secretValuesPrinted: false,
     },
     readbackSteps: manifest.readbackSteps,
     rollbackSteps: manifest.rollbackSteps,
@@ -315,8 +415,11 @@ export function writeUnifiedDeskOutputDiscordOneRowProductionPublishDisabledSend
 ): { jsonPath: string; markdownPath: string } {
   fs.mkdirSync(outDir, { recursive: true });
   const stamp = Date.now();
-  const jsonPath = path.join(outDir, `unified-desk-output-discord-one-row-production-publish-disabled-sender-${stamp}.json`);
-  const markdownPath = path.join(outDir, `unified-desk-output-discord-one-row-production-publish-disabled-sender-${stamp}.md`);
+  const prefix = report.reportType === 'unified_desk_output_discord_one_row_production_publish_receipt'
+    ? 'unified-desk-output-discord-one-row-production-publish-receipt'
+    : 'unified-desk-output-discord-one-row-production-publish-disabled-sender';
+  const jsonPath = path.join(outDir, `${prefix}-${stamp}.json`);
+  const markdownPath = path.join(outDir, `${prefix}-${stamp}.md`);
   fs.writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
   fs.writeFileSync(markdownPath, `${report.markdown}\n`);
   return { jsonPath, markdownPath };
@@ -329,6 +432,30 @@ async function main(): Promise<void> {
     '');
   if (!fs.existsSync(manifestPath)) throw new Error('Missing Unified Desk Output Discord final launch manifest path.');
   const manifestReport = readJson<DiscordFinalLaunchManifestReport>(manifestPath);
+  let discordMessageId: string | null = null;
+  if (options.executeProductionWebhook) {
+    const preflight = buildUnifiedDeskOutputDiscordOneRowProductionPublishDisabledSenderReport({
+      manifestPath,
+      manifestReport,
+      candidateId: options.candidateId,
+      idempotencyKey: options.idempotencyKey,
+      explicitApprovalFlagPresent: options.approvalFlag,
+      approvalPhrase: options.approvalPhrase,
+    });
+    if (preflight.status !== 'pass') {
+      throw new Error(`Production webhook blocked by preflight: ${preflight.blockers.join('; ')}`);
+    }
+    const rehearsalPath = path.resolve(manifestReport.source.oneRowRehearsalPlanPath);
+    const rehearsal = readJson<DiscordOneRowPublishRehearsalPlanReport>(rehearsalPath);
+    if (rehearsal.status !== 'pass' || !rehearsal.rehearsalCandidate) {
+      throw new Error('Production webhook blocked: one-row rehearsal candidate is unavailable.');
+    }
+    if (rehearsal.rehearsalCandidate.id !== manifestReport.launchContract.candidateId) {
+      throw new Error('Production webhook blocked: rehearsal candidate id does not match manifest.');
+    }
+    discordMessageId = await postOneDiscordWebhook(loadDiscordWebhookUrl(), rehearsal.rehearsalCandidate.payloadPreview);
+    if (!discordMessageId) throw new Error('Production webhook did not return a Discord message id.');
+  }
   const report = buildUnifiedDeskOutputDiscordOneRowProductionPublishDisabledSenderReport({
     manifestPath,
     manifestReport,
@@ -336,6 +463,8 @@ async function main(): Promise<void> {
     idempotencyKey: options.idempotencyKey,
     explicitApprovalFlagPresent: options.approvalFlag,
     approvalPhrase: options.approvalPhrase,
+    productionSendArmed: options.executeProductionWebhook,
+    discordMessageId,
   });
   const written = writeUnifiedDeskOutputDiscordOneRowProductionPublishDisabledSenderReport(report, path.resolve(options.outDir));
   if (options.json) {
@@ -344,6 +473,7 @@ async function main(): Promise<void> {
       status: report.status,
       summary: report.summary,
       contract: report.contract,
+      receipt: report.receipt,
       blockers: report.blockers.slice(0, 20),
     }, null, 2));
   } else {

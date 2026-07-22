@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Execute exactly one Unified Desk Output Discord production publish rehearsal.
+Files changed: tools/automation/unified-desk-output-discord-one-row-production-publish.ts, tools/automation/unified-desk-output-discord-one-row-production-publish.test.ts, docs/PROJECT_STATUS.md.
+Reason: User explicitly approved exactly one Unified Desk Output Discord production publish rehearsal for the manifest candidate and idempotency key, including one real Discord webhook call. This phase extended the locked sender to arm only under the exact manifest/candidate/idempotency/approval contract and executed the one approved call.
+Tests run: npx tsx tools/automation/unified-desk-output-discord-one-row-production-publish.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/unified-desk-output-discord-one-row-production-publish.ts --manifest <latest-final-launch-manifest> --candidate-id <manifest-candidate-id> --idempotency-key <manifest-idempotency-key> --i-approve-one-discord-post --approval-phrase "I approve exactly one Unified Desk Output Discord production publish rehearsal." --execute-production-webhook --json.
+Result: Focused test and typecheck passed before execution. The approved production receipt tools/automation/diagnostic-reports/unified-desk-output-discord-one-row-production-publish-disabled-sender-1784749083289.json passed with discordMessageId=1529573262068154513, manifestPassed=true, candidateMatched=true, idempotencyKeyMatched=true, explicitApprovalFlagPresent=true, explicitApprovalPhrasePresent=true, productionSendArmed=true, publishDiscordRows=1, realPostAllowedRows=1, webhookCallRows=1, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, blockedRows=0.
+Trading logic changed: No. This only arms the Discord one-row sender when the exact manifest, candidate id, idempotency key, explicit approval flag, and approval phrase are present. It does not change setupScanner rules, ranking, canExecute, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: Exactly one real Discord webhook call was made and Discord returned message id 1529573262068154513.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The saved receipt filename uses the previous disabled-sender prefix, though its reportType is the production receipt. The code has been corrected so future production receipts use the production-receipt prefix and accurate markdown label.
+Next recommended action: Run final full verification, commit, push, then stop. Do not send another Discord message without a new exact approval and a fresh idempotency key.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output Discord disabled one-row production sender contract.
 Files changed: tools/automation/unified-desk-output-discord-one-row-production-publish.ts, tools/automation/unified-desk-output-discord-one-row-production-publish.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved installing the next locked phase after the final launch manifest. This phase adds the proposed sender command as a disabled contract that validates the manifest, candidate id, idempotency key, explicit approval flag, and approval phrase while keeping productionSendArmed=false.

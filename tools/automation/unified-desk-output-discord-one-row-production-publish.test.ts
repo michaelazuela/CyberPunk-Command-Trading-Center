@@ -106,6 +106,33 @@ assert.equal(report.summary.blockedRows, 0);
 assert.equal(report.summary.recommendation, 'ready_for_final_explicit_one_row_production_execution');
 assert.match(report.markdown, /disabled sender contract only/i);
 
+const receipt = buildUnifiedDeskOutputDiscordOneRowProductionPublishDisabledSenderReport({
+  manifestPath: 'fixture-manifest.json',
+  manifestReport,
+  candidateId: 'approved-fixture',
+  idempotencyKey: 'unified-desk-output:discord-one-row-rehearsal:approved-fixture',
+  explicitApprovalFlagPresent: true,
+  approvalPhrase: 'I approve exactly one Unified Desk Output Discord production publish rehearsal.',
+  productionSendArmed: true,
+  discordMessageId: '1234567890',
+});
+assert.equal(receipt.reportType, 'unified_desk_output_discord_one_row_production_publish_receipt');
+assert.equal(receipt.authority.localOnly, false);
+assert.equal(receipt.authority.productionSendArmed, true);
+assert.equal(receipt.authority.postsDiscord, true);
+assert.equal(receipt.authority.webhookCalls, 1);
+assert.equal(receipt.summary.productionSendArmed, true);
+assert.equal(receipt.summary.publishDiscordRows, 1);
+assert.equal(receipt.summary.realPostAllowedRows, 1);
+assert.equal(receipt.summary.webhookCallRows, 1);
+assert.equal(receipt.summary.supabaseWriteRows, 0);
+assert.equal(receipt.summary.liveBridgeReadRows, 0);
+assert.equal(receipt.summary.canExecuteTrueRows, 0);
+assert.equal(receipt.receipt.discordMessageId, '1234567890');
+assert.equal(receipt.receipt.secretValuesPrinted, false);
+assert.match(receipt.markdown, /approved one-row production publish receipt/i);
+assert.doesNotMatch(receipt.markdown, /productionSendArmed remains false/i);
+
 const blocked = buildUnifiedDeskOutputDiscordOneRowProductionPublishDisabledSenderReport({
   manifestPath: 'fixture-manifest.json',
   manifestReport,
