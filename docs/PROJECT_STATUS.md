@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output local-live readiness proof.
+Files changed: tools/automation/unified-desk-output-local-live-readiness.ts, tools/automation/unified-desk-output-local-live-readiness.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved proving the desk can go live locally first before full production. This phase adds a saved-report-only readiness proof that checks the default route stays disabled, remote/non-local access stays blocked, and localhost plus explicit preview flag allows the scanner preview only after a passing rehearsal.
+Tests run: npx tsx tools/automation/unified-desk-output-local-live-readiness.test.ts; npx tsx tools/automation/unified-desk-output-local-live-readiness.ts --json.
+Result: Focused test passed. Real readiness report tools/automation/diagnostic-reports/unified-desk-output-local-live-readiness-1784733171974.json passed with defaultDisabled=true, remoteBlocked=true, localPreviewAllowed=true, scannerPreviewAllowed=true, previewRows=276, approvedDeskPlanRows=105, formingDeskReadRows=171, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, wordingViolationRows=0, blockedRows=0, recommendation=ready_for_local_live_preview.
+Trading logic changed: No. This is a local-live readiness gate over saved rehearsal output. It does not change setupScanner rules, ranking, canExecute, Discord, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves local-live preview eligibility from saved scanner output. It still does not enable production Discord posting, Supabase persistence, live bridge repair, or automated execution.
+Next recommended action: Run the app locally at the hidden Unified Desk Output preview URL, import the passing scanner surface smoke JSON, and visually confirm the local desk output before any production-facing phase.
+
+Date: 2026-07-22
 Task: Wire Unified Desk Output runtime gate into hidden local preview.
 Files changed: src/components/UnifiedDeskOutputPreviewPanel.tsx, docs/PROJECT_STATUS.md.
 Reason: User approved continuing in small chunks toward live. This phase wires the pure runtime gate into the hidden Unified Desk Output preview path so the app can render rows only when the surface-smoke adapter is ready and the local runtime latch allows the preview.
