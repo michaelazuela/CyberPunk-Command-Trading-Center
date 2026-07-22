@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add AfterLunch local scanner snapshot preview.
+Files changed: tools/automation/desk-playbook-selector-afterlunch-local-scanner-snapshot-preview.ts, tools/automation/desk-playbook-selector-afterlunch-local-scanner-snapshot-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved proving the AfterLunch scanner-owned dry-run contract through the current local scanner-owned DeskState and DeskPublishDecision builders before any live-facing behavior is considered. This phase verifies one dry-run review ticket per lunch slate can become a complete scanner-owned human-review snapshot without changing scanner runtime behavior.
+Tests run: npx tsx tools/automation/desk-playbook-selector-afterlunch-local-scanner-snapshot-preview.test.ts; npx tsx tools/automation/desk-playbook-selector-afterlunch-local-scanner-snapshot-preview.ts --dry-run-contract tools/automation/diagnostic-reports/desk-playbook-selector-afterlunch-scanner-owned-dry-run-contract-1784684731105.json --json.
+Result: Focused test passed. Real snapshot report tools/automation/diagnostic-reports/desk-playbook-selector-afterlunch-local-scanner-snapshot-preview-1784686505400.json passed with contractTicketsRead=18, reviewTicketsRead=18, snapshotRows=18, selectedCandidateSnapshotRows=18, deskTicketSnapshotRows=18, publishDecisionSnapshotRows=18, publishShouldPostRows=18, publishCompletePlanRows=18, publishCanExecuteTrueRows=0, localSnapshotReadyRows=18, canExecuteDriftRows=0, entryStopTargetDriftRows=0, htfDataLimitedSourceRows=11, livePromotionAllowedRows=0, runtimeInstallAllowed=false, recommendation=ready_for_live_wiring_decision_gate. This means the current scanner-owned builders preserve entry/stop/T1/T2 for the AfterLunch lane and would classify the tickets as complete human-review publish decisions, while canExecute remains false and the local tool performs no Discord/Supabase/live action.
+Trading logic changed: No. This is a local-only saved-contract snapshot preview. It does not run setupScanner, change ranking, change canExecute, post Discord, write Supabase, read NinjaTrader bridge data, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None. The snapshot reports local publish-decision eligibility only; it does not post.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: 11 of 18 source contracts still carry HTF=data_limited from saved context. Those rows remain valid only as 5M-proof review-ticket research snapshots; HTF is context only and not structural confirmation or candidate-promotion evidence.
+Next recommended action: Stop here for the live-wiring decision gate. If approved later, the next phase should design a tiny runtime adapter proposal for AfterLunch human-review tickets only, with explicit Discord/Supabase/canExecute boundaries and no automated execution.
+
+Date: 2026-07-22
 Task: Add AfterLunch scanner-owned dry-run contract.
 Files changed: tools/automation/desk-playbook-selector-afterlunch-scanner-owned-dry-run-contract.ts, tools/automation/desk-playbook-selector-afterlunch-scanner-owned-dry-run-contract.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved running the scanner-owned dry-run contract after the earliest completed 5M AfterLunch preview proved 18 clean preview tickets. This phase turns the preview into explicit scanner-owned review-ticket contracts with one ticket per lunch slate, deterministic entry/stop/T1/T2 requirements, HTF/session context when saved, and all live side effects disabled.
