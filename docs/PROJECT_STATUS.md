@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-21
+Task: Add Desk Playbook Selector Phase 5 no-lookahead camouflage validation.
+Files changed: tools/automation/desk-playbook-selector-camouflage-no-lookahead-validation.ts, tools/automation/desk-playbook-selector-camouflage-no-lookahead-validation.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved moving forward to see whether the Phase 4 camouflage separator still passes when final measured session direction is removed as a selector input. The validation uses saved candidate-present rows and only pre/live-plausible context fields in the artifact: selected model/session/direction, HTF support, raid context, and complete-candidate density. Outcomes are measurement only.
+Tests run: npx tsx tools/automation/desk-playbook-selector-camouflage-no-lookahead-validation.test.ts; npx tsx tools/automation/desk-playbook-selector-camouflage-no-lookahead-validation.ts --camouflage-audit tools/automation/diagnostic-reports/desk-playbook-selector-camouflage-audit-1784681786161.json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Focused test passed. Real no-lookahead validation report tools/automation/diagnostic-reports/desk-playbook-selector-camouflage-no-lookahead-validation-1784683052328.json passed with comparisonRows=83, positiveRows=14, validatedLanes=4, passingLanes=0, recommendation=hold_research_only. AfterLunchDriveFvgContinuation lunch HTF+raid is promising but sample-thin: 4 matches, 3 positives, precision=0.75, P/L=178.14, status=insufficient_sample. IntradayMssMicroContinuation lunch HTF+raid failed precision threshold: 6 matches, 3 positives, precision=0.5, P/L=190.63. OpeningDriveFvgContinuation morning HTF+raid failed: 7 matches, 2 positives, precision=0.2857, P/L=366.27. Broad all-model HTF+raid also failed: 21 matches, 10 positives, precision=0.4762. This means the broad Phase 4 edge relied too much on final-session-direction hindsight and should not be installed live.
+Trading logic changed: No. This is a local-only saved-diagnostic validation. It does not run setupScanner, change ranking, change canExecute, post Discord, write Supabase, read NinjaTrader bridge data, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The saved camouflage artifact still lacks full proof-time structural fields, so this is a conservative validation, not a final live scanner replay. AfterLunch remains worth studying, but it is too sample-thin for implementation.
+Next recommended action: Do not implement the camouflage selector into live behavior. If continuing this lane, run a narrow AfterLunch-only proof-time field enrichment/replay package to see whether those 4 rows survive with real proof-time structure and more samples.
+
+Date: 2026-07-21
 Task: Add Desk Playbook Selector Phase 4 camouflage separator audit.
 Files changed: tools/automation/desk-playbook-selector-camouflage-separator-audit.ts, tools/automation/desk-playbook-selector-camouflage-separator-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved isolating the 14 camouflaged positive-proof rows against the 69 candidate-present non-drive/raid rows so the desk can identify the separator without reopening every noisy balanced-range ticket.
