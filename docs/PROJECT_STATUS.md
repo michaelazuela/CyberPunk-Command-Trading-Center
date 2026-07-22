@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add current live-readiness manifest for Unified Desk Output runtime gate.
+Files changed: tools/automation/unified-desk-output-current-live-readiness-manifest.ts, tools/automation/unified-desk-output-current-live-readiness-manifest.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved adding the next manifest phase after the disabled selector-policy preview proved proven-lane-priority changes today's selected scanner output away from late TurtleSoup rows. This phase writes a local manifest that names proven_lane_priority_then_latest_proof as the proposed selector policy for a future disabled runtime gate.
+Tests run: npx tsx tools/automation/unified-desk-output-current-live-readiness-manifest.test.ts; npx tsx tools/automation/unified-desk-output-current-live-readiness-manifest.ts --proposed-preview <proven-lane-priority-preview> --comparison-preview <latest-proof-preview> --json.
+Result: Focused test passed. Real manifest tools/automation/diagnostic-reports/unified-desk-output-current-live-readiness-manifest-1784755466941.json passed with proposedPreviewPassed=true, comparisonPreviewPassed=true, selectedRows=2, morningRows=1, lunchRows=1, selectedPolicyChangedFromLatestProof=true, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, runtimeInstallAllowed=false, explicitApprovalPresent=false, blockedRows=0, recommendation=ready_to_install_disabled_runtime_gate_manifest. Manifest-selected candidates were morning HtfDisplacementFvgContinuation LONG at 09:10 ET, entry 7519.5, stop 7515.25, T1 7526, T2 7528; lunch IntradayMssMicroContinuation LONG at 15:45 ET, entry 7540, stop 7535.75, T1 7546.5, T2 7548.5.
+Trading logic changed: No. This is a local manifest only. It does not install runtime behavior, change default selector behavior, alter setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The runtime gate command named in the manifest does not exist yet. The selected policy is ready for a disabled runtime-gate manifest install, not production enablement.
+Next recommended action: Install the disabled runtime-gate manifest command named by this manifest. It should consume the current live-readiness manifest, require fresh idempotency, remain disabled by default, and prove no scanner runtime/Discord/Supabase/bridge behavior changes.
+
+Date: 2026-07-22
 Task: Add disabled selector-policy preview mode for Unified Desk Output.
 Files changed: src/lib/unifiedDeskOutputGuardedScannerLane.ts, src/lib/unifiedDeskOutputGuardedScannerLane.test.ts, tools/automation/unified-desk-output-guarded-local-scanner-lane-preview.ts, docs/PROJECT_STATUS.md.
 Reason: User approved running the next phase after the current scanner selection-policy audit proved today's selected row changes depending on whether the guarded lane uses latest-proof or proven-lane-priority selection. This phase adds an opt-in disabled preview mode for the guarded local scanner lane while preserving latest-proof as the default.
