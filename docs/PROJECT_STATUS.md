@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output local scanner-builder preview.
+Files changed: tools/automation/unified-desk-output-local-scanner-builder-preview.ts, tools/automation/unified-desk-output-local-scanner-builder-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved proving the clean `APPROVED_DESK_PLAN` / `FORMING_DESK_READ` output contract through current scanner-owned `DeskState` and `DeskPublishDecision` builders before any live runtime wiring. This phase verifies the new visible desk language can ride the existing scanner-owned builders without changing trade logic or live behavior.
+Tests run: npx tsx tools/automation/unified-desk-output-local-scanner-builder-preview.test.ts; npx tsx tools/automation/unified-desk-output-local-scanner-builder-preview.ts --selector-preview tools/automation/diagnostic-reports/unified-desk-output-selector-preview-1784698472012.json --json.
+Result: Focused test passed. Real builder preview report tools/automation/diagnostic-reports/unified-desk-output-local-scanner-builder-preview-1784727355969.json passed with sourceRows=276, builderRows=276, approvedDeskPlanRows=105, formingDeskReadRows=171, silentInternalRows=0, completePlanRows=276, publishShouldPostRows=276, publishCanExecuteTrueRows=0, canExecuteChangedRows=0, livePromotionAllowedRows=0, noAutomatedOrderRows=276, wordingViolationRows=0, blockedRows=0, runtimeInstallAllowed=false, recommendation=ready_for_disabled_runtime_adapter_preview.
+Trading logic changed: No. This is a local-only scanner-builder preview over the saved Unified Desk Output selector preview. It does not change setupScanner rules, ranking, canExecute, Discord, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: None. The preview observes scanner-owned publish-decision shape only; it does not post.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: `publishShouldPostRows=276` means the current scanner-owned publish builder considers these local snapshots structurally publishable, but this tool still sets runtimeInstallAllowed=false and performs no live publishing. The next phase must keep a disabled adapter gate until explicitly approved for live wiring.
+Next recommended action: Add the disabled runtime adapter preview that would map live scanner output to only `APPROVED_DESK_PLAN`, `FORMING_DESK_READ`, or silence, while still forcing Discord/Supabase/bridge/canExecute/live behavior off.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output Selector preview.
 Files changed: tools/automation/unified-desk-output-selector-preview.ts, tools/automation/unified-desk-output-selector-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved replacing the messy visible desk-output idea with a clean two-state output contract: `APPROVED_DESK_PLAN` when the proven primary lane is complete, `FORMING_DESK_READ` when a supporting setup is developing, and silent output when nothing useful exists. This is local-only and does not install live behavior.
