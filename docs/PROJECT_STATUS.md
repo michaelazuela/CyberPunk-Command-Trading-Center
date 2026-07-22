@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Run IntradayMssMicroContinuation saved-history selector test.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: User asked whether IntradayMssMicroContinuation could work if tested through the existing history-review tooling before adding it to the cleaner desk adapter.
+Tests run: npx tsx tools/automation/unified-positive-held-local-preview-scanner-owned-selector-proposal-audit.ts --session-bounded-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-session-bounded-profit-validation-1784586800588.json --selector-method-key 'IntradayMssMicroContinuation|lunch|SHORT|risk_16_to_24' --json; npx tsx tools/automation/unified-positive-held-local-preview-scanner-owned-selector-dry-run-contract.ts --session-bounded-report tools/automation/diagnostic-reports/unified-positive-held-local-preview-session-bounded-profit-validation-1784586800588.json --selector-method-key 'IntradayMssMicroContinuation|lunch|SHORT|risk_16_to_24' --json.
+Result: Saved-history proposal audit report tools/automation/diagnostic-reports/unified-positive-held-local-preview-scanner-owned-selector-proposal-audit-1784689940189.json passed with selectorRows=30, selectorResolvedRows=29, selectorSessionGrossOneMesPl=4030, selectorWinRateResolved=0.86, selectorAverageMfeR=3.46, selectorAverageMaeR=0.67, selectorVsNonTargetWinnerPlRank=1, but recommendation=hold_for_more_separator_research because the risk/noise threshold was not clean enough. The stricter one-ticket-per-slate dry-run contract report tools/automation/diagnostic-reports/unified-positive-held-local-preview-scanner-owned-selector-dry-run-contract-1784689940207.json passed with selectorRawRows=30, dryRunSlateRows=6, duplicateRowsSuppressed=24, staleRowsSuppressed=10, collisionRows=52, collisionWinningRows=29, rawSelectorOneMesPl=4030, dryRunOneMesPl=545, dryRunWinRateResolved=0.67, dryRunAverageMfeR=2.64, dryRunAverageMaeR=0.96, livePromotionAllowedRows=0, recommendation=hold_for_timing_or_collision_refinement. Selected strict slates were four winners and two losses; both losses were June 25 lunch shorts.
+Trading logic changed: No. This was a local-only saved-report diagnostic using existing tools. It did not run setupScanner, change ranking, change canExecute, post Discord, write Supabase, read NinjaTrader bridge data, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Raw IntradayMssMicroContinuation lunch short risk_16_to_24 is strong, but the realistic one-ticket-per-slate version is not clean enough yet because duplicate/stale compression, high collision count, and average MAE close to 1R suggest timing/refinement risk.
+Next recommended action: Do not add IntradayMssMicroContinuation to the first unified adapter. Keep it as research/supporting confirmation and run a narrow separator on the June 25 failure pattern before considering a later adapter lane.
+
+Date: 2026-07-22
 Task: Add morning local scanner snapshot preview.
 Files changed: tools/automation/desk-playbook-selector-morning-local-scanner-snapshot-preview.ts, tools/automation/desk-playbook-selector-morning-local-scanner-snapshot-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: User asked to run the missing morning proof before deciding when to install unified live-facing behavior. This phase proves the existing morning selector dry-run contract, `SweepMssFvgRetrace|morning|SHORT|risk_8_to_16`, through the current scanner-owned DeskState and DeskPublishDecision builders. OpeningDrive and other same-direction collision rows remain notes only, not extra tickets.
