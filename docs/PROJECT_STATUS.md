@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output Discord webhook target presence audit.
+Files changed: tools/automation/unified-desk-output-discord-webhook-target-presence-audit.ts, tools/automation/unified-desk-output-discord-webhook-target-presence-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the next local-only production readiness check after the disabled one-row Discord rehearsal plan. This phase verifies the production Discord webhook target variable is documented and locally configured without printing secret values or making a network call.
+Tests run: npx tsx tools/automation/unified-desk-output-discord-webhook-target-presence-audit.test.ts; npx tsx tools/automation/unified-desk-output-discord-webhook-target-presence-audit.ts --json.
+Result: Focused test passed. Real audit tools/automation/diagnostic-reports/unified-desk-output-discord-webhook-target-presence-audit-1784747001824.json passed with rehearsalPlanPassed=true, candidateSelectedRows=1, productionSendEnabled=false, explicitApprovalPresent=false, webhookTargetConfigured=true, webhookTargetShapeValid=true, webhookTargetVerifiedByNetwork=false, secretValuesPrinted=false, shouldPostRows=0, publishDiscordRows=0, realPostAllowedRows=0, webhookCallRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, readinessBlockers=0, recommendation=ready_for_explicit_one_row_discord_publish_approval.
+Trading logic changed: No. This is a local-only secret-safe Discord target presence audit. It does not change setupScanner rules, ranking, canExecute, Discord posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: Configuration-name/shape audit only. No webhook calls and no Discord posts.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves target presence and URL shape only. It does not prove network delivery because no webhook call was made.
+Next recommended action: Stop for explicit one-row Discord production publish approval, or add a no-network final launch manifest that names the exact command and rollback/readback steps.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output Discord one-row publish rehearsal plan.
 Files changed: tools/automation/unified-desk-output-discord-one-row-publish-rehearsal-plan.ts, tools/automation/unified-desk-output-discord-one-row-publish-rehearsal-plan.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the next disabled production-facing phase after the Discord publish-gate audit. This phase selects exactly one saved dry-run Approved Desk Plan payload and creates a disabled rehearsal plan with idempotency, one-row cap, launch requirements, and all production send switches off.
