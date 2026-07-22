@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-21
+Task: Add Desk Playbook Selector Phase 3 suppressed-window camouflage audit.
+Files changed: tools/automation/desk-playbook-selector-camouflage-audit.ts, tools/automation/desk-playbook-selector-camouflage-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: User asked whether the 163 Phase 1 suppressed windows were true noise or whether the market could be camouflaging the move inside non-drive/raid labels. The audit classifies each suppressed window using the saved proof-grade day-by-day report, measuring selected-candidate proof, session movement, active raids, HTF map alignment, and outcome without promoting execution.
+Tests run: npx tsx tools/automation/desk-playbook-selector-camouflage-audit.test.ts; npx tsx tools/automation/desk-playbook-selector-camouflage-audit.ts --day-by-day-report tools/automation/diagnostic-reports/ytd-full-scanner-day-by-day-market-move-best-model-map-1784671041320.json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Focused test passed. Real report tools/automation/diagnostic-reports/desk-playbook-selector-camouflage-audit-1784681786161.json passed with sourceWindows=344, suppressedWindows=163, camouflagedPositiveProof=14, directionConflictTrapsAvoided=3, storyWithoutFiveMinuteProof=7, candidatePresentButNotDriveRaid=69, cleanNoData=61, noiseOrUnresolved=9, positiveSuppressedPnl=718.16, currentRunArtifacts=172, staleArtifacts=0. The important finding is that Phase 1 was too strict for some saved windows: 14 suppressed windows had complete selected 5M proof, aligned with the measured session move, and positive selected-candidate outcome, but the saved movement label was not one of the Phase 1 drive/raid labels.
+Trading logic changed: No. This is a local-only saved-diagnostic audit. It does not run setupScanner, change ranking, change canExecute, post Discord, write Supabase, read NinjaTrader bridge data, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The audit uses saved selected-candidate outcomes from the proof-grade research report. It identifies hidden/camouflaged research edge candidates, but it does not prove live scanner selection, raw candidate ordering, or real-time publish readiness.
+Next recommended action: Phase 4 should isolate the 14 camouflaged positive-proof rows by model/session/HTF/raid pattern and compare them against the 69 non-drive/raid candidate-present rows that did not qualify, so the desk can find the exact selector rule without opening the door to noisy balanced-range tickets.
+
+Date: 2026-07-21
 Task: Add Desk Playbook Selector Phase 2 RAG weighting preview.
 Files changed: tools/automation/desk-playbook-selector-rag-weighting-preview.ts, tools/automation/desk-playbook-selector-rag-weighting-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the second small phase after the Phase 1 one-ticket selector preview. This phase adds a research-only advisory overlay that can weight each Phase 1 human-review ticket against prior RAG/outcome memory by session, model, and direction without approving trades or changing live behavior.
