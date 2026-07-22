@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add current scanner selection-policy audit for Unified Desk Output.
+Files changed: tools/automation/unified-desk-output-current-scanner-selection-policy-audit.ts, tools/automation/unified-desk-output-current-scanner-selection-policy-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the next narrow phase after the current scanner feed adapter showed today's one-row-per-session selector picked TurtleSoup for both windows. This phase compares the current latest-completed-5M-proof selector against a proposed proven-lane-priority selector without installing the policy or changing runtime behavior.
+Tests run: npx tsx tools/automation/unified-desk-output-current-scanner-selection-policy-audit.test.ts; npx tsx tools/automation/unified-desk-output-current-scanner-selection-policy-audit.ts --readiness-audit <current-feed-readiness-audit> --json.
+Result: Focused test passed. Real policy audit tools/automation/diagnostic-reports/unified-desk-output-current-scanner-selection-policy-audit-1784754463274.json passed with sourceCandidates=65, eligibleApprovedDeskPlanRows=54, latestProofSelectedRows=2, proposedPrioritySelectedRows=2, changedSessionSelections=2, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, runtimeInstallAllowed=false, blockedRows=0. Latest-proof policy selected morning TurtleSoup LONG at 11:45 ET and lunch TurtleSoup SHORT at 15:50 ET. Proposed proven-lane priority selected morning HtfDisplacementFvgContinuation LONG at 09:10 ET and lunch IntradayMssMicroContinuation LONG at 15:45 ET. Current-feed Approved Desk Plan model counts were: morning HtfDisplacementFvgContinuation=1, morning IntradayMssMicroContinuation=13, morning TurtleSoup=8, lunch IntradayMssMicroContinuation=24, lunch TurtleSoup=8.
+Trading logic changed: No. This is a local saved-readiness audit only. It does not change setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The proposed proven-lane-priority selector is not installed. The audit confirms the selector policy materially changes both current session choices, so runtime wiring should not proceed until the exact selection priority is approved.
+Next recommended action: Install a disabled selector-policy preview that can output either latest-proof or proven-lane-priority mode from the guarded scanner lane, then rerun it against the current scanner feed before deciding which policy goes live.
+
+Date: 2026-07-22
 Task: Add current scanner feed adapter for Unified Desk Output.
 Files changed: tools/automation/unified-desk-output-current-scanner-feed-adapter.ts, tools/automation/unified-desk-output-current-scanner-feed-adapter.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved running the final disabled current-scanner feed phase after the fresh guarded scanner-output producer. This phase reads saved scanner decision tapes from the local Discord audit directory, converts complete scanner-owned DeskPublishDecision rows into the existing selector-preview artifact contract, and reruns the guarded output chain from that fresh current-scanner selector preview.
