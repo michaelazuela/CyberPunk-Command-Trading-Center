@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add disabled scanner-runtime wiring for Unified Desk Output.
+Files changed: src/lib/unifiedDeskOutputDisabledScannerRuntime.ts, src/lib/unifiedDeskOutputDisabledScannerRuntime.test.ts, tools/automation/unified-desk-output-disabled-scanner-runtime-wiring.ts, tools/automation/unified-desk-output-disabled-scanner-runtime-wiring.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the next phase after the disabled E2E runtime validation proved the full chain from current saved scanner tape through disabled runtime-gate receipt. This phase adds a callable local scanner-runtime preview adapter that remains default-disabled and only renders rows when an explicit localhost preview flag is supplied.
+Tests run: npx tsx src/lib/unifiedDeskOutputDisabledScannerRuntime.test.ts; npx tsx tools/automation/unified-desk-output-disabled-scanner-runtime-wiring.test.ts; npx tsx tools/automation/unified-desk-output-disabled-scanner-runtime-wiring.ts --json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Focused tests passed. Real disabled scanner-runtime wiring report tools/automation/diagnostic-reports/unified-desk-output-disabled-scanner-runtime-wiring-1784761519363.json passed with defaultStatus=disabled, localPreviewStatus=ready, defaultScannerPreviewRows=0, localScannerPreviewRows=2, morningRows=1, lunchRows=1, runtimeGateEnabled=false, scannerRuntimeChangedRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0, recommendation=ready_for_local_scanner_runtime_consumer_probe. Local preview rows are morning HtfDisplacementFvgContinuation LONG at 09:10 ET and lunch IntradayMssMicroContinuation LONG at 15:45 ET.
+Trading logic changed: No. This is a local disabled scanner-runtime preview adapter only. It does not alter setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, normal scanner output, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Normal scanner runtime still does not consume this adapter. The callable adapter is ready for a local scanner consumer probe, but production remains off until a separate explicit go-live approval.
+Next recommended action: Add a local scanner consumer probe that imports this disabled adapter from the scanner side, proves default-off behavior inside the scanner boundary, and proves explicit localhost preview can read the two rows without changing normal scanner output.
+
+Date: 2026-07-22
 Task: Add disabled E2E runtime validation for Unified Desk Output.
 Files changed: tools/automation/unified-desk-output-disabled-e2e-runtime-validation.ts, tools/automation/unified-desk-output-disabled-e2e-runtime-validation.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the next best move after the disabled runtime-gate manifest command. This phase creates one local command that recomputes the full disabled chain from current saved scanner decision tapes through selector preview, scanner-owned builder preview, disabled runtime adapter, live-gate readiness, latest-proof/proven-lane guarded previews, current live-readiness manifest, and disabled runtime-gate receipt.
