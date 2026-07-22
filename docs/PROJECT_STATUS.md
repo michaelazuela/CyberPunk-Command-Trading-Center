@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output Discord publish-gate decision audit.
+Files changed: tools/automation/unified-desk-output-discord-publish-gate-decision-audit.ts, tools/automation/unified-desk-output-discord-publish-gate-decision-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved continuing toward local/live readiness after the Discord formatter dry-run. This phase evaluates the saved formatter dry-run and proves the exact production publish gate requirements while keeping real Discord posting blocked.
+Tests run: npx tsx tools/automation/unified-desk-output-discord-publish-gate-decision-audit.test.ts; npx tsx tools/automation/unified-desk-output-discord-publish-gate-decision-audit.ts --json.
+Result: Focused test passed. Real audit tools/automation/diagnostic-reports/unified-desk-output-discord-publish-gate-decision-audit-1784742704757.json passed with publishGateEvaluated=true, productionApprovalPresent=false, sourceRows=276, formattedPayloads=276, approvedDeskPlanPayloads=105, formingDeskReadPayloads=171, shouldPostRows=0, publishDiscordRows=0, realPostAllowedRows=0, webhookCallRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, wordingViolationRows=0, blockedRows=0, missingApprovalRequirements=8, recommendation=ready_for_explicit_discord_publish_approval.
+Trading logic changed: No. This is a saved-report-only Discord publish-gate audit. It does not change setupScanner rules, ranking, canExecute, Discord posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: Publish-gate audit only. No webhook calls and no Discord posts.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves the formatter is clean enough to ask for explicit production Discord publish approval, but production sending remains blocked until approval, webhook/channel verification, one-row/session cap, idempotency, readback, rollback, and route mapping are satisfied.
+Next recommended action: Add a one-row Discord production publish rehearsal plan that remains disabled by default, then stop for explicit production publish approval before any real webhook call.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output Discord formatter dry-run.
 Files changed: tools/automation/unified-desk-output-discord-formatter-dry-run.ts, tools/automation/unified-desk-output-discord-formatter-dry-run.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the next production-facing dry-run after local scanner UI refresh proof. This phase formats saved Unified Desk Output scanner surface rows into Discord-shaped text while keeping the actual Discord send path forced off.
