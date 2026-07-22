@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add disabled guarded local scanner-lane preview for Unified Desk Output.
+Files changed: src/lib/unifiedDeskOutputGuardedScannerLane.ts, src/lib/unifiedDeskOutputGuardedScannerLane.test.ts, tools/automation/unified-desk-output-guarded-local-scanner-lane-preview.ts, tools/automation/unified-desk-output-guarded-local-scanner-lane-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved running the next local scanner wiring phase after the disabled guarded live-lane contract. This phase proves the saved scanner-output readiness artifact can be reduced to one scanner-owned Approved Desk Plan per morning/lunch session before any production enablement.
+Tests run: npx tsx src/lib/unifiedDeskOutputGuardedScannerLane.test.ts; npx tsx tools/automation/unified-desk-output-guarded-local-scanner-lane-preview.test.ts; npx tsx tools/automation/unified-desk-output-guarded-local-scanner-lane-preview.ts --json.
+Result: Focused tests passed. Real local preview tools/automation/diagnostic-reports/unified-desk-output-guarded-local-scanner-lane-preview-1784750725041.json passed with sourceCandidates=276, eligibleApprovedDeskPlanRows=105, selectedRows=2, morningRows=1, lunchRows=1, suppressedRows=103, surfaceRows=2, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, blockedRows=0. Selected morning candidate: 2026-07-21 OpeningDriveFvgContinuation LONG at 10:50 ET, entry 7518, stop 7510.25, T1 7529.75, T2 7533.5. Selected lunch candidate: 2026-07-17 AfterLunchDriveFvgContinuation SHORT at 13:25 ET, entry 7525.125, stop 7539.25, T1 7504, T2 7497.
+Trading logic changed: No. This is a disabled local preview selector over saved artifacts only. It does not change setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This still reads a saved historical readiness artifact, not the live current scanner feed. Runtime wiring remains disabled until a separate local scanner feed adapter proves the same one-row-per-session contract against fresh scanner output.
+Next recommended action: Wire the disabled guarded selector to a fresh local scanner-output artifact producer, still no live posting, so current morning/lunch scanner output can be validated before production enablement.
+
+Date: 2026-07-22
 Task: Audit the Unified Desk Output Discord production receipt and add a disabled guarded live-lane contract.
 Files changed: src/lib/unifiedDeskOutputDiscordGuardedLiveLane.ts, src/lib/unifiedDeskOutputDiscordGuardedLiveLane.test.ts, tools/automation/unified-desk-output-discord-post-receipt-audit.ts, tools/automation/unified-desk-output-discord-post-receipt-audit.test.ts, tools/automation/unified-desk-output-discord-guarded-live-lane-install-audit.ts, tools/automation/unified-desk-output-discord-guarded-live-lane-install-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved both next phases after the one-row Discord production rehearsal: prove the saved receipt, then install the next guarded lane as disabled-by-default local contract only.
