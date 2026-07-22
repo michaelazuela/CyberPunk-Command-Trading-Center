@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add fresh guarded scanner-output artifact producer for Unified Desk Output.
+Files changed: tools/automation/unified-desk-output-fresh-guarded-scanner-output.ts, tools/automation/unified-desk-output-fresh-guarded-scanner-output.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the next phase after the disabled guarded local scanner-lane preview. This phase refreshes the saved selector-preview chain through scanner-owned builder preview, disabled runtime adapter preview, live-gate readiness, and guarded one-row-per-session local lane output without touching live runtime behavior.
+Tests run: npx tsx tools/automation/unified-desk-output-fresh-guarded-scanner-output.test.ts; npx tsx tools/automation/unified-desk-output-fresh-guarded-scanner-output.ts --json.
+Result: Focused test passed. Real fresh output tools/automation/diagnostic-reports/unified-desk-output-fresh-guarded-scanner-output-1784752573810.json passed with selectorRows=276, builderRows=276, disabledRuntimeCards=276, readinessCandidates=276, eligibleApprovedDeskPlanRows=105, guardedSelectedRows=2, morningRows=1, lunchRows=1, suppressedRows=103, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, runtimeInstallAllowed=false, blockedRows=0. The refreshed selected rows matched the prior guarded preview: 2026-07-21 morning OpeningDriveFvgContinuation LONG at 10:50 ET and 2026-07-17 lunch AfterLunchDriveFvgContinuation SHORT at 13:25 ET.
+Trading logic changed: No. This is a local artifact producer over saved selector-preview data only. It does not change setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This still refreshes from the latest saved selector-preview artifact, not direct live NinjaTrader/Supabase data. Current-day production readiness still requires a separately gated fresh selector-preview source from the active scanner output.
+Next recommended action: Add the final disabled current-scanner feed adapter that writes the selector-preview artifact from current local scanner state, then rerun this fresh guarded scanner-output producer against that artifact.
+
+Date: 2026-07-22
 Task: Add disabled guarded local scanner-lane preview for Unified Desk Output.
 Files changed: src/lib/unifiedDeskOutputGuardedScannerLane.ts, src/lib/unifiedDeskOutputGuardedScannerLane.test.ts, tools/automation/unified-desk-output-guarded-local-scanner-lane-preview.ts, tools/automation/unified-desk-output-guarded-local-scanner-lane-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved running the next local scanner wiring phase after the disabled guarded live-lane contract. This phase proves the saved scanner-output readiness artifact can be reduced to one scanner-owned Approved Desk Plan per morning/lunch session before any production enablement.
