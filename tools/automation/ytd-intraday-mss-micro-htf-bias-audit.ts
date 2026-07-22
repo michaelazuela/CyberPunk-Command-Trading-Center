@@ -180,8 +180,8 @@ function addBucket(target: Record<string, Bucket>, key: string, selected: Select
   const bucket = target[key] || (target[key] = emptyBucket());
   bucket.count += 1;
   bucket.pnl = round(bucket.pnl + (selected.outcome.pnl || 0));
-  if (selected.outcome.status === 't2_hit') bucket.wins += 1;
-  else if (selected.outcome.status === 'stopped_before_t1' || selected.outcome.status === 't1_then_stop') bucket.losses += 1;
+  if (selected.outcome.status === 't2_hit' || selected.outcome.status === 't1_then_stop') bucket.wins += 1;
+  else if (selected.outcome.status === 'stopped_before_t1') bucket.losses += 1;
   else if (selected.outcome.status === 'no_fill') bucket.noFill += 1;
   else bucket.unresolved += 1;
 }
@@ -285,8 +285,8 @@ export function buildYtdIntradayMssMicroHtfBiasAuditReport(args: {
     summary: {
       selectedRows: rows.length,
       pnl: round(rows.reduce((sum, row) => sum + row.oneMesPl, 0)),
-      wins: rows.filter((row) => row.outcome === 't2_hit').length,
-      losses: rows.filter((row) => row.outcome === 'stopped_before_t1' || row.outcome === 't1_then_stop').length,
+      wins: rows.filter((row) => row.outcome === 't2_hit' || row.outcome === 't1_then_stop').length,
+      losses: rows.filter((row) => row.outcome === 'stopped_before_t1').length,
       noFill: rows.filter((row) => row.outcome === 'no_fill').length,
       unresolved: rows.filter((row) => !['t2_hit', 'stopped_before_t1', 't1_then_stop', 'no_fill'].includes(row.outcome)).length,
       bestHtfAlignment: bestKey(byHtfAlignment),

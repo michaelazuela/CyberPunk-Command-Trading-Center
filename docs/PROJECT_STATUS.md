@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add durable YTD day-by-day scanner mapper and fold July 21.
+Files changed: tools/automation/ytd-full-scanner-day-by-day-market-move-best-model-map.ts, tools/automation/ytd-full-scanner-day-by-day-market-move-best-model-map.test.ts, tools/automation/ytd-intraday-mss-micro-htf-bias-audit.ts, tools/automation/ytd-intraday-mss-micro-htf-bias-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the next move after the Intraday MSS HTF-bias audit: restore/build the durable day-by-day best-model mapper that consumes exact raw scanner artifacts, then fold the July 21 replay artifact into the same report shape before any desk adapter decision.
+Tests run: npx tsx tools/automation/ytd-full-scanner-day-by-day-market-move-best-model-map.test.ts; npx tsx tools/automation/ytd-intraday-mss-micro-htf-bias-audit.test.ts; npx tsx tools/automation/ytd-full-scanner-day-by-day-market-move-best-model-map.ts --base-day-by-day-report tools/automation/diagnostic-reports/ytd-full-scanner-day-by-day-market-move-best-model-map-1784671041320.json --market-bars-json tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-01-01-to-2026-07-22-1784690929755.json --start-date 2026-07-21 --end-date 2026-07-21 --json; npx tsx tools/automation/ytd-intraday-mss-micro-htf-bias-audit.ts --day-by-day-report tools/automation/diagnostic-reports/ytd-full-scanner-day-by-day-market-move-best-model-map-1784695449246.json --top 40.
+Result: Focused mapper and Intraday audit tests passed. The durable mapper report tools/automation/diagnostic-reports/ytd-full-scanner-day-by-day-market-move-best-model-map-1784695449246.json passed with sourceRows=346, totalWindows=346, windowsWithCompleteCandidates=276, selectedPnl=10462.25, source coverage through 2026-07-21, and July 21 folded from the exact raw scanner artifact. July 21 morning classified as bullish_drive with selected OpeningDriveFvgContinuation LONG at 10:50, no_fill, 79 complete candidates; July 21 lunch classified as bullish_drive with selected IntradayMssMicroContinuation LONG at 15:55, filled_unresolved_by_session_end, 13 complete candidates. The expanded Intraday audit tools/automation/diagnostic-reports/ytd-intraday-mss-micro-htf-bias-audit-1784695455787.json passed with sourceRows=346, sourceDateStart=2026-01-01, sourceDateEnd=2026-07-21, sourceDates=173, selectedRows=75, oneMesPl=3021.95, wins=29, losses=4, noFill=13, unresolved=29, bestHtfAlignment=aligned, bestMovement=high_raid_reversal_down, bestSession=morning.
+Trading logic changed: No. This is a local-only research mapper/audit install. It reads saved raw scanner artifacts and canonical local OHLC JSON, computes research outcomes from existing app-owned entry/stop/T1/T2, and does not change setupScanner rules, ranking, canExecute, Discord, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None in this phase. It used the previously generated local canonical OHLC JSON only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The mapper can fold replayed artifact days into the existing YTD map, but July 22 still cannot be included until 5M RTH bars exist and a raw scanner artifact is generated. July 21 added unresolved Intraday evidence, not new realized P/L.
+Next recommended action: Use the expanded day-by-day map to compare the proven lane candidates by session: morning OpeningDrive/Sweep/Intraday and lunch AfterLunch/Intraday, then decide whether the first live-facing adapter should stay limited to the already-proven morning/lunch scanner-owned human-review lanes.
+
+Date: 2026-07-22
 Task: Add YTD Intraday MSS Micro HTF-bias audit.
 Files changed: tools/automation/ytd-intraday-mss-micro-htf-bias-audit.ts, tools/automation/ytd-intraday-mss-micro-htf-bias-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: User asked to validate the IntradayMssMicroContinuation idea day by day from the beginning of the year with morning/lunch session playback and HTF directional context, while preserving 5M execution authority.

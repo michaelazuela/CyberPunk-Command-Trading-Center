@@ -60,7 +60,7 @@ const report = buildYtdIntradayMssMicroHtfBiasAuditReport({
           target1: 7290.5,
           target2: 7279.75,
           riskPoints: 21.5,
-          outcome: { status: 't1_then_stop', pnl: -53.75 },
+          outcome: { status: 'stopped_before_t1', pnl: -53.75 },
         },
       },
       {
