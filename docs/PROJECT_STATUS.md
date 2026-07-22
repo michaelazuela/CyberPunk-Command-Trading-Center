@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output local scanner UI refresh proof.
+Files changed: tools/automation/unified-desk-output-local-scanner-ui-refresh-proof.ts, tools/automation/unified-desk-output-local-scanner-ui-refresh-proof.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved running the next gated phase after local-live readiness. This phase proves a scanner UI refresh is eligible locally only when the saved local-live readiness report is passing, default route remains disabled, remote/non-local remains blocked, and localhost plus explicit flag can render the scanner preview.
+Tests run: npx tsx tools/automation/unified-desk-output-local-scanner-ui-refresh-proof.test.ts; npx tsx tools/automation/unified-desk-output-local-scanner-ui-refresh-proof.ts --json.
+Result: Focused test passed. Real proof tools/automation/diagnostic-reports/unified-desk-output-local-scanner-ui-refresh-proof-1784735996675.json passed with scannerUiRefreshAllowed=true, defaultDisabled=true, remoteBlocked=true, localPreviewAllowed=true, scannerPreviewAllowed=true, previewRows=276, approvedDeskPlanRows=105, formingDeskReadRows=171, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, wordingViolationRows=0, blockedRows=0, recommendation=ready_for_local_scanner_ui_refresh.
+Trading logic changed: No. This is a saved-report-only local scanner UI refresh proof. It does not change setupScanner rules, ranking, canExecute, Discord, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves local scanner UI refresh eligibility only. Production Discord posting, Supabase persistence, live bridge repair, Cloudflare deployment, and automated execution remain off.
+Next recommended action: Run a visual local scanner UI refresh smoke in the browser, then decide whether the next production-facing phase is Discord formatter dry-run or Supabase persistence dry-run. Do not enable external effects without a separate explicit gate.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output local-live readiness proof.
 Files changed: tools/automation/unified-desk-output-local-live-readiness.ts, tools/automation/unified-desk-output-local-live-readiness.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved proving the desk can go live locally first before full production. This phase adds a saved-report-only readiness proof that checks the default route stays disabled, remote/non-local access stays blocked, and localhost plus explicit preview flag allows the scanner preview only after a passing rehearsal.
