@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output Discord formatter dry-run.
+Files changed: tools/automation/unified-desk-output-discord-formatter-dry-run.ts, tools/automation/unified-desk-output-discord-formatter-dry-run.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the next production-facing dry-run after local scanner UI refresh proof. This phase formats saved Unified Desk Output scanner surface rows into Discord-shaped text while keeping the actual Discord send path forced off.
+Tests run: npx tsx tools/automation/unified-desk-output-discord-formatter-dry-run.test.ts; npx tsx tools/automation/unified-desk-output-discord-formatter-dry-run.ts --json.
+Result: Focused test passed. Real dry-run tools/automation/diagnostic-reports/unified-desk-output-discord-formatter-dry-run-1784740455880.json passed with sourceRows=276, formattedPayloads=276, approvedDeskPlanPayloads=105, formingDeskReadPayloads=171, shouldPostRows=0, publishDiscordRows=0, webhookCallRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, wordingViolationRows=0, blockedRows=0, recommendation=ready_for_discord_publish_gate_decision.
+Trading logic changed: No. This is a saved-report-only Discord formatter dry-run. It does not change setupScanner rules, ranking, canExecute, Discord posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: Dry-run formatting only. No webhook calls and no Discord posts.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves formatter shape only. A separate explicit publish gate is still required before any production Discord post.
+Next recommended action: Add a Discord publish-gate decision audit that proves exactly what would be required before enabling real posts, still without posting.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output local scanner UI refresh proof.
 Files changed: tools/automation/unified-desk-output-local-scanner-ui-refresh-proof.ts, tools/automation/unified-desk-output-local-scanner-ui-refresh-proof.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved running the next gated phase after local-live readiness. This phase proves a scanner UI refresh is eligible locally only when the saved local-live readiness report is passing, default route remains disabled, remote/non-local remains blocked, and localhost plus explicit flag can render the scanner preview.
