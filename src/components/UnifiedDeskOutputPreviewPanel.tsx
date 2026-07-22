@@ -4,6 +4,10 @@ import {
   buildUnifiedDeskOutputScannerSurfacePreviewModel,
   type UnifiedDeskOutputScannerSurfaceSmokeReport,
 } from '../lib/unifiedDeskOutputScannerSurfacePreviewAdapter';
+import {
+  evaluateUnifiedDeskOutputRuntimeGate,
+  type UnifiedDeskOutputLocalGoLiveRehearsalGateReport,
+} from '../lib/unifiedDeskOutputRuntimeGate';
 
 export function isUnifiedDeskOutputPreviewLocalHost(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
@@ -24,14 +28,53 @@ function readStoredReport(): UnifiedDeskOutputScannerSurfaceSmokeReport | null {
   }
 }
 
+function runtimeGateReportFromSurfaceSmoke(
+  report: UnifiedDeskOutputScannerSurfaceSmokeReport
+): UnifiedDeskOutputLocalGoLiveRehearsalGateReport {
+  return {
+    reportType: 'unified_desk_output_local_go_live_rehearsal',
+    status: report.status,
+    authority: {
+      localOnly: true,
+      postsDiscord: false,
+      writesSupabase: false,
+      readsLiveSupabase: false,
+      readsLiveBridge: false,
+      changesTradingLogic: false,
+      changesCanExecute: false,
+      automatedOrders: false,
+    },
+    summary: {
+      previewRows: report.summary.renderedRows,
+      approvedDeskPlanRows: report.summary.approvedDeskPlanRows,
+      formingDeskReadRows: report.summary.formingDeskReadRows,
+      discordPostRows: report.summary.discordPostRows,
+      supabaseWriteRows: report.summary.supabaseWriteRows,
+      liveSupabaseReadRows: report.authority.readsLiveSupabase ? report.summary.renderedRows : 0,
+      liveBridgeReadRows: report.summary.liveBridgeReadRows,
+      canExecuteTrueRows: report.summary.canExecuteTrueRows,
+      wordingViolationRows: report.summary.wordingViolationRows,
+      blockedRows: report.summary.blockedRows,
+    },
+    blockers: [...report.blockers, ...report.surface.blockers],
+  };
+}
+
 export default function UnifiedDeskOutputPreviewPanel() {
   const [report, setReport] = useState<UnifiedDeskOutputScannerSurfaceSmokeReport | null>(() => readStoredReport());
   const [importMessage, setImportMessage] = useState<string | null>(null);
-  const model = useMemo(() => buildUnifiedDeskOutputScannerSurfacePreviewModel({
+  const previewModel = useMemo(() => buildUnifiedDeskOutputScannerSurfacePreviewModel({
     enabled: isUnifiedDeskOutputPreviewFlagEnabled(window.location),
     localHost: isUnifiedDeskOutputPreviewLocalHost(window.location.hostname),
     report,
   }), [report]);
+  const runtimeGate = useMemo(() => evaluateUnifiedDeskOutputRuntimeGate({
+    explicitLocalFlag: isUnifiedDeskOutputPreviewFlagEnabled(window.location),
+    localHost: isUnifiedDeskOutputPreviewLocalHost(window.location.hostname),
+    rehearsal: report ? runtimeGateReportFromSurfaceSmoke(report) : null,
+  }), [report]);
+  const ready = previewModel.status === 'ready' && runtimeGate.status === 'local_preview_allowed';
+  const blockers = [...previewModel.blockers, ...runtimeGate.blockers];
 
   async function importSurfaceSmoke(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -44,8 +87,13 @@ export default function UnifiedDeskOutputPreviewPanel() {
         localHost: isUnifiedDeskOutputPreviewLocalHost(window.location.hostname),
         report: parsed,
       });
-      if (nextModel.status !== 'ready') {
-        setImportMessage(`Import blocked: ${nextModel.blockers.join('; ')}`);
+      const nextGate = evaluateUnifiedDeskOutputRuntimeGate({
+        explicitLocalFlag: isUnifiedDeskOutputPreviewFlagEnabled(window.location),
+        localHost: isUnifiedDeskOutputPreviewLocalHost(window.location.hostname),
+        rehearsal: runtimeGateReportFromSurfaceSmoke(parsed),
+      });
+      if (nextModel.status !== 'ready' || nextGate.status !== 'local_preview_allowed') {
+        setImportMessage(`Import blocked: ${[...nextModel.blockers, ...nextGate.blockers].join('; ')}`);
         return;
       }
       localStorage.setItem(UNIFIED_DESK_OUTPUT_SCANNER_SURFACE_STORAGE_KEY, JSON.stringify(parsed));
@@ -67,7 +115,7 @@ export default function UnifiedDeskOutputPreviewPanel() {
           </p>
         </div>
         <div className="qd-badge bg-[var(--b0)] border-[var(--b1)] text-[var(--txt2)]">
-          {model.status.toUpperCase()}
+          {ready ? 'READY' : previewModel.status.toUpperCase()}
         </div>
       </div>
 
@@ -85,16 +133,16 @@ export default function UnifiedDeskOutputPreviewPanel() {
         {importMessage && <div className="text-[12px] text-[var(--txt2)]">{importMessage}</div>}
       </div>
 
-      {model.status !== 'ready' && (
+      {!ready && (
         <div className="border border-[var(--orange)]/30 bg-[var(--orange)]/10 p-4 text-[12px] text-[var(--txt2)]">
           <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--orange)]">Preview blocked</div>
           <ul className="mt-3 list-disc space-y-1 pl-5">
-            {model.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}
+            {blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}
           </ul>
         </div>
       )}
 
-      {model.status === 'ready' && (
+      {ready && (
         <div className="overflow-hidden border border-[var(--b1)] bg-[var(--panel)]">
           <div className="grid grid-cols-[1fr_120px_160px_90px_1.2fr] gap-3 border-b border-[var(--b1)] bg-[var(--b0)] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--txt2)]">
             <div>Desk State</div>
@@ -104,7 +152,7 @@ export default function UnifiedDeskOutputPreviewPanel() {
             <div>Levels</div>
           </div>
           <div className="max-h-[70vh] overflow-y-auto">
-            {model.rows.map((row) => (
+            {previewModel.rows.map((row) => (
               <article key={row.cardId} className="grid grid-cols-[1fr_120px_160px_90px_1.2fr] gap-3 border-b border-[var(--b1)] px-3 py-3 text-[12px] last:border-b-0">
                 <div>
                   <div className="font-semibold text-[var(--txt)]">{row.stateLabel}</div>
