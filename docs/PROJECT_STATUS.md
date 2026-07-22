@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output Discord one-row publish rehearsal plan.
+Files changed: tools/automation/unified-desk-output-discord-one-row-publish-rehearsal-plan.ts, tools/automation/unified-desk-output-discord-one-row-publish-rehearsal-plan.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the next disabled production-facing phase after the Discord publish-gate audit. This phase selects exactly one saved dry-run Approved Desk Plan payload and creates a disabled rehearsal plan with idempotency, one-row cap, launch requirements, and all production send switches off.
+Tests run: npx tsx tools/automation/unified-desk-output-discord-one-row-publish-rehearsal-plan.test.ts; npx tsx tools/automation/unified-desk-output-discord-one-row-publish-rehearsal-plan.ts --json.
+Result: Focused test passed. Real rehearsal plan tools/automation/diagnostic-reports/unified-desk-output-discord-one-row-publish-rehearsal-plan-1784746535138.json passed with publishGatePassed=true, formatterPassed=true, oneRowCap=true, candidateSelectedRows=1, productionSendEnabled=false, explicitApprovalPresent=false, webhookTargetVerified=false, shouldPostRows=0, publishDiscordRows=0, realPostAllowedRows=0, webhookCallRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, blockedRows=0, launchRequirements=8, recommendation=ready_for_explicit_one_row_discord_publish_approval.
+Trading logic changed: No. This is a saved-report-only disabled Discord publish rehearsal plan. It does not change setupScanner rules, ranking, canExecute, Discord posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: Disabled one-row rehearsal planning only. No webhook calls and no Discord posts.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves the one-row publish rehearsal plan is clean but still intentionally disabled. A real Discord webhook call requires explicit production publish approval and verified webhook/channel target without exposing secrets.
+Next recommended action: Stop at the production publish approval gate, or add a local-only Discord webhook target presence audit that checks configuration names without printing secret values.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output Discord publish-gate decision audit.
 Files changed: tools/automation/unified-desk-output-discord-publish-gate-decision-audit.ts, tools/automation/unified-desk-output-discord-publish-gate-decision-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved continuing toward local/live readiness after the Discord formatter dry-run. This phase evaluates the saved formatter dry-run and proves the exact production publish gate requirements while keeping real Discord posting blocked.
