@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output hidden local app/display preview.
+Files changed: src/lib/unifiedDeskOutputScannerSurfacePreviewAdapter.ts, src/lib/unifiedDeskOutputScannerSurfacePreviewAdapter.test.ts, src/components/UnifiedDeskOutputPreviewPanel.tsx, src/App.tsx, src/App.test.tsx, docs/PROJECT_STATUS.md.
+Reason: User approved continuing toward live in small phases. This phase wires a hidden localhost-only app display preview for the scanner surface smoke report behind `?unifiedDeskOutputPreview=1`, proving the current app consumer can import and render `Approved Desk Plan` and `Forming Desk Read` rows without changing normal UI behavior or live side effects.
+Tests run: npx tsx src/lib/unifiedDeskOutputScannerSurfacePreviewAdapter.test.ts; npx vitest run src/App.test.tsx.
+Result: Focused adapter test passed. App route test passed with 4/4 tests, including the hidden Unified Desk Output preview import/render flow. The preview preserves local-only display, no Discord post, no Supabase write, no live bridge read, canExecute=false, no trading-logic change, and no automated orders.
+Trading logic changed: No. This is hidden local app-display wiring only. It does not change setupScanner rules, ranking, canExecute, Discord, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves a manual local app preview using an imported smoke report. It does not yet run a live scanner dry-run cycle, Discord formatter dry-run, or Supabase persistence dry-run.
+Next recommended action: Run the live/local scanner dry-run proof phase during/against the current scanner path with Discord/Supabase/canExecute still off.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output scanner surface smoke.
 Files changed: src/lib/unifiedDeskOutputScannerSurface.ts, src/lib/unifiedDeskOutputScannerSurface.test.ts, tools/automation/unified-desk-output-scanner-surface-smoke.ts, tools/automation/unified-desk-output-scanner-surface-smoke.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the next phase after installing the local scanner visibility adapter: prove the local scanner display/consumer surface can render `APPROVED_DESK_PLAN` and `FORMING_DESK_READ` rows without changing Discord, Supabase, bridge reads, canExecute, trading logic, or automated execution.

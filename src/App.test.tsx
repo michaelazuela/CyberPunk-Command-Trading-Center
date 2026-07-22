@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { HELD_LOCAL_PREVIEW_STORAGE_KEY } from './lib/heldLocalPreviewUiAdapter';
+import { UNIFIED_DESK_OUTPUT_SCANNER_SURFACE_STORAGE_KEY } from './lib/unifiedDeskOutputScannerSurfacePreviewAdapter';
 
 function createSupabaseQueryResult(data: unknown[] = []) {
   const result = { data, error: null, count: 0 };
@@ -231,5 +232,121 @@ describe('App route shell', () => {
     expect(screen.getByText('Import ready: 1 local preview cards.')).toBeTruthy();
     expect(screen.getByAltText('2026-06-24-evening-TurtleSoup-SHORT held-local preview')).toBeTruthy();
     expect(localStorage.getItem(HELD_LOCAL_PREVIEW_STORAGE_KEY)).toContain('2026-06-24-evening-TurtleSoup-SHORT');
+  });
+
+  it('imports and renders the unified desk output scanner surface behind the hidden local flag', async () => {
+    window.history.pushState({}, '', '/?unifiedDeskOutputPreview=1');
+
+    render(<App />);
+
+    const previewTab = screen.getByRole('button', { name: 'Unified Desk Output' });
+    expect(previewTab).toBeTruthy();
+
+    fireEvent.click(previewTab);
+    expect(screen.getByRole('heading', { name: 'Unified Desk Output Preview' })).toBeTruthy();
+    expect(screen.getByText('BLOCKED')).toBeTruthy();
+
+    const report = {
+      reportType: 'unified_desk_output_scanner_surface_smoke',
+      status: 'pass',
+      authority: {
+        localOnly: true,
+        readsSavedInstallAuditOnly: true,
+        rendersScannerSurfaceOnly: true,
+        postsDiscord: false,
+        writesSupabase: false,
+        readsLiveSupabase: false,
+        readsLiveBridge: false,
+        changesTradingLogic: false,
+        changesCanExecute: false,
+        automatedOrders: false,
+      },
+      summary: {
+        renderedRows: 2,
+        approvedDeskPlanRows: 1,
+        formingDeskReadRows: 1,
+        discordPostRows: 0,
+        supabaseWriteRows: 0,
+        liveBridgeReadRows: 0,
+        canExecuteTrueRows: 0,
+        wordingViolationRows: 0,
+        blockedRows: 0,
+      },
+      surface: {
+        status: 'ready',
+        sourceOfTruth: 'scanner_surface_unified_desk_output_consumer',
+        localScannerOnly: true,
+        rows: [
+          {
+            cardId: 'unified-preview-approved',
+            date: '2026-07-22',
+            session: 'morning',
+            state: 'APPROVED_DESK_PLAN',
+            stateLabel: 'Approved Desk Plan',
+            model: 'OpeningDriveFvgContinuation',
+            direction: 'SHORT',
+            headline: 'Approved Desk Plan | MORNING | SHORT | OpeningDriveFvgContinuation',
+            bodyLines: ['Opening drive short.', 'Selected scanner-owned lane.'],
+            levelLine: 'Entry 100 | Stop 104 | T1 94 | T2 92',
+            riskLine: 'Risk 4 points.',
+            proofLine: 'Completed 5M proof: 09:45 ET.',
+            invalidationLine: 'Invalid if price violates the protected 5M stop line.',
+            authorityLine: 'Decision support only. Discord/Supabase/bridge/canExecute remain off in this surface.',
+            scannerVisibleNow: true,
+            publishDiscord: false,
+            writesSupabase: false,
+            readsLiveBridge: false,
+            canExecute: false,
+          },
+          {
+            cardId: 'unified-preview-forming',
+            date: '2026-07-22',
+            session: 'lunch',
+            state: 'FORMING_DESK_READ',
+            stateLabel: 'Forming Desk Read',
+            model: 'AfterLunchDriveFvgContinuation',
+            direction: 'LONG',
+            headline: 'Forming Desk Read | LUNCH | LONG | AfterLunchDriveFvgContinuation',
+            bodyLines: ['After lunch long.', 'Selected scanner-owned lane.'],
+            levelLine: 'Entry 100 | Stop 96 | T1 106 | T2 108',
+            riskLine: 'Risk 4 points.',
+            proofLine: 'Completed 5M proof: 12:35 ET.',
+            invalidationLine: 'Invalid if price violates the protected 5M stop line.',
+            authorityLine: 'Decision support only. Discord/Supabase/bridge/canExecute remain off in this surface.',
+            scannerVisibleNow: true,
+            publishDiscord: false,
+            writesSupabase: false,
+            readsLiveBridge: false,
+            canExecute: false,
+          },
+        ],
+        summary: {
+          rows: 2,
+          approvedDeskPlans: 1,
+          formingDeskReads: 1,
+          discordPostRows: 0,
+          supabaseWriteRows: 0,
+          liveBridgeReadRows: 0,
+          canExecuteTrueRows: 0,
+          wordingViolationRows: 0,
+        },
+        blockers: [],
+      },
+      blockers: [],
+    };
+
+    const file = new File([JSON.stringify(report)], 'scanner-surface-smoke.json', { type: 'application/json' });
+    fireEvent.change(screen.getByLabelText('Import scanner surface smoke JSON'), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => expect(screen.getByText('READY')).toBeTruthy());
+    expect(screen.getByText('Import ready: 2 scanner surface rows.')).toBeTruthy();
+    expect(screen.getByText('Approved Desk Plan')).toBeTruthy();
+    expect(screen.getByText('Forming Desk Read')).toBeTruthy();
+    expect(screen.getByText('OpeningDriveFvgContinuation')).toBeTruthy();
+    expect(screen.getByText('AfterLunchDriveFvgContinuation')).toBeTruthy();
+    expect(screen.getAllByText(/Discord\/Supabase\/bridge\/canExecute remain off/).length).toBeGreaterThan(0);
+    expect(localStorage.getItem(UNIFIED_DESK_OUTPUT_SCANNER_SURFACE_STORAGE_KEY)).toContain('unified-preview-approved');
   });
 });

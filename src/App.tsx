@@ -9,6 +9,7 @@ import Settings from './components/Settings';
 import AdminDashboard from './components/AdminDashboard';
 import SessionLab from './components/SessionLab';
 import HeldLocalPreviewPanel, { isHeldLocalPreviewFlagEnabled } from './components/HeldLocalPreviewPanel';
+import UnifiedDeskOutputPreviewPanel, { isUnifiedDeskOutputPreviewFlagEnabled } from './components/UnifiedDeskOutputPreviewPanel';
 import { embedPendingRecords } from './lib/rag';
 
 import { subscribeToTrades, addTrade as addSupabaseTrade, testSupabaseConnection } from './lib/supabaseTradeService';
@@ -43,7 +44,8 @@ function loadSavedAppState(): AppState {
 
 export default function App() {
   const heldLocalPreviewEnabled = typeof window !== 'undefined' && isHeldLocalPreviewFlagEnabled(window.location);
-  const [activeTab, setActiveTab] = useState<'admin' | 'workflow' | 'archive' | 'settings' | 'heldLocalPreview'>('admin');
+  const unifiedDeskOutputPreviewEnabled = typeof window !== 'undefined' && isUnifiedDeskOutputPreviewFlagEnabled(window.location);
+  const [activeTab, setActiveTab] = useState<'admin' | 'workflow' | 'archive' | 'settings' | 'heldLocalPreview' | 'unifiedDeskOutputPreview'>('admin');
   const [user, setUser] = useState<any>(null);
   const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -244,6 +246,9 @@ export default function App() {
             {heldLocalPreviewEnabled && (
               <TopNavItem label="Held-Local Preview" active={activeTab === 'heldLocalPreview'} onClick={() => setActiveTab('heldLocalPreview')} />
             )}
+            {unifiedDeskOutputPreviewEnabled && (
+              <TopNavItem label="Unified Desk Output" active={activeTab === 'unifiedDeskOutputPreview'} onClick={() => setActiveTab('unifiedDeskOutputPreview')} />
+            )}
             <TopNavItem label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
           </nav>
         </div>
@@ -319,6 +324,11 @@ export default function App() {
           {heldLocalPreviewEnabled && (
             <div className={activeTab === 'heldLocalPreview' ? 'block' : 'hidden'}>
               <HeldLocalPreviewPanel />
+            </div>
+          )}
+          {unifiedDeskOutputPreviewEnabled && (
+            <div className={activeTab === 'unifiedDeskOutputPreview' ? 'block' : 'hidden'}>
+              <UnifiedDeskOutputPreviewPanel />
             </div>
           )}
           <div className={activeTab === 'settings' ? 'block' : 'hidden'}>
