@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add Unified Desk Output guarded runtime gate.
+Files changed: src/lib/unifiedDeskOutputRuntimeGate.ts, src/lib/unifiedDeskOutputRuntimeGate.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved continuing toward live in small phases. This phase adds the reusable local runtime latch for Unified Desk Output so a scanner preview can be allowed only with an explicit local flag, localhost, and a passing local go-live rehearsal report.
+Tests run: npx tsx src/lib/unifiedDeskOutputRuntimeGate.test.ts.
+Result: Focused gate test passed. The gate returns disabled without an explicit local flag, blocks non-local hosts, blocks any rehearsal with Discord/Supabase/live bridge/canExecute/wording violations, and allows only local preview rows after a passing rehearsal.
+Trading logic changed: No. This is a pure local runtime-gate helper. It does not change setupScanner rules, ranking, canExecute, Discord, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The gate is not yet wired into a running scanner surface. It only defines the boundary required before the next local runtime integration phase.
+Next recommended action: Wire the gate into the hidden local preview path only, then prove the app still requires the URL flag and remains silent by default.
+
+Date: 2026-07-22
 Task: Add Unified Desk Output local go-live rehearsal proof.
 Files changed: tools/automation/unified-desk-output-local-go-live-rehearsal.ts, tools/automation/unified-desk-output-local-go-live-rehearsal.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved continuing toward live in small locked phases. This phase adds a read-only go-live rehearsal report that consumes the saved scanner surface smoke and validates the hidden local preview path with `Approved Desk Plan` and `Forming Desk Read` rows only.
