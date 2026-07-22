@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add disabled E2E runtime validation for Unified Desk Output.
+Files changed: tools/automation/unified-desk-output-disabled-e2e-runtime-validation.ts, tools/automation/unified-desk-output-disabled-e2e-runtime-validation.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the next best move after the disabled runtime-gate manifest command. This phase creates one local command that recomputes the full disabled chain from current saved scanner decision tapes through selector preview, scanner-owned builder preview, disabled runtime adapter, live-gate readiness, latest-proof/proven-lane guarded previews, current live-readiness manifest, and disabled runtime-gate receipt.
+Tests run: npx tsx tools/automation/unified-desk-output-disabled-e2e-runtime-validation.test.ts; npx tsx tools/automation/unified-desk-output-disabled-e2e-runtime-validation.ts --trade-date 2026-07-22 --instrument MES --idempotency-key unified-desk-output:disabled-e2e-runtime:2026-07-22:proven-lane-priority:002 --json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Focused test passed. Real disabled E2E runtime validation tools/automation/diagnostic-reports/unified-desk-output-disabled-e2e-runtime-validation-1784761066312.json passed with scannerTapeFilesRead=2, scannerEventsRead=81, selectorRows=65, builderRows=65, disabledRuntimeCards=65, readinessCandidates=65, latestProofSelectedRows=2, provenLaneSelectedRows=2, manifestSelectedRows=2, runtimeReceiptSelectedRows=2, morningRows=1, lunchRows=1, changedFromLatestProof=true, runtimeGateEnabled=false, scannerRuntimeChangedRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0, recommendation=ready_for_disabled_scanner_runtime_wiring. Proven-lane selected rows remain morning HtfDisplacementFvgContinuation LONG at 09:10 ET and lunch IntradayMssMicroContinuation LONG at 15:45 ET.
+Trading logic changed: No. This is a local disabled E2E validation command only. It does not install scanner runtime behavior, change default selector behavior, alter setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Scanner runtime is still not wired. The disabled E2E command proves the chain fresh from saved scanner tape, but live scanner-visible behavior still requires the next disabled wiring phase and then a separate production approval.
+Next recommended action: Install disabled scanner-runtime wiring so the scanner can call the validated runtime gate in local/preview mode only, still off by default and with no Discord/Supabase/bridge side effects.
+
+Date: 2026-07-22
 Task: Add disabled runtime-gate manifest command for Unified Desk Output.
 Files changed: tools/automation/unified-desk-output-runtime-gate-manifest.ts, tools/automation/unified-desk-output-runtime-gate-manifest.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved running the disabled runtime-gate manifest phase after the current live-readiness manifest named proven_lane_priority_then_latest_proof as the proposed selector policy. This phase adds the command named by the manifest and validates it remains disabled while proving policy, idempotency, selected-row, and no-side-effect requirements.
