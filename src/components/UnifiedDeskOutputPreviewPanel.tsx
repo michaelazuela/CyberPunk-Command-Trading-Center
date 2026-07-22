@@ -9,6 +9,12 @@ import {
   type UnifiedDeskOutputLocalGoLiveRehearsalGateReport,
 } from '../lib/unifiedDeskOutputRuntimeGate';
 
+interface UnifiedDeskOutputDisabledLocalScannerPreviewRenderProofReport {
+  reportType: 'unified_desk_output_disabled_local_scanner_preview_render_install_proof';
+  status: 'pass' | 'blocked';
+  scannerSurfaceSmokeImportPayload?: UnifiedDeskOutputScannerSurfaceSmokeReport | null;
+}
+
 export function isUnifiedDeskOutputPreviewLocalHost(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
 }
@@ -22,10 +28,25 @@ function readStoredReport(): UnifiedDeskOutputScannerSurfaceSmokeReport | null {
   try {
     const raw = localStorage.getItem(UNIFIED_DESK_OUTPUT_SCANNER_SURFACE_STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as UnifiedDeskOutputScannerSurfaceSmokeReport;
+    return normalizeImportedUnifiedDeskOutputReport(JSON.parse(raw));
   } catch {
     return null;
   }
+}
+
+function normalizeImportedUnifiedDeskOutputReport(value: unknown): UnifiedDeskOutputScannerSurfaceSmokeReport {
+  const report = value as Partial<UnifiedDeskOutputScannerSurfaceSmokeReport> & Partial<UnifiedDeskOutputDisabledLocalScannerPreviewRenderProofReport>;
+  if (report.reportType === 'unified_desk_output_scanner_surface_smoke') {
+    return report as UnifiedDeskOutputScannerSurfaceSmokeReport;
+  }
+  if (
+    report.reportType === 'unified_desk_output_disabled_local_scanner_preview_render_install_proof' &&
+    report.status === 'pass' &&
+    report.scannerSurfaceSmokeImportPayload?.reportType === 'unified_desk_output_scanner_surface_smoke'
+  ) {
+    return report.scannerSurfaceSmokeImportPayload;
+  }
+  throw new Error('Unsupported Unified Desk Output import payload.');
 }
 
 function runtimeGateReportFromSurfaceSmoke(
@@ -81,7 +102,7 @@ export default function UnifiedDeskOutputPreviewPanel() {
     event.target.value = '';
     if (!file) return;
     try {
-      const parsed = JSON.parse(await file.text()) as UnifiedDeskOutputScannerSurfaceSmokeReport;
+      const parsed = normalizeImportedUnifiedDeskOutputReport(JSON.parse(await file.text()));
       const nextModel = buildUnifiedDeskOutputScannerSurfacePreviewModel({
         enabled: true,
         localHost: isUnifiedDeskOutputPreviewLocalHost(window.location.hostname),

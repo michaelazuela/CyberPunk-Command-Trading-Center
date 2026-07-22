@@ -349,4 +349,119 @@ describe('App route shell', () => {
     expect(screen.getAllByText(/Discord\/Supabase\/bridge\/canExecute remain off/).length).toBeGreaterThan(0);
     expect(localStorage.getItem(UNIFIED_DESK_OUTPUT_SCANNER_SURFACE_STORAGE_KEY)).toContain('unified-preview-approved');
   });
+
+  it('imports the disabled scanner preview render proof and renders today approved desk plans', async () => {
+    window.history.pushState({}, '', '/?unifiedDeskOutputPreview=1');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unified Desk Output' }));
+
+    const report = {
+      reportType: 'unified_desk_output_disabled_local_scanner_preview_render_install_proof',
+      status: 'pass',
+      scannerSurfaceSmokeImportPayload: {
+        reportType: 'unified_desk_output_scanner_surface_smoke',
+        status: 'pass',
+        authority: {
+          localOnly: true,
+          readsSavedInstallAuditOnly: true,
+          rendersScannerSurfaceOnly: true,
+          postsDiscord: false,
+          writesSupabase: false,
+          readsLiveSupabase: false,
+          readsLiveBridge: false,
+          changesTradingLogic: false,
+          changesCanExecute: false,
+          automatedOrders: false,
+        },
+        summary: {
+          renderedRows: 2,
+          approvedDeskPlanRows: 2,
+          formingDeskReadRows: 0,
+          discordPostRows: 0,
+          supabaseWriteRows: 0,
+          liveBridgeReadRows: 0,
+          canExecuteTrueRows: 0,
+          wordingViolationRows: 0,
+          blockedRows: 0,
+        },
+        surface: {
+          status: 'ready',
+          sourceOfTruth: 'scanner_surface_unified_desk_output_consumer',
+          localScannerOnly: true,
+          rows: [
+            {
+              cardId: 'unified-desk-output-disabled|2026-07-22|morning',
+              date: '2026-07-22',
+              session: 'morning',
+              state: 'APPROVED_DESK_PLAN',
+              stateLabel: 'Approved Desk Plan',
+              model: 'HtfDisplacementFvgContinuation',
+              direction: 'LONG',
+              headline: 'Approved Desk Plan | MORNING | LONG | HtfDisplacementFvgContinuation',
+              bodyLines: ['morning long desk plan from the validated disabled runtime gate.'],
+              levelLine: 'Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528',
+              riskLine: 'Risk 4.25 points from scanner-owned entry/stop.',
+              proofLine: 'Completed 5M proof: 09:10 ET.',
+              invalidationLine: 'Invalid if price violates the protected 5M stop line at 7515.25.',
+              authorityLine: 'Decision support only. Disabled scanner-runtime preview; Discord/Supabase/bridge/canExecute remain off.',
+              scannerVisibleNow: true,
+              publishDiscord: false,
+              writesSupabase: false,
+              readsLiveBridge: false,
+              canExecute: false,
+            },
+            {
+              cardId: 'unified-desk-output-disabled|2026-07-22|lunch',
+              date: '2026-07-22',
+              session: 'lunch',
+              state: 'APPROVED_DESK_PLAN',
+              stateLabel: 'Approved Desk Plan',
+              model: 'IntradayMssMicroContinuation',
+              direction: 'LONG',
+              headline: 'Approved Desk Plan | LUNCH | LONG | IntradayMssMicroContinuation',
+              bodyLines: ['lunch long desk plan from the validated disabled runtime gate.'],
+              levelLine: 'Entry 7540 | Stop 7535.75 | T1 7546.5 | T2 7548.5',
+              riskLine: 'Risk 4.25 points from scanner-owned entry/stop.',
+              proofLine: 'Completed 5M proof: 15:45 ET.',
+              invalidationLine: 'Invalid if price violates the protected 5M stop line at 7535.75.',
+              authorityLine: 'Decision support only. Disabled scanner-runtime preview; Discord/Supabase/bridge/canExecute remain off.',
+              scannerVisibleNow: true,
+              publishDiscord: false,
+              writesSupabase: false,
+              readsLiveBridge: false,
+              canExecute: false,
+            },
+          ],
+          summary: {
+            rows: 2,
+            approvedDeskPlans: 2,
+            formingDeskReads: 0,
+            discordPostRows: 0,
+            supabaseWriteRows: 0,
+            liveBridgeReadRows: 0,
+            canExecuteTrueRows: 0,
+            wordingViolationRows: 0,
+          },
+          blockers: [],
+        },
+        blockers: [],
+      },
+    };
+
+    const file = new File([JSON.stringify(report)], 'disabled-render-proof.json', { type: 'application/json' });
+    fireEvent.change(screen.getByLabelText('Import scanner surface smoke JSON'), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => expect(screen.getByText('READY')).toBeTruthy());
+    expect(screen.getByText('Import ready: 2 scanner surface rows.')).toBeTruthy();
+    expect(screen.getByText('HtfDisplacementFvgContinuation')).toBeTruthy();
+    expect(screen.getByText('IntradayMssMicroContinuation')).toBeTruthy();
+    expect(screen.getByText('Completed 5M proof: 09:10 ET.')).toBeTruthy();
+    expect(screen.getByText('Completed 5M proof: 15:45 ET.')).toBeTruthy();
+    expect(screen.getAllByText('Approved Desk Plan').length).toBeGreaterThanOrEqual(2);
+    expect(localStorage.getItem(UNIFIED_DESK_OUTPUT_SCANNER_SURFACE_STORAGE_KEY)).toContain('IntradayMssMicroContinuation');
+  });
 });

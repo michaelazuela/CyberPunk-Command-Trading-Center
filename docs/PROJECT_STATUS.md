@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add direct hidden-preview import for Unified Desk Output render-proof payloads.
+Files changed: src/components/UnifiedDeskOutputPreviewPanel.tsx, src/App.test.tsx, docs/PROJECT_STATUS.md.
+Reason: User approved the next phase after the disabled local scanner preview render/install proof produced a scanner-surface-smoke-compatible payload. This phase lets the existing hidden local Unified Desk Output preview import the new render-proof JSON directly while preserving the older scanner-surface-smoke import path.
+Tests run: npx vitest run src/App.test.tsx; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Focused app test passed with 5/5 tests. The hidden localhost-only preview accepts `unified_desk_output_disabled_local_scanner_preview_render_install_proof`, extracts its embedded scanner-surface-smoke payload, and renders today's two Approved Desk Plan rows: morning HtfDisplacementFvgContinuation LONG at 09:10 ET and lunch IntradayMssMicroContinuation LONG at 15:45 ET. The old scanner-surface-smoke import path still passes.
+Trading logic changed: No. This is hidden local preview import support only. It does not alter setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, normal scanner output, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The feature is still hidden-local-preview only. Production scanner and Discord remain off until separate explicit approval.
+Next recommended action: Run one local app preview verification using the generated render-proof JSON, then prepare the final production readiness checklist for explicit go-live approval.
+
+Date: 2026-07-22
 Task: Add disabled local scanner preview render/install proof for Unified Desk Output.
 Files changed: tools/automation/unified-desk-output-disabled-local-scanner-preview-render-proof.ts, tools/automation/unified-desk-output-disabled-local-scanner-preview-render-proof.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the next phase after the local scanner consumer probe passed. This phase converts the passing consumer-probe rows into a scanner-surface-smoke-compatible hidden preview import payload, proving the current local Unified Desk Output preview can render one morning and one lunch Approved Desk Plan without changing normal scanner runtime behavior.
