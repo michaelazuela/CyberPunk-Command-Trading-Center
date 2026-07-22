@@ -2,6 +2,20 @@
 
 ## Latest Change
 
+Date: 2026-07-22
+Task: Add AfterLunch earliest completed 5M proof preview.
+Files changed: tools/automation/desk-playbook-selector-afterlunch-earliest-proof-preview.ts, tools/automation/desk-playbook-selector-afterlunch-earliest-proof-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the recommended surgical path after closing the weaker proof-time enrichment path: build a dry-run preview that selects the first valid completed 5M AfterLunchDriveFvgContinuation candidate per lunch slate and measures whether it produces clean scanner-owned review-ticket candidates before touching live behavior.
+Tests run: npx tsx tools/automation/desk-playbook-selector-afterlunch-earliest-proof-preview.test.ts; npx tsx tools/automation/desk-playbook-selector-afterlunch-earliest-proof-preview.ts --source-proof-timing tools/automation/diagnostic-reports/unified-positive-held-local-preview-replay-package-source-proof-timing-1784419768053.json --replay-package tools/automation/diagnostic-reports/raw-ohlc-scanner-artifact-replay-package-1784419066591.json --reviewed-case-intake tools/automation/diagnostic-reports/unified-positive-held-local-preview-reviewed-case-intake-1784574087447.json --camouflage-audit tools/automation/diagnostic-reports/desk-playbook-selector-camouflage-audit-1784681786161.json --json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Focused test passed. Real preview report tools/automation/diagnostic-reports/desk-playbook-selector-afterlunch-earliest-proof-preview-1784684274431.json passed with sourceRows=2154, afterLunchRows=138, previewTickets=18, joinedGeometryTickets=18, winners=13, losses=5, unresolved=0, oneMesPl=1060.66, winRateResolved=0.72, recommendation=candidate_for_scanner_owned_dry_run_contract. This means earliest completed 5M AfterLunch proof is materially better than the stopped proof-time enrichment selector and is strong enough for a scanner-owned dry-run contract proposal, not live publish.
+Trading logic changed: No. This is a local-only saved-report dry-run preview. It does not run setupScanner, change ranking, change canExecute, post Discord, write Supabase, read NinjaTrader bridge data, or change entry/stop/target/risk math.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The preview uses saved research artifacts and outcome replay. It proves the dry-run lane is worth packaging, but it does not prove live scanner runtime ownership, Discord wording, or current-day publish readiness.
+Next recommended action: Build a scanner-owned dry-run contract for one earliest valid completed 5M AfterLunchDriveFvgContinuation ticket per lunch slate, with HTF/session context attached and live publishing still disabled.
+
 Date: 2026-07-21
 Task: Add AfterLunch proof-time enrichment closeout diagnostic.
 Files changed: tools/automation/desk-playbook-selector-afterlunch-proof-time-enrichment.ts, tools/automation/desk-playbook-selector-afterlunch-proof-time-enrichment.test.ts, docs/PROJECT_STATUS.md.
