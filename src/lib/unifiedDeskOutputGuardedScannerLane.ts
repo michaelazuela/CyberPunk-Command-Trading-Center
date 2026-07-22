@@ -10,6 +10,9 @@ import {
 } from './unifiedDeskOutputScannerVisibilityAdapter';
 
 type GuardedSession = 'morning' | 'lunch';
+export type UnifiedDeskOutputSelectionPolicyOrder =
+  'latest_completed_5m_proof_per_session' |
+  'proven_lane_priority_then_latest_proof';
 
 export interface UnifiedDeskOutputGuardedLaneContractInput {
   reportType: 'unified_desk_output_discord_guarded_live_lane_contract' | string;
@@ -72,7 +75,8 @@ export interface UnifiedDeskOutputGuardedScannerLanePreview {
     state: 'APPROVED_DESK_PLAN';
     sessions: GuardedSession[];
     maxRowsPerSession: 1;
-    order: 'latest_completed_5m_proof_per_session';
+    order: UnifiedDeskOutputSelectionPolicyOrder;
+    proposedPriority: Record<GuardedSession, string[]> | null;
   };
   summary: {
     sourceCandidates: number;
@@ -106,12 +110,51 @@ function sortedLatestFirst(candidates: UnifiedDeskOutputVisibilityCandidate[]): 
   });
 }
 
+const PROVEN_LANE_PRIORITY: Record<GuardedSession, string[]> = {
+  morning: [
+    'OpeningDriveFvgContinuation',
+    'HtfDisplacementFvgContinuation',
+    'HtfDisplacementMssContinuation',
+    'HtfDrawContinuationAfterRaid',
+    'IntradayMssMicroContinuation',
+    'SweepMssFvgRetrace',
+    'TurtleSoup',
+  ],
+  lunch: [
+    'AfterLunchDriveFvgContinuation',
+    'HtfDisplacementFvgContinuation',
+    'HtfDisplacementMssContinuation',
+    'HtfDrawContinuationAfterRaid',
+    'IntradayMssMicroContinuation',
+    'SweepMssFvgRetrace',
+    'TurtleSoup',
+  ],
+};
+
+function priorityFor(session: GuardedSession, model: string): number {
+  const index = PROVEN_LANE_PRIORITY[session].indexOf(model);
+  return index >= 0 ? index : PROVEN_LANE_PRIORITY[session].length;
+}
+
+function sortedByProvenLanePriority(candidates: UnifiedDeskOutputVisibilityCandidate[]): UnifiedDeskOutputVisibilityCandidate[] {
+  return [...candidates].sort((left, right) => {
+    const priorityCompare = priorityFor(left.session, left.model) - priorityFor(right.session, right.model);
+    if (priorityCompare !== 0) return priorityCompare;
+    const timeCompare = right.proofTime.localeCompare(left.proofTime);
+    return timeCompare || left.cardId.localeCompare(right.cardId);
+  });
+}
+
 function selectOneApprovedPerSession(args: {
   candidates: UnifiedDeskOutputVisibilityCandidate[];
   sessions: GuardedSession[];
+  order: UnifiedDeskOutputSelectionPolicyOrder;
 }): UnifiedDeskOutputVisibilityCandidate[] {
   return args.sessions.flatMap((session) => {
-    const rows = sortedLatestFirst(args.candidates.filter((candidate) => candidate.session === session));
+    const candidates = args.candidates.filter((candidate) => candidate.session === session);
+    const rows = args.order === 'proven_lane_priority_then_latest_proof'
+      ? sortedByProvenLanePriority(candidates)
+      : sortedLatestFirst(candidates);
     return rows[0] ? [rows[0]] : [];
   });
 }
@@ -170,15 +213,17 @@ function validateReadiness(readinessReport: UnifiedDeskOutputVisibilityReadiness
 export function buildUnifiedDeskOutputGuardedScannerLanePreview(args: {
   guardedLaneContract: UnifiedDeskOutputGuardedLaneContractInput | null;
   readinessReport: UnifiedDeskOutputVisibilityReadinessReport | null;
+  selectionPolicyOrder?: UnifiedDeskOutputSelectionPolicyOrder;
 }): UnifiedDeskOutputGuardedScannerLanePreview {
   const contractBlockers = validateContract(args.guardedLaneContract);
   const readinessBlockers = validateReadiness(args.readinessReport);
   const sessions = args.guardedLaneContract?.lane.sessions || ['morning', 'lunch'];
+  const selectionPolicyOrder = args.selectionPolicyOrder || 'latest_completed_5m_proof_per_session';
   const eligible = (args.readinessReport?.candidates || [])
     .filter((candidate) => candidate.state === 'APPROVED_DESK_PLAN' && sessions.includes(candidate.session));
   const selectedCandidates = contractBlockers.length || readinessBlockers.length
     ? []
-    : selectOneApprovedPerSession({ candidates: eligible, sessions });
+    : selectOneApprovedPerSession({ candidates: eligible, sessions, order: selectionPolicyOrder });
   const selectionBlockers = [
     selectedCandidates.length > 0 ? null : 'No eligible APPROVED_DESK_PLAN candidates were selected.',
     ...sessions.map((session) => {
@@ -226,7 +271,10 @@ export function buildUnifiedDeskOutputGuardedScannerLanePreview(args: {
       state: 'APPROVED_DESK_PLAN',
       sessions: [...sessions],
       maxRowsPerSession: 1,
-      order: 'latest_completed_5m_proof_per_session',
+      order: selectionPolicyOrder,
+      proposedPriority: selectionPolicyOrder === 'proven_lane_priority_then_latest_proof'
+        ? PROVEN_LANE_PRIORITY
+        : null,
     },
     summary: {
       sourceCandidates: args.readinessReport?.candidates.length || 0,

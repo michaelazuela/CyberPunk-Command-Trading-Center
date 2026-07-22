@@ -47,12 +47,13 @@ const candidate = (
   session: 'morning' | 'lunch',
   proofTime: string,
   state: UnifiedDeskVisibleState = 'APPROVED_DESK_PLAN',
+  model = session === 'morning' ? 'OpeningDriveFvgContinuation' : 'AfterLunchDriveFvgContinuation',
 ) => ({
-  cardId: `guarded|${session}|${proofTime}|${state}`,
+  cardId: `guarded|${session}|${proofTime}|${state}|${model}`,
   date: proofTime.slice(0, 10),
   session,
   state,
-  model: session === 'morning' ? 'OpeningDriveFvgContinuation' : 'AfterLunchDriveFvgContinuation',
+  model,
   direction: session === 'morning' ? 'LONG' as const : 'SHORT' as const,
   proofTime,
   entry: session === 'morning' ? 100 : 200,
@@ -98,6 +99,8 @@ const preview = buildUnifiedDeskOutputGuardedScannerLanePreview({
 assert.equal(preview.reportType, 'unified_desk_output_guarded_local_scanner_lane_preview');
 assert.equal(preview.status, 'pass');
 assert.equal(preview.selectionPolicy.enabledByDefault, false);
+assert.equal(preview.selectionPolicy.order, 'latest_completed_5m_proof_per_session');
+assert.equal(preview.selectionPolicy.proposedPriority, null);
 assert.equal(preview.summary.sourceCandidates, 5);
 assert.equal(preview.summary.eligibleApprovedDeskPlanRows, 4);
 assert.equal(preview.summary.selectedRows, 2);
@@ -133,3 +136,40 @@ const blocked = buildUnifiedDeskOutputGuardedScannerLanePreview({
 assert.equal(blocked.status, 'blocked');
 assert.equal(blocked.summary.recommendation, 'hold_for_guarded_scanner_lane_fix');
 assert.ok(blocked.blockers.some((blocker) => blocker.includes('does not cap at one post per session')));
+
+const priorityReadinessReport = {
+  ...readinessReport,
+  candidates: [
+    candidate('morning', '2026-07-22T09:10:00', 'APPROVED_DESK_PLAN', 'HtfDisplacementFvgContinuation'),
+    candidate('morning', '2026-07-22T11:45:00', 'APPROVED_DESK_PLAN', 'TurtleSoup'),
+    candidate('lunch', '2026-07-22T15:45:00', 'APPROVED_DESK_PLAN', 'IntradayMssMicroContinuation'),
+    candidate('lunch', '2026-07-22T15:50:00', 'APPROVED_DESK_PLAN', 'TurtleSoup'),
+  ],
+} satisfies UnifiedDeskOutputVisibilityReadinessReport;
+
+const latestPolicy = buildUnifiedDeskOutputGuardedScannerLanePreview({
+  guardedLaneContract: contract,
+  readinessReport: priorityReadinessReport,
+});
+
+const provenLanePriority = buildUnifiedDeskOutputGuardedScannerLanePreview({
+  guardedLaneContract: contract,
+  readinessReport: priorityReadinessReport,
+  selectionPolicyOrder: 'proven_lane_priority_then_latest_proof',
+});
+
+assert.equal(latestPolicy.selectedCandidates[0].model, 'TurtleSoup');
+assert.equal(latestPolicy.selectedCandidates[1].model, 'TurtleSoup');
+assert.equal(provenLanePriority.selectionPolicy.order, 'proven_lane_priority_then_latest_proof');
+assert.deepEqual(provenLanePriority.selectionPolicy.proposedPriority?.morning.slice(0, 2), [
+  'OpeningDriveFvgContinuation',
+  'HtfDisplacementFvgContinuation',
+]);
+assert.equal(provenLanePriority.selectedCandidates[0].model, 'HtfDisplacementFvgContinuation');
+assert.equal(provenLanePriority.selectedCandidates[1].model, 'IntradayMssMicroContinuation');
+assert.equal(provenLanePriority.summary.discordPostRows, 0);
+assert.equal(provenLanePriority.summary.supabaseWriteRows, 0);
+assert.equal(provenLanePriority.summary.liveBridgeReadRows, 0);
+assert.equal(provenLanePriority.summary.canExecuteChangedRows, 0);
+assert.equal(provenLanePriority.summary.tradingLogicChangedRows, 0);
+assert.equal(provenLanePriority.summary.runtimeInstallAllowed, false);

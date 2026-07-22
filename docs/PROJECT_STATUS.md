@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add disabled selector-policy preview mode for Unified Desk Output.
+Files changed: src/lib/unifiedDeskOutputGuardedScannerLane.ts, src/lib/unifiedDeskOutputGuardedScannerLane.test.ts, tools/automation/unified-desk-output-guarded-local-scanner-lane-preview.ts, docs/PROJECT_STATUS.md.
+Reason: User approved running the next phase after the current scanner selection-policy audit proved today's selected row changes depending on whether the guarded lane uses latest-proof or proven-lane-priority selection. This phase adds an opt-in disabled preview mode for the guarded local scanner lane while preserving latest-proof as the default.
+Tests run: npx tsx src/lib/unifiedDeskOutputGuardedScannerLane.test.ts; npx tsx tools/automation/unified-desk-output-guarded-local-scanner-lane-preview.test.ts; npx tsx tools/automation/unified-desk-output-guarded-local-scanner-lane-preview.ts --readiness-audit <current-feed-readiness-audit> --selection-policy latest_completed_5m_proof_per_session --json; npx tsx tools/automation/unified-desk-output-guarded-local-scanner-lane-preview.ts --readiness-audit <current-feed-readiness-audit> --selection-policy proven_lane_priority_then_latest_proof --json.
+Result: Focused tests passed. Latest-proof current preview tools/automation/diagnostic-reports/unified-desk-output-guarded-local-scanner-lane-preview-1784754882640.json passed and selected morning TurtleSoup LONG at 11:45 ET plus lunch TurtleSoup SHORT at 15:50 ET. Proven-lane-priority current preview tools/automation/diagnostic-reports/unified-desk-output-guarded-local-scanner-lane-preview-1784754882607.json passed and selected morning HtfDisplacementFvgContinuation LONG at 09:10 ET plus lunch IntradayMssMicroContinuation LONG at 15:45 ET. Both previews had sourceCandidates=65, eligibleApprovedDeskPlanRows=54, selectedRows=2, morningRows=1, lunchRows=1, suppressedRows=52, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, runtimeInstallAllowed=false, blockedRows=0.
+Trading logic changed: No. Default guarded-lane behavior remains latest_completed_5m_proof_per_session. The proven-lane-priority mode is opt-in for disabled local preview only and does not change setupScanner rules, runtime ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The proven-lane-priority mode is not installed into runtime. It now proves the exact alternative local output, but production still needs an explicit selector-policy decision and a separate runtime gate.
+Next recommended action: Run a current/live-readiness manifest that names which selector policy will be used for the first runtime gate. My recommendation is proven-lane-priority, because it prevents late TurtleSoup rows from overriding stronger drive/HTF/Intraday lanes solely by timestamp.
+
+Date: 2026-07-22
 Task: Add current scanner selection-policy audit for Unified Desk Output.
 Files changed: tools/automation/unified-desk-output-current-scanner-selection-policy-audit.ts, tools/automation/unified-desk-output-current-scanner-selection-policy-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the next narrow phase after the current scanner feed adapter showed today's one-row-per-session selector picked TurtleSoup for both windows. This phase compares the current latest-completed-5M-proof selector against a proposed proven-lane-priority selector without installing the policy or changing runtime behavior.

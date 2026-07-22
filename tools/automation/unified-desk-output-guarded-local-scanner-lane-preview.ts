@@ -4,12 +4,14 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   buildUnifiedDeskOutputGuardedScannerLanePreview,
   type UnifiedDeskOutputGuardedLaneContractInput,
+  type UnifiedDeskOutputSelectionPolicyOrder,
 } from '../../src/lib/unifiedDeskOutputGuardedScannerLane';
 import type { UnifiedDeskOutputVisibilityReadinessReport } from '../../src/lib/unifiedDeskOutputScannerVisibilityAdapter';
 
 interface CliOptions {
   guardedLaneAuditPath: string | null;
   readinessAuditPath: string | null;
+  selectionPolicyOrder: UnifiedDeskOutputSelectionPolicyOrder;
   outDir: string;
   json: boolean;
 }
@@ -26,9 +28,15 @@ function readFlag(args: string[], flag: string): string | null {
 }
 
 function parseArgs(args = process.argv.slice(2)): CliOptions {
+  const selectionPolicyOrder = readFlag(args, '--selection-policy') || 'latest_completed_5m_proof_per_session';
+  if (selectionPolicyOrder !== 'latest_completed_5m_proof_per_session' &&
+    selectionPolicyOrder !== 'proven_lane_priority_then_latest_proof') {
+    throw new Error(`Unsupported selection policy: ${selectionPolicyOrder}`);
+  }
   return {
     guardedLaneAuditPath: readFlag(args, '--guarded-lane-audit'),
     readinessAuditPath: readFlag(args, '--readiness-audit'),
+    selectionPolicyOrder,
     outDir: readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR,
     json: args.includes('--json'),
   };
@@ -109,6 +117,7 @@ async function main(): Promise<void> {
   const report = buildUnifiedDeskOutputGuardedScannerLanePreview({
     guardedLaneContract: readJson<UnifiedDeskOutputGuardedLaneContractInput>(guardedLaneAuditPath),
     readinessReport: readJson<UnifiedDeskOutputVisibilityReadinessReport>(readinessAuditPath),
+    selectionPolicyOrder: options.selectionPolicyOrder,
   });
   const written = writeUnifiedDeskOutputGuardedLocalScannerLanePreview(report, path.resolve(options.outDir));
   if (options.json) {
