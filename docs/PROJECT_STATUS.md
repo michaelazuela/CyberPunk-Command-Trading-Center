@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add YTD Intraday MSS Micro HTF-bias audit.
+Files changed: tools/automation/ytd-intraday-mss-micro-htf-bias-audit.ts, tools/automation/ytd-intraday-mss-micro-htf-bias-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: User asked to validate the IntradayMssMicroContinuation idea day by day from the beginning of the year with morning/lunch session playback and HTF directional context, while preserving 5M execution authority.
+Tests run: npx tsx tools/automation/ytd-intraday-mss-micro-htf-bias-audit.test.ts; npx tsx tools/automation/ytd-intraday-mss-micro-htf-bias-audit.ts --day-by-day-report tools/automation/diagnostic-reports/ytd-full-scanner-day-by-day-market-move-best-model-map-1784671041320.json --top 40; npx tsx tools/automation/controlled-htf-ohlc-acquisition.ts --start-date 2026-01-01 --end-date 2026-07-22 --instrument MES --source market-bars-then-bridge --rollover-aware --chunk-days 7 --lookback-days 30 --json; npx tsx tools/automation/raw-ohlc-scanner-artifact-generator.ts --start-date 2026-07-21 --end-date 2026-07-21 --instrument MES --market-bars-json tools/automation/diagnostic-reports/tmp-ytd-2026-07-21-sliced-scanner-input.json --sessions morning,lunch --json.
+Result: Focused test passed. Real audit tools/automation/diagnostic-reports/ytd-intraday-mss-micro-htf-bias-audit-1784690890361.json passed against the proof-grade YTD day-by-day mapper with sourceRows=344, sourceDateStart=2026-01-01, sourceDateEnd=2026-07-20, sourceDates=172, selectedRows=74, oneMesPl=3021.95, wins=29, losses=4, noFill=13, unresolved=28, bestHtfAlignment=aligned, bestMovement=high_raid_reversal_down, bestSession=morning. HTF-aligned Intraday rows produced the strongest bucket, so the user is on the right track using HTF as directional context while leaving 5M as execution proof. A read-only rollover-aware OHLC acquisition also produced tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-01-01-to-2026-07-22-1784690929755.json with 66,356 bars and contract legs MES 12-25, MES 03-26, MES 06-26, MES 09-26. July 21 sliced raw scanner replay passed with 81 events and HTF ready on every event; July 22 had zero 5M RTH bars loaded at check time, so it cannot be replayed yet without inventing data.
+Trading logic changed: No. This is a local-only research diagnostic and local OHLC/replay artifact generation. It does not change setupScanner rules, ranking, canExecute, Discord, Supabase writes, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: Historical read-only bridge repair was attempted by controlled HTF acquisition. No bridge behavior changed.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: Read-only market_bars access was attempted by controlled HTF acquisition. No Supabase writes or schema changes.
+Known risks: The durable day-by-day edge map currently covers 2026-01-01 through 2026-07-20. July 21 now has a raw scanner artifact but has not been folded into the day-by-day best-model map. July 22 has no loaded 5M RTH bars, so any July 22 morning/lunch conclusion is data-limited.
+Next recommended action: Build or restore a durable day-by-day best-model mapper that consumes raw scanner artifacts, then fold the July 21 artifact into the same report shape before deciding whether IntradayMssMicroContinuation deserves a cleaner desk adapter lane.
+
+Date: 2026-07-22
 Task: Run IntradayMssMicroContinuation saved-history selector test.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: User asked whether IntradayMssMicroContinuation could work if tested through the existing history-review tooling before adding it to the cleaner desk adapter.
