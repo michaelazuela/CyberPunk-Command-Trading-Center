@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add hidden local app preview verification for Unified Desk Output render-proof payloads.
+Files changed: tools/automation/unified-desk-output-hidden-preview-local-verification.ts, src/components/UnifiedDeskOutputPreviewPanel.tsx, docs/PROJECT_STATUS.md.
+Reason: User approved the local proof step after direct hidden-preview import support was added. This phase verifies the hidden localhost Unified Desk Output tab in a real browser by importing the saved render-proof JSON, checking the expected two scanner-owned rows, capturing a screenshot, and confirming no integration side effects. The preview layout was also tightened after visual QA showed the side column overlapping the model name.
+Tests run: npx tsx tools/automation/unified-desk-output-hidden-preview-local-verification.ts --url "http://127.0.0.1:3000/?unifiedDeskOutputPreview=1" --json; screenshot visual QA; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Browser verification passed in tools/automation/diagnostic-reports/unified-desk-output-hidden-preview-local-verification-1784764742301.json. Screenshot captured at tools/automation/diagnostic-reports/unified-desk-output-hidden-preview-local-verification-1784764742203.png. Summary: previewReady=true, importReady=true, renderedRows=2, approvedDeskPlanRows=2, morningModelVisible=true, lunchModelVisible=true, morningProofVisible=true, lunchProofVisible=true, discordPostRows=0, supabaseWriteRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0, recommendation=ready_for_final_production_readiness_checklist.
+Trading logic changed: No. This is hidden local preview verification plus a display-only grid width fix. It does not alter setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, normal scanner output, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Production scanner-visible behavior remains off until separate explicit approval. The browser proof used the existing local app server at http://127.0.0.1:3000 and a saved render-proof payload.
+Next recommended action: Prepare the final production readiness checklist/manifest for explicit go-live approval. Do not enable production posting or runtime scanner visibility without that approval gate.
+
+Date: 2026-07-22
 Task: Add direct hidden-preview import for Unified Desk Output render-proof payloads.
 Files changed: src/components/UnifiedDeskOutputPreviewPanel.tsx, src/App.test.tsx, docs/PROJECT_STATUS.md.
 Reason: User approved the next phase after the disabled local scanner preview render/install proof produced a scanner-surface-smoke-compatible payload. This phase lets the existing hidden local Unified Desk Output preview import the new render-proof JSON directly while preserving the older scanner-surface-smoke import path.

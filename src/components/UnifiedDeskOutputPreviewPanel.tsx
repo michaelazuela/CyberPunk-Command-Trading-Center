@@ -165,7 +165,7 @@ export default function UnifiedDeskOutputPreviewPanel() {
 
       {ready && (
         <div className="overflow-hidden border border-[var(--b1)] bg-[var(--panel)]">
-          <div className="grid grid-cols-[1fr_120px_160px_90px_1.2fr] gap-3 border-b border-[var(--b1)] bg-[var(--b0)] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--txt2)]">
+          <div className="grid grid-cols-[1fr_120px_minmax(240px,0.9fr)_90px_1.2fr] gap-3 border-b border-[var(--b1)] bg-[var(--b0)] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--txt2)]">
             <div>Desk State</div>
             <div>Session</div>
             <div>Model</div>
@@ -174,7 +174,7 @@ export default function UnifiedDeskOutputPreviewPanel() {
           </div>
           <div className="max-h-[70vh] overflow-y-auto">
             {previewModel.rows.map((row) => (
-              <article key={row.cardId} className="grid grid-cols-[1fr_120px_160px_90px_1.2fr] gap-3 border-b border-[var(--b1)] px-3 py-3 text-[12px] last:border-b-0">
+              <article key={row.cardId} className="grid grid-cols-[1fr_120px_minmax(240px,0.9fr)_90px_1.2fr] gap-3 border-b border-[var(--b1)] px-3 py-3 text-[12px] last:border-b-0">
                 <div>
                   <div className="font-semibold text-[var(--txt)]">{row.stateLabel}</div>
                   <div className="mt-1 font-mono text-[10px] text-[var(--txt3)]">{row.proofLine}</div>
