@@ -1,10 +1,10 @@
 {
   "reportType": "unified_desk_output_production_scanner_surface_activation",
-  "generatedAt": "2026-07-23T00:22:42.563Z",
+  "generatedAt": "2026-07-23T02:33:49.592Z",
   "status": "active",
   "approval": {
     "explicitProductionApproval": true,
-    "approvalScope": "scanner_visibility_one_morning_one_lunch_approved_desk_plan_only",
+    "approvalScope": "scanner_visibility_one_morning_one_lunch_optional_one_evening_approved_desk_plan_only",
     "discordPostingRemainsGuarded": true,
     "changesTradingLogic": false,
     "changesCanExecute": false,
@@ -29,6 +29,7 @@
     "selectedRows": 2,
     "morningRows": 1,
     "lunchRows": 1,
+    "eveningRows": 0,
     "approvedDeskPlanRows": 2,
     "discordPostRows": 0,
     "supabaseWriteRows": 0,
@@ -92,5 +93,5 @@
   ],
   "blockers": [],
   "runtimeSurfacePath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\.unified-desk-output-production-scanner-surface.json",
-  "markdown": "# Unified Desk Output Production Go-Live Gate\n\nStatus: active\n\nAuthority: production scanner surface activation only. This writes the runtime scanner surface file for one morning and one lunch Approved Desk Plan row. It does not post Discord, write Supabase, read live bridge data, change trading logic, change canExecute, change entry/stop/targets, or place/manage orders.\n\n## Summary\n- Scanner visible now: true.\n- Selected rows: 2.\n- Morning rows: 1.\n- Lunch rows: 1.\n- Approved Desk Plan rows: 2.\n- Discord-post rows: 0.\n- Supabase-write rows: 0.\n- Live-bridge-read rows: 0.\n- canExecute true rows: 0.\n- Trading-logic changed rows: 0.\n- Runtime surface: C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\.unified-desk-output-production-scanner-surface.json.\n\n## Rows\n| Session | Model | Direction | Proof | Levels |\n|---|---|---|---|---|\n| morning | HtfDisplacementFvgContinuation | LONG | Completed 5M proof: 09:10 ET. | Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528 |\n| lunch | IntradayMssMicroContinuation | LONG | Completed 5M proof: 15:45 ET. | Entry 7540 | Stop 7535.75 | T1 7546.5 | T2 7548.5 |\n\n## Blockers\n- None."
+  "markdown": "# Unified Desk Output Production Go-Live Gate\n\nStatus: active\n\nAuthority: production scanner surface activation only. This writes the runtime scanner surface file for one morning, one lunch, and optionally one evening Approved Desk Plan row. It does not post Discord, write Supabase, read live bridge data, change trading logic, change canExecute, change entry/stop/targets, or place/manage orders.\n\n## Summary\n- Scanner visible now: true.\n- Selected rows: 2.\n- Morning rows: 1.\n- Lunch rows: 1.\n- Evening rows: 0.\n- Approved Desk Plan rows: 2.\n- Discord-post rows: 0.\n- Supabase-write rows: 0.\n- Live-bridge-read rows: 0.\n- canExecute true rows: 0.\n- Trading-logic changed rows: 0.\n- Runtime surface: C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\.unified-desk-output-production-scanner-surface.json.\n\n## Rows\n| Session | Model | Direction | Proof | Levels |\n|---|---|---|---|---|\n| morning | HtfDisplacementFvgContinuation | LONG | Completed 5M proof: 09:10 ET. | Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528 |\n| lunch | IntradayMssMicroContinuation | LONG | Completed 5M proof: 15:45 ET. | Entry 7540 | Stop 7535.75 | T1 7546.5 | T2 7548.5 |\n\n## Blockers\n- None."
 }

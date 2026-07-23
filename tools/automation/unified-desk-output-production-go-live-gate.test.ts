@@ -19,6 +19,7 @@ const checklist: UnifiedDeskOutputFinalProductionReadinessChecklistInput = {
     selectedRows: 2,
     morningRows: 1,
     lunchRows: 1,
+    eveningRows: 0,
     approvedDeskPlanRows: 2,
     browserRenderedRows: 2,
     discordPostRows: 0,
@@ -90,6 +91,7 @@ assert.equal(runtime.authority.canExecute, false);
 assert.equal(runtime.summary.selectedRows, 2);
 assert.equal(runtime.summary.morningRows, 1);
 assert.equal(runtime.summary.lunchRows, 1);
+assert.equal(runtime.summary.eveningRows, 0);
 assert.equal(runtime.summary.discordPostRows, 0);
 assert.equal(runtime.summary.tradingLogicChangedRows, 0);
 assert.equal(runtime.rows.length, 2);

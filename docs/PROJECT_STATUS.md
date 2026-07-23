@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add optional evening slot to Unified Desk Output production scanner surface.
+Files changed: src/lib/unifiedDeskOutputScannerSurface.ts, src/lib/unifiedDeskOutputProductionScannerSurface.ts, src/lib/unifiedDeskOutputProductionScannerSurface.test.ts, tools/automation/unified-desk-output-production-go-live-gate.ts, tools/automation/unified-desk-output-production-go-live-gate.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/.unified-desk-output-production-scanner-surface.json, docs/PROJECT_STATUS.md.
+Reason: User confirmed the evening execution window should be included. This phase adds evening as an optional third Unified Desk Output production scanner-surface slot while preserving the current morning/lunch active rows and blocking any surface with more than one evening row.
+Tests run: npx tsx src/lib/unifiedDeskOutputProductionScannerSurface.test.ts; npx tsx tools/automation/unified-desk-output-production-go-live-gate.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/unified-desk-output-production-go-live-gate.ts --json.
+Result: Focused checks passed. Production runtime surface was refreshed with selectedRows=2, morningRows=1, lunchRows=1, eveningRows=0, approvedDeskPlanRows=2, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0. The contract now accepts one optional evening Approved Desk Plan row when a clean evening candidate exists; tonight's observer did not provide a clean evening Approved Desk Plan row, so no evening row was fabricated.
+Trading logic changed: No. This widens a scanner visibility surface contract only. It does not alter setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: None from the code change. The prior evening observer was read-only and used saved scanner artifacts.
+Discord impact: No Discord webhook calls from this phase. Surface rows still keep publishDiscord=false and existing Discord policy remains separately guarded.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The continuous scanner process must be restarted after this commit so it loads the optional-evening validation/readback contract.
+Next recommended action: Run full verification, commit/push, restart only nt-scanner, then confirm the production readback still passes with eveningRows=0 until a valid evening candidate appears.
+
+Date: 2026-07-22
 Task: Run Unified Desk Output production go-live gate.
 Files changed: src/lib/unifiedDeskOutputProductionScannerSurface.ts, src/lib/unifiedDeskOutputProductionScannerSurface.test.ts, tools/automation/unified-desk-output-production-go-live-gate.ts, tools/automation/unified-desk-output-production-go-live-gate.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/.unified-desk-output-production-scanner-surface.json, docs/PROJECT_STATUS.md.
 Reason: User explicitly approved the Unified Desk Output production go-live gate for scanner visibility only: one morning and one lunch Approved Desk Plan row, Discord still behind the existing guarded policy, and no changes to trading logic, canExecute, entry, stop, or targets.

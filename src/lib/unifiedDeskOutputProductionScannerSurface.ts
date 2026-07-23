@@ -1,6 +1,6 @@
 import type { UnifiedDeskOutputScannerSurfaceRow } from './unifiedDeskOutputScannerSurface';
 
-type SessionName = 'morning' | 'lunch';
+type SessionName = 'morning' | 'lunch' | 'evening';
 type Direction = 'LONG' | 'SHORT';
 type DeskState = 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ';
 
@@ -26,6 +26,7 @@ export interface UnifiedDeskOutputFinalProductionReadinessChecklistInput {
     selectedRows: number;
     morningRows: number;
     lunchRows: number;
+    eveningRows?: number;
     approvedDeskPlanRows: number;
     browserRenderedRows: number;
     discordPostRows: number;
@@ -51,7 +52,7 @@ export interface UnifiedDeskOutputProductionScannerSurfaceActivation {
   status: 'active' | 'blocked';
   approval: {
     explicitProductionApproval: true;
-    approvalScope: 'scanner_visibility_one_morning_one_lunch_approved_desk_plan_only';
+    approvalScope: 'scanner_visibility_one_morning_one_lunch_optional_one_evening_approved_desk_plan_only';
     discordPostingRemainsGuarded: true;
     changesTradingLogic: false;
     changesCanExecute: false;
@@ -76,6 +77,7 @@ export interface UnifiedDeskOutputProductionScannerSurfaceActivation {
     selectedRows: number;
     morningRows: number;
     lunchRows: number;
+    eveningRows: number;
     approvedDeskPlanRows: number;
     discordPostRows: number;
     supabaseWriteRows: number;
@@ -98,7 +100,7 @@ function isFinitePrice(value: unknown): value is number {
 function candidateBlockers(candidate: UnifiedDeskOutputFinalReadinessCandidate): string[] {
   return [
     candidate.date ? null : 'Candidate missing date.',
-    candidate.session === 'morning' || candidate.session === 'lunch' ? null : `${candidate.cardId || '<candidate>'} has unsupported session.`,
+    candidate.session === 'morning' || candidate.session === 'lunch' || candidate.session === 'evening' ? null : `${candidate.cardId || '<candidate>'} has unsupported session.`,
     candidate.state === 'APPROVED_DESK_PLAN' || candidate.state === 'FORMING_DESK_READ' ? null : `${candidate.cardId || '<candidate>'} has unsupported desk state.`,
     candidate.model ? null : `${candidate.cardId || '<candidate>'} missing model.`,
     candidate.direction === 'LONG' || candidate.direction === 'SHORT' ? null : `${candidate.cardId || '<candidate>'} missing direction.`,
@@ -149,15 +151,19 @@ export function buildUnifiedDeskOutputProductionScannerSurfaceActivation(args: {
   finalReadinessChecklist: UnifiedDeskOutputFinalProductionReadinessChecklistInput;
 }, generatedAt = new Date().toISOString()): UnifiedDeskOutputProductionScannerSurfaceActivation {
   const checklist = args.finalReadinessChecklist;
+  const expectedRows = checklist.summary.eveningRows === 1 ? 3 : 2;
+  const expectedApprovedRows = expectedRows;
+  const expectedRenderedRows = expectedRows;
   const sourceBlockers = [
     checklist.reportType === 'unified_desk_output_final_production_readiness_checklist' ? null : 'Source report is not the final production readiness checklist.',
     checklist.status === 'pass' ? null : `Final readiness checklist status is ${checklist.status}.`,
     checklist.summary.recommendation === 'ready_for_explicit_production_go_live_approval' ? null : `Final readiness recommendation is ${checklist.summary.recommendation}.`,
-    checklist.summary.selectedRows === 2 ? null : 'Final readiness did not select exactly two rows.',
+    checklist.summary.selectedRows === expectedRows ? null : `Final readiness did not select exactly ${expectedRows} rows.`,
     checklist.summary.morningRows === 1 ? null : 'Final readiness did not select exactly one morning row.',
     checklist.summary.lunchRows === 1 ? null : 'Final readiness did not select exactly one lunch row.',
-    checklist.summary.approvedDeskPlanRows === 2 ? null : 'Final readiness did not prove two Approved Desk Plan rows.',
-    checklist.summary.browserRenderedRows === 2 ? null : 'Final readiness did not prove two browser-rendered rows.',
+    (checklist.summary.eveningRows || 0) <= 1 ? null : 'Final readiness selected more than one evening row.',
+    checklist.summary.approvedDeskPlanRows === expectedApprovedRows ? null : `Final readiness did not prove ${expectedApprovedRows} Approved Desk Plan rows.`,
+    checklist.summary.browserRenderedRows === expectedRenderedRows ? null : `Final readiness did not prove ${expectedRenderedRows} browser-rendered rows.`,
     checklist.summary.discordPostRows === 0 ? null : 'Final readiness has Discord post rows.',
     checklist.summary.supabaseWriteRows === 0 ? null : 'Final readiness has Supabase write rows.',
     checklist.summary.liveSupabaseReadRows === 0 ? null : 'Final readiness has live Supabase read rows.',
@@ -172,14 +178,15 @@ export function buildUnifiedDeskOutputProductionScannerSurfaceActivation(args: {
     ...(checklist.blockers || []),
   ].filter((item): item is string => Boolean(item));
   const candidateBlockerList = checklist.selectedCandidates.flatMap(candidateBlockers);
-  const sessionOrder: Record<SessionName, number> = { morning: 0, lunch: 1 };
+  const sessionOrder: Record<SessionName, number> = { morning: 0, lunch: 1, evening: 2 };
   const rows = [...checklist.selectedCandidates]
     .sort((left, right) => sessionOrder[left.session] - sessionOrder[right.session])
     .map(surfaceRow);
   const rowBlockers = [
-    rows.length === 2 ? null : 'Production surface did not build exactly two rows.',
+    rows.length === expectedRows ? null : `Production surface did not build exactly ${expectedRows} rows.`,
     rows.filter((row) => row.session === 'morning').length === 1 ? null : 'Production surface does not have exactly one morning row.',
     rows.filter((row) => row.session === 'lunch').length === 1 ? null : 'Production surface does not have exactly one lunch row.',
+    rows.filter((row) => row.session === 'evening').length <= 1 ? null : 'Production surface has more than one evening row.',
     rows.every((row) => row.state === 'APPROVED_DESK_PLAN') ? null : 'Production surface contains non-Approved Desk Plan rows.',
     rows.every((row) => !row.publishDiscord) ? null : 'Production surface would publish Discord.',
     rows.every((row) => !row.writesSupabase) ? null : 'Production surface would write Supabase.',
@@ -195,7 +202,7 @@ export function buildUnifiedDeskOutputProductionScannerSurfaceActivation(args: {
     status: active ? 'active' : 'blocked',
     approval: {
       explicitProductionApproval: true,
-      approvalScope: 'scanner_visibility_one_morning_one_lunch_approved_desk_plan_only',
+      approvalScope: 'scanner_visibility_one_morning_one_lunch_optional_one_evening_approved_desk_plan_only',
       discordPostingRemainsGuarded: true,
       changesTradingLogic: false,
       changesCanExecute: false,
@@ -220,6 +227,7 @@ export function buildUnifiedDeskOutputProductionScannerSurfaceActivation(args: {
       selectedRows: active ? rows.length : 0,
       morningRows: active ? rows.filter((row) => row.session === 'morning').length : 0,
       lunchRows: active ? rows.filter((row) => row.session === 'lunch').length : 0,
+      eveningRows: active ? rows.filter((row) => row.session === 'evening').length : 0,
       approvedDeskPlanRows: active ? rows.filter((row) => row.state === 'APPROVED_DESK_PLAN').length : 0,
       discordPostRows: 0,
       supabaseWriteRows: 0,

@@ -7,7 +7,7 @@ import type {
 export interface UnifiedDeskOutputScannerSurfaceRow {
   cardId: string;
   date: string;
-  session: 'morning' | 'lunch';
+  session: 'morning' | 'lunch' | 'evening';
   state: UnifiedDeskVisibleState;
   stateLabel: 'Approved Desk Plan' | 'Forming Desk Read';
   model: string;

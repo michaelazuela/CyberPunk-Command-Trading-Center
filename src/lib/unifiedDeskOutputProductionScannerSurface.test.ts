@@ -11,6 +11,7 @@ const checklist: UnifiedDeskOutputFinalProductionReadinessChecklistInput = {
     selectedRows: 2,
     morningRows: 1,
     lunchRows: 1,
+    eveningRows: 0,
     approvedDeskPlanRows: 2,
     browserRenderedRows: 2,
     discordPostRows: 0,
@@ -78,6 +79,7 @@ assert.equal(active.authority.automatedOrders, false);
 assert.equal(active.summary.selectedRows, 2);
 assert.equal(active.summary.morningRows, 1);
 assert.equal(active.summary.lunchRows, 1);
+assert.equal(active.summary.eveningRows, 0);
 assert.equal(active.summary.approvedDeskPlanRows, 2);
 assert.equal(active.summary.discordPostRows, 0);
 assert.equal(active.summary.supabaseWriteRows, 0);
@@ -89,6 +91,40 @@ assert.equal(active.rows[1]?.headline, 'Approved Desk Plan | LUNCH | LONG | Intr
 assert.equal(active.rows.every((row) => row.publishDiscord === false), true);
 assert.equal(active.rows.every((row) => row.canExecute === false), true);
 assert.deepEqual(active.blockers, []);
+
+const eveningActive = buildUnifiedDeskOutputProductionScannerSurfaceActivation({
+  finalReadinessChecklistPath: 'final-readiness.json',
+  finalReadinessChecklist: {
+    ...checklist,
+    summary: {
+      ...checklist.summary,
+      selectedRows: 3,
+      eveningRows: 1,
+      approvedDeskPlanRows: 3,
+      browserRenderedRows: 3,
+    },
+    selectedCandidates: [...checklist.selectedCandidates, {
+      cardId: 'evening-card',
+      date: '2026-07-22',
+      session: 'evening',
+      state: 'APPROVED_DESK_PLAN',
+      model: 'HtfDisplacementFvgContinuation',
+      direction: 'SHORT',
+      proofTime: '2026-07-22T20:15:00.0000000',
+      entry: 7537,
+      stop: 7543.25,
+      target1: 7527.75,
+      target2: 7524.5,
+      riskPoints: 6.25,
+    }],
+  },
+}, '2026-07-22T23:59:00.000Z');
+
+assert.equal(eveningActive.status, 'active');
+assert.equal(eveningActive.summary.selectedRows, 3);
+assert.equal(eveningActive.summary.eveningRows, 1);
+assert.equal(eveningActive.summary.approvedDeskPlanRows, 3);
+assert.equal(eveningActive.rows[2]?.headline, 'Approved Desk Plan | EVENING | SHORT | HtfDisplacementFvgContinuation');
 
 const blocked = buildUnifiedDeskOutputProductionScannerSurfaceActivation({
   finalReadinessChecklistPath: 'final-readiness.json',

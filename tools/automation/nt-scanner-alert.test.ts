@@ -136,7 +136,7 @@ const unifiedDeskOutputSurface = {
   status: 'active',
   approval: {
     explicitProductionApproval: true,
-    approvalScope: 'scanner_visibility_one_morning_one_lunch_approved_desk_plan_only',
+    approvalScope: 'scanner_visibility_one_morning_one_lunch_optional_one_evening_approved_desk_plan_only',
     discordPostingRemainsGuarded: true,
     changesTradingLogic: false,
     changesCanExecute: false,
@@ -161,6 +161,7 @@ const unifiedDeskOutputSurface = {
     selectedRows: 2,
     morningRows: 1,
     lunchRows: 1,
+    eveningRows: 0,
     approvedDeskPlanRows: 2,
     discordPostRows: 0,
     supabaseWriteRows: 0,

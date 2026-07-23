@@ -1524,6 +1524,7 @@ function unifiedDeskOutputProductionSurfaceBlockers(
   surface: UnifiedDeskOutputProductionScannerSurfaceActivation | null,
 ): string[] {
   if (!surface) return ['Unified Desk Output production scanner surface is not active.'];
+  const eveningRows = surface.summary.eveningRows ?? 0;
   return [
     surface.reportType === 'unified_desk_output_production_scanner_surface_activation' ? null : 'Unified Desk Output production surface has invalid report type.',
     surface.status === 'active' ? null : `Unified Desk Output production surface status is ${surface.status}.`,
@@ -1542,10 +1543,12 @@ function unifiedDeskOutputProductionSurfaceBlockers(
     surface.authority.changesCanExecute === false ? null : 'Unified Desk Output production surface changes canExecute authority.',
     surface.authority.canExecute === false ? null : 'Unified Desk Output production surface has canExecute=true.',
     surface.authority.automatedOrders === false ? null : 'Unified Desk Output production surface allows automated orders authority.',
-    surface.summary.selectedRows === 2 ? null : 'Unified Desk Output production surface does not expose exactly two rows.',
+    surface.summary.selectedRows === surface.rows.length ? null : 'Unified Desk Output production surface selected row count does not match rows.',
+    surface.summary.selectedRows >= 2 && surface.summary.selectedRows <= 3 ? null : 'Unified Desk Output production surface must expose two or three rows.',
     surface.summary.morningRows === 1 ? null : 'Unified Desk Output production surface does not expose exactly one morning row.',
     surface.summary.lunchRows === 1 ? null : 'Unified Desk Output production surface does not expose exactly one lunch row.',
-    surface.summary.approvedDeskPlanRows === 2 ? null : 'Unified Desk Output production surface does not expose two Approved Desk Plan rows.',
+    eveningRows <= 1 ? null : 'Unified Desk Output production surface exposes more than one evening row.',
+    surface.summary.approvedDeskPlanRows === surface.summary.selectedRows ? null : 'Unified Desk Output production surface Approved Desk Plan count does not match selected rows.',
     surface.summary.discordPostRows === 0 ? null : 'Unified Desk Output production surface has Discord post rows.',
     surface.summary.supabaseWriteRows === 0 ? null : 'Unified Desk Output production surface has Supabase write rows.',
     surface.summary.liveSupabaseReadRows === 0 ? null : 'Unified Desk Output production surface has live Supabase read rows.',
@@ -1555,7 +1558,7 @@ function unifiedDeskOutputProductionSurfaceBlockers(
     surface.summary.tradingLogicChangedRows === 0 ? null : 'Unified Desk Output production surface changed trading logic.',
     surface.summary.automatedOrderRows === 0 ? null : 'Unified Desk Output production surface has automated order rows.',
     surface.summary.blockedRows === 0 ? null : 'Unified Desk Output production surface has blocked rows.',
-    surface.rows.length === 2 ? null : 'Unified Desk Output production surface row array does not contain two rows.',
+    surface.rows.length >= 2 && surface.rows.length <= 3 ? null : 'Unified Desk Output production surface row array must contain two or three rows.',
     ...surface.blockers,
   ].filter((item): item is string => Boolean(item));
 }
@@ -1613,6 +1616,7 @@ export async function writeUnifiedDeskOutputProductionScannerReadback(args: {
       selectedRows: blockers.length ? 0 : args.surface.summary.selectedRows,
       morningRows: blockers.length ? 0 : args.surface.summary.morningRows,
       lunchRows: blockers.length ? 0 : args.surface.summary.lunchRows,
+      eveningRows: blockers.length ? 0 : (args.surface.summary.eveningRows ?? 0),
       approvedDeskPlanRows: blockers.length ? 0 : args.surface.summary.approvedDeskPlanRows,
       discordPostRows: 0,
       supabaseWriteRows: 0,
