@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Run Unified Desk Output production go-live gate.
+Files changed: src/lib/unifiedDeskOutputProductionScannerSurface.ts, src/lib/unifiedDeskOutputProductionScannerSurface.test.ts, tools/automation/unified-desk-output-production-go-live-gate.ts, tools/automation/unified-desk-output-production-go-live-gate.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/.unified-desk-output-production-scanner-surface.json, docs/PROJECT_STATUS.md.
+Reason: User explicitly approved the Unified Desk Output production go-live gate for scanner visibility only: one morning and one lunch Approved Desk Plan row, Discord still behind the existing guarded policy, and no changes to trading logic, canExecute, entry, stop, or targets.
+Tests run: npx tsx src/lib/unifiedDeskOutputProductionScannerSurface.test.ts; npx tsx tools/automation/unified-desk-output-production-go-live-gate.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/unified-desk-output-production-go-live-gate.ts --json; npx tsx tools/automation/nt-scanner.ts --once --dry-run --discord false --live-discord-policy-confirmed; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Production go-live gate activated tools/automation/.unified-desk-output-production-scanner-surface.json and wrote diagnostic receipt tools/automation/diagnostic-reports/unified-desk-output-production-go-live-gate-1784766162564.json with selectedRows=2, morningRows=1, lunchRows=1, approvedDeskPlanRows=2, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0. Live local dry-run scanner readback passed in tools/automation/diagnostic-reports/unified-desk-output-production-scanner-readback.json with scanner health READY, completed 5M current, 5M/15M/60M/120M/240M 30-day context sufficient, and the two approved rows visible to the scanner surface.
+Trading logic changed: No. This enables an artifact-backed scanner visibility surface only. It does not alter setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: The go-live activation command did not read the bridge. The live local dry-run scanner readback did read the local NinjaTrader bridge for health/current-cycle verification only.
+Discord impact: No Discord webhook calls from the go-live command. The scanner surface rows keep publishDiscord=false; existing scanner Discord policy remains separately guarded.
+Journal/RAG impact: None from the go-live command.
+Supabase impact: No Supabase write from the go-live command. Scanner dry-run readback used existing market_bars cache behavior and did not write Unified Desk Output records.
+Known risks: The continuous scanner process must be restarted after this commit so it loads the new scanner-surface readback hook. Rollback is to remove/disable tools/automation/.unified-desk-output-production-scanner-surface.json or revert this commit.
+Next recommended action: Restart only the nt-scanner process with its prior MES arguments, then confirm the continuous scanner writes the Unified Desk Output production scanner readback on its next cycle.
+
+Date: 2026-07-22
 Task: Add final production readiness checklist for Unified Desk Output.
 Files changed: tools/automation/unified-desk-output-final-production-readiness-checklist.ts, tools/automation/unified-desk-output-final-production-readiness-checklist.test.ts, docs/PROJECT_STATUS.md.
 Reason: User approved the final readiness-manifest phase after the hidden local browser preview passed. This phase ties together the latest current live-readiness manifest, disabled runtime-gate receipt, disabled E2E runtime validation, and hidden browser verification into one local checklist before any production enablement decision.

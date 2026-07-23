@@ -101,6 +101,9 @@ import {
   writeScannerDiscordFinalDeliveryOutcomeFromReceipt,
   writeScannerDiscordFinalDeliveryFailureOutcome,
   writeScannerDecisionTapeAuditLog,
+  readUnifiedDeskOutputProductionScannerSurface,
+  unifiedDeskOutputProductionScannerSummaryLine,
+  writeUnifiedDeskOutputProductionScannerReadback,
   scannerMarketBarsUpsertSkipAuditLine,
   scannerDiscordDryRunSummaryLine,
   scannerSuppressionSummaryLine,
@@ -123,6 +126,123 @@ const previousSupabaseUrl = process.env.SUPABASE_URL;
 const previousSupabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const previousDiscordRagUserId = process.env.DISCORD_RAG_USER_ID;
 const originalFetch = globalThis.fetch;
+
+await fs.mkdir(outputDir, { recursive: true });
+const unifiedDeskOutputSurfacePath = path.join(outputDir, '.unified-desk-output-production-surface.json');
+const unifiedDeskOutputReadbackPath = path.join(outputDir, 'unified-desk-output-readback.json');
+const unifiedDeskOutputSurface = {
+  reportType: 'unified_desk_output_production_scanner_surface_activation',
+  generatedAt: '2026-07-22T23:59:00.000Z',
+  status: 'active',
+  approval: {
+    explicitProductionApproval: true,
+    approvalScope: 'scanner_visibility_one_morning_one_lunch_approved_desk_plan_only',
+    discordPostingRemainsGuarded: true,
+    changesTradingLogic: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    automatedOrders: false,
+  },
+  authority: {
+    scannerVisibleNow: true,
+    postsDiscord: false,
+    writesSupabase: false,
+    readsLiveSupabase: false,
+    readsLiveBridge: false,
+    changesTradingLogic: false,
+    changesCanExecute: false,
+    canExecute: false,
+    automatedOrders: false,
+  },
+  source: {
+    finalReadinessChecklistPath: 'final-readiness.json',
+  },
+  summary: {
+    selectedRows: 2,
+    morningRows: 1,
+    lunchRows: 1,
+    approvedDeskPlanRows: 2,
+    discordPostRows: 0,
+    supabaseWriteRows: 0,
+    liveSupabaseReadRows: 0,
+    liveBridgeReadRows: 0,
+    canExecuteTrueRows: 0,
+    canExecuteChangedRows: 0,
+    tradingLogicChangedRows: 0,
+    automatedOrderRows: 0,
+    blockedRows: 0,
+  },
+  rows: [{
+    cardId: 'morning-card',
+    date: '2026-07-22',
+    session: 'morning',
+    state: 'APPROVED_DESK_PLAN',
+    stateLabel: 'Approved Desk Plan',
+    model: 'HtfDisplacementFvgContinuation',
+    direction: 'LONG',
+    headline: 'Approved Desk Plan | MORNING | LONG | HtfDisplacementFvgContinuation',
+    bodyLines: ['Morning long desk plan.', 'Scanner-owned lane.'],
+    levelLine: 'Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528',
+    riskLine: 'Risk 4.25 points from scanner-owned entry/stop.',
+    proofLine: 'Completed 5M proof: 09:10 ET.',
+    invalidationLine: 'Invalid if price violates the protected 5M stop line at 7515.25.',
+    authorityLine: 'Decision support only. Discord posting remains separately guarded; canExecute, Supabase, bridge, and automated orders remain off in this surface.',
+    scannerVisibleNow: true,
+    publishDiscord: false,
+    writesSupabase: false,
+    readsLiveBridge: false,
+    canExecute: false,
+  }, {
+    cardId: 'lunch-card',
+    date: '2026-07-22',
+    session: 'lunch',
+    state: 'APPROVED_DESK_PLAN',
+    stateLabel: 'Approved Desk Plan',
+    model: 'IntradayMssMicroContinuation',
+    direction: 'LONG',
+    headline: 'Approved Desk Plan | LUNCH | LONG | IntradayMssMicroContinuation',
+    bodyLines: ['Lunch long desk plan.', 'Scanner-owned lane.'],
+    levelLine: 'Entry 7540 | Stop 7535.75 | T1 7546.5 | T2 7548.5',
+    riskLine: 'Risk 4.25 points from scanner-owned entry/stop.',
+    proofLine: 'Completed 5M proof: 15:45 ET.',
+    invalidationLine: 'Invalid if price violates the protected 5M stop line at 7535.75.',
+    authorityLine: 'Decision support only. Discord posting remains separately guarded; canExecute, Supabase, bridge, and automated orders remain off in this surface.',
+    scannerVisibleNow: true,
+    publishDiscord: false,
+    writesSupabase: false,
+    readsLiveBridge: false,
+    canExecute: false,
+  }],
+  blockers: [],
+};
+await fs.writeFile(unifiedDeskOutputSurfacePath, `${JSON.stringify(unifiedDeskOutputSurface, null, 2)}\n`);
+const loadedUnifiedDeskOutputSurface = await readUnifiedDeskOutputProductionScannerSurface(unifiedDeskOutputSurfacePath);
+assert.equal(loadedUnifiedDeskOutputSurface?.status, 'active');
+assert.match(unifiedDeskOutputProductionScannerSummaryLine(loadedUnifiedDeskOutputSurface as any), /rows=2 morning:HtfDisplacementFvgContinuation:LONG:09:10/);
+await writeUnifiedDeskOutputProductionScannerReadback({
+  tradeDate: '2026-07-22',
+  instrument: 'MES',
+  session: 'morning',
+  completed5mTime: '2026-07-22T16:00:00.000Z',
+  surface: loadedUnifiedDeskOutputSurface as any,
+  filePath: unifiedDeskOutputReadbackPath,
+});
+const unifiedDeskOutputReadback = JSON.parse(await fs.readFile(unifiedDeskOutputReadbackPath, 'utf8'));
+assert.equal(unifiedDeskOutputReadback.reportType, 'unified_desk_output_production_scanner_readback');
+assert.equal(unifiedDeskOutputReadback.status, 'pass');
+assert.equal(unifiedDeskOutputReadback.summary.selectedRows, 2);
+assert.equal(unifiedDeskOutputReadback.summary.discordPostRows, 0);
+assert.equal(unifiedDeskOutputReadback.summary.canExecuteTrueRows, 0);
+
+const dirtyUnifiedDeskOutputSurfacePath = path.join(outputDir, '.dirty-unified-desk-output-production-surface.json');
+await fs.writeFile(dirtyUnifiedDeskOutputSurfacePath, `${JSON.stringify({
+  ...unifiedDeskOutputSurface,
+  summary: {
+    ...unifiedDeskOutputSurface.summary,
+    canExecuteTrueRows: 1,
+  },
+}, null, 2)}\n`);
+assert.equal(await readUnifiedDeskOutputProductionScannerSurface(dirtyUnifiedDeskOutputSurfacePath), null);
 
 assert.equal(normalizeScannerBarTimestampMode(undefined), 'open');
 assert.equal(normalizeScannerBarTimestampMode(null), 'open');

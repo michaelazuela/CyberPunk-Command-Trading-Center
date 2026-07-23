@@ -1,0 +1,96 @@
+{
+  "reportType": "unified_desk_output_production_scanner_surface_activation",
+  "generatedAt": "2026-07-23T00:22:42.563Z",
+  "status": "active",
+  "approval": {
+    "explicitProductionApproval": true,
+    "approvalScope": "scanner_visibility_one_morning_one_lunch_approved_desk_plan_only",
+    "discordPostingRemainsGuarded": true,
+    "changesTradingLogic": false,
+    "changesCanExecute": false,
+    "changesEntryStopTargets": false,
+    "automatedOrders": false
+  },
+  "authority": {
+    "scannerVisibleNow": true,
+    "postsDiscord": false,
+    "writesSupabase": false,
+    "readsLiveSupabase": false,
+    "readsLiveBridge": false,
+    "changesTradingLogic": false,
+    "changesCanExecute": false,
+    "canExecute": false,
+    "automatedOrders": false
+  },
+  "source": {
+    "finalReadinessChecklistPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\diagnostic-reports\\unified-desk-output-final-production-readiness-checklist-1784765295249.json"
+  },
+  "summary": {
+    "selectedRows": 2,
+    "morningRows": 1,
+    "lunchRows": 1,
+    "approvedDeskPlanRows": 2,
+    "discordPostRows": 0,
+    "supabaseWriteRows": 0,
+    "liveSupabaseReadRows": 0,
+    "liveBridgeReadRows": 0,
+    "canExecuteTrueRows": 0,
+    "canExecuteChangedRows": 0,
+    "tradingLogicChangedRows": 0,
+    "automatedOrderRows": 0,
+    "blockedRows": 0
+  },
+  "rows": [
+    {
+      "cardId": "unified-desk-output-disabled|2026-07-22|morning|APPROVED_DESK_PLAN|HtfDisplacementFvgContinuation|LONG|2026-07-22T09:10:00.0000000",
+      "date": "2026-07-22",
+      "session": "morning",
+      "state": "APPROVED_DESK_PLAN",
+      "stateLabel": "Approved Desk Plan",
+      "model": "HtfDisplacementFvgContinuation",
+      "direction": "LONG",
+      "headline": "Approved Desk Plan | MORNING | LONG | HtfDisplacementFvgContinuation",
+      "bodyLines": [
+        "morning long desk plan from the approved Unified Desk Output go-live gate.",
+        "HtfDisplacementFvgContinuation is the selected scanner-owned lane for this window."
+      ],
+      "levelLine": "Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528",
+      "riskLine": "Risk 4.25 points from scanner-owned entry/stop.",
+      "proofLine": "Completed 5M proof: 09:10 ET.",
+      "invalidationLine": "Invalid if price violates the protected 5M stop line at 7515.25.",
+      "authorityLine": "Decision support only. Discord posting remains separately guarded; canExecute, Supabase, bridge, and automated orders remain off in this surface.",
+      "scannerVisibleNow": true,
+      "publishDiscord": false,
+      "writesSupabase": false,
+      "readsLiveBridge": false,
+      "canExecute": false
+    },
+    {
+      "cardId": "unified-desk-output-disabled|2026-07-22|lunch|APPROVED_DESK_PLAN|IntradayMssMicroContinuation|LONG|2026-07-22T15:45:00.0000000",
+      "date": "2026-07-22",
+      "session": "lunch",
+      "state": "APPROVED_DESK_PLAN",
+      "stateLabel": "Approved Desk Plan",
+      "model": "IntradayMssMicroContinuation",
+      "direction": "LONG",
+      "headline": "Approved Desk Plan | LUNCH | LONG | IntradayMssMicroContinuation",
+      "bodyLines": [
+        "lunch long desk plan from the approved Unified Desk Output go-live gate.",
+        "IntradayMssMicroContinuation is the selected scanner-owned lane for this window."
+      ],
+      "levelLine": "Entry 7540 | Stop 7535.75 | T1 7546.5 | T2 7548.5",
+      "riskLine": "Risk 4.25 points from scanner-owned entry/stop.",
+      "proofLine": "Completed 5M proof: 15:45 ET.",
+      "invalidationLine": "Invalid if price violates the protected 5M stop line at 7535.75.",
+      "authorityLine": "Decision support only. Discord posting remains separately guarded; canExecute, Supabase, bridge, and automated orders remain off in this surface.",
+      "scannerVisibleNow": true,
+      "publishDiscord": false,
+      "writesSupabase": false,
+      "readsLiveBridge": false,
+      "canExecute": false
+    }
+  ],
+  "blockers": [],
+  "runtimeSurfacePath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\.unified-desk-output-production-scanner-surface.json",
+  "markdown": "# Unified Desk Output Production Go-Live Gate\n\nStatus: active\n\nAuthority: production scanner surface activation only. This writes the runtime scanner surface file for one morning and one lunch Approved Desk Plan row. It does not post Discord, write Supabase, read live bridge data, change trading logic, change canExecute, change entry/stop/targets, or place/manage orders.\n\n## Summary\n- Scanner visible now: true.\n- Selected rows: 2.\n- Morning rows: 1.\n- Lunch rows: 1.\n- Approved Desk Plan rows: 2.\n- Discord-post rows: 0.\n- Supabase-write rows: 0.\n- Live-bridge-read rows: 0.\n- canExecute true rows: 0.\n- Trading-logic changed rows: 0.\n- Runtime surface: C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\.unified-desk-output-production-scanner-surface.json.\n\n## Rows\n| Session | Model | Direction | Proof | Levels |\n|---|---|---|---|---|\n| morning | HtfDisplacementFvgContinuation | LONG | Completed 5M proof: 09:10 ET. | Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528 |\n| lunch | IntradayMssMicroContinuation | LONG | Completed 5M proof: 15:45 ET. | Entry 7540 | Stop 7535.75 | T1 7546.5 | T2 7548.5 |\n\n## Blockers\n- None."
+}

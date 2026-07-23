@@ -149,6 +149,7 @@ import { readCliArgValue } from './cli-args';
 import { etDateTime } from './et-time';
 import { readQuantDeskMaintenanceStatus } from './quant-desk-maintenance';
 import { isGeminiAdvisoryFallbackEnabled } from '../../src/config/geminiFallback';
+import type { UnifiedDeskOutputProductionScannerSurfaceActivation } from '../../src/lib/unifiedDeskOutputProductionScannerSurface';
 import {
   attachDiscordMessageReceiptToRagPayload,
   resolveDiscordRagPersistenceConfig,
@@ -555,6 +556,8 @@ const __dirname = path.dirname(__filename);
 const STATE_FILE = path.join(__dirname, '.nt-scanner-state.json');
 const DISCORD_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const MARKET_DATA_GAP_FALLBACK_LEDGER = path.join(__dirname, '.market-data-gap-events.json');
+const UNIFIED_DESK_OUTPUT_PRODUCTION_SURFACE_FILE = path.join(__dirname, '.unified-desk-output-production-scanner-surface.json');
+const UNIFIED_DESK_OUTPUT_PRODUCTION_READBACK_FILE = path.join(__dirname, 'diagnostic-reports', 'unified-desk-output-production-scanner-readback.json');
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
 export const SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS = 30;
@@ -1515,6 +1518,115 @@ async function readState(): Promise<ScannerStateFile> {
 
 async function writeState(state: ScannerStateFile): Promise<void> {
   await writeRuntimeJsonAtomic(STATE_FILE, state);
+}
+
+function unifiedDeskOutputProductionSurfaceBlockers(
+  surface: UnifiedDeskOutputProductionScannerSurfaceActivation | null,
+): string[] {
+  if (!surface) return ['Unified Desk Output production scanner surface is not active.'];
+  return [
+    surface.reportType === 'unified_desk_output_production_scanner_surface_activation' ? null : 'Unified Desk Output production surface has invalid report type.',
+    surface.status === 'active' ? null : `Unified Desk Output production surface status is ${surface.status}.`,
+    surface.approval.explicitProductionApproval ? null : 'Unified Desk Output production surface lacks explicit production approval.',
+    surface.approval.discordPostingRemainsGuarded ? null : 'Unified Desk Output production surface does not preserve Discord guard.',
+    surface.approval.changesTradingLogic === false ? null : 'Unified Desk Output production surface changes trading logic.',
+    surface.approval.changesCanExecute === false ? null : 'Unified Desk Output production surface changes canExecute.',
+    surface.approval.changesEntryStopTargets === false ? null : 'Unified Desk Output production surface changes entry/stop/targets.',
+    surface.approval.automatedOrders === false ? null : 'Unified Desk Output production surface allows automated orders.',
+    surface.authority.scannerVisibleNow ? null : 'Unified Desk Output production surface is not scanner-visible.',
+    surface.authority.postsDiscord === false ? null : 'Unified Desk Output production surface posts Discord.',
+    surface.authority.writesSupabase === false ? null : 'Unified Desk Output production surface writes Supabase.',
+    surface.authority.readsLiveSupabase === false ? null : 'Unified Desk Output production surface reads live Supabase.',
+    surface.authority.readsLiveBridge === false ? null : 'Unified Desk Output production surface reads live bridge.',
+    surface.authority.changesTradingLogic === false ? null : 'Unified Desk Output production surface changes trading logic authority.',
+    surface.authority.changesCanExecute === false ? null : 'Unified Desk Output production surface changes canExecute authority.',
+    surface.authority.canExecute === false ? null : 'Unified Desk Output production surface has canExecute=true.',
+    surface.authority.automatedOrders === false ? null : 'Unified Desk Output production surface allows automated orders authority.',
+    surface.summary.selectedRows === 2 ? null : 'Unified Desk Output production surface does not expose exactly two rows.',
+    surface.summary.morningRows === 1 ? null : 'Unified Desk Output production surface does not expose exactly one morning row.',
+    surface.summary.lunchRows === 1 ? null : 'Unified Desk Output production surface does not expose exactly one lunch row.',
+    surface.summary.approvedDeskPlanRows === 2 ? null : 'Unified Desk Output production surface does not expose two Approved Desk Plan rows.',
+    surface.summary.discordPostRows === 0 ? null : 'Unified Desk Output production surface has Discord post rows.',
+    surface.summary.supabaseWriteRows === 0 ? null : 'Unified Desk Output production surface has Supabase write rows.',
+    surface.summary.liveSupabaseReadRows === 0 ? null : 'Unified Desk Output production surface has live Supabase read rows.',
+    surface.summary.liveBridgeReadRows === 0 ? null : 'Unified Desk Output production surface has live bridge read rows.',
+    surface.summary.canExecuteTrueRows === 0 ? null : 'Unified Desk Output production surface has canExecute=true rows.',
+    surface.summary.canExecuteChangedRows === 0 ? null : 'Unified Desk Output production surface changed canExecute.',
+    surface.summary.tradingLogicChangedRows === 0 ? null : 'Unified Desk Output production surface changed trading logic.',
+    surface.summary.automatedOrderRows === 0 ? null : 'Unified Desk Output production surface has automated order rows.',
+    surface.summary.blockedRows === 0 ? null : 'Unified Desk Output production surface has blocked rows.',
+    surface.rows.length === 2 ? null : 'Unified Desk Output production surface row array does not contain two rows.',
+    ...surface.blockers,
+  ].filter((item): item is string => Boolean(item));
+}
+
+export async function readUnifiedDeskOutputProductionScannerSurface(
+  filePath = UNIFIED_DESK_OUTPUT_PRODUCTION_SURFACE_FILE,
+): Promise<UnifiedDeskOutputProductionScannerSurfaceActivation | null> {
+  try {
+    const surface = (await readRuntimeJson<UnifiedDeskOutputProductionScannerSurfaceActivation>(filePath)).value;
+    const blockers = unifiedDeskOutputProductionSurfaceBlockers(surface);
+    return blockers.length ? null : surface;
+  } catch {
+    return null;
+  }
+}
+
+export function unifiedDeskOutputProductionScannerSummaryLine(
+  surface: UnifiedDeskOutputProductionScannerSurfaceActivation,
+): string {
+  const rows = surface.rows
+    .map((row) => `${row.session}:${row.model}:${row.direction}:${row.proofLine.replace('Completed 5M proof: ', '').replace(' ET.', '')}`)
+    .join(' | ');
+  return `[scanner] Unified Desk Output production surface active: rows=${surface.summary.selectedRows} ${rows} | Discord guarded, canExecute=false, no automated orders.`;
+}
+
+export async function writeUnifiedDeskOutputProductionScannerReadback(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  completed5mTime: string | null;
+  surface: UnifiedDeskOutputProductionScannerSurfaceActivation;
+  filePath?: string;
+}): Promise<string> {
+  const filePath = args.filePath || UNIFIED_DESK_OUTPUT_PRODUCTION_READBACK_FILE;
+  const blockers = unifiedDeskOutputProductionSurfaceBlockers(args.surface);
+  const payload = {
+    reportType: 'unified_desk_output_production_scanner_readback',
+    generatedAt: new Date().toISOString(),
+    status: blockers.length ? 'blocked' : 'pass',
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    scannerSession: args.session,
+    completed5mTime: args.completed5mTime,
+    authority: {
+      scannerVisibleNow: blockers.length === 0,
+      postsDiscord: false,
+      writesSupabase: false,
+      readsLiveBridge: false,
+      changesTradingLogic: false,
+      changesCanExecute: false,
+      canExecute: false,
+      automatedOrders: false,
+    },
+    summary: {
+      selectedRows: blockers.length ? 0 : args.surface.summary.selectedRows,
+      morningRows: blockers.length ? 0 : args.surface.summary.morningRows,
+      lunchRows: blockers.length ? 0 : args.surface.summary.lunchRows,
+      approvedDeskPlanRows: blockers.length ? 0 : args.surface.summary.approvedDeskPlanRows,
+      discordPostRows: 0,
+      supabaseWriteRows: 0,
+      liveBridgeReadRows: 0,
+      canExecuteTrueRows: 0,
+      tradingLogicChangedRows: 0,
+      automatedOrderRows: 0,
+      blockedRows: blockers.length,
+    },
+    rows: blockers.length ? [] : args.surface.rows,
+    blockers,
+  };
+  await writeRuntimeJsonAtomic(filePath, payload);
+  return filePath;
 }
 
 type LocalMarketDataGapEventRecord = MarketDataGapEventRecord & {
@@ -10846,6 +10958,17 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     dryRun: config.dryRun,
     historyCoverage,
   });
+  const unifiedDeskOutputSurface = await readUnifiedDeskOutputProductionScannerSurface();
+  if (unifiedDeskOutputSurface) {
+    const readbackPath = await writeUnifiedDeskOutputProductionScannerReadback({
+      tradeDate,
+      instrument: config.instrument,
+      session,
+      completed5mTime: completed5m.time,
+      surface: unifiedDeskOutputSurface,
+    });
+    console.log(`${unifiedDeskOutputProductionScannerSummaryLine(unifiedDeskOutputSurface)} readback=${readbackPath}`);
+  }
 
   console.log(scannerCycleSummaryLine({
     session,
