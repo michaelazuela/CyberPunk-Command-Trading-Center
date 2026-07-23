@@ -113,7 +113,7 @@ for (const entry of SETUP_REGISTRY) {
   }
 }
 
-for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch'] as const) {
+for (const sessionType of ['morning', 'lunch', 'evening', 'replay_morning', 'replay_lunch'] as const) {
   const primary = getPrimarySetupRegistry(sessionType);
   const supporting = getSupportingEvidenceRegistry(sessionType);
   const deprecated = getDeprecatedSetupRegistry(sessionType);
@@ -132,6 +132,11 @@ for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch']
   const allowedTypes = setupTypes(allowed);
   const sessionPrimaryExpected = sessionType === 'lunch' || sessionType === 'replay_lunch'
     ? primaryExpected.filter((setupType) => setupType !== SetupType.OpeningDriveFvgContinuation)
+    : sessionType === 'evening'
+    ? primaryExpected.filter((setupType) =>
+        setupType !== SetupType.OpeningDriveFvgContinuation &&
+        setupType !== SetupType.AfterLunchDriveFvgContinuation
+      )
     : primaryExpected.filter((setupType) => setupType !== SetupType.AfterLunchDriveFvgContinuation);
 
   assertExactSet(primaryTypes, sessionPrimaryExpected, `${sessionType} primary registry`);
@@ -154,6 +159,10 @@ for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch']
   assertExactSet(deprecatedTypes, deprecatedExpected.filter((setupType) => allowedTypes.has(setupType)), `${sessionType} deprecated registry`);
   assertContainsAll(allowedTypes, sessionPrimaryExpected, `${sessionType} compatibility registry`);
   assertContainsAll(allowedTypes, supportingExpected, `${sessionType} compatibility registry`);
+  if (sessionType === 'evening') {
+    assert(allowedTypes.has(SetupType.HtfDisplacementFvgContinuation), 'evening registry must allow HTF Displacement FVG Continuation');
+    assert(allowedTypes.has(SetupType.IntradayMssMicroContinuation), 'evening registry must allow Intraday MSS Micro Continuation');
+  }
   assert(
     allowed.length === primary.length + supporting.length + deprecated.length,
     `${sessionType} compatibility accessor should still return every role`,

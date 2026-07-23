@@ -1,6 +1,6 @@
 import { SetupType } from '../types';
 
-export type SetupSession = 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
+export type SetupSession = 'morning' | 'lunch' | 'evening' | 'replay_morning' | 'replay_lunch';
 export type SetupRole = 'primary_model' | 'supporting_evidence' | 'deprecated';
 export type ParentModelFamily =
   | 'MODEL_1_SWEEP_MSS_FVG_RETRACE'
@@ -23,7 +23,7 @@ export interface SetupRegistryEntry {
   defaultNextAction: string;
 }
 
-const BOTH_SESSIONS: SetupSession[] = ['morning', 'lunch', 'replay_morning', 'replay_lunch'];
+const BOTH_SESSIONS: SetupSession[] = ['morning', 'lunch', 'evening', 'replay_morning', 'replay_lunch'];
 const MORNING_SESSIONS: SetupSession[] = ['morning', 'replay_morning'];
 const LUNCH_SESSIONS: SetupSession[] = ['lunch', 'replay_lunch'];
 

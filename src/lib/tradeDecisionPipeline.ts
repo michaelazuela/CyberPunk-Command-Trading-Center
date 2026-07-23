@@ -343,7 +343,8 @@ function candidatesFromResult(result: AnalysisResult | null | undefined): Candid
   return candidates;
 }
 
-function sessionKey(sessionType: PipelineSessionType): 'morning' | 'lunch' {
+function sessionKey(sessionType: PipelineSessionType): 'morning' | 'lunch' | 'evening' {
+  if (sessionType === 'evening') return 'evening';
   return sessionType === 'lunch' || sessionType === 'replay_lunch' ? 'lunch' : 'morning';
 }
 

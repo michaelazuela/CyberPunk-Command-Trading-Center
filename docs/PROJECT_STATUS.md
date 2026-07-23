@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Normalize evening session support for approved continuation models.
+Files changed: src/config/setupRegistry.ts, src/config/setupRegistry.test.ts, src/lib/tradeDecisionPipeline.ts, src/types.ts, docs/PROJECT_STATUS.md.
+Reason: User asked to run the recommended fix after confirming HtfDisplacementFvgContinuation and IntradayMssMicroContinuation should be available in the evening window. TRADE_RULES already allowed both models for evening; this phase makes the registry/session typing and pipeline session key recognize evening consistently.
+Tests run: npx tsx src/config/setupRegistry.test.ts; npx tsx src/lib/setupScanner.test.ts; npx tsx src/lib/tradeDecisionPipeline.test.ts; npx tsc --noEmit --pretty false.
+Result: Focused checks passed. The setup registry now supports `evening`, `BOTH_SESSIONS` includes evening, the trade decision pipeline resolves evening through `TRADE_RULES.sessions.evening`, and the registry test asserts both HtfDisplacementFvgContinuation and IntradayMssMicroContinuation are available in evening.
+Trading logic changed: No new setup logic, no entry/stop/target/risk math change, no canExecute change, and no Discord/Supabase/bridge behavior change. This aligns session metadata with the already-approved evening trade rules.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This makes evening eligible where rules already listed it. Evening candidates still require the same completed 5M proof, protected stop, target room, HTF sufficiency, and deterministic gates before any Approved Desk Plan can surface.
+Next recommended action: Run full verification, commit/push, restart only nt-scanner, and confirm the next evening scanner cycle can evaluate these models without producing a row unless the normal proof gates pass.
+
+Date: 2026-07-22
 Task: Add optional evening slot to Unified Desk Output production scanner surface.
 Files changed: src/lib/unifiedDeskOutputScannerSurface.ts, src/lib/unifiedDeskOutputProductionScannerSurface.ts, src/lib/unifiedDeskOutputProductionScannerSurface.test.ts, tools/automation/unified-desk-output-production-go-live-gate.ts, tools/automation/unified-desk-output-production-go-live-gate.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/.unified-desk-output-production-scanner-surface.json, docs/PROJECT_STATUS.md.
 Reason: User confirmed the evening execution window should be included. This phase adds evening as an optional third Unified Desk Output production scanner-surface slot while preserving the current morning/lunch active rows and blocking any surface with more than one evening row.

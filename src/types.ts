@@ -722,7 +722,7 @@ export interface ChartExtractionWarnings {
 }
 
 export interface ChartContext {
-  sessionType: 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
+  sessionType: 'morning' | 'lunch' | 'evening' | 'replay_morning' | 'replay_lunch';
   instrument: 'MES' | 'MNQ';
   tradeDate: string;
   timeframe: '1m' | '5m' | '15m' | '60m' | string;
