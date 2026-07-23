@@ -8396,11 +8396,12 @@ export function buildScannerLiveDiscordSendBoundaryReport(args: {
   auditPath: string | null;
   discordPayloadValidated: boolean;
   webhookConfigured: boolean;
+  unifiedDeskOutputProductionSurfaceActive?: boolean;
 }): LiveDiscordEligibilityReport {
   const highConfidenceConditionalOverride = scannerDeskStateHasHighConfidenceConditionalPlan(args.deskState);
   const scannerOwnedFreshMapOverride = scannerDeskStateHasFreshLiveDiscordMap(args.deskState);
   const rolloutConfirmed = Boolean(args.config.liveDiscordPolicyConfirmed) || highConfidenceConditionalOverride || scannerOwnedFreshMapOverride;
-  return evaluateLiveDiscordPostEligibility({
+  const report = evaluateLiveDiscordPostEligibility({
     postKind: args.postKind || 'trade_alert',
     scannerHealth: args.healthReport,
     bridgeConnected: args.bridgeConnected,
@@ -8417,6 +8418,23 @@ export function buildScannerLiveDiscordSendBoundaryReport(args: {
     freshDryScanObserved: rolloutConfirmed,
     diagnosticReplayPassed: rolloutConfirmed,
   });
+  const postKind = args.postKind || 'trade_alert';
+  if (
+    args.unifiedDeskOutputProductionSurfaceActive &&
+    (postKind === 'trade_alert' || postKind === 'desk_play')
+  ) {
+    const blocker = 'Unified Desk Output production surface is active; legacy scanner trade-plan Discord posts are production-suppressed. Only Unified Desk Output Approved Desk Plan rows may reach the production trade-plan lane.';
+    return {
+      ...report,
+      eligible: false,
+      blockers: [...report.blockers, blocker],
+      notes: [
+        ...report.notes,
+        'Legacy scanner candidates remain local/audit-only while Unified Desk Output controls production trade-plan visibility.',
+      ],
+    };
+  }
+  return report;
 }
 
 function scannerLifecycleItemHasFullPlanLevels(item: DeskState['selectedCandidate']): boolean {
@@ -11219,6 +11237,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     auditPath,
     discordPayloadValidated: true,
     webhookConfigured: Boolean(resolveScannerDiscordWebhookUrl().url),
+    unifiedDeskOutputProductionSurfaceActive: Boolean(unifiedDeskOutputSurface),
   });
 
   const htfDeskMapDeferReason = scannerHtfDeskMapDeferReasonForCanonicalPlan(deskPublishDecision);

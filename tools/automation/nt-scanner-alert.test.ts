@@ -6465,6 +6465,50 @@ assert.equal(highConfidenceReviewBoundaryWithoutChecklist.blockers.length, 0);
 assert.equal(highConfidenceReviewBoundaryWithoutChecklist.authorityBoundary.changesCanExecute, false);
 assert.equal(highConfidenceReviewBoundaryWithoutChecklist.authorityBoundary.createsTradeApproval, false);
 
+const unifiedDeskOutputSuppressedTradeAlertBoundary = buildScannerLiveDiscordSendBoundaryReport({
+  postKind: 'trade_alert',
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: false,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: highConfidenceConditionalBoundaryDeskStateFixture(),
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-07-23-MES-lunch.json'),
+  auditPath: path.join(auditDir, 'scanner-lunch-2026-07-23-MES-LEGACY-CONDITIONAL.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+  unifiedDeskOutputProductionSurfaceActive: true,
+});
+assert.equal(unifiedDeskOutputSuppressedTradeAlertBoundary.eligible, false);
+assert.ok(unifiedDeskOutputSuppressedTradeAlertBoundary.blockers.some((item) => item.includes('legacy scanner trade-plan Discord posts are production-suppressed')));
+assert.equal(unifiedDeskOutputSuppressedTradeAlertBoundary.authorityBoundary.changesCanExecute, false);
+assert.equal(unifiedDeskOutputSuppressedTradeAlertBoundary.authorityBoundary.createsTradeApproval, false);
+
+const unifiedDeskOutputSuppressedDeskPlayBoundary = buildScannerLiveDiscordSendBoundaryReport({
+  postKind: 'desk_play',
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: true,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: phase11BoundaryDeskStateFixture(),
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-07-23-MES-lunch.json'),
+  auditPath: path.join(auditDir, 'scanner-lunch-2026-07-23-MES-LEGACY-DESK-PLAY.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+  unifiedDeskOutputProductionSurfaceActive: true,
+});
+assert.equal(unifiedDeskOutputSuppressedDeskPlayBoundary.eligible, false);
+assert.ok(unifiedDeskOutputSuppressedDeskPlayBoundary.blockers.some((item) => item.includes('Only Unified Desk Output Approved Desk Plan rows')));
+
 const liveBoundaryWithChecklist = buildScannerLiveDiscordSendBoundaryReport({
   config: {
     dryRun: false,

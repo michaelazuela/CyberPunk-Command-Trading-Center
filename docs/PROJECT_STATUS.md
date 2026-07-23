@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-23
+Task: Hard-suppress legacy scanner trade-plan Discord posts while Unified Desk Output production surface is active.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: A July 23 lunch `IntradayMssMicroContinuation` conditional review card posted through the legacy scanner trade-alert path even though the active operating intent is Unified Desk Output Approved Desk Plan rows only.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. The live Discord send boundary now blocks legacy `trade_alert` and `desk_play` posts when the Unified Desk Output production surface is active. Legacy scanner candidates remain local/audit-only; production trade-plan visibility is restricted to the Unified Desk Output approved lane.
+Trading logic changed: No. This changes Discord publish eligibility only. It does not alter setup definitions, ranking, canExecute, NinjaTrader bridge reads, Supabase behavior, entry, stop, target, risk, or automated execution.
+Bridge impact: None.
+Discord impact: Legacy scanner trade-plan posts are production-suppressed behind the existing live send boundary while Unified Desk Output is active. No Discord webhook call was made by this code change.
+Journal/RAG impact: Live trade-alert RAG pending saves are skipped when the hard boundary is not eligible; local decision/audit artifacts remain available.
+Supabase impact: None.
+Known risks: The running scanner process must be restarted after this commit for the new boundary to take effect.
+Next recommended action: Restart only the nt-scanner process so production uses the hard gate, then run a read-only scanner status/readback check.
+
+Date: 2026-07-23
 Task: Add scanner timing and missed-move re-entry diagnostics.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: User asked to add the deeper-dive recommendation after the July 23 morning short review showed the scanner saw the move only after the original short entry/target path was already stale.
