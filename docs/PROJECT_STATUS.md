@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-22
+Task: Add final production readiness checklist for Unified Desk Output.
+Files changed: tools/automation/unified-desk-output-final-production-readiness-checklist.ts, tools/automation/unified-desk-output-final-production-readiness-checklist.test.ts, docs/PROJECT_STATUS.md.
+Reason: User approved the final readiness-manifest phase after the hidden local browser preview passed. This phase ties together the latest current live-readiness manifest, disabled runtime-gate receipt, disabled E2E runtime validation, and hidden browser verification into one local checklist before any production enablement decision.
+Tests run: npx tsx tools/automation/unified-desk-output-final-production-readiness-checklist.test.ts; npx tsx tools/automation/unified-desk-output-final-production-readiness-checklist.ts --json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Final readiness checklist passed in tools/automation/diagnostic-reports/unified-desk-output-final-production-readiness-checklist-1784765295249.json. Summary: currentLiveReadinessManifestPassed=true, disabledRuntimeGateReceiptPassed=true, disabledE2eRuntimeValidationPassed=true, hiddenPreviewLocalVerificationPassed=true, selectedRows=2, morningRows=1, lunchRows=1, approvedDeskPlanRows=2, browserRenderedRows=2, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, runtimeGateEnabled=false, productionGoLiveApproved=false, blockedRows=0, recommendation=ready_for_explicit_production_go_live_approval.
+Trading logic changed: No. This is a local saved-artifact checklist only. It does not alter setupScanner rules, ranking, canExecute, Discord runtime posting, Supabase, bridge behavior, entry/stop/target/risk math, normal scanner output, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook calls this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The checklist proves readiness but does not approve go-live. Production enablement still requires a separate explicit approval gate before scanner visibility or Discord posting changes.
+Next recommended action: If approved, run the production go-live gate as the next small phase: enable scanner visibility for Unified Desk Output one-row morning/lunch rows only, keep Discord posting behind the existing guarded policy, and immediately run live local health/readback checks.
+
+Date: 2026-07-22
 Task: Add hidden local app preview verification for Unified Desk Output render-proof payloads.
 Files changed: tools/automation/unified-desk-output-hidden-preview-local-verification.ts, src/components/UnifiedDeskOutputPreviewPanel.tsx, docs/PROJECT_STATUS.md.
 Reason: User approved the local proof step after direct hidden-preview import support was added. This phase verifies the hidden localhost Unified Desk Output tab in a real browser by importing the saved render-proof JSON, checking the expected two scanner-owned rows, capturing a screenshot, and confirming no integration side effects. The preview layout was also tightened after visual QA showed the side column overlapping the model name.
