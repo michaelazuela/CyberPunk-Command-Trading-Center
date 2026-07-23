@@ -3016,6 +3016,8 @@ export async function writeScannerDecisionTapeAuditLog(args: {
   targetCascade?: TargetCascadeResult | null;
   deskState?: DeskState;
   publishDecision?: DeskPublishDecision | null;
+  completed5mLatency?: ScannerCompletedFiveMinuteLatencySentinel | null;
+  missedMoveReentryWatch?: ScannerMissedMoveReentryWatch | null;
   planVersionId: string;
   dryRun: boolean;
   historyCoverage?: ScannerHistoryCoverageRecord[];
@@ -3106,6 +3108,8 @@ export async function writeScannerDecisionTapeAuditLog(args: {
       candidateRiskPoints: args.candidate?.riskPoints ?? null,
       blockReason: args.candidate?.blockReason ?? args.normalized.noTradeReason ?? null,
     },
+    completed5mLatency: args.completed5mLatency || null,
+    missedMoveReentryWatch: args.missedMoveReentryWatch || null,
     scannerState: args.state,
     visibility: visibilityMetadata,
     candidateLifecycleTrace,
@@ -9864,6 +9868,203 @@ export function evaluateCompletedFiveMinuteBarAssuranceGate(args: {
   };
 }
 
+export interface ScannerCompletedFiveMinuteLatencySentinel {
+  sourceOfTruth: 'scanner_completed_5m_latency_sentinel';
+  status: 'on_time' | 'late' | 'missing';
+  latestCompletedTime: string | null;
+  completedAtIso: string | null;
+  observedAtIso: string;
+  latencySeconds: number | null;
+  warningThresholdSeconds: number;
+  message: string;
+  recoverySteps: string[];
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesBridgeBehavior: false;
+  };
+}
+
+function completedFiveMinuteCloseTime(args: {
+  completed5m: NinjaBridgeBar;
+  timestampMode: BridgeTimestampMode;
+  timeZoneMode: BridgeTimeZoneMode;
+}): Date | null {
+  const parsed = parseBridgeTime(args.completed5m.time, args.timeZoneMode);
+  if (!parsed) return null;
+  return args.timestampMode === 'close'
+    ? parsed
+    : new Date(parsed.getTime() + 5 * 60_000);
+}
+
+export function evaluateScannerCompletedFiveMinuteLatencySentinel(args: {
+  completed5m: NinjaBridgeBar | null;
+  now: Date;
+  timestampMode: BridgeTimestampMode;
+  timeZoneMode: BridgeTimeZoneMode;
+  warningThresholdSeconds?: number;
+}): ScannerCompletedFiveMinuteLatencySentinel {
+  const warningThresholdSeconds = Math.max(15, args.warningThresholdSeconds ?? 90);
+  const recoverySteps = [
+    'Confirm the scanner process is running continuously, not only as a delayed one-shot replay.',
+    'Confirm NinjaTrader bridge 5M bars are updating immediately after each completed candle.',
+    'Reduce scanner poll cadence only after bridge freshness is confirmed; do not change trading rules to compensate for late bars.',
+  ];
+  const boundary = {
+    changesTradeApprovals: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesRiskRules: false,
+    changesBridgeBehavior: false,
+  } as const;
+
+  if (!args.completed5m) {
+    return {
+      sourceOfTruth: 'scanner_completed_5m_latency_sentinel',
+      status: 'missing',
+      latestCompletedTime: null,
+      completedAtIso: null,
+      observedAtIso: args.now.toISOString(),
+      latencySeconds: null,
+      warningThresholdSeconds,
+      message: 'Completed 5M latency sentinel missing: no completed 5M bar was available for timing review.',
+      recoverySteps,
+      approvalBoundary: boundary,
+    };
+  }
+
+  const completedAt = completedFiveMinuteCloseTime({
+    completed5m: args.completed5m,
+    timestampMode: args.timestampMode,
+    timeZoneMode: args.timeZoneMode,
+  });
+  if (!completedAt) {
+    return {
+      sourceOfTruth: 'scanner_completed_5m_latency_sentinel',
+      status: 'missing',
+      latestCompletedTime: args.completed5m.time,
+      completedAtIso: null,
+      observedAtIso: args.now.toISOString(),
+      latencySeconds: null,
+      warningThresholdSeconds,
+      message: `Completed 5M latency sentinel could not parse bar time ${args.completed5m.time}.`,
+      recoverySteps,
+      approvalBoundary: boundary,
+    };
+  }
+
+  const latencySeconds = Math.max(0, Math.round((args.now.getTime() - completedAt.getTime()) / 1000));
+  const status = latencySeconds > warningThresholdSeconds ? 'late' : 'on_time';
+  return {
+    sourceOfTruth: 'scanner_completed_5m_latency_sentinel',
+    status,
+    latestCompletedTime: args.completed5m.time,
+    completedAtIso: completedAt.toISOString(),
+    observedAtIso: args.now.toISOString(),
+    latencySeconds,
+    warningThresholdSeconds,
+    message: status === 'late'
+      ? `Completed 5M latency sentinel late: latest completed 5M bar ${args.completed5m.time} was observed ${latencySeconds}s after completion. Fast-open moves may be stale before alert generation.`
+      : `Completed 5M latency sentinel on time: latest completed 5M bar ${args.completed5m.time} was observed ${latencySeconds}s after completion.`,
+    recoverySteps: status === 'late' ? recoverySteps : [],
+    approvalBoundary: boundary,
+  };
+}
+
+export interface ScannerMissedMoveReentryWatch {
+  sourceOfTruth: 'scanner_missed_move_reentry_watch';
+  status: 'not_applicable' | 'watch_retest_only';
+  setupType: SetupType | null;
+  direction: SetupCandidate['direction'];
+  completed5mTime: string | null;
+  currentPrice: number | null;
+  originalEntry: number | null;
+  originalStop: number | null;
+  originalT1: number | null;
+  originalT2: number | null;
+  staleReason: string | null;
+  freshEntryAvailable: false;
+  tradeAlertEligible: false;
+  requiredNextCondition: string | null;
+  notes: string[];
+  approvalBoundary: {
+    watchApprovesTrade: false;
+    watchChangesRules: false;
+    watchCreatesEntry: false;
+    watchCreatesStop: false;
+    watchCreatesTargets: false;
+    watchChangesCanExecute: false;
+  };
+}
+
+export function buildScannerMissedMoveReentryWatch(args: {
+  candidate: SetupCandidate | null;
+  currentPrice: number | null;
+  completed5m: NinjaBridgeBar | null;
+  staleReason: string | null;
+}): ScannerMissedMoveReentryWatch {
+  const boundary = {
+    watchApprovesTrade: false,
+    watchChangesRules: false,
+    watchCreatesEntry: false,
+    watchCreatesStop: false,
+    watchCreatesTargets: false,
+    watchChangesCanExecute: false,
+  } as const;
+  const candidate = args.candidate;
+  const reentryReason = 'Wait for a fresh completed 5M retest/rejection of the original entry/FVG zone, protected 5M structure stop, app T1/T2, target room, and normal scanner gates. No late market entry.';
+  if (
+    !candidate ||
+    !args.staleReason ||
+    candidate.direction === 'NO TRADE' ||
+    !isFiniteTradePrice(candidate.entry) ||
+    !isFiniteTradePrice(candidate.stop)
+  ) {
+    return {
+      sourceOfTruth: 'scanner_missed_move_reentry_watch',
+      status: 'not_applicable',
+      setupType: candidate?.setupType || null,
+      direction: candidate?.direction || 'NO TRADE',
+      completed5mTime: args.completed5m?.time || null,
+      currentPrice: args.currentPrice,
+      originalEntry: isFiniteTradePrice(candidate?.entry) ? candidate.entry : null,
+      originalStop: isFiniteTradePrice(candidate?.stop) ? candidate.stop : null,
+      originalT1: isFiniteTradePrice(candidate?.target1) ? candidate.target1 : null,
+      originalT2: isFiniteTradePrice(candidate?.target2) ? candidate.target2 : null,
+      staleReason: args.staleReason,
+      freshEntryAvailable: false,
+      tradeAlertEligible: false,
+      requiredNextCondition: null,
+      notes: ['No missed-move re-entry watch was created because the selected candidate is not a stale complete directional plan.'],
+      approvalBoundary: boundary,
+    };
+  }
+
+  return {
+    sourceOfTruth: 'scanner_missed_move_reentry_watch',
+    status: 'watch_retest_only',
+    setupType: candidate.setupType,
+    direction: candidate.direction,
+    completed5mTime: args.completed5m?.time || null,
+    currentPrice: args.currentPrice,
+    originalEntry: candidate.entry,
+    originalStop: candidate.stop,
+    originalT1: isFiniteTradePrice(candidate.target1) ? candidate.target1 : null,
+    originalT2: isFiniteTradePrice(candidate.target2) ? candidate.target2 : null,
+    staleReason: args.staleReason,
+    freshEntryAvailable: false,
+    tradeAlertEligible: false,
+    requiredNextCondition: reentryReason,
+    notes: [
+      'Original move is missed/no-chase; this metadata does not post a trade plan.',
+      'Use the original entry/FVG as a watch zone only. A new completed 5M proof cycle must rebuild the trade plan before visibility.',
+    ],
+    approvalBoundary: boundary,
+  };
+}
+
 export function buildCompletedFiveMinuteGapEventRecord(args: {
   userId: string;
   instrument: Instrument;
@@ -10226,11 +10427,20 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     bridgeInstrument: config.bridgeInstrument,
     maxStaleBarMinutes: config.maxStaleBarMinutes,
   });
+  const completed5mLatency = evaluateScannerCompletedFiveMinuteLatencySentinel({
+    completed5m,
+    now,
+    timestampMode: config.barTimestampMode,
+    timeZoneMode: config.barTimeZone,
+  });
   if (completed5mRecovery.attempts.length) {
     console.log(`[scanner-data] Completed 5M self-healing attempts: ${completed5mRecovery.attempts.join(' | ')}`);
   }
   if (completed5mRecovery.selfHealed) {
     console.log(`[scanner-data] Completed 5M bar self-healed from cache/repair: ${completed5m?.time || 'N/A'}`);
+  }
+  if (completed5mLatency.status === 'late') {
+    console.warn(`[scanner-data] ${completed5mLatency.message}`);
   }
 
   const healthReport = evaluateScannerHealth({
@@ -10263,6 +10473,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         : 'Macro calendar is disabled intentionally.',
     },
     scannerWindow: window,
+    warnings: completed5mLatency.status === 'late' ? [completed5mLatency.message] : [],
   });
   logScannerHealth(healthReport);
   await sendScannerHealthAlertIfNeeded({ config, state, report: healthReport });
@@ -10595,6 +10806,12 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   );
   const stale = selection.stale;
   const stateForAlert = selection.stateForAlert;
+  const missedMoveReentryWatch = buildScannerMissedMoveReentryWatch({
+    candidate,
+    currentPrice,
+    completed5m,
+    staleReason: stale.reason,
+  });
   if (selection.auditWarnings.length) {
     console.warn(`[scanner] selection audit: ${selection.auditWarnings.join(' | ')}`);
   }
@@ -10958,6 +11175,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     targetCascade,
     deskState,
     publishDecision: deskPublishDecision,
+    completed5mLatency,
+    missedMoveReentryWatch,
     planVersionId,
     dryRun: config.dryRun,
     historyCoverage,

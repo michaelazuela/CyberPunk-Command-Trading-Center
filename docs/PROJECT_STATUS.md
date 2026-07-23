@@ -2,6 +2,20 @@
 
 ## Latest Change
 
+Date: 2026-07-23
+Task: Add scanner timing and missed-move re-entry diagnostics.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: User asked to add the deeper-dive recommendation after the July 23 morning short review showed the scanner saw the move only after the original short entry/target path was already stale.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. The scanner now records a completed-5M latency sentinel with on-time/late/missing status and degrades scanner health with a warning when a completed 5M bar is observed late. The decision tape also records missed-move re-entry watch metadata for stale complete directional candidates, including original entry/stop/T1/T2, freshEntryAvailable=false, tradeAlertEligible=false, and the exact fresh completed 5M retest/rebuild condition required before any future visibility.
+Trading logic changed: No. This adds diagnostics and audit metadata only. It does not alter setup definitions, ranking, canExecute, Discord publish eligibility, Supabase persistence, NinjaTrader bridge behavior, entry/stop/target/risk math, or automated execution.
+Bridge impact: Read-only timing interpretation through the existing open-time NinjaTrader bar contract.
+Discord impact: No Discord webhook calls and no new Discord publish path.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Late-bar warnings degrade scanner health but do not block trading plans. A later phase may choose to route severe repeated latency to an operational alert after separate approval.
+Next recommended action: Run a live local scanner dry-run during the next active window and confirm the decision tape shows completed5mLatency plus missedMoveReentryWatch for any stale/no-chase fast move.
+
 Date: 2026-07-22
 Task: Normalize evening session support for approved continuation models.
 Files changed: src/config/setupRegistry.ts, src/config/setupRegistry.test.ts, src/lib/tradeDecisionPipeline.ts, src/types.ts, docs/PROJECT_STATUS.md.

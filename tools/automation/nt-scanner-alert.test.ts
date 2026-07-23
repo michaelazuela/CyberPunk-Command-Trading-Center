@@ -20,6 +20,8 @@ import {
   appOwnedFailedPlanEventsFromScannerState,
   createPendingScannerAlertDeliveryRecord,
   evaluateCompletedFiveMinuteBarAssuranceGate,
+  evaluateScannerCompletedFiveMinuteLatencySentinel,
+  buildScannerMissedMoveReentryWatch,
   evaluateScannerDeskPlayDiscordSuppression,
   scannerDeskPlayCanonicalPreDeliveryHold,
   evaluateScannerReversalWatchDiscordSuppression,
@@ -907,6 +909,68 @@ const completed5mAssuranceStale = evaluateCompletedFiveMinuteBarAssuranceGate({
 });
 assert.equal(completed5mAssuranceStale.status, 'blocked');
 assert.ok(completed5mAssuranceStale.message.includes('Latest completed 5M candle is stale'));
+
+const completed5mLatencyOnTime = evaluateScannerCompletedFiveMinuteLatencySentinel({
+  completed5m: { time: '2026-06-05T10:05:00-04:00', open: 7518, high: 7520, low: 7515, close: 7519, volume: 1000 },
+  now: new Date('2026-06-05T10:10:45-04:00'),
+  timestampMode: 'open',
+  timeZoneMode: 'eastern',
+  warningThresholdSeconds: 90,
+});
+assert.equal(completed5mLatencyOnTime.status, 'on_time');
+assert.equal(completed5mLatencyOnTime.latencySeconds, 45);
+assert.equal(completed5mLatencyOnTime.approvalBoundary.changesTradeApprovals, false);
+
+const completed5mLatencyLate = evaluateScannerCompletedFiveMinuteLatencySentinel({
+  completed5m: { time: '2026-06-05T10:05:00-04:00', open: 7518, high: 7520, low: 7515, close: 7519, volume: 1000 },
+  now: new Date('2026-06-05T10:12:01-04:00'),
+  timestampMode: 'open',
+  timeZoneMode: 'eastern',
+  warningThresholdSeconds: 90,
+});
+assert.equal(completed5mLatencyLate.status, 'late');
+assert.equal(completed5mLatencyLate.latencySeconds, 121);
+assert.ok(completed5mLatencyLate.message.includes('Fast-open moves may be stale'));
+
+const missedMoveReentryWatch = buildScannerMissedMoveReentryWatch({
+  candidate: {
+    setupType: SetupType.SweepMssFvgRetrace,
+    scenarioLabel: 'ICT Model 1 Short',
+    direction: 'SHORT',
+    detectedStatus: SetupCandidateStatus.Conditional,
+    executionStatus: ExecutionStatus.Executable,
+    confidence: 'High',
+    priority: 98,
+    entry: 7502.25,
+    stop: 7524.25,
+    target1: 7469.25,
+    target2: 7458.25,
+    riskPoints: 22,
+    riskAdvisoryStatus: 'RISK_ABOVE_STANDARD_LIMIT',
+    riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    invalidation: 'Invalid above 7524.25.',
+    entryClarity: 10,
+    stopClarity: 10,
+    targetClarity: 10,
+    proximityScore: 10,
+    levelContextScore: 10,
+    levelContextSummary: 'test',
+    evidence: [],
+    missingEvidence: [],
+    blockReason: null,
+    requiredTrigger: 'Entry only on retrace into bearish imbalance.',
+    nextAction: 'No chase.',
+    reducedRiskPlan: null,
+  },
+  currentPrice: 7451.75,
+  completed5m: { time: '2026-07-23T09:15:00', open: 7458, high: 7459.5, low: 7454, close: 7458.25, volume: 8450 },
+  staleReason: 'T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry.',
+});
+assert.equal(missedMoveReentryWatch.status, 'watch_retest_only');
+assert.equal(missedMoveReentryWatch.tradeAlertEligible, false);
+assert.equal(missedMoveReentryWatch.freshEntryAvailable, false);
+assert.ok(missedMoveReentryWatch.requiredNextCondition?.includes('fresh completed 5M retest'));
+assert.equal(missedMoveReentryWatch.approvalBoundary.watchChangesCanExecute, false);
 
 const scannerDataQualityNoticeConfig: ScannerConfig = {
   instrument: 'MES',
