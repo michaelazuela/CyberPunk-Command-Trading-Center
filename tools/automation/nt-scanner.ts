@@ -9083,17 +9083,16 @@ async function sendScannerHealthAlertIfNeeded(args: {
 }): Promise<void> {
   const previousStatus = args.state.lastHealthStatus;
   const currentStatus = args.report.status;
+  args.state.lastHealthStatus = currentStatus;
   if (!shouldSendScannerHealthAlert(previousStatus, currentStatus)) return;
 
   if (!args.config.discordEnabled) {
-    args.state.lastHealthStatus = currentStatus;
     console.log(`[scanner-health] Discord health alert skipped because Discord is disabled: ${previousStatus || 'none'} -> ${currentStatus}`);
     return;
   }
 
   const webhook = resolveScannerDiscordWebhookUrl();
   if (!args.config.dryRun && !webhook.url) {
-    args.state.lastHealthStatus = currentStatus;
     console.warn(`[scanner-health] Discord health alert skipped because scanner Discord webhook is not configured: ${previousStatus || 'none'} -> ${currentStatus}`);
     return;
   }
@@ -9917,6 +9916,13 @@ function completedFiveMinuteCloseTime(args: {
     : new Date(parsed.getTime() + 5 * 60_000);
 }
 
+export function scannerCompletedFiveMinuteLatencyWarningThresholdSeconds(pollSeconds: number | null | undefined): number {
+  const normalizedPollSeconds = Number.isFinite(pollSeconds) && Number(pollSeconds) > 0
+    ? Number(pollSeconds)
+    : 60;
+  return Math.max(300, Math.ceil(normalizedPollSeconds * 3));
+}
+
 export function evaluateScannerCompletedFiveMinuteLatencySentinel(args: {
   completed5m: NinjaBridgeBar | null;
   now: Date;
@@ -10450,6 +10456,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     now,
     timestampMode: config.barTimestampMode,
     timeZoneMode: config.barTimeZone,
+    warningThresholdSeconds: scannerCompletedFiveMinuteLatencyWarningThresholdSeconds(config.pollSeconds),
   });
   if (completed5mRecovery.attempts.length) {
     console.log(`[scanner-data] Completed 5M self-healing attempts: ${completed5mRecovery.attempts.join(' | ')}`);

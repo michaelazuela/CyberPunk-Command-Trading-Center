@@ -102,13 +102,18 @@ function refreshState(config: SupervisorConfig, state: SupervisorState): Supervi
       if (!service.enabled) return { ...existing, status: 'disabled', error: null };
       if (existing.status === 'launch_error') return existing;
       const externalPids = external.get(service.id) || [];
+      const ownedRunning = isTrackedServiceProcessRunning(service, existing.pid, processes);
+      const adoptableExternalPid = !ownedRunning && externalPids.length === 1 ? externalPids[0] : null;
       return {
         ...existing,
+        pid: adoptableExternalPid || existing.pid,
+        startedAt: adoptableExternalPid ? existing.startedAt || new Date().toISOString() : existing.startedAt,
         restartCount: existing.restartCount || 0,
         lastRestartAt: existing.lastRestartAt || null,
         lastRestartReason: existing.lastRestartReason || null,
-        externalPids,
-        status: isTrackedServiceProcessRunning(service, existing.pid, processes)
+        externalPids: adoptableExternalPid ? [] : externalPids,
+        error: adoptableExternalPid ? null : existing.error,
+        status: ownedRunning || adoptableExternalPid
           ? 'running'
           : existing.pid
             ? 'stopped'
@@ -126,14 +131,21 @@ export interface SupervisorProcessInfo {
   commandLine: string;
 }
 
+function normalizeCommandFragment(value: string): string {
+  return value.replace(/\\/g, '/').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
 export function serviceMatchesCommandLine(service: SupervisorChildService, commandLine: string): boolean {
+  const normalizedCommandLine = normalizeCommandFragment(commandLine);
+  const normalizedNpmScript = normalizeCommandFragment(service.npmScript);
   const directScriptPath = directScriptPathForNpmScript(service.npmScript);
-  const scriptMatches = commandLine.includes(`run ${service.npmScript}`)
-    || commandLine.includes(`run ${service.npmScript.replace(/:/g, '\\:')}`)
-    || commandLine.includes(service.npmScript)
-    || Boolean(directScriptPath && commandLine.includes(directScriptPath));
+  const normalizedDirectScriptPath = directScriptPath ? normalizeCommandFragment(directScriptPath) : null;
+  const scriptMatches = normalizedCommandLine.includes(`run ${normalizedNpmScript}`)
+    || normalizedCommandLine.includes(`run ${normalizeCommandFragment(service.npmScript.replace(/:/g, '\\:'))}`)
+    || normalizedCommandLine.includes(normalizedNpmScript)
+    || Boolean(normalizedDirectScriptPath && normalizedCommandLine.includes(normalizedDirectScriptPath));
   if (!scriptMatches) return false;
-  return service.args.every((arg) => commandLine.includes(arg));
+  return service.args.every((arg) => normalizedCommandLine.includes(normalizeCommandFragment(arg)));
 }
 
 function listNodeProcesses(): SupervisorProcessInfo[] {
@@ -185,8 +197,11 @@ export function findExternalServiceProcesses(config: SupervisorConfig, processes
   const external = new Map<string, number[]>();
 
   for (const service of config.childServices) {
-    const pids = processes
-      .filter((processInfo) => !ownedPids.has(processInfo.pid) && serviceMatchesCommandLine(service, processInfo.commandLine))
+    const matches = processes
+      .filter((processInfo) => !ownedPids.has(processInfo.pid) && serviceMatchesCommandLine(service, processInfo.commandLine));
+    const matchingPids = new Set(matches.map((processInfo) => processInfo.pid));
+    const pids = matches
+      .filter((processInfo) => !processInfo.parentPid || !matchingPids.has(processInfo.parentPid))
       .map((processInfo) => processInfo.pid);
     external.set(service.id, pids);
   }

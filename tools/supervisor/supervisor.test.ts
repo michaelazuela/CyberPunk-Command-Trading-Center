@@ -29,6 +29,7 @@ import {
   isTrackedServiceProcessRunning,
   launchEnabledServices,
   restartFailedOwnedServices,
+  serviceMatchesCommandLine,
   stopOwnedServices,
   writeSupervisorState,
 } from './processManager';
@@ -158,6 +159,20 @@ const alignedBackfillCommand = buildPreWindowBackfillCommand(currentContractPreR
 const alignedHtfPreloadCommand = buildHtfPreloadCommand(currentContractPreResolve.config);
 assert.equal(commandArg(alignedBackfillCommand.args, '--bridge-instrument'), 'MES 09-26');
 assert.equal(commandArg(alignedHtfPreloadCommand.args, '--bridge-instrument'), 'MES 09-26');
+const scannerService = currentContractPreResolve.config.childServices.find((service) => service.id === 'scanner');
+assert.ok(scannerService);
+assert.equal(serviceMatchesCommandLine(
+  scannerService,
+  '"C:\\Program Files\\nodejs\\node.exe" --require "C:\\quant-desk\\node_modules\\tsx\\dist\\preflight.cjs" --import file:///C:/quant-desk/node_modules/tsx/dist/loader.mjs tools/automation/nt-scanner.ts --instrument MES --bridge-instrument MES 09-26 --bridge-url http://127.0.0.1:8765 --poll-seconds 60 --bar-time-zone eastern --live-discord-policy-confirmed',
+), true);
+assert.equal(serviceMatchesCommandLine(
+  scannerService,
+  'cmd.exe /d /s /c tsx tools\\automation\\nt-scanner.ts --instrument MES --bridge-instrument MES 09-26 --bridge-url http://127.0.0.1:8765 --poll-seconds 60 --bar-time-zone eastern --live-discord-policy-confirmed',
+), true);
+assert.equal(serviceMatchesCommandLine(
+  scannerService,
+  'cmd.exe /d /s /c tsx tools\\automation\\nt-scanner.ts --instrument MES --bridge-instrument MES 12-26 --bridge-url http://127.0.0.1:8765 --poll-seconds 60 --bar-time-zone eastern --live-discord-policy-confirmed',
+), false);
 const safeSpawnCommand = buildWindowsSafeSpawnCommand('npm.cmd', ['run', 'nt:backfill', '--', '--bridge-instrument', 'MES 06-26']);
 assert.equal(safeSpawnCommand.command, process.execPath);
 assert.equal(safeSpawnCommand.args.at(1), path.join('tools', 'automation', 'backfill-market-bars.ts'));

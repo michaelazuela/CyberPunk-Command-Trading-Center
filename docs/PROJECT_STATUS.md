@@ -2,6 +2,20 @@
 
 ## Latest Change
 
+Date: 2026-07-24
+Task: Stabilize supervisor scanner process health and completed-5M latency visibility.
+Files changed: tools/supervisor/processManager.ts, tools/supervisor/health.ts, tools/supervisor/supervisor.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The local supervisor reported the scanner child stopped/degraded while the scanner process was actually running under a direct Windows/tsx command line, and the scanner health state stayed degraded from normal completed-5M post-close observation latency.
+Tests run: npx tsx tools/supervisor/supervisor.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. Supervisor process matching now normalizes Windows paths and can adopt one matching external scanner child as the tracked running process. Supervisor health treats fresh scanner state as authoritative when only scanner stdout is stale. Scanner health status is now recorded independently from Discord health-alert delivery success, and the completed-5M latency sentinel uses a poll-aware operational threshold so normal 60-second polling does not keep delivery visibility degraded.
+Trading logic changed: No. This is process supervision and operational health visibility only. It does not alter setup definitions, ranking, canExecute, Discord trade-plan posting policy, Supabase persistence, NinjaTrader bridge behavior, entry, stop, target, risk, or automated execution.
+Bridge impact: Read-only health/readback only. No bridge contract change.
+Discord impact: Health status bookkeeping is decoupled from health-alert webhook success. No trade-plan Discord behavior was changed.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: True stale completed-5M data still blocks through the existing completed-5M assurance gate; normal operational latency is no longer treated as degraded by itself.
+Next recommended action: Keep the supervisor running and monitor the next active scanner window for clean health/readback. If Reversal Watch webhook 400 errors persist, handle that separately as a Discord component formatting fix.
+
 Date: 2026-07-23
 Task: Hard-suppress legacy scanner trade-plan Discord posts while Unified Desk Output production surface is active.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.

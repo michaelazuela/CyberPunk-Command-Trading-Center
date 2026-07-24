@@ -282,6 +282,7 @@ export async function buildHealthReport(
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<SupervisorHealthReport> {
   const supervisorRunning = isProcessRunning(state.supervisorPid);
+  const scannerStateFile = stateFileCheck(now, config.health.logStaleAfterMs);
   const checks: SupervisorHealthCheck[] = [
     {
       id: 'supervisor_process',
@@ -294,7 +295,7 @@ export async function buildHealthReport(
     },
     activeContractCheck(config),
     discordConfigCheck(env),
-    stateFileCheck(now, config.health.logStaleAfterMs),
+    scannerStateFile,
     recorderHeartbeatCheck(config, now),
   ];
 
@@ -323,14 +324,23 @@ export async function buildHealthReport(
             : 'Owned child process is not running.',
       details: { pid: service.pid, externalPids: service.externalPids },
     });
-    checks.push(logCheck({
+    const stdoutLogCheck = logCheck({
       id: `${service.id}_stdout_log`,
       label: `${service.id} stdout log`,
       filePath: service.stdoutLog,
       staleAfterMs: config.health.logStaleAfterMs,
       now,
       required,
-    }));
+    });
+    checks.push(
+      service.id === 'scanner' && stdoutLogCheck.status === 'warn' && scannerStateFile.status === 'ok'
+        ? {
+            ...stdoutLogCheck,
+            status: 'ok',
+            message: 'Scanner state file is fresh; stale stdout log is not health-blocking.',
+          }
+        : stdoutLogCheck,
+    );
   }
 
   checks.push(await checkBridgeHealth(config.health.bridgeUrl, configuredBridgeInstrument(config)));

@@ -21,6 +21,7 @@ import {
   createPendingScannerAlertDeliveryRecord,
   evaluateCompletedFiveMinuteBarAssuranceGate,
   evaluateScannerCompletedFiveMinuteLatencySentinel,
+  scannerCompletedFiveMinuteLatencyWarningThresholdSeconds,
   buildScannerMissedMoveReentryWatch,
   evaluateScannerDeskPlayDiscordSuppression,
   scannerDeskPlayCanonicalPreDeliveryHold,
@@ -931,6 +932,15 @@ const completed5mLatencyLate = evaluateScannerCompletedFiveMinuteLatencySentinel
 assert.equal(completed5mLatencyLate.status, 'late');
 assert.equal(completed5mLatencyLate.latencySeconds, 121);
 assert.ok(completed5mLatencyLate.message.includes('Fast-open moves may be stale'));
+assert.equal(scannerCompletedFiveMinuteLatencyWarningThresholdSeconds(60), 300);
+const completed5mOperationalDelay = evaluateScannerCompletedFiveMinuteLatencySentinel({
+  completed5m: { time: '2026-06-05T10:05:00-04:00', open: 7518, high: 7520, low: 7515, close: 7519, volume: 1000 },
+  now: new Date('2026-06-05T10:14:59-04:00'),
+  timestampMode: 'open',
+  timeZoneMode: 'eastern',
+  warningThresholdSeconds: scannerCompletedFiveMinuteLatencyWarningThresholdSeconds(60),
+});
+assert.equal(completed5mOperationalDelay.status, 'on_time');
 
 const missedMoveReentryWatch = buildScannerMissedMoveReentryWatch({
   candidate: {
