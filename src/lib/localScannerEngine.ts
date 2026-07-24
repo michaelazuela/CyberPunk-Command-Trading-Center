@@ -4,6 +4,7 @@ import { SETUP_REGISTRY, type ParentModelFamily, type SetupRegistryEntry, type S
 import { ChartContext, ExecutionStatus, FvgZoneFact, NoTradeReason, SetupCandidate, SetupType, TacticalZoneBounds, TargetObjective, TimeframeFactSet, TradeDecisionStatus } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
 import { buildHtfFvgReactionMemory, type HtfFvgReactionMemory } from './htfFvgReactionMemory';
+import { isUnifiedDeskOutputApprovedProductionModel } from './unifiedDeskOutputProductionScannerSurface';
 
 export type ScannerState =
   | 'NoData'
@@ -1903,6 +1904,52 @@ function scannerCandidateKey(candidate: SetupCandidate): string {
   ].join('|');
 }
 
+function lifecycleItemIsUnifiedDeskOutputProductionModel(item: ScannerCandidateLifecycleTraceItem | null | undefined): item is ScannerCandidateLifecycleTraceItem {
+  return Boolean(item && isUnifiedDeskOutputApprovedProductionModel(item.setupType));
+}
+
+function setupCandidateIsUnifiedDeskOutputProductionModel(candidate: SetupCandidate | null | undefined): candidate is SetupCandidate {
+  return Boolean(candidate && isUnifiedDeskOutputApprovedProductionModel(candidate.setupType));
+}
+
+function candidateKeyIsUnifiedDeskOutputProductionModel(candidateKey: string | null | undefined): boolean {
+  const setupType = candidateKey?.split('|')[0];
+  return Boolean(setupType && isUnifiedDeskOutputApprovedProductionModel(setupType));
+}
+
+function unifiedDeskOutputDisplayCandidate(trace: ScannerCandidateLifecycleTrace): ScannerCandidateLifecycleTraceItem | null {
+  const candidates = [
+    trace.selectedCandidate,
+    trace.bestLongPlan,
+    trace.bestShortPlan,
+  ].filter(lifecycleItemIsUnifiedDeskOutputProductionModel);
+  if (candidates.length === 0) return null;
+  return candidates.find((item) => item.selected) ||
+    candidates.find((item) => item.hasFullPlanLevels) ||
+    [...candidates].sort((a, b) => b.rankScore - a.rankScore)[0] ||
+    null;
+}
+
+function unifiedDeskOutputDisplayCandidateForDeskTicket(
+  trace: ScannerCandidateLifecycleTrace,
+  primaryDeskPlay: PrimaryDeskPlay,
+): ScannerCandidateLifecycleTraceItem | null {
+  const selected = trace.selectedCandidate;
+  const primaryDirection = primaryDeskPlay.direction === 'LONG' || primaryDeskPlay.direction === 'SHORT'
+    ? primaryDeskPlay.direction
+    : null;
+  if (!selected) return null;
+  const selectedDirection = selected.direction;
+  const selectedIsUnifiedDeskOutputModel = isUnifiedDeskOutputApprovedProductionModel(selected.setupType);
+  if (
+    selectedIsUnifiedDeskOutputModel ||
+    (primaryDirection !== null && selectedDirection !== primaryDirection)
+  ) {
+    return null;
+  }
+  return unifiedDeskOutputDisplayCandidate(trace);
+}
+
 function scannerStateForLifecycleCandidate(candidate: SetupCandidate): ScannerState {
   if (candidate.executionStatus === ExecutionStatus.Executable) return 'Executable';
   if (candidate.executionStatus === ExecutionStatus.Conditional) return 'Conditional';
@@ -3160,12 +3207,16 @@ function buildDeskTicket(args: {
   candidate: SetupCandidate | null;
   selectedCandidate: ScannerCandidateLifecycleTraceItem | null;
   primaryLifecycleCandidate: ScannerCandidateLifecycleTraceItem | null;
+  unifiedDeskOutputDisplayCandidate?: ScannerCandidateLifecycleTraceItem | null;
   visibilityMetadata: ScannerVisibilityMetadata;
   htfContextStatus: DeskStateHtfContextStatus;
 }): DeskTicket {
   const play = args.primaryDeskPlay;
-  const selected = args.selectedCandidate;
-  const primaryDirection = play.direction === 'LONG' || play.direction === 'SHORT'
+  const displayCandidate = args.unifiedDeskOutputDisplayCandidate || null;
+  const selected = displayCandidate || args.selectedCandidate;
+  const primaryDirection = displayCandidate?.direction === 'LONG' || displayCandidate?.direction === 'SHORT'
+    ? displayCandidate.direction
+    : play.direction === 'LONG' || play.direction === 'SHORT'
     ? play.direction
     : selected?.direction === 'LONG' || selected?.direction === 'SHORT'
       ? selected.direction
@@ -3177,7 +3228,9 @@ function buildDeskTicket(args: {
     ? args.primaryLifecycleCandidate
     : null;
   const selectedForPrimaryDirection = selected?.direction === primaryDirection ? selected : null;
-  const candidateForPrimaryDirection = args.candidate?.direction === primaryDirection ? args.candidate : null;
+  const candidateForPrimaryDirection = args.candidate?.direction === primaryDirection && setupCandidateIsUnifiedDeskOutputProductionModel(args.candidate)
+    ? args.candidate
+    : null;
   const freshReentryCandidate = args.primaryDeskPlay.freshReentryCandidates?.approvalStatus === 'approved_discord_conditional_display' &&
     args.primaryDeskPlay.freshReentryCandidates.bestCandidate?.status === 'ready_for_owner_review' &&
     args.primaryDeskPlay.freshReentryCandidates.bestCandidate.direction === primaryDirection
@@ -5957,16 +6010,19 @@ export function buildDeskState(args: {
     visibilityMetadata: args.visibilityMetadata,
     candidateLifecycleTrace: args.candidateLifecycleTrace,
   });
+  const unifiedDisplayCandidate = unifiedDeskOutputDisplayCandidateForDeskTicket(args.candidateLifecycleTrace, primaryDeskPlay);
   const deskTicket = buildDeskTicket({
     marketMode,
     primaryDeskPlay,
     candidate,
     selectedCandidate: args.candidateLifecycleTrace.selectedCandidate,
-    primaryLifecycleCandidate: primaryDeskPlay.direction === 'LONG'
+    primaryLifecycleCandidate: unifiedDisplayCandidate ||
+      (primaryDeskPlay.direction === 'LONG'
       ? args.candidateLifecycleTrace.bestLongPlan
       : primaryDeskPlay.direction === 'SHORT'
         ? args.candidateLifecycleTrace.bestShortPlan
-        : null,
+        : null),
+    unifiedDeskOutputDisplayCandidate: unifiedDisplayCandidate,
     visibilityMetadata: args.visibilityMetadata,
     htfContextStatus,
   });
@@ -6006,8 +6062,10 @@ export function buildDeskPublishDecision(args: {
   const deskState = args.deskState;
   const ticket = deskState.deskTicket;
   const selected = deskState.selectedCandidate;
+  const ticketOwnsUnifiedDeskOutputDisplay = candidateKeyIsUnifiedDeskOutputProductionModel(ticket.sourceCandidateKey);
   const selectedHasCompletePlan = lifecycleItemHasCompletePublishLevels(selected);
   const selectedCanPublish = selectedHasCompletePlan &&
+    (!ticketOwnsUnifiedDeskOutputDisplay || lifecycleItemIsUnifiedDeskOutputProductionModel(selected)) &&
     lifecycleItemPublishableVisibility(selected) &&
     selected.selected &&
     !selected.filteredOutReason &&

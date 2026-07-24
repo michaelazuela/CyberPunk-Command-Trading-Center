@@ -6340,6 +6340,61 @@ function highConfidenceConditionalBoundaryDeskStateFixture(): DeskState {
   });
 }
 
+function approvedUnifiedDeskOutputBoundaryDeskStateFixture(): DeskState {
+  const approvedCandidate: SetupCandidate = {
+    ...candidate,
+    setupType: SetupType.IntradayMssMicroContinuation,
+    scenarioLabel: 'Intraday MSS Micro Continuation',
+    direction: 'LONG',
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: null,
+    entry: 7473.5,
+    stop: 7461,
+    target1: 7492.25,
+    target2: 7498.5,
+    riskPoints: 12.5,
+    decisionQualityScore: 64,
+    requiredTrigger: 'Completed 5M close above 7455.50.',
+    invalidation: 'Invalid if price trades below the protected 5M stop at 7461.00.',
+    candidateState: 'HUMAN_REVIEW_READY',
+  };
+  const visibilityMetadata: ScannerVisibilityMetadata = {
+    sourceOfTruth: 'scanner_desk_state_visibility_metadata',
+    visibilityMode: 'POST_CONDITIONAL',
+    discordAction: 'post_conditional',
+    suppressionReason: null,
+    nextTrigger: 'Completed 5M close above 7455.50.',
+    dataQualityBlocker: null,
+    holdWithReason: null,
+    noTradeWithReason: null,
+    hasMeaningfulStructuredEvidence: true,
+    authority: {
+      registeredModel: true,
+      activeModel: true,
+      watchEligible: true,
+      planEligible: true,
+      discordEligible: true,
+      executionEligible: false,
+      humanReviewOnly: true,
+      canExecute: false,
+    },
+    notes: [],
+  };
+  return buildDeskState({
+    state: 'Conditional',
+    candidate: approvedCandidate,
+    visibilityMetadata,
+    candidateLifecycleTrace: buildCandidateLifecycleTrace({
+      candidates: [approvedCandidate],
+      selectedCandidate: approvedCandidate,
+      state: 'Conditional',
+      alertDecision: { shouldSend: true, reason: 'Approved Unified Desk Output fixture.' },
+      canExecute: false,
+    }),
+    canExecute: false,
+  });
+}
+
 function highConfidenceReviewBoundaryDeskStateFixture(): DeskState {
   const highConfidenceCandidate: SetupCandidate = {
     ...candidate,
@@ -6497,6 +6552,30 @@ assert.equal(unifiedDeskOutputSuppressedTradeAlertBoundary.eligible, false);
 assert.ok(unifiedDeskOutputSuppressedTradeAlertBoundary.blockers.some((item) => item.includes('legacy scanner trade-plan Discord posts are production-suppressed')));
 assert.equal(unifiedDeskOutputSuppressedTradeAlertBoundary.authorityBoundary.changesCanExecute, false);
 assert.equal(unifiedDeskOutputSuppressedTradeAlertBoundary.authorityBoundary.createsTradeApproval, false);
+
+const unifiedDeskOutputApprovedModelBoundary = buildScannerLiveDiscordSendBoundaryReport({
+  postKind: 'trade_alert',
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: true,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: approvedUnifiedDeskOutputBoundaryDeskStateFixture(),
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-07-24-MES-lunch.json'),
+  auditPath: path.join(auditDir, 'scanner-lunch-2026-07-24-MES-APPROVED-UNIFIED.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+  unifiedDeskOutputProductionSurfaceActive: true,
+});
+assert.equal(unifiedDeskOutputApprovedModelBoundary.eligible, true);
+assert.equal(unifiedDeskOutputApprovedModelBoundary.blockers.length, 0);
+assert.ok(unifiedDeskOutputApprovedModelBoundary.notes.some((item) => item.includes('approved scanner-owned model plan is allowed')));
+assert.equal(unifiedDeskOutputApprovedModelBoundary.authorityBoundary.changesCanExecute, false);
+assert.equal(unifiedDeskOutputApprovedModelBoundary.authorityBoundary.createsTradeApproval, false);
 
 const unifiedDeskOutputSuppressedDeskPlayBoundary = buildScannerLiveDiscordSendBoundaryReport({
   postKind: 'desk_play',

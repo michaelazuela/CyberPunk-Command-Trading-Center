@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-24
+Task: Keep live DeskTicket/current-plan display and Discord eligibility on the two approved Unified Desk Output models.
+Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: User reported the desk was still surfacing noisy legacy model tickets while a lower-timeframe MSS/FVG approved-model setup was forming. The production-visible desk read should not let TurtleSoup/Sweep/AfterLunch legacy candidates own the current desk ticket when an approved Unified Desk Output candidate is present, and the live Discord guard should not classify a complete approved-model plan as legacy.
+Tests run: npx tsx src/lib/localScannerEngine.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/nt-scanner.ts --once --dry-run --discord false --live-discord-policy-confirmed; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check; npm run lint; npm run build; npm run test.
+Result: Focused scanner engine and alert-boundary tests passed. Live no-Discord dry run showed the current visible desk read as LONG IntradayMssMicroContinuation with complete levels at 13:30 ET, held below the 65 score threshold and not posted. After the boundary fix, active Unified Desk Output production surface still blocks non-approved legacy model posts but allows complete HtfDisplacementFvgContinuation/IntradayMssMicroContinuation plans through the normal guarded eligibility path. Restarted the local supervisor/scanner and confirmed health OK with scanner pid 4360, recorder pid 15424, bridge reachable on MES 09-26, and live delivery sent for the current approved IntradayMssMicroContinuation lunch plan with Discord message id 1530273869410078774.
+Trading logic changed: Yes, narrowly at the trader-facing DeskTicket/current-plan display and Discord eligibility fallback layer only. This does not change setup definitions, model detection, ranking math, entry, stop, target, risk, bridge reads, Supabase schema, webhook destination, or automated execution.
+Bridge impact: Read-only live bridge/scanner dry run only. No bridge contract change.
+Discord impact: Yes. After restart, one live current approved IntradayMssMicroContinuation lunch plan was sent through the existing guarded scanner webhook path. Non-approved legacy model trade-plan posts remain suppressed while the Unified Desk Output production surface is active.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Current scanner behavior is now live for the approved-model display/Discord eligibility boundary. Monitor the next morning/lunch/evening windows for any legacy model leakage or stale plan reuse.
+Next recommended action: Commit and push this boundary fix, then run the next live window readback only if the current scanner health changes.
+
+Date: 2026-07-24
 Task: Lock Unified Desk Output production visibility to the two approved models.
 Files changed: src/lib/unifiedDeskOutputProductionScannerSurface.ts, src/lib/unifiedDeskOutputProductionScannerSurface.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/unified-desk-output-production-go-live-gate.test.ts, tools/automation/.unified-desk-output-production-scanner-surface.json, docs/PROJECT_STATUS.md.
 Reason: User clarified that production desk output should show only the two agreed trade models and should not use `canExecute` as the public gating concept for that lane.

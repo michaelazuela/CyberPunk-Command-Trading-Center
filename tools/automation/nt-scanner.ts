@@ -8426,6 +8426,15 @@ export function buildScannerLiveDiscordSendBoundaryReport(args: {
     args.unifiedDeskOutputProductionSurfaceActive &&
     (postKind === 'trade_alert' || postKind === 'desk_play')
   ) {
+    if (scannerDeskStateHasApprovedUnifiedDeskOutputProductionPlan(args.deskState)) {
+      return {
+        ...report,
+        notes: [
+          ...report.notes,
+          'Unified Desk Output production surface is active; approved scanner-owned model plan is allowed through the normal guarded Discord eligibility path.',
+        ],
+      };
+    }
     const blocker = 'Unified Desk Output production surface is active; legacy scanner trade-plan Discord posts are production-suppressed. Only Unified Desk Output Approved Desk Plan rows may reach the production trade-plan lane.';
     return {
       ...report,
@@ -8447,6 +8456,17 @@ function scannerLifecycleItemHasFullPlanLevels(item: DeskState['selectedCandidat
     isFiniteTradePrice(item.stop) &&
     isFiniteTradePrice(item.target1) &&
     isFiniteTradePrice(item.target2)
+  );
+}
+
+function scannerDeskStateHasApprovedUnifiedDeskOutputProductionPlan(deskState: DeskState | null): boolean {
+  const item = deskState?.selectedCandidate;
+  return Boolean(
+    item &&
+    isUnifiedDeskOutputApprovedProductionModel(item.setupType) &&
+    scannerLifecycleItemHasFullPlanLevels(item) &&
+    item.executionStatus !== ExecutionStatus.Blocked &&
+    !item.filteredOutReason
   );
 }
 

@@ -1916,6 +1916,101 @@ assert.ok(!protectedBullishStackDeskState.deskTicket.sourceCandidateKey?.include
 assert.equal(protectedBullishStackDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
 assert.equal(protectedBullishStackDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
 
+const approvedShortWatchWithLegacyLong = candidate({
+  setupType: SetupType.IntradayMssMicroContinuation,
+  scenarioLabel: 'Intraday MSS Micro Continuation',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Possible,
+  executionStatus: ExecutionStatus.Conditional,
+  candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
+  blockReason: NoTradeReason.EntryTriggerPending,
+  entry: 7437.5,
+  stop: null,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  rankScore: 214,
+  decisionQualityScore: 50,
+  modelConfidenceScore: 54,
+  activeRuleset: {
+    setupType: SetupType.IntradayMssMicroContinuation,
+    direction: 'SHORT',
+    htfLineInSand: {
+      lineInSand: 7438.25,
+      lineReason: 'Completed 5M MSS close-through/retest decision boundary.',
+    },
+    summary: 'Bearish Intraday MSS Micro Continuation watch.',
+    status: 'pending',
+    notes: [],
+    blockers: [],
+  } as unknown as SetupCandidate['activeRuleset'],
+  missingEvidence: [
+    'Protected 5M retest swing stop blocked: retest high is not a confirmed protected 5M swing high.',
+    'Protected 5M MSS swing stop',
+    'App T1/T2 from actual entry/stop risk',
+  ],
+  requiredTrigger: 'Human-review short: completed bearish 5M MSS plus bearish 15M MSS/displacement context. Completed 5M close below 7438.25 required before short continuation is active.',
+  nextAction: 'Short MSS forming. Campaign active from app-owned completed 5M close-through. Line is 7438.25. Price is extended; do not chase.',
+});
+const legacyLongWithFullLevels = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Bullish Turtle Soup Reversal',
+  direction: 'LONG',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Executable,
+  entry: 7444,
+  stop: 7432.5,
+  target1: 7461.25,
+  target2: 7467,
+  riskPoints: 11.5,
+  rankScore: 256,
+  decisionQualityScore: 44,
+  requiredTrigger: 'Bullish Turtle Soup legacy trigger should not own Unified Desk Output display.',
+  nextAction: 'Legacy long should remain audit-only while approved model watch is present.',
+});
+const approvedShortWatchTrace = buildCandidateLifecycleTrace({
+  candidates: [legacyLongWithFullLevels, approvedShortWatchWithLegacyLong],
+  selectedCandidate: legacyLongWithFullLevels,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Regression fixture: approved short watch must own trader-facing desk ticket.' },
+  canExecute: false,
+});
+const approvedShortWatchDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: legacyLongWithFullLevels,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: legacyLongWithFullLevels,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Regression fixture: legacy selected candidate is not production-visible.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: approvedShortWatchTrace,
+  currentPrice: 7471,
+  canExecute: false,
+});
+assert.equal(approvedShortWatchDeskState.selectedCandidate?.setupType, SetupType.TurtleSoup);
+assert.equal(approvedShortWatchDeskState.deskTicket.primaryDirection, 'SHORT');
+assert.equal(approvedShortWatchDeskState.deskTicket.lineInSand, 7438.25);
+assert.equal(approvedShortWatchDeskState.deskTicket.entry, 7438.25);
+assert.equal(approvedShortWatchDeskState.deskTicket.stop, null);
+assert.equal(approvedShortWatchDeskState.deskTicket.t1, null);
+assert.equal(approvedShortWatchDeskState.deskTicket.t2, null);
+assert.match(approvedShortWatchDeskState.deskTicket.sourceCandidateKey || '', /^IntradayMssMicroContinuation\|SHORT/);
+assert.ok(!approvedShortWatchDeskState.deskTicket.sourceCandidateKey?.includes('TurtleSoup'));
+const approvedShortWatchPublishDecision = buildDeskPublishDecision({
+  deskState: approvedShortWatchDeskState,
+  currentPrice: 7471,
+  completed5mTime: '2026-07-24T12:55:00.0000000',
+});
+assert.equal(approvedShortWatchPublishDecision.shouldPost, false);
+assert.equal(approvedShortWatchPublishDecision.displaySource, 'none');
+assert.equal(approvedShortWatchPublishDecision.setupType, null);
+assert.equal(approvedShortWatchPublishDecision.hasCompletePlan, false);
+assert.equal(approvedShortWatchPublishDecision.approvalBoundary.changesCanExecute, false);
+assert.equal(approvedShortWatchPublishDecision.approvalBoundary.changesEntryStopTargets, false);
+
 const june12DataLimitedProtectedHoldDeskState = buildDeskState({
   state: 'Conditional',
   candidate: june12UnsupportedShort,
