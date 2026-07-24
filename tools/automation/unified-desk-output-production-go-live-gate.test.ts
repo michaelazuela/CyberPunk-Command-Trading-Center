@@ -109,7 +109,25 @@ const blocked = await writeUnifiedDeskOutputProductionGoLiveGate({
   runtimeSurfacePath: blockedPath,
   outDir,
 });
-assert.equal(blocked.report.status, 'blocked');
-assert.equal(fs.existsSync(blockedPath), false);
+assert.equal(blocked.report.status, 'active');
+assert.equal(blocked.report.summary.canExecuteTrueRows, 1);
+assert.equal(fs.existsSync(blockedPath), true);
+
+const thirdModelBlockedPath = path.join(outDir, '.blocked-third-model-surface.json');
+const thirdModelBlocked = await writeUnifiedDeskOutputProductionGoLiveGate({
+  finalReadinessChecklistPath: checklistPath,
+  finalReadinessChecklist: {
+    ...checklist,
+    selectedCandidates: [{
+      ...checklist.selectedCandidates[0],
+      model: 'TurtleSoup',
+    }, checklist.selectedCandidates[1]],
+  },
+  runtimeSurfacePath: thirdModelBlockedPath,
+  outDir,
+});
+assert.equal(thirdModelBlocked.report.status, 'blocked');
+assert.equal(fs.existsSync(thirdModelBlockedPath), false);
+assert.ok(thirdModelBlocked.report.blockers.some((blocker) => blocker.includes('not approved for Unified Desk Output production visibility')));
 
 console.log('Unified Desk Output production go-live gate verified.');

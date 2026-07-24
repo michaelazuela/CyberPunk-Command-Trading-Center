@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-24
+Task: Lock Unified Desk Output production visibility to the two approved models.
+Files changed: src/lib/unifiedDeskOutputProductionScannerSurface.ts, src/lib/unifiedDeskOutputProductionScannerSurface.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/unified-desk-output-production-go-live-gate.test.ts, tools/automation/.unified-desk-output-production-scanner-surface.json, docs/PROJECT_STATUS.md.
+Reason: User clarified that production desk output should show only the two agreed trade models and should not use `canExecute` as the public gating concept for that lane.
+Tests run: npx tsx src/lib/unifiedDeskOutputProductionScannerSurface.test.ts; npx tsx tools/automation/unified-desk-output-production-go-live-gate.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false.
+Result: Focused checks passed. Unified Desk Output production visibility now accepts only HtfDisplacementFvgContinuation and IntradayMssMicroContinuation. Runtime scanner readback rejects any production surface row from other models. `canExecute` true-counts are treated as audit metadata for this surface and do not block the two approved model rows; generated visible rows still keep canExecute false/audit-only and no automated-order authority.
+Trading logic changed: Yes, narrowly at the production-visible output policy layer only. This does not change setup definitions, model detection, ranking math, entry, stop, target, risk, bridge reads, Supabase schema, or automated execution.
+Bridge impact: None.
+Discord impact: No Discord webhook call was made. Existing Discord posting remains separately guarded.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Other models may still appear in internal research/audit artifacts, but they are blocked from the Unified Desk Output production surface.
+Next recommended action: Run full verification, restart only the scanner so the running process loads the updated two-model visibility contract, then confirm local scanner readback is clean.
+
+Date: 2026-07-24
 Task: Stabilize supervisor scanner process health and completed-5M latency visibility.
 Files changed: tools/supervisor/processManager.ts, tools/supervisor/health.ts, tools/supervisor/supervisor.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The local supervisor reported the scanner child stopped/degraded while the scanner process was actually running under a direct Windows/tsx command line, and the scanner health state stayed degraded from normal completed-5M post-close observation latency.

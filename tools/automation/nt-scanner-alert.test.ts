@@ -241,10 +241,10 @@ assert.equal(unifiedDeskOutputReadback.summary.canExecuteTrueRows, 0);
 const dirtyUnifiedDeskOutputSurfacePath = path.join(outputDir, '.dirty-unified-desk-output-production-surface.json');
 await fs.writeFile(dirtyUnifiedDeskOutputSurfacePath, `${JSON.stringify({
   ...unifiedDeskOutputSurface,
-  summary: {
-    ...unifiedDeskOutputSurface.summary,
-    canExecuteTrueRows: 1,
-  },
+  rows: [{
+    ...unifiedDeskOutputSurface.rows[0],
+    model: 'TurtleSoup',
+  }, unifiedDeskOutputSurface.rows[1]],
 }, null, 2)}\n`);
 assert.equal(await readUnifiedDeskOutputProductionScannerSurface(dirtyUnifiedDeskOutputSurfacePath), null);
 

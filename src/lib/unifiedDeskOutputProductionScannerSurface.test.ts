@@ -92,6 +92,22 @@ assert.equal(active.rows.every((row) => row.publishDiscord === false), true);
 assert.equal(active.rows.every((row) => row.canExecute === false), true);
 assert.deepEqual(active.blockers, []);
 
+const canExecuteAuditOnly = buildUnifiedDeskOutputProductionScannerSurfaceActivation({
+  finalReadinessChecklistPath: 'final-readiness.json',
+  finalReadinessChecklist: {
+    ...checklist,
+    summary: {
+      ...checklist.summary,
+      canExecuteTrueRows: 2,
+    },
+  },
+}, '2026-07-22T23:59:00.000Z');
+
+assert.equal(canExecuteAuditOnly.status, 'active');
+assert.equal(canExecuteAuditOnly.summary.canExecuteTrueRows, 2);
+assert.equal(canExecuteAuditOnly.rows.every((row) => row.canExecute === false), true);
+assert.ok(canExecuteAuditOnly.rows.every((row) => row.authorityLine.includes('canExecute is audit-only')));
+
 const eveningActive = buildUnifiedDeskOutputProductionScannerSurfaceActivation({
   finalReadinessChecklistPath: 'final-readiness.json',
   finalReadinessChecklist: {
@@ -141,5 +157,20 @@ assert.equal(blocked.status, 'blocked');
 assert.equal(blocked.authority.scannerVisibleNow, false);
 assert.equal(blocked.rows.length, 0);
 assert.ok(blocked.blockers.some((blocker) => blocker.includes('Discord post rows')));
+
+const blockedThirdModel = buildUnifiedDeskOutputProductionScannerSurfaceActivation({
+  finalReadinessChecklistPath: 'final-readiness.json',
+  finalReadinessChecklist: {
+    ...checklist,
+    selectedCandidates: [{
+      ...checklist.selectedCandidates[0],
+      model: 'TurtleSoup',
+    }, checklist.selectedCandidates[1]],
+  },
+});
+
+assert.equal(blockedThirdModel.status, 'blocked');
+assert.equal(blockedThirdModel.rows.length, 0);
+assert.ok(blockedThirdModel.blockers.some((blocker) => blocker.includes('not approved for Unified Desk Output production visibility')));
 
 console.log('Unified Desk Output production scanner surface activation verified.');

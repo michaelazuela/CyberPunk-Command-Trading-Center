@@ -1,6 +1,6 @@
 {
   "reportType": "unified_desk_output_production_scanner_surface_activation",
-  "generatedAt": "2026-07-23T02:33:49.592Z",
+  "generatedAt": "2026-07-24T16:30:03.000Z",
   "status": "active",
   "approval": {
     "explicitProductionApproval": true,
@@ -59,7 +59,7 @@
       "riskLine": "Risk 4.25 points from scanner-owned entry/stop.",
       "proofLine": "Completed 5M proof: 09:10 ET.",
       "invalidationLine": "Invalid if price violates the protected 5M stop line at 7515.25.",
-      "authorityLine": "Decision support only. Discord posting remains separately guarded; canExecute, Supabase, bridge, and automated orders remain off in this surface.",
+      "authorityLine": "Decision support only. Discord posting remains separately guarded; canExecute is audit-only for this surface; Supabase, bridge, and automated orders remain off.",
       "scannerVisibleNow": true,
       "publishDiscord": false,
       "writesSupabase": false,
@@ -83,7 +83,7 @@
       "riskLine": "Risk 4.25 points from scanner-owned entry/stop.",
       "proofLine": "Completed 5M proof: 15:45 ET.",
       "invalidationLine": "Invalid if price violates the protected 5M stop line at 7535.75.",
-      "authorityLine": "Decision support only. Discord posting remains separately guarded; canExecute, Supabase, bridge, and automated orders remain off in this surface.",
+      "authorityLine": "Decision support only. Discord posting remains separately guarded; canExecute is audit-only for this surface; Supabase, bridge, and automated orders remain off.",
       "scannerVisibleNow": true,
       "publishDiscord": false,
       "writesSupabase": false,

@@ -149,7 +149,10 @@ import { readCliArgValue } from './cli-args';
 import { etDateTime } from './et-time';
 import { readQuantDeskMaintenanceStatus } from './quant-desk-maintenance';
 import { isGeminiAdvisoryFallbackEnabled } from '../../src/config/geminiFallback';
-import type { UnifiedDeskOutputProductionScannerSurfaceActivation } from '../../src/lib/unifiedDeskOutputProductionScannerSurface';
+import {
+  isUnifiedDeskOutputApprovedProductionModel,
+  type UnifiedDeskOutputProductionScannerSurfaceActivation,
+} from '../../src/lib/unifiedDeskOutputProductionScannerSurface';
 import {
   attachDiscordMessageReceiptToRagPayload,
   resolveDiscordRagPersistenceConfig,
@@ -1553,12 +1556,12 @@ function unifiedDeskOutputProductionSurfaceBlockers(
     surface.summary.supabaseWriteRows === 0 ? null : 'Unified Desk Output production surface has Supabase write rows.',
     surface.summary.liveSupabaseReadRows === 0 ? null : 'Unified Desk Output production surface has live Supabase read rows.',
     surface.summary.liveBridgeReadRows === 0 ? null : 'Unified Desk Output production surface has live bridge read rows.',
-    surface.summary.canExecuteTrueRows === 0 ? null : 'Unified Desk Output production surface has canExecute=true rows.',
     surface.summary.canExecuteChangedRows === 0 ? null : 'Unified Desk Output production surface changed canExecute.',
     surface.summary.tradingLogicChangedRows === 0 ? null : 'Unified Desk Output production surface changed trading logic.',
     surface.summary.automatedOrderRows === 0 ? null : 'Unified Desk Output production surface has automated order rows.',
     surface.summary.blockedRows === 0 ? null : 'Unified Desk Output production surface has blocked rows.',
     surface.rows.length >= 2 && surface.rows.length <= 3 ? null : 'Unified Desk Output production surface row array must contain two or three rows.',
+    surface.rows.every((row) => isUnifiedDeskOutputApprovedProductionModel(row.model)) ? null : 'Unified Desk Output production surface includes a non-approved production model.',
     ...surface.blockers,
   ].filter((item): item is string => Boolean(item));
 }
@@ -1581,7 +1584,7 @@ export function unifiedDeskOutputProductionScannerSummaryLine(
   const rows = surface.rows
     .map((row) => `${row.session}:${row.model}:${row.direction}:${row.proofLine.replace('Completed 5M proof: ', '').replace(' ET.', '')}`)
     .join(' | ');
-  return `[scanner] Unified Desk Output production surface active: rows=${surface.summary.selectedRows} ${rows} | Discord guarded, canExecute=false, no automated orders.`;
+  return `[scanner] Unified Desk Output production surface active: rows=${surface.summary.selectedRows} ${rows} | Discord guarded, canExecute audit-only, no automated orders.`;
 }
 
 export async function writeUnifiedDeskOutputProductionScannerReadback(args: {

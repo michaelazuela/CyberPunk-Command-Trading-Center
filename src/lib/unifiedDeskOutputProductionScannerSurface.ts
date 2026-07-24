@@ -4,6 +4,13 @@ type SessionName = 'morning' | 'lunch' | 'evening';
 type Direction = 'LONG' | 'SHORT';
 type DeskState = 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ';
 
+export const UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS = [
+  'HtfDisplacementFvgContinuation',
+  'IntradayMssMicroContinuation',
+] as const;
+
+export type UnifiedDeskOutputApprovedProductionModel = typeof UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS[number];
+
 export interface UnifiedDeskOutputFinalReadinessCandidate {
   cardId?: string;
   date: string;
@@ -97,12 +104,19 @@ function isFinitePrice(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+export function isUnifiedDeskOutputApprovedProductionModel(model: string): model is UnifiedDeskOutputApprovedProductionModel {
+  return UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS.includes(model as UnifiedDeskOutputApprovedProductionModel);
+}
+
 function candidateBlockers(candidate: UnifiedDeskOutputFinalReadinessCandidate): string[] {
   return [
     candidate.date ? null : 'Candidate missing date.',
     candidate.session === 'morning' || candidate.session === 'lunch' || candidate.session === 'evening' ? null : `${candidate.cardId || '<candidate>'} has unsupported session.`,
     candidate.state === 'APPROVED_DESK_PLAN' || candidate.state === 'FORMING_DESK_READ' ? null : `${candidate.cardId || '<candidate>'} has unsupported desk state.`,
     candidate.model ? null : `${candidate.cardId || '<candidate>'} missing model.`,
+    candidate.model && !isUnifiedDeskOutputApprovedProductionModel(candidate.model)
+      ? `${candidate.cardId || '<candidate>'} model ${candidate.model} is not approved for Unified Desk Output production visibility.`
+      : null,
     candidate.direction === 'LONG' || candidate.direction === 'SHORT' ? null : `${candidate.cardId || '<candidate>'} missing direction.`,
     candidate.proofTime ? null : `${candidate.cardId || '<candidate>'} missing completed 5M proof time.`,
     isFinitePrice(candidate.entry) ? null : `${candidate.cardId || '<candidate>'} missing entry.`,
@@ -137,7 +151,7 @@ function surfaceRow(candidate: UnifiedDeskOutputFinalReadinessCandidate): Unifie
     riskLine: `Risk ${candidate.riskPoints} points from scanner-owned entry/stop.`,
     proofLine: `Completed 5M proof: ${proofEt} ET.`,
     invalidationLine: `Invalid if price violates the protected 5M stop line at ${candidate.stop}.`,
-    authorityLine: 'Decision support only. Discord posting remains separately guarded; canExecute, Supabase, bridge, and automated orders remain off in this surface.',
+    authorityLine: 'Decision support only. Discord posting remains separately guarded; canExecute is audit-only for this surface; Supabase, bridge, and automated orders remain off.',
     scannerVisibleNow: true,
     publishDiscord: false,
     writesSupabase: false,
@@ -168,7 +182,6 @@ export function buildUnifiedDeskOutputProductionScannerSurfaceActivation(args: {
     checklist.summary.supabaseWriteRows === 0 ? null : 'Final readiness has Supabase write rows.',
     checklist.summary.liveSupabaseReadRows === 0 ? null : 'Final readiness has live Supabase read rows.',
     checklist.summary.liveBridgeReadRows === 0 ? null : 'Final readiness has live bridge read rows.',
-    checklist.summary.canExecuteTrueRows === 0 ? null : 'Final readiness has canExecute=true rows.',
     checklist.summary.canExecuteChangedRows === 0 ? null : 'Final readiness changed canExecute.',
     checklist.summary.tradingLogicChangedRows === 0 ? null : 'Final readiness changed trading logic.',
     checklist.summary.automatedOrderRows === 0 ? null : 'Final readiness has automated order rows.',
@@ -188,6 +201,7 @@ export function buildUnifiedDeskOutputProductionScannerSurfaceActivation(args: {
     rows.filter((row) => row.session === 'lunch').length === 1 ? null : 'Production surface does not have exactly one lunch row.',
     rows.filter((row) => row.session === 'evening').length <= 1 ? null : 'Production surface has more than one evening row.',
     rows.every((row) => row.state === 'APPROVED_DESK_PLAN') ? null : 'Production surface contains non-Approved Desk Plan rows.',
+    rows.every((row) => isUnifiedDeskOutputApprovedProductionModel(row.model)) ? null : 'Production surface contains a model outside the two approved Unified Desk Output production models.',
     rows.every((row) => !row.publishDiscord) ? null : 'Production surface would publish Discord.',
     rows.every((row) => !row.writesSupabase) ? null : 'Production surface would write Supabase.',
     rows.every((row) => !row.readsLiveBridge) ? null : 'Production surface would read live bridge.',
@@ -233,7 +247,7 @@ export function buildUnifiedDeskOutputProductionScannerSurfaceActivation(args: {
       supabaseWriteRows: 0,
       liveSupabaseReadRows: 0,
       liveBridgeReadRows: 0,
-      canExecuteTrueRows: 0,
+      canExecuteTrueRows: active ? checklist.summary.canExecuteTrueRows : 0,
       canExecuteChangedRows: 0,
       tradingLogicChangedRows: 0,
       automatedOrderRows: 0,
