@@ -132,9 +132,9 @@ describe('App route shell', () => {
         htmlPath: 'preview.html',
       },
       items: [{
-        ticketId: '2026-06-16-morning-TurtleSoup-LONG',
+        ticketId: '2026-06-16-morning-raidReclaim-LONG',
         sourceSnapshotId: 'scanner-local-preview',
-        setupType: 'TurtleSoup',
+        setupType: 'raidReclaim',
         direction: 'LONG',
         pngPath: 'C:/preview/card.png',
         imageSrc: 'file:///C:/preview/card.png',
@@ -157,7 +157,7 @@ describe('App route shell', () => {
     fireEvent.click(previewTab);
     expect(screen.getByRole('heading', { name: 'Held-Local Preview' })).toBeTruthy();
     expect(screen.getByText('READY')).toBeTruthy();
-    expect(screen.getByAltText('2026-06-16-morning-TurtleSoup-LONG held-local preview')).toBeTruthy();
+    expect(screen.getByAltText('2026-06-16-morning-raidReclaim-LONG held-local preview')).toBeTruthy();
     expect(screen.getByText(/No Discord post/)).toBeTruthy();
     expect(screen.getByText(/No Supabase write/)).toBeTruthy();
   });
@@ -206,9 +206,9 @@ describe('App route shell', () => {
         htmlPath: 'preview.html',
       },
       items: [{
-        ticketId: '2026-06-24-evening-TurtleSoup-SHORT',
+        ticketId: '2026-06-24-evening-raidReclaim-SHORT',
         sourceSnapshotId: 'scanner-local-preview',
-        setupType: 'TurtleSoup',
+        setupType: 'raidReclaim',
         direction: 'SHORT',
         pngPath: 'C:/preview/card-short.png',
         imageSrc: 'file:///C:/preview/card-short.png',
@@ -230,8 +230,8 @@ describe('App route shell', () => {
 
     await waitFor(() => expect(screen.getByText('READY')).toBeTruthy());
     expect(screen.getByText('Import ready: 1 local preview cards.')).toBeTruthy();
-    expect(screen.getByAltText('2026-06-24-evening-TurtleSoup-SHORT held-local preview')).toBeTruthy();
-    expect(localStorage.getItem(HELD_LOCAL_PREVIEW_STORAGE_KEY)).toContain('2026-06-24-evening-TurtleSoup-SHORT');
+    expect(screen.getByAltText('2026-06-24-evening-raidReclaim-SHORT held-local preview')).toBeTruthy();
+    expect(localStorage.getItem(HELD_LOCAL_PREVIEW_STORAGE_KEY)).toContain('2026-06-24-evening-raidReclaim-SHORT');
   });
 
   it('imports and renders the unified desk output scanner surface behind the hidden local flag', async () => {
@@ -397,9 +397,9 @@ describe('App route shell', () => {
               session: 'morning',
               state: 'APPROVED_DESK_PLAN',
               stateLabel: 'Approved Desk Plan',
-              model: 'HtfDisplacementFvgContinuation',
+              model: 'SweepMssFvgRetrace',
               direction: 'LONG',
-              headline: 'Approved Desk Plan | MORNING | LONG | HtfDisplacementFvgContinuation',
+              headline: 'Approved Desk Plan | MORNING | LONG | SweepMssFvgRetrace',
               bodyLines: ['morning long desk plan from the validated disabled runtime gate.'],
               levelLine: 'Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528',
               riskLine: 'Risk 4.25 points from scanner-owned entry/stop.',
@@ -457,7 +457,7 @@ describe('App route shell', () => {
 
     await waitFor(() => expect(screen.getByText('READY')).toBeTruthy());
     expect(screen.getByText('Import ready: 2 scanner surface rows.')).toBeTruthy();
-    expect(screen.getByText('HtfDisplacementFvgContinuation')).toBeTruthy();
+    expect(screen.getByText('SweepMssFvgRetrace')).toBeTruthy();
     expect(screen.getByText('IntradayMssMicroContinuation')).toBeTruthy();
     expect(screen.getByText('Completed 5M proof: 09:10 ET.')).toBeTruthy();
     expect(screen.getByText('Completed 5M proof: 15:45 ET.')).toBeTruthy();

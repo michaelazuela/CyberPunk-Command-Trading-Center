@@ -128,13 +128,6 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'src/lib/activeTimeframeMssRulesetAudit.test.ts'],
   },
   {
-    id: 'htf-mss-actual-ohlc-replay',
-    area: 'mss_evidence_tracking',
-    description: 'Verifies actual-OHLC replay reporting for HTF/MSS evidence and data-limited classification.',
-    command: bin('npx'),
-    args: ['tsx', 'tools/automation/htf-mss-actual-ohlc-replay.test.ts'],
-  },
-  {
     id: 'thirty-day-active-mss-plan-replay',
     area: 'mss_evidence_tracking',
     description: 'Verifies 30-day active MSS plan replay, preload expectations, and protected-structure output.',

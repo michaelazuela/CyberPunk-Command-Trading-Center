@@ -15,7 +15,7 @@ type AuditWindowId =
   | 'pm_liquidity_delivery_window';
 type OverlapClassification =
   | 'model_1_overlap_possible'
-  | 'turtle_soup_overlap_possible'
+  | 'RAID_RECLAIM_overlap_possible'
   | 'advisory_only_time_window_research';
 
 interface AuditOptions {
@@ -130,7 +130,7 @@ export interface TimeWindowLiquidityDeliveryAuditReport {
     deliveryAchievedCount: number;
     failedDeliveryCount: number;
     modelOneOverlapCount: number;
-    turtleSoupOverlapCount: number;
+    raidReclaimOverlapCount: number;
     advisoryOnlyCount: number;
   };
   candidates: WindowCandidateAudit[];
@@ -456,7 +456,7 @@ function buildCandidate(
   const overlapClassification: OverlapClassification = zones.length && mss && sweep
     ? 'model_1_overlap_possible'
     : sweep
-      ? 'turtle_soup_overlap_possible'
+      ? 'RAID_RECLAIM_overlap_possible'
       : 'advisory_only_time_window_research';
 
   return {
@@ -494,8 +494,8 @@ function buildCandidate(
       'Research-only time-window observation. No executable setup is created.',
       overlapClassification === 'model_1_overlap_possible'
         ? 'Model 1 overlap is advisory classification only; use current approved Model 1 rules for any separate review.'
-        : overlapClassification === 'turtle_soup_overlap_possible'
-          ? 'Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review.'
+        : overlapClassification === 'RAID_RECLAIM_overlap_possible'
+          ? 'Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review.'
           : 'Advisory-only time-window research; no approved model overlap was inferred.',
     ],
   };
@@ -549,13 +549,13 @@ export function buildTimeWindowLiquidityDeliveryAuditReport(
       deliveryAchievedCount: candidates.filter((candidate) => candidate.deliveryAchieved).length,
       failedDeliveryCount: candidates.filter((candidate) => candidate.failedDelivery).length,
       modelOneOverlapCount: candidates.filter((candidate) => candidate.overlapClassification === 'model_1_overlap_possible').length,
-      turtleSoupOverlapCount: candidates.filter((candidate) => candidate.overlapClassification === 'turtle_soup_overlap_possible').length,
+      raidReclaimOverlapCount: candidates.filter((candidate) => candidate.overlapClassification === 'RAID_RECLAIM_overlap_possible').length,
       advisoryOnlyCount: candidates.filter((candidate) => candidate.overlapClassification === 'advisory_only_time_window_research').length,
     },
     candidates,
     requiredNextActions: [
       'Review sample evidence cards manually before any rule-review discussion.',
-      'Keep Model 1 and Turtle Soup overlap as advisory classification only.',
+      'Keep Model 1 and Raid Reclaim Reversal overlap as advisory classification only.',
       'Do not create entries, stops, T1/T2, outcome buttons, live alerts, or execution authority from this audit.',
       'Collect 20-30 examples per window before discussing any rules.',
     ],
@@ -595,7 +595,7 @@ export function renderTimeWindowLiquidityDeliveryMarkdown(report: TimeWindowLiqu
     `- Delivery achieved count: ${report.summary.deliveryAchievedCount}`,
     `- Failed delivery count: ${report.summary.failedDeliveryCount}`,
     `- Model 1 overlap count: ${report.summary.modelOneOverlapCount}`,
-    `- Turtle Soup overlap count: ${report.summary.turtleSoupOverlapCount}`,
+    `- Raid Reclaim Reversal overlap count: ${report.summary.raidReclaimOverlapCount}`,
     `- Advisory-only count: ${report.summary.advisoryOnlyCount}`,
     '',
     '## Evidence Collection Threshold',
@@ -648,7 +648,7 @@ export async function runTimeWindowLiquidityDeliveryCli(rawArgs = process.argv.s
       `Candidates: ${report.summary.candidateCount}`,
       `Clean draws: ${report.summary.cleanDrawCount}`,
       `Model 1 overlaps: ${report.summary.modelOneOverlapCount}`,
-      `Turtle Soup overlaps: ${report.summary.turtleSoupOverlapCount}`,
+      `Raid Reclaim Reversal overlaps: ${report.summary.raidReclaimOverlapCount}`,
       `Advisory-only: ${report.summary.advisoryOnlyCount}`,
       'Research-only. This report does not approve trades and does not create execution authority.',
     ].join('\n'));

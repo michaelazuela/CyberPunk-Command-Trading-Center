@@ -124,7 +124,7 @@ const samebarReport = {
   timeBuckets: [],
   rows: [
     samebarRow({ ticketId: 'selected-best', proofTime: '2026-07-17T10:00:00', setupType: 'OpeningDriveFvgContinuation', oneMesPl: 198.13, outcomeLabel: 't1_hit_only', riskPoints: 26.25 }),
-    samebarRow({ ticketId: 'competitor-loss', proofTime: '2026-07-17T10:00:00', setupType: 'TurtleSoup', oneMesPl: -30, outcomeLabel: 'stopped_before_t1' }),
+    samebarRow({ ticketId: 'competitor-loss', proofTime: '2026-07-17T10:00:00', setupType: 'raidReclaim', oneMesPl: -30, outcomeLabel: 'stopped_before_t1' }),
     samebarRow({ ticketId: 'competitor-smaller-win', proofTime: '2026-07-17T10:00:00', setupType: 'IntradayMssMicroContinuation', oneMesPl: 80 }),
     samebarRow({ ticketId: 'selected-no-competitor', proofTime: '2026-07-17T10:40:00', setupType: 'OpeningDriveFvgContinuation', oneMesPl: 42.5 }),
   ],
@@ -167,7 +167,7 @@ const lagging = buildRawOhlcScannerArtifactOpeningDriveOosCollisionComparisonRep
     ...samebarReport,
     rows: [
       samebarRow({ ticketId: 'selected-best', proofTime: '2026-07-17T10:00:00', setupType: 'OpeningDriveFvgContinuation', oneMesPl: 198.13, outcomeLabel: 't1_hit_only', riskPoints: 26.25 }),
-      samebarRow({ ticketId: 'competitor-bigger', proofTime: '2026-07-17T10:00:00', setupType: 'TurtleSoup', oneMesPl: 250 }),
+      samebarRow({ ticketId: 'competitor-bigger', proofTime: '2026-07-17T10:00:00', setupType: 'raidReclaim', oneMesPl: 250 }),
       samebarRow({ ticketId: 'selected-no-competitor', proofTime: '2026-07-17T10:40:00', setupType: 'OpeningDriveFvgContinuation', oneMesPl: 42.5 }),
     ],
   }],

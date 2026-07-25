@@ -64,7 +64,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": false,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -317,7 +317,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -590,7 +590,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -863,7 +863,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -1136,7 +1136,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -1409,7 +1409,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -1682,7 +1682,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -1955,7 +1955,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": false,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -2227,7 +2227,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -2500,7 +2500,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -2773,7 +2773,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -3046,7 +3046,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -3319,7 +3319,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -3592,7 +3592,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -3865,7 +3865,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -4138,7 +4138,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -4411,7 +4411,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -4684,7 +4684,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": false,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -4956,7 +4956,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -5229,7 +5229,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -5504,7 +5504,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -5755,7 +5755,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -6026,7 +6026,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -6297,7 +6297,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -6570,7 +6570,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -6841,7 +6841,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -7112,7 +7112,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -7383,7 +7383,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -7654,7 +7654,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -7925,7 +7925,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": false,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -8196,7 +8196,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -8468,7 +8468,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -8741,7 +8741,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -9012,7 +9012,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -9283,7 +9283,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -9554,7 +9554,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -9825,7 +9825,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -10096,7 +10096,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -10367,7 +10367,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -10638,7 +10638,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -10909,7 +10909,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -11180,7 +11180,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -11451,7 +11451,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -11722,7 +11722,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -11993,7 +11993,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -12264,7 +12264,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -12535,7 +12535,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -12806,7 +12806,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -13077,7 +13077,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -13348,7 +13348,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -13619,7 +13619,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -13890,7 +13890,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -14161,7 +14161,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -14432,7 +14432,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -14703,7 +14703,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -14974,7 +14974,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -15245,7 +15245,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -15516,7 +15516,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -15787,7 +15787,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -16048,7 +16048,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -16319,7 +16319,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -16590,7 +16590,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -16861,7 +16861,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -17122,7 +17122,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -17393,7 +17393,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -17654,7 +17654,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -17925,7 +17925,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -18197,7 +18197,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -18468,7 +18468,7 @@
       "marketStructureShiftPresent": true,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": true,
-      "turtleSoupOverlapPossible": false,
+      "raidReclaimOverlapPossible": false,
       "drawReferences": [
         {
           "kind": "prior_day_high",
@@ -18739,7 +18739,7 @@
       "marketStructureShiftPresent": false,
       "sweepRaidPlusReclaimPresent": true,
       "modelOneOverlapPossible": false,
-      "turtleSoupOverlapPossible": true,
+      "raidReclaimOverlapPossible": true,
       "drawReferences": [
         {
           "kind": "prior_day_high",

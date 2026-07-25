@@ -58,7 +58,7 @@ fs.writeFileSync(path.join(tmpDir, 'raw-ohlc-scanner-artifacts-sample.json'), `$
           rankScore: 100,
           humanReview: { canExecute: false },
         }, {
-          setupType: 'HtfDisplacementMssContinuation',
+          setupType: 'IntradayMssMicroContinuation',
           direction: 'SHORT',
           executionStatus: 'Conditional',
           blockReason: 'EntryTriggerPending',
@@ -108,7 +108,7 @@ assert.equal(report.summary.canExecuteChangedEvents, 0);
 assert.equal(report.summary.tradeMathChangedEvents, 1);
 assert.equal(report.summary.runtimeInstallAllowed, false);
 assert.equal(report.changedEvents[0].baselineTopSetupType, 'SweepMssFvgRetrace');
-assert.equal(report.changedEvents[0].simulatedTopSetupType, 'HtfDisplacementMssContinuation');
+assert.equal(report.changedEvents[0].simulatedTopSetupType, 'IntradayMssMicroContinuation');
 
 const missing = buildUnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionCurrentSelectionImpactSimulationReport({
   exactProofPackagePath: null,

@@ -5,7 +5,7 @@ import type { UnifiedPositiveHeldLocalTicketAdapterReport } from './unified-posi
 import type { UnifiedPositiveHeldLocalPreviewFilterDifferenceReport } from './unified-positive-held-local-preview-filter-difference';
 import type { UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport } from './unified-positive-held-local-preview-ohlc-outcome';
 
-type TargetSetupType = 'TurtleSoup' | 'SweepMssFvgRetrace';
+type TargetSetupType = 'raidReclaim' | 'SweepMssFvgRetrace';
 type FilterDecision = 'accepted_for_research_validation' | 'rejected_by_source_proof_filter';
 
 interface FormalReplayTrade {
@@ -102,7 +102,7 @@ export interface UnifiedPositiveHeldLocalPreviewSourceProofFilterReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const TARGET_MODELS: TargetSetupType[] = ['TurtleSoup', 'SweepMssFvgRetrace'];
+const TARGET_MODELS: TargetSetupType[] = ['raidReclaim', 'SweepMssFvgRetrace'];
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -146,7 +146,7 @@ function hasCompletedRetestProof(text: unknown): boolean {
 }
 
 function isTargetSetup(value: unknown): value is TargetSetupType {
-  return value === 'TurtleSoup' || value === 'SweepMssFvgRetrace';
+  return value === 'raidReclaim' || value === 'SweepMssFvgRetrace';
 }
 
 function authority(): UnifiedPositiveHeldLocalPreviewSourceProofFilterReport['authority'] {
@@ -378,7 +378,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSourceProofFilterReport(args
       ? ['Do not implement source/proof filtering until the validation accepts reviewed winners and rejects broad formal losers with no leak-through.']
       : [
         'Source/proof filter validation passed for this research set.',
-        'Keep TurtleSoup and SweepMssFvgRetrace; do not broaden either model or change canExecute.',
+        'Keep raidReclaim and SweepMssFvgRetrace; do not broaden either model or change canExecute.',
         'Next narrow phase can add a research-only rank overlay that uses this validated source/proof tag without touching live behavior.',
       ],
   };

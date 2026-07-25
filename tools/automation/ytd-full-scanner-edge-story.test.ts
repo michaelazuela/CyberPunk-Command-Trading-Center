@@ -55,7 +55,7 @@ const report = buildYtdFullScannerEdgeStoryReport({
         raids: {},
         completeCandidateCount: 2,
         selected: {
-          setupType: 'HtfDisplacementMssContinuation',
+          setupType: 'IntradayMssMicroContinuation',
           direction: 'SHORT',
           eventTime: '2026-06-10T12:55:00',
           entry: 7322.75,

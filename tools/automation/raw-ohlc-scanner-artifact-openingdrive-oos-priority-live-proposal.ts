@@ -49,7 +49,7 @@ export interface RawOhlcScannerArtifactOpeningDriveOosPriorityLiveProposalReport
     scannerVisibleInstallAllowedNow: false;
     requiredFutureApproval: true;
     rankingIntent: string;
-    eligiblePriorityModels: Array<'SweepMssFvgRetrace' | 'HtfDisplacementMssContinuation'>;
+    eligiblePriorityModels: Array<'SweepMssFvgRetrace' | 'IntradayMssMicroContinuation'>;
     requiredConditions: string[];
     disallowedInputs: string[];
     unchangedBoundaries: string[];
@@ -187,8 +187,8 @@ export function buildRawOhlcScannerArtifactOpeningDriveOosPriorityLiveProposalRe
       behaviorName: 'same_event_same_direction_sweep_htf_priority_over_openingdrive',
       scannerVisibleInstallAllowedNow: false,
       requiredFutureApproval: true,
-      rankingIntent: 'When OpeningDriveFvgContinuation and a clean same-direction SweepMssFvgRetrace or HtfDisplacementMssContinuation candidate exist at the same proof event, prefer the Sweep/HTF candidate in research ranking before OpeningDrive.',
-      eligiblePriorityModels: ['SweepMssFvgRetrace', 'HtfDisplacementMssContinuation'],
+      rankingIntent: 'When OpeningDriveFvgContinuation and a clean same-direction SweepMssFvgRetrace or IntradayMssMicroContinuation candidate exist at the same proof event, prefer the Sweep/HTF candidate in research ranking before OpeningDrive.',
+      eligiblePriorityModels: ['SweepMssFvgRetrace', 'IntradayMssMicroContinuation'],
       requiredConditions: [
         'same trade date',
         'same session',

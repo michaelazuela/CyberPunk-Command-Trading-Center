@@ -60,8 +60,8 @@ const report = buildWeeklyTradingAnalysisReport({
       totalCandidates: 3,
       datesReviewed: { from: '2026-05-28', to: '2026-05-28' },
       dataGaps: [],
-      classificationCounts: { model1Overlap: 0, turtleSoupOverlap: 0, advisoryOnly: 3 },
-      approvedModelOverlaps: { model1: 0, turtleSoup: 0 },
+      classificationCounts: { model1Overlap: 0, raidReclaimOverlap: 0, advisoryOnly: 3 },
+      approvedModelOverlaps: { model1: 0, raidReclaim: 0 },
       advisoryOnlyCount: 3,
       commonReasons: [],
       sampleEvents: [],
@@ -70,7 +70,7 @@ const report = buildWeeklyTradingAnalysisReport({
       recommendation: 'continue_collecting',
       ruleChangeRecommendation: 'none',
     }],
-    approvedModelOverlap: { model1: 0, turtleSoup: 0, total: 0 },
+    approvedModelOverlap: { model1: 0, raidReclaim: 0, total: 0 },
   }],
   researchNotes: [{
     researchTitle: 'Final-Hour Liquidity Draw Research',
@@ -85,7 +85,7 @@ const report = buildWeeklyTradingAnalysisReport({
     status: 'research_only',
     candidateName: 'False-Run Liquidity Fade Near Highs Watchlist',
     primaryIdea: 'Fade a run toward ATH or major buy-side liquidity when price fails to sustain and begins drawing toward sell-side liquidity.',
-    taxonomyNote: 'If sweep + reclaim exists, evaluate through existing Turtle Soup; otherwise keep as advisory research.',
+    taxonomyNote: 'If sweep + reclaim exists, evaluate through existing Raid Reclaim Reversal; otherwise keep as advisory research.',
     recommendedNextStep: 'Collect 20-30 bridge-backed examples before any rule review.',
     ruleChange: 'none',
     approvalBoundarySummary: 'Research only: no rules, entries, stops, targets, alerts, or model promotion.',
@@ -95,7 +95,7 @@ const report = buildWeeklyTradingAnalysisReport({
     status: 'research_only',
     candidateName: 'Time-Window Liquidity Delivery Watchlist',
     primaryIdea: 'Study FVG/inefficiency delivery toward liquidity during defined market windows.',
-    taxonomyNote: 'If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+    taxonomyNote: 'If Model 1 or Raid Reclaim Reversal gates pass, classify through existing approved models; otherwise keep as advisory research.',
     recommendedNextStep: 'Collect 20-30 bridge-backed examples per window before any rule review.',
     ruleChange: 'none',
     approvalBoundarySummary: 'Research only: no rules, entries, stops, targets, alerts, or model promotion.',
@@ -105,7 +105,7 @@ const report = buildWeeklyTradingAnalysisReport({
     status: 'research_only',
     candidateName: 'Accumulation–Manipulation–Distribution Range Model Watchlist',
     primaryIdea: 'Study open-based accumulation, liquidity manipulation, and later distribution behavior.',
-    taxonomyNote: 'If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+    taxonomyNote: 'If Model 1 or Raid Reclaim Reversal gates pass, classify through existing approved models; otherwise keep as advisory research.',
     recommendedNextStep: 'Collect 20-30 bridge-backed examples before any rule review.',
     ruleChange: 'none',
     approvalBoundarySummary: 'Research only: no rules, entries, stops, targets, alerts, or model promotion.',
@@ -173,7 +173,7 @@ assert.ok(report.discordMessage.includes([
   '- False-Run Liquidity Fade Near Highs Watchlist',
   '  Status: research-only / not executable',
   '  Idea: Fade a run toward ATH or major buy-side liquidity when price fails to sustain and begins drawing toward sell-side liquidity.',
-  '  Taxonomy: If sweep + reclaim exists, evaluate through existing Turtle Soup; otherwise keep as advisory research.',
+  '  Taxonomy: If sweep + reclaim exists, evaluate through existing Raid Reclaim Reversal; otherwise keep as advisory research.',
   '  Next step: Collect 20-30 bridge-backed examples before any rule review.',
   '  Rule change: none.',
 ].join('\n')));
@@ -188,7 +188,7 @@ assert.ok(report.discordMessage.includes([
   '- Time-Window Liquidity Delivery Watchlist',
   '  Status: research-only / not executable',
   '  Idea: Study FVG/inefficiency delivery toward liquidity during defined market windows.',
-  '  Taxonomy: If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+  '  Taxonomy: If Model 1 or Raid Reclaim Reversal gates pass, classify through existing approved models; otherwise keep as advisory research.',
   '  Next step: Collect 20-30 bridge-backed examples per window before any rule review.',
   '  Rule change: none.',
 ].join('\n')));
@@ -196,7 +196,7 @@ assert.ok(report.discordMessage.includes([
   '- Accumulation–Manipulation–Distribution Range Model Watchlist',
   '  Status: research-only / not executable',
   '  Idea: Study open-based accumulation, liquidity manipulation, and later distribution behavior.',
-  '  Taxonomy: If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+  '  Taxonomy: If Model 1 or Raid Reclaim Reversal gates pass, classify through existing approved models; otherwise keep as advisory research.',
   '  Next step: Collect 20-30 bridge-backed examples before any rule review.',
   '  Rule change: none.',
 ].join('\n')));
@@ -237,9 +237,9 @@ const oversizedNewsletter = buildWeeklyTradingAnalysisReport({
       totalCandidates: 50,
       datesReviewed: { from: '2026-01-01', to: '2026-05-29' },
       dataGaps: [],
-      classificationCounts: { model1Overlap: 0, turtleSoupOverlap: 0, advisoryOnly: 50 },
+      classificationCounts: { model1Overlap: 0, raidReclaimOverlap: 0, advisoryOnly: 50 },
       advisoryOnlyCount: 50,
-      approvedModelOverlaps: { model1: 0, turtleSoup: 0 },
+      approvedModelOverlaps: { model1: 0, raidReclaim: 0 },
       commonReasons: [],
       sampleEvents: [],
       sampleThreshold: { minimum: 20, current: 50, met: true },
@@ -247,7 +247,7 @@ const oversizedNewsletter = buildWeeklyTradingAnalysisReport({
       recommendation: 'review_manually',
       ruleChangeRecommendation: 'none',
     })),
-    approvedModelOverlap: { model1: 0, turtleSoup: 0, total: 0 },
+    approvedModelOverlap: { model1: 0, raidReclaim: 0, total: 0 },
   }],
   researchNotes: Array.from({ length: 30 }, (_, index) => ({
     researchTitle: `Research Note ${index}`,
@@ -314,9 +314,9 @@ writeFileSync(join(researchReportDir, 'research-backfill.json'), JSON.stringify(
     title: 'Final-Hour Liquidity Draw',
     totalCandidates: 2,
     advisoryOnlyCount: 2,
-    approvedModelOverlaps: { model1: 0, turtleSoup: 0 },
+    approvedModelOverlaps: { model1: 0, raidReclaim: 0 },
   }],
-  approvedModelOverlap: { model1: 0, turtleSoup: 0, total: 0 },
+  approvedModelOverlap: { model1: 0, raidReclaim: 0, total: 0 },
 }));
 writeFileSync(join(auditDir, 'watchlist.json'), JSON.stringify({
   watchlistType: 'morning_continuation_watchlist',
@@ -329,7 +329,7 @@ writeFileSync(join(auditDir, 'scanner.json'), JSON.stringify({
   instrument: 'MES',
   state: 'Conditional',
   discordSent: true,
-  candidates: [{ setupType: 'TurtleSoup', direction: 'LONG', executionStatus: 'Conditional' }],
+  candidates: [{ setupType: 'raidReclaim', direction: 'LONG', executionStatus: 'Conditional' }],
   attachments: { chartMarkup: 'chart.png', priceLevelMap: 'map.png' },
 }));
 writeFileSync(join(auditDir, 'health.json'), JSON.stringify({
@@ -350,11 +350,11 @@ const normalizedTradeAudit = normalizeScannerAuditRecord({
   tradeDate: '2026-05-29',
   instrument: 'MES',
   state: 'Executable',
-  candidates: [{ setupType: 'TurtleSoup', direction: 'LONG', executionStatus: 'Executable' }],
+  candidates: [{ setupType: 'raidReclaim', direction: 'LONG', executionStatus: 'Executable' }],
   attachments: { chartMarkup: 'chart.png' },
 }, join(auditDir, 'scanner.json'));
 assert.equal(normalizedTradeAudit.alertType, 'trade');
-assert.equal(normalizedTradeAudit.candidateSetupType, 'TurtleSoup');
+assert.equal(normalizedTradeAudit.candidateSetupType, 'raidReclaim');
 assert.equal(normalizedTradeAudit.attachmentsGenerated, true);
 
 const watchlistHistory = await loadWatchlistAuditHistory(auditDir);
@@ -378,9 +378,9 @@ assert.equal(collected.healthEvents?.length, 1);
 assert.equal(collected.researchNotes?.length, 4);
 assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'Final-Hour Liquidity Draw Watchlist'));
 assert.equal(collected.researchNotes?.some((note) => note.candidateName.includes('ICT')), false);
-assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'False-Run Liquidity Fade Near Highs Watchlist' && note.taxonomyNote?.includes('Turtle Soup')));
-assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'Time-Window Liquidity Delivery Watchlist' && note.taxonomyNote?.includes('Model 1 or Turtle Soup')));
-assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'Accumulation–Manipulation–Distribution Range Model Watchlist' && note.taxonomyNote?.includes('Model 1 or Turtle Soup')));
+assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'False-Run Liquidity Fade Near Highs Watchlist' && note.taxonomyNote?.includes('Raid Reclaim Reversal')));
+assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'Time-Window Liquidity Delivery Watchlist' && note.taxonomyNote?.includes('Model 1 or Raid Reclaim Reversal')));
+assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'Accumulation–Manipulation–Distribution Range Model Watchlist' && note.taxonomyNote?.includes('Model 1 or Raid Reclaim Reversal')));
 assert.ok((collected.auditEvents?.length || 0) >= 3);
 
 const newsletterSkip = await publishWeeklyTradingNewsletter({

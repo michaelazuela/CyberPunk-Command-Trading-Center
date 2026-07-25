@@ -217,7 +217,7 @@ assert.equal(confirmedCandidateEligible.activeScanWindow, 'MORNING_SETUP_SCAN');
 assert.ok(confirmedCandidateEligible.confidence >= 75);
 assert.equal(confirmedCandidateEligible.createsTradingPlanCandidate, false);
 assert.equal(confirmedCandidateEligible.approvesExecution, false);
-assert.ok(describeHtfLiquidityDrawStateForDisplay(confirmedCandidateEligible).includes('Execution still requires deterministic entry, stop, target, risk, and final pipeline gates'));
+assert.ok(describeHtfLiquidityDrawStateForDisplay(confirmedCandidateEligible).includes('This is not a standalone model'));
 assert.ok(describeTimeframeMssStateForDisplay(confirmedCandidateEligible.fiveMinuteState).includes('Building candidate from HTF draw + raid/reclaim context'));
 
 const broad15mConflict = classifyTimeframeMssState({

@@ -31,7 +31,7 @@ const input = {
   ],
   currentModelComparisonTargets: [
     'Current Model 1',
-    'Current Turtle Soup',
+    'Current Raid Reclaim Reversal',
     'Current Displacement/FVG Pullback Watchlist',
     'Current conditional risk scoring behavior',
     'Current Discord advisory behavior',
@@ -112,7 +112,7 @@ watching bearish FVG/SIBI, IFVG, wick consequent encroachment, and sell-side dra
   ],
   currentModelComparisonTargets: [
     'Current Model 1',
-    'Current Turtle Soup',
+    'Current Raid Reclaim Reversal',
     'Current Morning Continuation Watchlist',
     'Current ICT-style Displacement/FVG Pullback diagnostic category',
     'Current scanner health / selection safety layers',
@@ -126,9 +126,9 @@ assert.equal(falseRunBrief.candidateWatchlistModel.name, 'False-Run Liquidity Fa
 assert.equal(falseRunBrief.candidateWatchlistModel.executable, false);
 assert.equal(falseRunBrief.weeklyNewsletterSummary.status, 'research_only');
 assert.equal(falseRunBrief.weeklyNewsletterSummary.ruleChange, 'none');
-assert.ok(falseRunBrief.weeklyNewsletterSummary.taxonomyNote?.includes('Turtle Soup'));
-assert.ok(falseRunBrief.comparisonToExistingRules.some((item) => item.target.includes('Turtle Soup') && item.note.includes('sweep/raid plus reclaim')));
-assert.ok(falseRunBrief.guardrails.some((item) => item.includes('Do not duplicate Turtle Soup')));
+assert.ok(falseRunBrief.weeklyNewsletterSummary.taxonomyNote?.includes('Raid Reclaim Reversal'));
+assert.ok(falseRunBrief.comparisonToExistingRules.some((item) => item.target.includes('Raid Reclaim Reversal') && item.note.includes('sweep/reclaim')));
+assert.ok(falseRunBrief.guardrails.some((item) => item.includes('Do not duplicate Raid Reclaim Reversal')));
 assert.ok(falseRunBrief.bridgeDataResearchPlan.some((item) => item.includes('completed bars only')));
 assert.ok(!JSON.stringify(falseRunBrief).includes('"canExecute":true'));
 assert.ok(!JSON.stringify(falseRunBrief).includes('"entry"'));
@@ -138,9 +138,9 @@ assert.ok(!JSON.stringify(falseRunBrief).includes('"t2"'));
 
 const falseRunMarkdown = readFileSync('docs/research/false-run-liquidity-fade-near-highs-research.md', 'utf8');
 assert.ok(falseRunMarkdown.includes('# False-Run Liquidity Fade Near Highs Research'));
-assert.ok(falseRunMarkdown.includes('## 3. Judas Swing / Turtle Soup Taxonomy'));
+assert.ok(falseRunMarkdown.includes('## 3. Judas Swing / Raid Reclaim Reversal Taxonomy'));
 assert.ok(falseRunMarkdown.includes('Do not create a separate executable Judas Swing model'));
-assert.ok(falseRunMarkdown.includes('If sweep + reclaim exists, evaluate through existing Turtle Soup'));
+assert.ok(falseRunMarkdown.includes('If sweep + reclaim exists, evaluate through existing Raid Reclaim Reversal'));
 assert.ok(falseRunMarkdown.includes('otherwise keep as advisory research'));
 assert.ok(falseRunMarkdown.includes('False-Run Liquidity Fade Near Highs Watchlist'));
 assert.ok(falseRunMarkdown.includes('## 9. Guardrails'));
@@ -179,7 +179,7 @@ market structure shift plus FVG, bodies respecting the FVG, and one-market speci
   ],
   currentModelComparisonTargets: [
     'Current Model 1',
-    'Current Turtle Soup',
+    'Current Raid Reclaim Reversal',
     'Current Morning Continuation Watchlist',
     'Current Bridge Diagnostic Replay categories',
     'Current scanner health / selection safety layers',
@@ -193,12 +193,12 @@ assert.equal(timeWindowBrief.candidateWatchlistModel.name, 'Time-Window Liquidit
 assert.equal(timeWindowBrief.candidateWatchlistModel.executable, false);
 assert.equal(timeWindowBrief.weeklyNewsletterSummary.status, 'research_only');
 assert.equal(timeWindowBrief.weeklyNewsletterSummary.ruleChange, 'none');
-assert.ok(timeWindowBrief.weeklyNewsletterSummary.taxonomyNote?.includes('Model 1 or Turtle Soup'));
+assert.ok(timeWindowBrief.weeklyNewsletterSummary.taxonomyNote?.includes('Model 1 or Raid Reclaim Reversal'));
 assert.ok(!/ICT|Silver Bullet/i.test(timeWindowBrief.weeklyNewsletterSummary.candidateName));
 assert.ok(!/ICT|Silver Bullet/i.test(timeWindowBrief.weeklyNewsletterSummary.researchTitle));
 assert.ok(timeWindowBrief.comparisonToExistingRules.some((item) => item.target.includes('Model 1') && item.note.includes('only current Model 1 gates can approve')));
-assert.ok(timeWindowBrief.comparisonToExistingRules.some((item) => item.target.includes('Turtle Soup') && item.note.includes('existing Turtle Soup')));
-assert.ok(timeWindowBrief.guardrails.some((item) => item.includes('Do not duplicate Model 1 or Turtle Soup')));
+assert.ok(timeWindowBrief.comparisonToExistingRules.some((item) => item.target.includes('Raid Reclaim Reversal') && item.note.includes('existing Raid Reclaim Reversal')));
+assert.ok(timeWindowBrief.guardrails.some((item) => item.includes('Do not duplicate Model 1 or Raid Reclaim Reversal')));
 assert.ok(timeWindowBrief.bridgeDataResearchPlan.some((item) => item.includes('completed bars only')));
 assert.ok(!JSON.stringify(timeWindowBrief).includes('"canExecute":true'));
 assert.ok(!JSON.stringify(timeWindowBrief).includes('"entry"'));
@@ -212,7 +212,7 @@ assert.ok(timeWindowMarkdown.includes('## 3. Time-Window Liquidity Delivery / 6K
 assert.ok(timeWindowMarkdown.includes('Time-Window Liquidity Delivery Watchlist'));
 assert.ok(timeWindowMarkdown.includes('This is not an approved executable model.'));
 assert.ok(timeWindowMarkdown.includes('If the setup satisfies current Model 1 gates, classify it through existing Model 1.'));
-assert.ok(timeWindowMarkdown.includes('If the setup includes a true sweep/raid plus reclaim, classify it through existing Turtle Soup.'));
+assert.ok(timeWindowMarkdown.includes('If the setup includes a true sweep/raid plus reclaim, classify it through existing Raid Reclaim Reversal.'));
 assert.ok(timeWindowMarkdown.includes('If the setup only has time window + FVG/inefficiency + draw-on-liquidity, keep it advisory-only research.'));
 assert.ok(timeWindowMarkdown.includes('## 9. Guardrails'));
 assert.ok(timeWindowMarkdown.includes('## 11. Weekly Newsletter Summary'));
@@ -254,7 +254,7 @@ engineering liquidity, old highs/lows and equal highs/lows, and daily range beha
   ],
   currentModelComparisonTargets: [
     'Current Model 1',
-    'Current Turtle Soup',
+    'Current Raid Reclaim Reversal',
     'Current Morning Continuation Watchlist',
     'Current Bridge Diagnostic Replay categories',
     'Current scanner health / selection safety layers',
@@ -268,12 +268,12 @@ assert.equal(amdBrief.candidateWatchlistModel.name, 'Accumulation–Manipulation
 assert.equal(amdBrief.candidateWatchlistModel.executable, false);
 assert.equal(amdBrief.weeklyNewsletterSummary.status, 'research_only');
 assert.equal(amdBrief.weeklyNewsletterSummary.ruleChange, 'none');
-assert.ok(amdBrief.weeklyNewsletterSummary.taxonomyNote?.includes('Model 1 or Turtle Soup'));
+assert.ok(amdBrief.weeklyNewsletterSummary.taxonomyNote?.includes('Model 1 or Raid Reclaim Reversal'));
 assert.ok(!/ICT/i.test(amdBrief.weeklyNewsletterSummary.candidateName));
 assert.ok(!/ICT/i.test(amdBrief.weeklyNewsletterSummary.researchTitle));
 assert.ok(amdBrief.comparisonToExistingRules.some((item) => item.target.includes('Model 1') && item.note.includes('Model 1 gates independently pass')));
-assert.ok(amdBrief.comparisonToExistingRules.some((item) => item.target.includes('Turtle Soup') && item.note.includes('true sweep/raid plus reclaim')));
-assert.ok(amdBrief.guardrails.some((item) => item.includes('Do not duplicate Model 1 or Turtle Soup')));
+assert.ok(amdBrief.comparisonToExistingRules.some((item) => item.target.includes('Raid Reclaim Reversal') && item.note.includes('true sweep/raid plus reclaim')));
+assert.ok(amdBrief.guardrails.some((item) => item.includes('Do not duplicate Model 1 or Raid Reclaim Reversal')));
 assert.ok(amdBrief.bridgeDataResearchPlan.some((item) => item.includes('completed bars only')));
 assert.ok(!JSON.stringify(amdBrief).includes('"canExecute":true'));
 assert.ok(!JSON.stringify(amdBrief).includes('"entry"'));
@@ -287,7 +287,7 @@ assert.ok(amdMarkdown.includes('## 3. Accumulation-Manipulation-Distribution / 6
 assert.ok(amdMarkdown.includes('Accumulation–Manipulation–Distribution Range Model Watchlist'));
 assert.ok(amdMarkdown.includes('This is not an approved 6K executable model.'));
 assert.ok(amdMarkdown.includes('If the setup satisfies current Model 1 gates, classify it through existing Model 1.'));
-assert.ok(amdMarkdown.includes('If the manipulation leg includes true sweep/raid plus reclaim, classify it through existing Turtle Soup.'));
+assert.ok(amdMarkdown.includes('If the manipulation leg includes true sweep/raid plus reclaim, classify it through existing Raid Reclaim Reversal.'));
 assert.ok(amdMarkdown.includes('If the setup only has accumulation + manipulation + distribution behavior without approved gates, keep it advisory-only research.'));
 assert.ok(amdMarkdown.includes('## 9. Guardrails'));
 assert.ok(amdMarkdown.includes('## 11. Weekly Newsletter Summary'));

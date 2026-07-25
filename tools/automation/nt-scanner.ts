@@ -8,7 +8,6 @@ import { buildAppTradePlan } from '../../src/lib/planEngine';
 import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
 import { createPlanVersionId } from '../../src/lib/planMetadata';
 import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
-import { buildFailedPlanReversalContextFromChartContext } from '../../src/lib/failedPlanReversalEngine';
 import { summarizeActiveTimeframeMssRuleset, type ActiveTimeframeMssRulesetAudit } from '../../src/lib/activeTimeframeMssRulesetAudit';
 import { roundToTradeTick, targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
 import { EVENING_MARKET_MAPPING_WINDOW, MARKET_MAPPING_WINDOW } from '../../src/config/timeWindows';
@@ -86,7 +85,6 @@ import {
   type ChartContext,
   type DecisionQualityScoreItem,
   type FailedBreakEventFact,
-  type FailedPlanReversalContext,
   type SetupCandidate,
   type TargetObjective,
 } from '../../src/types';
@@ -628,7 +626,7 @@ export interface ScannerHtfHistoryCoverageReadiness {
   requiredTimeframes: Array<'15m' | '60m' | '120m' | '240m'>;
   insufficientTimeframes: Array<'15m' | '60m' | '120m' | '240m'>;
   summary: string;
-  candidatePromotionBoundary: 'htf_context_required_for_failed_plan_reversal';
+  candidatePromotionBoundary: 'htf_context_required_for_raid_reclaim_reversal';
 }
 
 export interface ScannerPreMarketDataReadinessBackfillGateReport {
@@ -2237,7 +2235,7 @@ export function htfHistoryCoverageReadiness(
       requiredTimeframes: required,
       insufficientTimeframes: required,
       summary: 'HTF history coverage was not evaluated for this cycle; HTF structure cannot be treated as confirmed.',
-      candidatePromotionBoundary: 'htf_context_required_for_failed_plan_reversal',
+      candidatePromotionBoundary: 'htf_context_required_for_raid_reclaim_reversal',
     };
   }
 
@@ -2248,7 +2246,7 @@ export function htfHistoryCoverageReadiness(
       requiredTimeframes: required,
       insufficientTimeframes: [],
       summary: '15M, 1H, 2H, and 4H scanner history coverage is sufficient for HTF structural classification.',
-      candidatePromotionBoundary: 'htf_context_required_for_failed_plan_reversal',
+      candidatePromotionBoundary: 'htf_context_required_for_raid_reclaim_reversal',
     };
   }
 
@@ -2257,7 +2255,7 @@ export function htfHistoryCoverageReadiness(
     requiredTimeframes: required,
     insufficientTimeframes: insufficient,
     summary: `HTF history is data-limited for ${insufficient.join(', ')} after cache, bridge, and segmented bridge repair; failed-plan reversal and HTF promotion must treat this as context only, not structural confirmation. The scanner cannot invent missing NinjaTrader bars.`,
-    candidatePromotionBoundary: 'htf_context_required_for_failed_plan_reversal',
+    candidatePromotionBoundary: 'htf_context_required_for_raid_reclaim_reversal',
   };
 }
 
@@ -2933,8 +2931,7 @@ function summarizeScannerCandidateForTape(candidate: SetupCandidate | null, norm
           requiredTrigger: candidate.requiredTrigger,
           nextAction: candidate.nextAction,
           candidateState: candidate.candidateState || null,
-          failedPlanReversal: candidate.failedPlanReversal || null,
-        }
+            }
       : null,
     counts: {
       total: candidates.length,
@@ -2954,48 +2951,8 @@ function summarizeScannerCandidateForTape(candidate: SetupCandidate | null, norm
       riskPoints: item.riskPoints,
       blockReason: item.blockReason,
       candidateState: item.candidateState || null,
-      failedPlanReversal: item.failedPlanReversal || null,
     })),
   }).value;
-}
-
-function summarizeFailedPlanReversalForTape(chartContext: unknown, candidate: SetupCandidate | null) {
-  const context = candidate?.failedPlanReversal || asRecord(chartContext)?.failedPlanReversal || null;
-  if (!context) {
-    return {
-      present: false,
-      state: null,
-      status: 'not_present',
-      createsCandidate: false,
-      approvesExecution: false,
-    };
-  }
-  const record = asRecord(context);
-  const timeframeConfirmations = asArray(record?.timeframeConfirmations)
-    .map((item) => {
-      const value = asRecord(item);
-      return {
-        timeframe: stringField(value, ['timeframe']) || null,
-        direction: stringField(value, ['direction']) || null,
-        status: stringField(value, ['status']) || null,
-        evidence: asArray(value?.evidence).filter((entry): entry is string => typeof entry === 'string'),
-      };
-    })
-    .filter((item) => item.timeframe || item.direction || item.status || item.evidence.length);
-  return {
-    present: true,
-    state: stringField(record, ['decisionState']) || candidate?.candidateState || null,
-    originalPlanDirection: stringField(record, ['originalPlanDirection']) || null,
-    oppositeDirection: stringField(record, ['oppositeDirection']) || candidate?.direction || null,
-    failedDecisionLevel: record?.failedDecisionLevel ?? null,
-    htfStackStatus: stringField(record, ['htfStackStatus']) || null,
-    timeframeConfirmations,
-    fiveMinuteTriggerStatus: stringField(record, ['fiveMinuteTriggerStatus']) || null,
-    staleOrNoFreshEntry: Boolean(record?.staleOrNoFreshEntry),
-    blockers: asArray(record?.blockers),
-    createsCandidate: Boolean(record?.createsCandidate),
-    approvesExecution: false,
-  };
 }
 
 export async function writeScannerDecisionTapeAuditLog(args: {
@@ -3092,7 +3049,6 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     completed5m: args.completed5m,
     currentPrice: args.currentPrice,
     facts: summarizeScannerEventTapeFacts(args.chartContext, args.completed5m),
-    failedPlanReversal: summarizeFailedPlanReversalForTape(args.chartContext, args.candidate),
     setupCandidateStatus: summarizeScannerCandidateForTape(args.candidate, args.normalized),
     plan: {
       planVersionId: args.planVersionId,
@@ -3838,7 +3794,7 @@ export function appOwnedFailedDecisionEventFromCandidate(
   candidate: SetupCandidate | null | undefined,
   completed5m: NinjaBridgeBar,
 ): FailedBreakEventFact | null {
-  if (!candidate || candidate.pathway === 'failed_plan_reversal') return null;
+  if (!candidate) return null;
   if (candidate.executionStatus !== 'Executable') return null;
   const originalDirection = candidate.direction === 'LONG' || candidate.direction === 'SHORT'
     ? candidate.direction
@@ -3942,56 +3898,6 @@ export async function appOwnedFailedPlanEventsFromScannerAudits(args: {
     });
   }
   return events;
-}
-
-function dedupeFailedPlanEvents(events: FailedBreakEventFact[]): FailedBreakEventFact[] {
-  const byKey = new Map<string, FailedBreakEventFact>();
-  for (const event of events) {
-    byKey.set(`${event.direction}:${event.failedLevel ?? 'unknown'}:${event.levelLabel || ''}`, event);
-  }
-  return [...byKey.values()];
-}
-
-export function attachFailedPlanReversalContextFromScannerState(args: {
-  chartContext: Partial<ChartContext> | null | undefined;
-  failedPlanEvents: FailedBreakEventFact[];
-}): {
-  chartContext: Partial<ChartContext> | null | undefined;
-  eventCount: number;
-  failedPlanReversal: FailedPlanReversalContext | null;
-} {
-  if (!args.chartContext || !args.failedPlanEvents.length) {
-    return {
-      chartContext: args.chartContext,
-      eventCount: 0,
-      failedPlanReversal: args.chartContext?.failedPlanReversal || null,
-    };
-  }
-
-  const notes = [
-    ...(args.chartContext.setupReadyFacts?.notes || []),
-    `Scanner added ${args.failedPlanEvents.length} app-owned failed decision/reclaim level event(s) from prior alert delivery state.`,
-  ];
-  const chartContext: Partial<ChartContext> = {
-    ...args.chartContext,
-    failedBreakEvents: [
-      ...(args.chartContext.failedBreakEvents || []),
-      ...args.failedPlanEvents,
-    ],
-    setupReadyFacts: {
-      ...(args.chartContext.setupReadyFacts || {}),
-      notes,
-    },
-  };
-  const failedPlanReversal =
-    chartContext.failedPlanReversal ||
-    buildFailedPlanReversalContextFromChartContext(chartContext as ChartContext);
-
-  return {
-    chartContext: failedPlanReversal ? { ...chartContext, failedPlanReversal } : chartContext,
-    eventCount: args.failedPlanEvents.length,
-    failedPlanReversal,
-  };
 }
 
 async function analysisFromBars(args: {
@@ -4804,10 +4710,8 @@ function lifecycleItemShowsFiveMinuteTacticalShift(
 ): boolean {
   if (!item || item.direction !== direction) return false;
   const setupTypes = new Set<SetupType>([
-    SetupType.HtfDisplacementMssContinuation,
-    SetupType.HtfDisplacementFvgContinuation,
     SetupType.IntradayMssMicroContinuation,
-    SetupType.TurtleSoup,
+    SetupType.RaidReclaimReversal,
   ]);
   if (!setupTypes.has(item.setupType)) return false;
   const proofText = [
@@ -4831,8 +4735,8 @@ function tacticalCampaignHtfFvgTimeframes(item: ScannerCandidateLifecycleTraceIt
     item.targetReactionReason,
     item.blockReason,
     item.filteredOutReason,
-    ...item.missingEvidence,
-    ...item.missingLevels,
+    ...(Array.isArray(item.missingEvidence) ? item.missingEvidence : []),
+    ...(Array.isArray(item.missingLevels) ? item.missingLevels : []),
   ].filter(Boolean).join(' ').toUpperCase();
   if (!/\b(FVG|FAIR VALUE GAP|PARENT FVG|HTF)\b/.test(text)) return [];
   const timeframes = [
@@ -10764,26 +10668,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     instrument: config.instrument,
     completed5m,
   });
-  const appOwnedFailedPlanEvents = dedupeFailedPlanEvents([
-    ...appOwnedFailedPlanEventsFromState,
-    ...appOwnedFailedPlanEventsFromAudits,
-  ]);
-  if (appOwnedFailedPlanEventsFromAudits.length && !appOwnedFailedPlanEventsFromState.length) {
-    console.warn(
-      `[scanner-failed-plan-reversal] Recovered ${appOwnedFailedPlanEventsFromAudits.length} app-owned failed-plan event(s) from durable scanner audits because delivery state had none.`,
-    );
-  }
-  const failedPlanReversalIntegration = attachFailedPlanReversalContextFromScannerState({
-    chartContext: analysis.structuredChartContext,
-    failedPlanEvents: appOwnedFailedPlanEvents,
-  });
-  analysis.structuredChartContext = failedPlanReversalIntegration.chartContext || undefined;
-  if (failedPlanReversalIntegration.failedPlanReversal) {
-    const context = failedPlanReversalIntegration.failedPlanReversal;
-    console.log(
-      `[scanner-failed-plan-reversal] ${context.decisionState}: failed ${context.originalPlanDirection} level ${context.failedDecisionLevel ?? 'unknown'} -> ${context.oppositeDirection}; htf=${context.htfStackStatus}; 5m=${context.fiveMinuteTriggerStatus}; createsCandidate=${context.createsCandidate ? 'yes' : 'no'}; executionAuthority=no.`,
-    );
-  }
   const setupSession = setupSessionForLiveSession(session);
   let normalized = buildAppTradePlan(analysis, { sessionType: setupSession, instrument: config.instrument, windowStatusOverride: 'active' });
   const scoringDate = analysisTimestampDate(analysis, completed5m, config);
@@ -10808,34 +10692,11 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     guards: scannerGuards,
   });
   let initialCandidate = initialSelection.candidate;
-  const sameCycleFailedPlanEvent = appOwnedFailedDecisionEventFromCandidate(initialCandidate, completed5m);
-  if (sameCycleFailedPlanEvent) {
-    const sameCycleIntegration = attachFailedPlanReversalContextFromScannerState({
-      chartContext: analysis.structuredChartContext,
-      failedPlanEvents: [sameCycleFailedPlanEvent],
-    });
-    analysis.structuredChartContext = sameCycleIntegration.chartContext || undefined;
-    if (sameCycleIntegration.failedPlanReversal) {
-      const context = sameCycleIntegration.failedPlanReversal;
-      console.warn(
-        `[scanner-failed-plan-reversal] Same-cycle failed app-owned plan detected: ${context.decisionState}: failed ${context.originalPlanDirection} level ${context.failedDecisionLevel ?? 'unknown'} -> ${context.oppositeDirection}; htf=${context.htfStackStatus}; 5m=${context.fiveMinuteTriggerStatus}; createsCandidate=${context.createsCandidate ? 'yes' : 'no'}; executionAuthority=no.`,
-      );
-      normalized = buildAppTradePlan(analysis, { sessionType: setupSession, instrument: config.instrument, windowStatusOverride: 'active' });
-      initialSelection = selectScannerPlan({
-        normalized,
-        currentPrice,
-        latestCompletedBar: completed5m,
-        guards: scannerGuards,
-      });
-      initialCandidate = initialSelection.candidate;
-    }
-  }
-  const objectives = (analysis.structuredChartContext?.targetObjectives || initialCandidate?.targetObjectivePlan?.objectives || []) as TargetObjective[];
   const targetCascade = buildTargetCascade({
     candidate: initialCandidate,
-    objectives,
+    objectives: analysis.structuredChartContext?.targetObjectives,
     recentBars: bars['5m'],
-    lookbackCandles: config.targetAlreadySweptLookbackCandles,
+    lookbackCandles: scannerGuards.targetAlreadySweptLookbackCandles,
   });
   const selection = selectScannerPlan({
     normalized,

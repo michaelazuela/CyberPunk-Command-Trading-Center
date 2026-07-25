@@ -30,7 +30,7 @@ fs.writeFileSync(path.join(auditDir, 'sweep-countertrend.json'), JSON.stringify(
 fs.writeFileSync(path.join(auditDir, 'failed-no-levels.json'), JSON.stringify({
   normalizedPlan: {
     setupCandidates: [{
-      setupType: 'FailedPlanReversal',
+      setupType: 'RaidReclaimReversal',
       direction: 'SHORT',
       entry: null,
       stop: null,
@@ -47,7 +47,7 @@ fs.writeFileSync(path.join(auditDir, 'failed-no-levels.json'), JSON.stringify({
 fs.writeFileSync(path.join(auditDir, 'htf-stop-conflict.json'), JSON.stringify({
   normalizedPlan: {
     setupCandidates: [{
-      setupType: 'HtfDisplacementMssContinuation',
+      setupType: 'IntradayMssMicroContinuation',
       direction: 'SHORT',
       entry: 7444.5,
       stop: null,
@@ -79,7 +79,7 @@ const carveoutMiner = {
       ticketId: 'failed',
       tradeDate: '2026-06-24',
       session: 'morning',
-      setupType: 'FailedPlanReversal',
+      setupType: 'RaidReclaimReversal',
       direction: 'SHORT',
       snapshotId: 'failed-no-levels',
       performanceCarveoutEligible: false,
@@ -89,7 +89,7 @@ const carveoutMiner = {
       ticketId: 'htf',
       tradeDate: '2026-06-24',
       session: 'morning',
-      setupType: 'HtfDisplacementMssContinuation',
+      setupType: 'IntradayMssMicroContinuation',
       direction: 'SHORT',
       snapshotId: 'htf-stop-conflict',
       performanceCarveoutEligible: false,
@@ -120,7 +120,7 @@ assert.equal(report.summary.selectorProposalEligibleRows, 0);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'rerun_readiness_with_research_accounting_carveouts');
 assert.equal(report.rows.find((row) => row.ticketId === 'sweep')?.unresolvedClass, 'countertrend_opposing_mss_conditional');
-assert.equal(report.rows.find((row) => row.ticketId === 'failed')?.unresolvedClass, 'failed_plan_reversal_no_deterministic_levels');
+assert.equal(report.rows.find((row) => row.ticketId === 'failed')?.unresolvedClass, 'raid_reclaim_reversal_no_deterministic_levels');
 assert.equal(report.rows.find((row) => row.ticketId === 'htf')?.unresolvedClass, 'htf_mss_protected_stop_conflict');
 assert.ok(report.rows.every((row) => row.performanceCarveoutEligible));
 assert.ok(report.rows.every((row) => !row.selectorProposalEligible));

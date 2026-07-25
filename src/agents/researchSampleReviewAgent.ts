@@ -12,7 +12,7 @@ import { HUMAN_REVIEW_LABEL_METADATA } from '../lib/humanReviewLabels';
 export type ResearchSampleInspectionLabel =
   | 'keep_advisory'
   | 'possible_model1_mapping_review'
-  | 'possible_turtle_soup_mapping_review'
+  | 'possible_RAID_RECLAIM_mapping_review'
   | 'insufficient_context'
   | 'reject';
 
@@ -99,12 +99,12 @@ export interface ResearchReviewSample {
   conceptTitle: string;
   direction: ResearchBackfillDirection;
   window: string | null;
-  classification: 'model1_overlap' | 'turtle_soup_overlap' | 'advisory_only';
+  classification: 'model1_overlap' | 'RAID_RECLAIM_overlap' | 'advisory_only';
   advisoryOnly: true;
   summary: string;
   whyAdvisoryOnly: string;
   model1Overlap: boolean;
-  turtleSoupOverlap: boolean;
+  raidReclaimOverlap: boolean;
   researchDetectorReason: string;
   warningFailureReason: string;
   dataQualityNotes: string[];
@@ -147,7 +147,7 @@ export interface ResearchSampleConceptSummary {
   classificationCounts: {
     advisoryOnly: number;
     model1Overlap: number;
-    turtleSoupOverlap: number;
+    raidReclaimOverlap: number;
   };
   directionCounts: Record<string, number>;
   windowCounts: Record<string, number>;
@@ -289,13 +289,13 @@ function inspectCandidate(candidate: CandidateSample): Pick<
     };
   }
 
-  if (event.classification === 'turtle_soup_overlap') {
+  if (event.classification === 'RAID_RECLAIM_overlap') {
     return {
-      agentInspectionLabel: 'possible_turtle_soup_mapping_review',
+      agentInspectionLabel: 'possible_RAID_RECLAIM_mapping_review',
       agentConfidence: 'medium',
-      agentReason: 'The source report marked possible Turtle Soup overlap, so this needs human review against true sweep, reclaim, risk, session, and target-room gates.',
+      agentReason: 'The source report marked possible Raid Reclaim Reversal overlap, so this needs human review against true sweep, reclaim, risk, session, and target-room gates.',
       agentEvidence: evidence,
-      agentConcerns: [...concerns, 'Possible mapping is not an approval and does not change Turtle Soup gates.'],
+      agentConcerns: [...concerns, 'Possible mapping is not an approval and does not change Raid Reclaim Reversal gates.'],
       agentRecommendedNextStep: 'human_review_only',
     };
   }
@@ -314,7 +314,7 @@ function inspectCandidate(candidate: CandidateSample): Pick<
   return {
     agentInspectionLabel: 'keep_advisory',
     agentConfidence: reason ? 'high' : 'medium',
-    agentReason: 'The sample has research structure, but no approved Model 1 or Turtle Soup mapping was confirmed by the source report.',
+    agentReason: 'The sample has research structure, but no approved Model 1 or Raid Reclaim Reversal mapping was confirmed by the source report.',
     agentEvidence: evidence,
     agentConcerns: concerns,
     agentRecommendedNextStep: 'continue_tracking',
@@ -335,9 +335,9 @@ export function computeResearchQualityScore(input: {
   direction?: ResearchBackfillDirection | string | null;
   window?: string | null;
   summary?: string | null;
-  classification?: 'model1_overlap' | 'turtle_soup_overlap' | 'advisory_only' | string | null;
+  classification?: 'model1_overlap' | 'RAID_RECLAIM_overlap' | 'advisory_only' | string | null;
   model1Overlap?: boolean;
-  turtleSoupOverlap?: boolean;
+  raidReclaimOverlap?: boolean;
   dataQualityNotes?: string[];
   agentInspectionLabel?: ResearchSampleInspectionLabel | string | null;
   agentConfidence?: ResearchSampleConfidence | string | null;
@@ -383,7 +383,7 @@ export function computeResearchQualityScore(input: {
     reasons.push('Agent confidence is low or unavailable.');
   }
 
-  if (input.classification === 'model1_overlap' || input.classification === 'turtle_soup_overlap') {
+  if (input.classification === 'model1_overlap' || input.classification === 'RAID_RECLAIM_overlap') {
     score += 8;
     reasons.push('Source classification flagged possible existing-model mapping review.');
   } else if (input.classification === 'advisory_only') {
@@ -394,7 +394,7 @@ export function computeResearchQualityScore(input: {
     reasons.push('Source classification is missing or unrecognized.');
   }
 
-  if (input.model1Overlap || input.turtleSoupOverlap) {
+  if (input.model1Overlap || input.raidReclaimOverlap) {
     score += 6;
     reasons.push('Possible existing-model overlap is marked for human review only.');
   }
@@ -405,7 +405,7 @@ export function computeResearchQualityScore(input: {
   } else if (input.agentInspectionLabel === 'insufficient_context') {
     score -= 18;
     reasons.push('Agent inspection says context is insufficient.');
-  } else if (input.agentInspectionLabel === 'possible_model1_mapping_review' || input.agentInspectionLabel === 'possible_turtle_soup_mapping_review') {
+  } else if (input.agentInspectionLabel === 'possible_model1_mapping_review' || input.agentInspectionLabel === 'possible_RAID_RECLAIM_mapping_review') {
     score += 6;
     reasons.push('Agent inspection queues the sample for human-only mapping review.');
   } else if (input.agentInspectionLabel === 'keep_advisory') {
@@ -439,7 +439,7 @@ export function computeResearchQualityScore(input: {
 function buildReviewSample(candidate: CandidateSample, index: number): ResearchReviewSample {
   const event = candidate.event;
   const model1Overlap = event.classification === 'model1_overlap' || ('possibleModel1Overlap' in event && event.possibleModel1Overlap);
-  const turtleSoupOverlap = event.classification === 'turtle_soup_overlap' || ('possibleTurtleSoupOverlap' in event && event.possibleTurtleSoupOverlap);
+  const raidReclaimOverlap = event.classification === 'RAID_RECLAIM_overlap' || ('possibleraidReclaimOverlap' in event && event.possibleraidReclaimOverlap);
   const inspection = inspectCandidate(candidate);
   const reason = reasonFor(candidate);
   const dataNotes = dataQualityNotes(candidate);
@@ -451,7 +451,7 @@ function buildReviewSample(candidate: CandidateSample, index: number): ResearchR
     summary: event.summary,
     classification: event.classification,
     model1Overlap,
-    turtleSoupOverlap,
+    raidReclaimOverlap,
     dataQualityNotes: dataNotes,
     researchDetectorReason: reason,
     warningFailureReason: reason,
@@ -473,7 +473,7 @@ function buildReviewSample(candidate: CandidateSample, index: number): ResearchR
       ? reason
       : 'Source report marked possible approved-model overlap; human review is still required before any rule discussion.',
     model1Overlap,
-    turtleSoupOverlap,
+    raidReclaimOverlap,
     researchDetectorReason: reason,
     warningFailureReason: reason,
     dataQualityNotes: dataNotes,
@@ -602,7 +602,7 @@ function summarizeConcept(concept: ResearchBackfillConceptId, candidates: Candid
     classificationCounts: {
       advisoryOnly: selected.filter((sample) => sample.classification === 'advisory_only').length,
       model1Overlap: selected.filter((sample) => sample.classification === 'model1_overlap').length,
-      turtleSoupOverlap: selected.filter((sample) => sample.classification === 'turtle_soup_overlap').length,
+      raidReclaimOverlap: selected.filter((sample) => sample.classification === 'RAID_RECLAIM_overlap').length,
     },
     directionCounts,
     windowCounts,
@@ -621,7 +621,7 @@ function renderSample(sample: ResearchReviewSample): string {
     `- Classification: ${sample.classification}`,
     `- Why advisory-only: ${sample.whyAdvisoryOnly}`,
     `- Model 1 overlap: ${sample.model1Overlap ? 'yes' : 'no'}`,
-    `- Turtle Soup overlap: ${sample.turtleSoupOverlap ? 'yes' : 'no'}`,
+    `- Raid Reclaim Reversal overlap: ${sample.raidReclaimOverlap ? 'yes' : 'no'}`,
     `- Agent inspection: ${sample.agentInspectionLabel}`,
     `- Agent confidence: ${sample.agentConfidence}`,
     `- Agent reason: ${sample.agentReason}`,
@@ -646,7 +646,7 @@ export function renderResearchSampleReviewMarkdown(pack: Omit<ResearchSampleRevi
       `- ${summary.title}: ${summary.selectedSamples}/${summary.availableSamples} selected`,
       `  - Advisory-only: ${summary.classificationCounts.advisoryOnly}`,
       `  - Model 1 mapping review: ${summary.classificationCounts.model1Overlap}`,
-      `  - Turtle Soup mapping review: ${summary.classificationCounts.turtleSoupOverlap}`,
+      `  - Raid Reclaim Reversal mapping review: ${summary.classificationCounts.raidReclaimOverlap}`,
     ].join('\n')),
     '',
     '## 3. Sample Selection Method',
@@ -697,7 +697,7 @@ export function createResearchSampleReviewPack(input: ResearchSampleReviewInput)
   const concepts = selectedConcepts(input.concept);
   const conceptSummaries = concepts.map((concept) => summarizeConcept(concept, allCandidates, samples));
   const possibleMappings = samples
-    .filter((sample) => sample.agentInspectionLabel === 'possible_model1_mapping_review' || sample.agentInspectionLabel === 'possible_turtle_soup_mapping_review')
+    .filter((sample) => sample.agentInspectionLabel === 'possible_model1_mapping_review' || sample.agentInspectionLabel === 'possible_RAID_RECLAIM_mapping_review')
     .map((sample) => `${sample.sampleId}: ${sample.agentInspectionLabel}; human review required before any rule discussion.`);
   const packWithoutMarkdown: Omit<ResearchSampleReviewPack, 'markdown'> = {
     reportType: 'research_sample_review_pack',
@@ -731,7 +731,7 @@ export function createResearchSampleReviewPack(input: ResearchSampleReviewInput)
       .map((sample) => `${sample.sampleId}: remains advisory-only; ${sample.warningFailureReason}`),
     humanReviewQuestions: [
       'Does the sample actually satisfy current approved Model 1 gates?',
-      'Does the sample actually satisfy current Turtle Soup sweep, reclaim, risk, session, and target-room gates?',
+      'Does the sample actually satisfy current Raid Reclaim Reversal sweep, reclaim, risk, session, and target-room gates?',
       'Is the detector reason meaningful enough to continue collecting this concept?',
       'Should the sample remain advisory-only, be rejected, or be queued for human rule review?',
     ],

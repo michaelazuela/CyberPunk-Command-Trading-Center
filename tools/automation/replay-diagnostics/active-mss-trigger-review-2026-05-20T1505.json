@@ -134,7 +134,7 @@
       }
     },
     "bestConditionalCandidate": {
-      "setupType": "TurtleSoup",
+      "setupType": "RaidReclaimReversal",
       "direction": "LONG",
       "detectedStatus": "Possible",
       "executionStatus": "Conditional",
@@ -148,10 +148,10 @@
       "riskPoints": null,
       "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
       "blockReason": "EntryTriggerMissing",
-      "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+      "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
       "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
       "evidence": [
-        "Turtle Soup reversal",
+        "Raid Reclaim Reversal reversal",
         "Liquidity raid confirmed",
         "Sweep below sell-side liquidity confirmed",
         "Established liquidity level confirmed",
@@ -316,7 +316,7 @@
         }
       },
       {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -330,10 +330,10 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -407,9 +407,9 @@
         }
       },
       {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -487,9 +487,9 @@
         }
       },
       {
-        "setupType": "HtfDrawContinuationAfterRaid",
-        "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
-        "pathway": "htf_liquidity_draw_mss",
+        "setupType": "RaidReclaimReversal",
+        "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "NO TRADE",
         "detectedStatus": "NotDetected",
         "executionStatus": "NotDetected",
@@ -543,9 +543,9 @@
         }
       },
       {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "NO TRADE",
         "detectedStatus": "NotDetected",
         "executionStatus": "NotDetected",
@@ -601,9 +601,9 @@
         }
       },
       {
-        "setupType": "FailedPlanReversal",
-        "scenarioLabel": "Failed Plan Reversal",
-        "pathway": "failed_plan_reversal",
+        "setupType": "RaidReclaimReversal",
+        "scenarioLabel": "Raid Reclaim Reversal",
+        "pathway": "raid_reclaim_reversal",
         "direction": "NO TRADE",
         "detectedStatus": "NotDetected",
         "executionStatus": "NotDetected",
@@ -780,8 +780,8 @@
       }
     },
     "bestConditionalCandidate": {
-      "setupType": "TurtleSoup",
-      "scenarioLabel": "Bullish Turtle Soup Reversal",
+      "setupType": "RaidReclaimReversal",
+      "scenarioLabel": "Bullish Raid Reclaim Reversal Reversal",
       "direction": "LONG",
       "detectedStatus": "Conditional",
       "executionStatus": "Conditional",
@@ -795,10 +795,10 @@
       "riskPoints": 4.75,
       "riskAdvisoryStatus": "RISK_WITHIN_STANDARD_LIMIT",
       "blockReason": "EntryTriggerPending",
-      "requiredTrigger": "Bullish Turtle Soup: sell-side sweep below 7427.5, reclaim back above the swept low, then confirm upward rejection or expansion.",
+      "requiredTrigger": "Bullish Raid Reclaim Reversal: sell-side sweep below 7427.5, reclaim back above the swept low, then confirm upward rejection or expansion.",
       "nextAction": "Preferred plan: take only the reclaim-confirmed reversal or the retrace after expansion; do not chase the first reversal candle.",
       "evidence": [
-        "Turtle Soup reversal",
+        "Raid Reclaim Reversal reversal",
         "Liquidity raid confirmed",
         "Sweep below sell-side liquidity confirmed",
         "Established liquidity level confirmed",
@@ -834,7 +834,7 @@
         "Sell-side liquidity was swept and reclaimed.",
         "Wick rejection support: lower wick 6.25 is at least 1.5x body, swept sell-side liquidity, and closed back above 7434.75.",
         "No breaker/FVG overlap confluence; breaker context is optional and cannot trigger by itself.",
-        "Turtle Soup failed breakdown reversal target room passes the minimum 2.0R expected-value filter.",
+        "Raid Reclaim Reversal failed breakdown reversal target room passes the minimum 2.0R expected-value filter.",
         "Bullish expansion confirms the reversal attempt.",
         "Market structure shift supports the reversal.",
         "Stop 7431 is beyond the sweep wick; target 7458 is opposing liquidity or a valid 2.0R objective.",

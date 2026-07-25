@@ -26,7 +26,7 @@ writeTape('2026-06-01', 'morning', {
     htfHistoryCoverage: { status: 'sufficient' },
     deskState: { dataQualityStatus: 'ok', htfContextStatus: 'sufficient', primaryDeskPlay: { direction: 'LONG' } },
     plan: { decision: 'LONG', entry: 100, stop: 98, t1: 103, t2: 104, canExecute: true },
-    setupCandidateStatus: { selected: { setupType: 'TurtleSoup', direction: 'LONG', requiredTrigger: 'completed 5M close above 100' } },
+    setupCandidateStatus: { selected: { setupType: 'raidReclaim', direction: 'LONG', requiredTrigger: 'completed 5M close above 100' } },
     visibility: { visibilityMode: 'POST_PLAN' },
   },
   target: {

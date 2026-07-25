@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync(new URL('./gemini.ts', import.meta.url), 'utf8');
-const htfRuleStart = source.indexOf('## HTF Draw Continuation After Raid/Reclaim Rule');
-const htfRuleEnd = source.indexOf('## Research Review P/L Interpretation Rule');
-assert.ok(htfRuleStart >= 0, 'Gemini prompt must include the HTF draw continuation rule.');
-assert.ok(htfRuleEnd > htfRuleStart, 'Gemini prompt must keep the HTF rule before research review rules.');
+const activeContractStart = source.indexOf('## Active Model Contract');
+const activeContractEnd = source.indexOf('## Research Review P/L Interpretation Rule');
+assert.ok(activeContractStart >= 0, 'Gemini prompt must include the active model contract.');
+assert.ok(activeContractEnd > activeContractStart, 'Gemini prompt must keep the active model contract before research review rules.');
 
-const htfRule = source.slice(htfRuleStart, htfRuleEnd);
+const activeContract = source.slice(activeContractStart, activeContractEnd);
 
 assert.ok(source.includes('[DESK PLAN MANAGEMENT RULE]'));
 assert.ok(source.includes('Name the HTF/session target/reaction level.'));
@@ -18,63 +18,38 @@ assert.ok(source.includes('State both long-side bias and short-side bias when De
 assert.ok(source.includes('next protected 5M line-in-the-sand map'));
 assert.ok(source.includes('must not change app-owned entry, stop, T1, T2, risk, canExecute, model rules, or final approval'));
 
-assert.ok(htfRule.includes('SetupType.HtfDrawContinuationAfterRaid'));
-assert.ok(htfRule.includes('SetupType.HtfDisplacementMssContinuation'));
-assert.ok(htfRule.includes('SetupType.HtfDisplacementFvgContinuation'));
-assert.ok(htfRule.includes('SetupType.OpeningDriveFvgContinuation'));
-assert.ok(htfRule.includes('SetupType.AfterLunchDriveFvgContinuation'));
-assert.ok(htfRule.includes('SetupType.IntradayMssMicroContinuation'));
-assert.ok(htfRule.includes('SetupType.FailedPlanReversal'));
-assert.ok(htfRule.includes('HTF Draw Continuation After Raid/Reclaim'));
-assert.ok(htfRule.includes('HTF Displacement + FVG Continuation'));
-assert.ok(htfRule.includes('Opening Drive FVG Continuation'));
-assert.ok(htfRule.includes('After-Lunch Drive FVG Continuation'));
-assert.ok(htfRule.includes('must remain canExecute false with trader confirmation required'));
-assert.ok(htfRule.includes('5M MSS may raise confidence for this FVG continuation pathway, but must not be invented'));
-assert.ok(htfRule.includes('may not bypass deterministic entry, stop, target, session, screenshot-quality, final-pipeline, or canExecute gates'));
-assert.ok(htfRule.includes('Risk exceeds standard limit. Human final decision required.'));
-assert.ok(htfRule.includes('Potential MSS is not execution approval'));
-assert.ok(htfRule.includes('15M potential MSS may support a candidate only when 5M MSS is confirmed'));
-assert.ok(htfRule.includes('5M potential MSS may produce pending/developing states only and must not create a reversal-delivery candidate'));
-assert.ok(htfRule.includes('Narrative fallback cannot create HtfDrawContinuationAfterRaid and cannot approve execution'));
-assert.ok(htfRule.includes('Morning 9:15-12:00 ET and Lunch/PM 12:00-16:00 ET'));
-assert.ok(htfRule.includes('Do not use legacy pre-noon, lunch-only, or split-window cutoffs'));
-assert.ok(htfRule.includes('HTF Context Sufficiency Visibility Rule'));
-assert.ok(htfRule.includes('sufficient, partial, or insufficient'));
-assert.ok(htfRule.includes('HTF is context only, not structural confirmation'));
-assert.ok(htfRule.includes('cannot be used as candidate-promotion evidence'));
-assert.ok(htfRule.includes('must not say HTF conflict confirmed, bullish structure confirmed, bearish structure confirmed, candidate ready'));
-assert.ok(htfRule.includes('## Failed Plan Reversal Rule'));
-assert.ok(htfRule.includes('When an app-owned plan fails its decision/reclaim level'));
-assert.ok(htfRule.includes('re-evaluate 15M, 1H, 2H, and 4H structure first, then use 5M only as the execution trigger authority'));
-assert.ok(htfRule.includes('Convert the failed plan level into an opposite-side decision level only when 15M, 1H, 2H, and 4H all confirm the opposite-side structure'));
-assert.ok(htfRule.includes('If any of those HTF frames are missing, data-limited, neutral, mixed, or conflicting'));
-assert.ok(htfRule.includes('failed original plan'));
-assert.ok(htfRule.includes('failed decision level'));
-assert.ok(htfRule.includes('opposite HTF MSS evidence'));
-assert.ok(htfRule.includes('whether 5M has confirmed a fresh trigger'));
-assert.ok(htfRule.includes('whether the trade is pending, confirmed, stale, or no fresh entry'));
-assert.ok(htfRule.includes('This does not approve execution'));
-assert.ok(htfRule.includes('The opposite-side plan still requires completed 5M trigger'));
-assert.ok(htfRule.includes('## HTF Stack Confirmation Rule'));
-assert.ok(htfRule.includes('Full confirmation: 15M + 1H + 2H + 4H align'));
-assert.ok(htfRule.includes('Supported confirmation: legacy/context-only label. It is not enough to create a Failed Plan Reversal candidate.'));
-assert.ok(htfRule.includes('Mixed: one or more of 15M/1H/2H/4H are neutral, data-limited, or unclear.'));
-assert.ok(htfRule.includes('Conflict: one or more of 15M/1H/2H/4H materially oppose the move'));
-assert.ok(htfRule.includes('5M remains execution authority. HTF stack can promote bias/state only.'));
-assert.ok(htfRule.includes('## Failed Decision Level Role-Flip Rule'));
-assert.ok(htfRule.includes('short-side resistance only after completed candle acceptance below that level'));
-assert.ok(htfRule.includes('long-side support only after completed candle acceptance above that level'));
-assert.ok(htfRule.includes('Do not role-flip from wick-only movement'));
-assert.ok(htfRule.includes('Require fresh 5M trigger confirmation'));
-assert.ok(htfRule.includes('## No-Chase Reversal Protection'));
-assert.ok(htfRule.includes('no_fresh_entry or stale'));
-assert.ok(htfRule.includes('must not create a late executable-style plan'));
-assert.ok(htfRule.includes('## Failed Plan Reversal Output Format'));
-assert.ok(htfRule.includes('## Failed Plan Boundary Rule'));
-assert.ok(htfRule.includes('A failed long is not automatically a short'));
-assert.ok(htfRule.includes('A failed short is not automatically a long'));
-assert.ok(htfRule.includes('requires independent confirmation from HTF structure and 5M execution'));
-assert.equal(/current.*9:30-11:15 ET|current.*10:00-11:15 ET|current.*10:00-11:50 ET|current.*11:50-13:00 ET|current.*11:50-15:30 ET/i.test(htfRule), false);
+for (const required of [
+  'SetupType.RaidReclaimReversal',
+  'SetupType.SweepMssFvgRetrace',
+  'SetupType.OpeningDriveFvgContinuation',
+  'SetupType.AfterLunchDriveFvgContinuation',
+  'SetupType.IntradayMssMicroContinuation',
+  'HTF liquidity draw, HTF displacement, and failed-plan behavior are context only',
+  'must not create separate executable model families or produce retired setup names',
+  'Potential MSS is not execution approval',
+  '15M potential MSS may support a candidate only when 5M MSS is confirmed',
+  'HTF Context Sufficiency Visibility Rule',
+  'HTF is context only, not structural confirmation',
+  'cannot be used as candidate-promotion evidence',
+  'Morning 9:15-12:00 ET and Lunch/PM 12:00-16:00 ET',
+  'Do not use legacy pre-noon, lunch-only, or split-window cutoffs',
+]) {
+  assert.ok(activeContract.includes(required), `Active model contract missing: ${required}`);
+}
 
-console.log('Gemini HTF draw prompt safety verified.');
+for (const retired of [
+  'SetupType.TurtleSoup',
+  'SetupType.HtfDrawContinuationAfterRaid',
+  'SetupType.HtfDisplacementMssContinuation',
+  'SetupType.HtfDisplacementFvgContinuation',
+  'SetupType.FailedPlanReversal',
+  'Narrative fallback cannot create TurtleSoup',
+  '## Failed Plan Reversal Rule',
+  '## Failed Plan Reversal Output Format',
+]) {
+  assert.equal(activeContract.includes(retired), false, `Retired prompt text leaked: ${retired}`);
+}
+
+assert.equal(/current.*9:30-11:15 ET|current.*10:00-11:15 ET|current.*10:00-11:50 ET|current.*11:50-13:00 ET|current.*11:50-15:30 ET/i.test(activeContract), false);
+
+console.log('Gemini active model prompt safety verified.');

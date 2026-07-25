@@ -198,8 +198,8 @@ const needsFresh = buildUnifiedPositiveHeldLocalPreviewSweepPenaltyScannerArtifa
     ...scannerDryRun,
     rows: [{
       ...scannerDryRun.rows[0],
-      ticketId: '2026-07-09-evening-TurtleSoup-LONG',
-      setupType: 'TurtleSoup',
+      ticketId: '2026-07-09-evening-raidReclaim-LONG',
+      setupType: 'raidReclaim',
       direction: 'LONG',
     }],
   },
@@ -208,8 +208,8 @@ const needsFresh = buildUnifiedPositiveHeldLocalPreviewSweepPenaltyScannerArtifa
     ...installedScore,
     rows: [{
       ...installedScore.rows[0],
-      ticketId: '2026-07-09-evening-TurtleSoup-LONG',
-      setupType: 'TurtleSoup',
+      ticketId: '2026-07-09-evening-raidReclaim-LONG',
+      setupType: 'raidReclaim',
       invalidStopSweepPenaltyCandidate: false,
       installedPenaltyExpected: false,
     }],
@@ -226,8 +226,8 @@ const missingInstalledCoverage = buildUnifiedPositiveHeldLocalPreviewSweepPenalt
     ...scannerDryRun,
     rows: [{
       ...scannerDryRun.rows[0],
-      ticketId: '2026-07-10-evening-TurtleSoup-LONG',
-      setupType: 'TurtleSoup',
+      ticketId: '2026-07-10-evening-raidReclaim-LONG',
+      setupType: 'raidReclaim',
       direction: 'LONG',
     }],
   },

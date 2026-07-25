@@ -26,7 +26,7 @@ const authority = {
   changesAppRuntime: false,
 } as const;
 
-const ticketId = '2026-06-16-morning-TurtleSoup-LONG';
+const ticketId = '2026-06-16-morning-raidReclaim-LONG';
 
 const decisionSummary: UnifiedPositiveHeldLocalPreviewDecisionSummaryReport = {
   reportType: 'unified_positive_held_local_preview_decision_summary',
@@ -49,11 +49,11 @@ const decisionSummary: UnifiedPositiveHeldLocalPreviewDecisionSummaryReport = {
   rows: [
     {
       ticketId,
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       noteDisposition: 'candidate_for_later_research',
       decisionAction: 'queue_for_replay_research',
-      systemReviewNotes: ['TurtleSoup long remains review-only: this cluster lacks full plan-level proof.'],
+      systemReviewNotes: ['raidReclaim long remains review-only: this cluster lacks full plan-level proof.'],
       systemNotesAffectDecision: false,
       researchOnly: true,
       livePromotionAllowed: false,
@@ -112,7 +112,7 @@ const heldLocalAdapter: UnifiedPositiveHeldLocalTicketAdapterReport = {
       ticketId,
       sourceSnapshotId: 'scanner-morning-2026-06-16-MES-MORNING-20260616-140147',
       session: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       adapterStatus: 'held_local_artifact_created',
       artifact: {
@@ -203,7 +203,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
     changesBridgeBehavior: false,
     changesDiscordPosting: false,
   },
-  source: { inspectionSurfacePath: 'inspection.json', wordingGuardPath: 'wording.json', turtleSoupReviewNotePlacementSimulationPath: null },
+  source: { inspectionSurfacePath: 'inspection.json', wordingGuardPath: 'wording.json', raidReclaimReviewNotePlacementSimulationPath: null },
   summary: {
     inspectionRowsLoaded: 1,
     previewPayloadsCreated: 1,
@@ -220,7 +220,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
       ticketId,
       sourceSnapshotId: 'scanner-morning-2026-06-16-MES-MORNING-20260616-140147',
       session: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       status: 'preview_payload_created',
       payload: {
@@ -228,7 +228,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
         ticketId,
         sourceSnapshotId: 'scanner-morning-2026-06-16-MES-MORNING-20260616-140147',
         session: 'morning',
-        setupType: 'TurtleSoup',
+        setupType: 'raidReclaim',
         direction: 'LONG',
         state: 'ACTIVE_REVIEW',
         publishDiscord: false,
@@ -239,7 +239,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
         reviewOnly: true,
         humanReviewOnly: true,
         noAutomatedOrders: true,
-        title: 'TurtleSoup LONG ACTIVE_REVIEW local preview',
+        title: 'raidReclaim LONG ACTIVE_REVIEW local preview',
         sections: {
           what: 'what',
           where: 'where',

@@ -44,9 +44,9 @@ const bundleReport: HeldLocalPreviewUiIndexReport = {
     htmlPath: 'preview.html',
   },
   items: [{
-    ticketId: '2026-06-16-morning-TurtleSoup-LONG',
+    ticketId: '2026-06-16-morning-raidReclaim-LONG',
     sourceSnapshotId: 'scanner-preview',
-    setupType: 'TurtleSoup',
+    setupType: 'raidReclaim',
     direction: 'LONG',
     pngPath: 'card.png',
     imageSrc: 'data:image/png;base64,iVBORw0KGgo=',
@@ -91,7 +91,7 @@ const previewPayloadReport: UnifiedPositiveHeldLocalPreviewPayloadReport = {
   source: {
     inspectionSurfacePath: 'inspection.json',
     wordingGuardPath: 'wording.json',
-    turtleSoupReviewNotePlacementSimulationPath: 'placement.json',
+    raidReclaimReviewNotePlacementSimulationPath: 'placement.json',
   },
   summary: {
     inspectionRowsLoaded: 1,
@@ -105,18 +105,18 @@ const previewPayloadReport: UnifiedPositiveHeldLocalPreviewPayloadReport = {
     reviewNotePlacementAppliedPayloads: 1,
   },
   rows: [{
-    ticketId: '2026-06-16-morning-TurtleSoup-LONG',
+    ticketId: '2026-06-16-morning-raidReclaim-LONG',
     sourceSnapshotId: 'scanner-preview',
     session: 'morning',
-    setupType: 'TurtleSoup',
+    setupType: 'raidReclaim',
     direction: 'LONG',
     status: 'preview_payload_created',
     payload: {
       sourceOfTruth: 'scanner_owned_held_local_local_preview_payload',
-      ticketId: '2026-06-16-morning-TurtleSoup-LONG',
+      ticketId: '2026-06-16-morning-raidReclaim-LONG',
       sourceSnapshotId: 'scanner-preview',
       session: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       state: 'ACTIVE_REVIEW',
       publishDiscord: false,
@@ -127,7 +127,7 @@ const previewPayloadReport: UnifiedPositiveHeldLocalPreviewPayloadReport = {
       reviewOnly: true,
       humanReviewOnly: true,
       noAutomatedOrders: true,
-      title: 'TurtleSoup LONG ACTIVE_REVIEW local preview',
+      title: 'raidReclaim LONG ACTIVE_REVIEW local preview',
       sections: {
         what: 'what',
         where: 'where',
@@ -143,7 +143,7 @@ const previewPayloadReport: UnifiedPositiveHeldLocalPreviewPayloadReport = {
         t2: 108,
       },
       htfStatus: 'sufficient',
-      notes: ['TurtleSoup long remains review-only: this cluster lacks full plan-level proof.'],
+      notes: ['raidReclaim long remains review-only: this cluster lacks full plan-level proof.'],
     },
     blockers: [],
   }],
@@ -181,9 +181,9 @@ assert.equal(report.rows[0].visibleInHiddenTab, true);
 assert.equal(report.rows[0].reviewOnly, true);
 assert.equal(report.rows[0].canExecute, false);
 assert.equal(report.rows[0].publishDiscord, false);
-assert.deepEqual(report.rows[0].systemReviewNotes, ['TurtleSoup long remains review-only: this cluster lacks full plan-level proof.']);
+assert.deepEqual(report.rows[0].systemReviewNotes, ['raidReclaim long remains review-only: this cluster lacks full plan-level proof.']);
 assert.ok(report.rows[0].reviewOnlyReasons.includes('canExecute remains false.'));
-assert.match(report.markdown, /2026-06-16-morning-TurtleSoup-LONG/);
+assert.match(report.markdown, /2026-06-16-morning-raidReclaim-LONG/);
 assert.match(report.markdown, /Human-review only/);
 assert.match(report.markdown, /lacks full plan-level proof/);
 

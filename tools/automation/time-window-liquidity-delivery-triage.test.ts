@@ -54,7 +54,7 @@ function sample(index: number) {
     sweepRaidPlusReclaimPresent: index % 3 === 0,
     deliveryStatus: kind === 'clean_delivery' || kind === 'fvg_mss_delivery' ? 'achieved' : kind === 'clean_failed' ? 'failed' : 'not_observed',
     modelOneOverlap: false,
-    turtleSoupOverlap: false,
+    raidReclaimOverlap: false,
     advisoryOnly: true,
     suggestedReviewLabels: ['needs_chart_review', 'weak_or_noisy'],
     chartPath: null,

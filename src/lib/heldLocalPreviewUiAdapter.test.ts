@@ -45,7 +45,7 @@ const report = {
     {
       ticketId: 'held-local-ticket',
       sourceSnapshotId: 'scanner-held-local',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       pngPath: 'C:/preview/card.png',
       imageSrc: 'file:///C:/preview/card.png',

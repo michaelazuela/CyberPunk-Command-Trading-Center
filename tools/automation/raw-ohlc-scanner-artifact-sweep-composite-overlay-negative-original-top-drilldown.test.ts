@@ -50,7 +50,7 @@ const negativeSimulationReport = {
       overlayTopTicketId: 'old-1',
       overlayTopSetupType: 'IntradayMssMicroContinuation',
       negativeTopTicketId: 'new-1',
-      negativeTopSetupType: 'HtfDisplacementMssContinuation',
+      negativeTopSetupType: 'IntradayMssMicroContinuation',
       topChanged: true,
     },
     {
@@ -60,7 +60,7 @@ const negativeSimulationReport = {
       overlayTopTicketId: 'old-2',
       overlayTopSetupType: 'OpeningDriveFvgContinuation',
       negativeTopTicketId: 'new-2',
-      negativeTopSetupType: 'HtfDisplacementMssContinuation',
+      negativeTopSetupType: 'IntradayMssMicroContinuation',
       topChanged: true,
     },
   ],

@@ -95,7 +95,7 @@ assert.equal(report.proposedRule.setupType, 'SweepMssFvgRetrace');
 assert.equal(report.proposedRule.appliesOnlyWhen.executionStatus, 'Blocked');
 assert.equal(report.proposedRule.appliesOnlyWhen.blockReason, 'InvalidStopLocation');
 assert.equal(report.proposedRule.preservesValidSweepLead, true);
-assert.equal(report.proposedRule.preservesTurtleSoup, true);
+assert.equal(report.proposedRule.preservesraidReclaim, true);
 assert.equal(report.proposedRule.preservesModelAvailability, true);
 assert.equal(report.proposedRule.preservesCanExecute, true);
 assert.equal(report.authority.changesTradingLogic, false);
@@ -103,7 +103,7 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.readsLiveBridge, false);
-assert.match(report.markdown, /No TurtleSoup removal/);
+assert.match(report.markdown, /No raidReclaim removal/);
 assert.match(report.markdown, /No canExecute removal or loosening/);
 
 const blocked = buildUnifiedPositiveHeldLocalPreviewSweepPenaltyLiveProposalReport({

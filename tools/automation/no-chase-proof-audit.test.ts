@@ -45,7 +45,7 @@ const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
         nextAction: 'No chase. Wait for fresh completed 5M re-entry proof.',
       }),
       candidate({
-        setupType: SetupType.TurtleSoup,
+        setupType: SetupType.RaidReclaimReversal,
         scenarioLabel: 'strict-out-of-scope',
         requiredTrigger: 'Preferred entry was missed. Do not chase.',
       }),
@@ -151,7 +151,7 @@ assert.equal(report.summary.intradayNoChaseCases, 2);
 assert.equal(report.summary.intradayConverted, 1);
 assert.equal(report.summary.afterLunchNoChaseCases, 1);
 assert.equal(report.summary.afterLunchConverted, 1);
-assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.TurtleSoup), false);
+assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.RaidReclaimReversal), false);
 assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.SweepMssFvgRetrace), false);
 
 const intradayConverted = report.cases.find((item) => item.caseId === '2026-06-10|morning|IntradayMssMicroContinuation|LONG');
@@ -167,7 +167,7 @@ assert.match(intradayBlocked?.recommendation || '', /Keep no-chase blocked/);
 assert.equal(afterLunchConverted?.proofStatus, 'converted_to_human_review');
 assert.equal(afterLunchConverted?.proofSnapshotId, 'after-lunch-proof');
 assert.match(report.markdown, /No-Chase Proof Audit/);
-assert.match(report.recommendations.join(' '), /Do not broaden TurtleSoup or SweepMssFvgRetrace/);
+assert.match(report.recommendations.join(' '), /Do not broaden raidReclaim or SweepMssFvgRetrace/);
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'no-chase-proof-audit-'));
 const paths = writeNoChaseProofAuditReport(report, root);

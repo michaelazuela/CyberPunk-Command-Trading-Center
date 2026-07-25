@@ -87,9 +87,9 @@ const fixtureInput: HistoricalResearchBackfillInput = {
       direction: 'SHORT',
       window: 'regular_session',
       summary: 'Run near major high failed and delivered toward sell-side draw.',
-      classification: 'turtle_soup_overlap',
+      classification: 'RAID_RECLAIM_overlap',
       trueSweepReclaim: true,
-      turtleSoupOverlap: true,
+      raidReclaimOverlap: true,
       reachedDrawAfterFact: true,
     },
     {
@@ -140,7 +140,7 @@ assert.equal(report.fullCandidateEvents.length, 6);
 assert.ok(report.fullCandidateEvents.every((event) => event.advisoryOnly === true));
 assert.ok(report.fullCandidateEvents.every((event) => event.instrument === 'MES'));
 assert.ok(report.fullCandidateEvents.some((event) => event.possibleModel1Overlap));
-assert.ok(report.fullCandidateEvents.some((event) => event.possibleTurtleSoupOverlap));
+assert.ok(report.fullCandidateEvents.some((event) => event.possibleraidReclaimOverlap));
 assert.ok(report.markdown.includes('Full candidate events persisted: 6'));
 for (const event of report.fullCandidateEvents) {
   const keys = Object.keys(event);
@@ -165,7 +165,7 @@ assert.equal(report.detectorAudit.length, 4);
 assert.equal(report.detectorAudit.some((audit) => audit.rawCandidatePrefilterCount > 0), true);
 assert.deepEqual(report.zeroCandidateExplanation, []);
 assert.equal(report.approvedModelOverlap.model1, 1);
-assert.equal(report.approvedModelOverlap.turtleSoup, 1);
+assert.equal(report.approvedModelOverlap.raidReclaim, 1);
 assert.equal(report.approvalBoundary.researchBackfillApprovesTrade, false);
 assert.equal(report.approvalBoundary.researchBackfillChangesRules, false);
 assert.equal(report.approvalBoundary.researchBackfillCreatesEntry, false);
@@ -285,7 +285,7 @@ assert.equal(timeWindow?.approvedModelOverlaps.model1, 1);
 assert.equal((timeWindow?.metrics.countByWindow as Record<string, number>)['10:00-11:00 NY'], 2);
 
 const falseRun = report.conceptReports.find((concept) => concept.conceptId === 'false_run_liquidity_fade');
-assert.equal(falseRun?.approvedModelOverlaps.turtleSoup, 1);
+assert.equal(falseRun?.approvedModelOverlaps.raidReclaim, 1);
 assert.equal(falseRun?.advisoryOnlyCount, 1);
 
 const amd = report.conceptReports.find((concept) => concept.conceptId === 'amd_range_model');

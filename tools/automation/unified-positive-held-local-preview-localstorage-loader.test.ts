@@ -53,7 +53,7 @@ try {
     items: [{
       ticketId: 'preview-ticket',
       sourceSnapshotId: 'scanner-preview',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       pngPath: path.join(tempDir, 'card.png'),
       imageSrc: 'file:///C:/preview/card.png',

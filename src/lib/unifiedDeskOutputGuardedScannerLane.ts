@@ -112,22 +112,14 @@ function sortedLatestFirst(candidates: UnifiedDeskOutputVisibilityCandidate[]): 
 
 const PROVEN_LANE_PRIORITY: Record<GuardedSession, string[]> = {
   morning: [
-    'OpeningDriveFvgContinuation',
-    'HtfDisplacementFvgContinuation',
-    'HtfDisplacementMssContinuation',
-    'HtfDrawContinuationAfterRaid',
-    'IntradayMssMicroContinuation',
+    'OpeningDriveFvgContinuation',    'IntradayMssMicroContinuation',
     'SweepMssFvgRetrace',
-    'TurtleSoup',
+    'raidReclaim',
   ],
   lunch: [
-    'AfterLunchDriveFvgContinuation',
-    'HtfDisplacementFvgContinuation',
-    'HtfDisplacementMssContinuation',
-    'HtfDrawContinuationAfterRaid',
-    'IntradayMssMicroContinuation',
+    'AfterLunchDriveFvgContinuation',    'IntradayMssMicroContinuation',
     'SweepMssFvgRetrace',
-    'TurtleSoup',
+    'raidReclaim',
   ],
 };
 

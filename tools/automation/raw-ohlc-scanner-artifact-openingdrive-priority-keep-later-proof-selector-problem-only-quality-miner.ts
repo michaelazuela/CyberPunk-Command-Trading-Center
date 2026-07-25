@@ -316,7 +316,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
       : broadCleanCombos.length
         ? [
           'Validate broad clean problem-only combos against a broader source before any scanner-visible rank consumer.',
-          'Do not use this single saved set to remove TurtleSoup, Sweep, canExecute, or approved model gates.',
+          'Do not use this single saved set to remove raidReclaim, Sweep, canExecute, or approved model gates.',
         ]
         : [
           'Do not install a runtime rank consumer from this miner; clean problem-only combos are too narrow or absent.',

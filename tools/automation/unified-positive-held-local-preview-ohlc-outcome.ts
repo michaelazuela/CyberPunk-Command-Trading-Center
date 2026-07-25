@@ -89,7 +89,7 @@ export interface UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport {
     unresolvedRows: number;
     blockedRows: number;
     grossResolvedOneMesPl: number | null;
-    turtleSoupResolvedOneMesPl: number | null;
+    raidReclaimResolvedOneMesPl: number | null;
     sweepMssFvgRetraceResolvedOneMesPl: number | null;
     livePromotionAllowedRows: number;
   };
@@ -430,7 +430,7 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewOhlcOutcomeRe
     `- Unresolved rows: ${report.summary.unresolvedRows}.`,
     `- Blocked rows: ${report.summary.blockedRows}.`,
     `- Gross resolved one-MES P/L: ${report.summary.grossResolvedOneMesPl ?? 'not available'}.`,
-    `- TurtleSoup resolved one-MES P/L: ${report.summary.turtleSoupResolvedOneMesPl ?? 'not available'}.`,
+    `- raidReclaim resolved one-MES P/L: ${report.summary.raidReclaimResolvedOneMesPl ?? 'not available'}.`,
     `- SweepMssFvgRetrace resolved one-MES P/L: ${report.summary.sweepMssFvgRetraceResolvedOneMesPl ?? 'not available'}.`,
     `- Live promotion allowed rows: ${report.summary.livePromotionAllowedRows}.`,
     '',
@@ -500,7 +500,7 @@ export function buildUnifiedPositiveHeldLocalPreviewOhlcOutcomeReport(args: {
       unresolvedRows: rows.filter((row) => row.outcomeStatus === 'unresolved').length,
       blockedRows: rows.filter((row) => row.outcomeStatus === 'blocked').length,
       grossResolvedOneMesPl: sumResolved(rows),
-      turtleSoupResolvedOneMesPl: sumResolved(rows, 'TurtleSoup'),
+      raidReclaimResolvedOneMesPl: sumResolved(rows, 'raidReclaim'),
       sweepMssFvgRetraceResolvedOneMesPl: sumResolved(rows, 'SweepMssFvgRetrace'),
       livePromotionAllowedRows: args.replayQueueReport?.summary.livePromotionAllowedRows || 0,
     },

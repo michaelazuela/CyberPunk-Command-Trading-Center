@@ -1693,7 +1693,6 @@ function hasMeaningfulStructuredEvidence(candidate: SetupCandidate | null | unde
     candidate.nextAction ||
     candidate.activeCampaign ||
     candidate.htfLiquidityDrawState ||
-    candidate.failedPlanReversal ||
     candidate.activeRuleset?.timeframeMss ||
     candidate.activeRuleset?.htfLineInSand
   );
@@ -3490,7 +3489,7 @@ function buildApprovedModelFit(args: {
         sourceOfTruth: 'scanner_protected_structure_model_fit',
         setupType: SetupType.IntradayMssMicroContinuation,
         modelName: entry?.label || 'Intraday MSS Micro Continuation',
-        parentModelFamily: entry?.parentModelFamily || 'HTF_DISPLACEMENT_CONTINUATION',
+        parentModelFamily: entry?.parentModelFamily || 'INTRADAY_MSS_MICRO_CONTINUATION',
         fitScore: Math.max(70, Math.min(100, Math.round(lifecycleItemScore(args.item) + 6))),
         status: 'best_fit',
         reason: `${args.direction} routes to Intraday MSS Micro Continuation from HTF FVG reaction plus completed 5M micro MSS/close-through. HTF conflict remains caution/management, not an eraser; execution still requires protected 5M stop proof and normal gates.`,
@@ -6475,7 +6474,7 @@ const ICT_RULE_WEIGHTS = {
   LIQUIDITY_SWEEP: 25,
   RECLAIM_AFTER_SWEEP: 15,
   WICK_REJECTION_SUPPORT: 10,
-  TURTLE_SOUP_REVERSAL: 20,
+  RAID_RECLAIM_REVERSAL: 20,
   DISPLACEMENT_CONFIRMED: 20,
   MARKET_STRUCTURE_SHIFT: 20,
   FVG_OR_IMBALANCE_ENTRY: 15,
@@ -6609,9 +6608,9 @@ function extractIctSignals(candidate: SetupCandidate) {
       scenario.includes('closed back above swept low') ||
       scenario.includes('closed back below swept high'),
 
-    hasTurtleSoupReversal:
-      scenario.includes('turtle soup') ||
-      setupType.includes('turtle soup') ||
+    hasraidReclaimReversal:
+      scenario.includes('Raid Reclaim Reversal') ||
+      setupType.includes('Raid Reclaim Reversal') ||
       scenario.includes('failed breakout') ||
       scenario.includes('failed breakdown') ||
       scenario.includes('liquidity raid reversal'),
@@ -6702,7 +6701,7 @@ export function scoreScannerCandidate(
         score: 0,
         max: 25,
         status: 'blocked',
-        note: 'No registered primary Model 1 or Turtle Soup candidate was available.',
+        note: 'No registered primary Model 1 or Raid Reclaim Reversal candidate was available.',
       }],
     };
   }
@@ -6750,11 +6749,11 @@ export function scoreScannerCandidate(
     !signals.hasDisplacement &&
     !signals.hasMarketStructureShift &&
     !signals.hasFvgOrImbalanceEntry &&
-    !signals.hasTurtleSoupReversal &&
+    !signals.hasraidReclaimReversal &&
     !higherTimeframeAligned;
 
   if (wickOnly) {
-    const hardBlocker = 'Wick rejection support is not enough without reclaim, displacement, market structure shift, FVG, Turtle Soup, or higher-timeframe alignment';
+    const hardBlocker = 'Wick rejection support is not enough without reclaim, displacement, market structure shift, FVG, Raid Reclaim Reversal, or higher-timeframe alignment';
     return {
       score: ICT_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons: [],
@@ -6775,7 +6774,7 @@ export function scoreScannerCandidate(
   add(signals.hasLiquiditySweep, ICT_RULE_WEIGHTS.LIQUIDITY_SWEEP, 'Liquidity sweep confirmed', 'No confirmed liquidity sweep');
   add(signals.hasReclaimAfterSweep, ICT_RULE_WEIGHTS.RECLAIM_AFTER_SWEEP, 'Reclaim after sweep confirmed', 'No confirmed liquidity sweep');
   add(signals.hasWickRejectionSupport, ICT_RULE_WEIGHTS.WICK_REJECTION_SUPPORT, 'Wick rejection support', 'Wick rejection support missing');
-  add(signals.hasTurtleSoupReversal, ICT_RULE_WEIGHTS.TURTLE_SOUP_REVERSAL, 'Turtle Soup reversal', 'No confirmed liquidity sweep');
+  add(signals.hasraidReclaimReversal, ICT_RULE_WEIGHTS.RAID_RECLAIM_REVERSAL, 'Raid Reclaim Reversal reversal', 'No confirmed liquidity sweep');
   add(signals.hasDisplacement, ICT_RULE_WEIGHTS.DISPLACEMENT_CONFIRMED, 'Displacement confirmed', 'No confirmed displacement');
   add(signals.hasMarketStructureShift, ICT_RULE_WEIGHTS.MARKET_STRUCTURE_SHIFT, 'Market structure shift confirmed', 'No confirmed market structure shift');
   add(signals.hasFvgOrImbalanceEntry, ICT_RULE_WEIGHTS.FVG_OR_IMBALANCE_ENTRY, 'Fair value gap / imbalance entry model', 'No fair value gap / imbalance entry model');
@@ -6799,7 +6798,7 @@ export function scoreScannerCandidate(
   const modelCompletion = clampScore(
     (signals.hasLiquiditySweep ? 6 : 0) +
     (signals.hasReclaimAfterSweep ? 6 : 0) +
-    (signals.hasTurtleSoupReversal || signals.hasFvgOrImbalanceEntry || isIntradayMssMicroContinuationWatch(candidate) ? 7 : 0) +
+    (signals.hasraidReclaimReversal || signals.hasFvgOrImbalanceEntry || isIntradayMssMicroContinuationWatch(candidate) ? 7 : 0) +
     (signals.hasDisplacement || signals.hasMarketStructureShift ? 6 : 0) +
     (isIntradayMssMicroContinuationWatch(candidate) ? 6 : 0),
     25
@@ -6849,8 +6848,8 @@ export function scoreScannerCandidate(
         status: scoreStatus(modelCompletion, 25),
         note: isIntradayMssMicroContinuationWatch(candidate)
           ? 'Intraday MSS Micro Continuation watch is active from aligned 15M/5M MSS and a named line in the sand.'
-          : signals.hasTurtleSoupReversal
-            ? 'Turtle Soup evidence is present.'
+          : signals.hasraidReclaimReversal
+            ? 'Raid Reclaim Reversal evidence is present.'
             : signals.hasFvgOrImbalanceEntry
               ? 'Model 1 FVG/imbalance evidence is present.'
               : 'Active model is still missing required evidence.',

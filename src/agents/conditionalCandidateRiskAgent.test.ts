@@ -7,10 +7,10 @@ import {
 } from './conditionalCandidateRiskAgent';
 import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, type SetupCandidate } from '../types';
 
-function turtleSoupCandidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
+function raidReclaimCandidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.TurtleSoup,
-    scenarioLabel: 'Turtle Soup LONG',
+    setupType: SetupType.RaidReclaimReversal,
+    scenarioLabel: 'Raid Reclaim Reversal LONG',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Conditional,
     confidence: 'High',
@@ -36,7 +36,7 @@ function turtleSoupCandidate(overrides: Partial<SetupCandidate> = {}): SetupCand
   };
 }
 
-const wideCandidate = turtleSoupCandidate();
+const wideCandidate = raidReclaimCandidate();
 const wideBefore = JSON.stringify(wideCandidate);
 const wideScore = scoreConditionalCandidateRisk({
   candidate: wideCandidate,
@@ -73,21 +73,21 @@ assert.ok(extendedScore.score <= 49, 'RiskTooWide plus price extension must cap 
 assert.ok(extendedScore.advisoryNotes.some((note) => note.includes('Do not chase')));
 assert.ok(extendedScore.advisoryNotes.some((note) => note.includes('tighter retest trigger')));
 
-const displayScore = scoreConditionalCandidateRiskForDisplay(turtleSoupCandidate({
+const displayScore = scoreConditionalCandidateRiskForDisplay(raidReclaimCandidate({
   requiredTrigger: 'Wait for a fresh completed 5M retest that keeps risk inside limits.',
   nextAction: 'Manual decision only. Do not chase the reclaim candle.',
   evidence: ['HTF stack aligned LONG: 4H / 1H / 15M / 5M.'],
 }));
 assert.equal(displayScore.score, 49, 'shared display/audit scorer should apply the extended RiskTooWide cap');
 assert.equal(displayScore.label, 'High risk');
-assert.equal(inferHigherTimeframeRiskAlignment(turtleSoupCandidate({
+assert.equal(inferHigherTimeframeRiskAlignment(raidReclaimCandidate({
   evidence: ['HTF stack aligned LONG: 4H / 1H / 15M / 5M.'],
 })), 'aligned');
-assert.equal(inferPriceExtended(turtleSoupCandidate({
+assert.equal(inferPriceExtended(raidReclaimCandidate({
   nextAction: 'Manual decision only. Do not chase the reclaim candle.',
 })), true);
 
-const insideLimitCandidate = turtleSoupCandidate({
+const insideLimitCandidate = raidReclaimCandidate({
   entry: 7593,
   stop: 7588.75,
   target1: 7602,

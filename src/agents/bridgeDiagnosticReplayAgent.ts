@@ -28,7 +28,7 @@ export interface DiagnosticFvgBound {
 }
 
 export interface DiagnosticGateReview {
-  model: 'Model 1 Sweep -> MSS -> FVG Retrace' | 'Turtle Soup Reversal' | 'Other approved primary model';
+  model: 'Model 1 Sweep -> MSS -> FVG Retrace' | 'Raid Reclaim Reversal Reversal' | 'Other approved primary model';
   passedGates: string[];
   failedGates: string[];
   missingRequiredConditions: string[];
@@ -429,7 +429,7 @@ function candidatePool(input: BridgeDiagnosticReplayInput): SetupCandidate[] {
 
 function candidateIsApprovedExecutable(candidate: SetupCandidate): boolean {
   return (
-    (candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup) &&
+    (candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.RaidReclaimReversal) &&
     candidate.executionStatus === ExecutionStatus.Executable &&
     candidate.direction !== 'NO TRADE' &&
     !candidate.blockReason
@@ -455,7 +455,7 @@ function buildGateReview(
 ): DiagnosticGateReview[] {
   const candidates = candidatePool(input);
   const model1 = candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
-  const turtle = candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+  const turtle = candidates.find((candidate) => candidate.setupType === SetupType.RaidReclaimReversal);
   const reviewFor = (
     model: DiagnosticGateReview['model'],
     candidate: SetupCandidate | undefined,
@@ -480,7 +480,7 @@ function buildGateReview(
       'FVG retrace',
       'Valid risk and minimum target room',
     ]),
-    reviewFor('Turtle Soup Reversal', turtle, [
+    reviewFor('Raid Reclaim Reversal Reversal', turtle, [
       'Swept swing/session level',
       'Reclaim back inside level',
       'Stop beyond sweep wick',

@@ -14,7 +14,7 @@ interface CliOptions {
 
 type UnresolvedClass =
   | 'countertrend_opposing_mss_conditional'
-  | 'failed_plan_reversal_no_deterministic_levels'
+  | 'raid_reclaim_reversal_no_deterministic_levels'
   | 'htf_mss_protected_stop_conflict'
   | 'manual_inspection_required';
 
@@ -186,10 +186,10 @@ function classify(args: {
   if (args.setupType === 'SweepMssFvgRetrace' && /Countertrend|opposing completed 5M|opposing completed HTF|Structure signal conflicts/i.test(text)) {
     return 'countertrend_opposing_mss_conditional';
   }
-  if (args.setupType === 'FailedPlanReversal' && (!numberOrNull(args.candidate?.entry) || !numberOrNull(args.candidate?.stop))) {
-    return 'failed_plan_reversal_no_deterministic_levels';
+  if (args.setupType === 'RaidReclaimReversal' && (!numberOrNull(args.candidate?.entry) || !numberOrNull(args.candidate?.stop))) {
+    return 'raid_reclaim_reversal_no_deterministic_levels';
   }
-  if (args.setupType === 'HtfDisplacementMssContinuation' && /Protected 5M MSS swing stop blocked|Protected 5M structure stop|opposing completed 5M/i.test(text)) {
+  if (args.setupType === 'IntradayMssMicroContinuation' && /Protected 5M MSS swing stop blocked|Protected 5M structure stop|opposing completed 5M/i.test(text)) {
     return 'htf_mss_protected_stop_conflict';
   }
   return 'manual_inspection_required';
@@ -197,7 +197,7 @@ function classify(args: {
 
 function rowRecommendation(unresolvedClass: UnresolvedClass): string {
   if (unresolvedClass === 'countertrend_opposing_mss_conditional') return 'Treat as research-accounting carveout: it is conditional/countertrend with opposing completed MSS, not proof for selector promotion.';
-  if (unresolvedClass === 'failed_plan_reversal_no_deterministic_levels') return 'Treat as research-accounting carveout until app-owned opposite-side entry, protected stop, and targets exist.';
+  if (unresolvedClass === 'raid_reclaim_reversal_no_deterministic_levels') return 'Treat as research-accounting carveout until app-owned opposite-side entry, protected stop, and targets exist.';
   if (unresolvedClass === 'htf_mss_protected_stop_conflict') return 'Treat as research-accounting carveout until protected 5M stop and aligned completed 5M MSS exist.';
   return 'Keep out of readiness until manually inspected.';
 }

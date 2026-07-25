@@ -21,7 +21,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-21-MES-eveni
       setupCandidateStatus: {
         selected: {
           direction: 'LONG',
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           executionStatus: 'Conditional',
           entry: 7533.75,
           stop: 7525.75,
@@ -87,7 +87,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-21-MES-eveni
       setupCandidateStatus: {
         selected: {
           direction: 'LONG',
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           executionStatus: 'Executable',
           entry: 7551,
           stop: 7546,

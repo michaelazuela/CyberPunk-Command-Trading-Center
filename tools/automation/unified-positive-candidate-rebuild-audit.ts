@@ -132,6 +132,22 @@ function directionallyValidPlan(item: UnifiedDeskCandidateBookItem): boolean {
   return false;
 }
 
+function needsFreshFiveMinuteProof(item: UnifiedDeskCandidateBookItem): boolean {
+  const source = item.sourceCandidate;
+  const proofText = [
+    item.state,
+    item.fiveMinuteProofStatus,
+    ...item.nextProofRequired,
+    source.requiredTrigger,
+    source.nextAction,
+    ...(Array.isArray(source.missingEvidence) ? source.missingEvidence : []),
+    ...(Array.isArray(source.evidence) ? source.evidence : []),
+  ].filter(Boolean).join(' ');
+  return item.fiveMinuteProofStatus === 'missing' ||
+    item.state === 'no_chase' ||
+    /no chase|fresh completed 5m|fresh 5m|fresh .*re-entry proof|wait for .*proof|needs? .*5m proof/i.test(proofText);
+}
+
 function missingFields(item: UnifiedDeskCandidateBookItem | null): string[] {
   if (!item) return ['source candidate missing'];
   const fields: string[] = [];
@@ -140,15 +156,14 @@ function missingFields(item: UnifiedDeskCandidateBookItem | null): string[] {
   if (item.target1 === null) fields.push('target1');
   if (item.target2 === null) fields.push('target2');
   if (!fields.length && !directionallyValidPlan(item)) fields.push('directionally valid plan geometry');
-  if (item.fiveMinuteProofStatus === 'missing') fields.push('fresh completed 5M proof');
-  if (item.state === 'no_chase') fields.push('fresh non-stale 5M re-entry proof');
+  if (needsFreshFiveMinuteProof(item)) fields.push('fresh completed 5M proof');
   return fields;
 }
 
 function classify(item: UnifiedDeskCandidateBookItem | null): RebuildClassification {
   if (!item) return 'not_rebuild_candidate';
   const hasGeometry = directionallyValidPlan(item);
-  const needsProof = item.fiveMinuteProofStatus === 'missing' || item.state === 'no_chase';
+  const needsProof = needsFreshFiveMinuteProof(item);
   if (item.tradingModelState === 'review_ticket' && hasGeometry && !needsProof) return 'eligible_review_ticket_candidate';
   if (!hasGeometry && needsProof) return 'needs_proof_and_geometry';
   if (!hasGeometry) return 'needs_plan_geometry_rebuild';

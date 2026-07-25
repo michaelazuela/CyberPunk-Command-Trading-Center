@@ -113,7 +113,7 @@ function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
 function buildFixtureTrace() {
   const selected = candidate();
   const lowerRankedShort = candidate({
-    setupType: SetupType.TurtleSoup,
+    setupType: SetupType.RaidReclaimReversal,
     scenarioLabel: 'Lifecycle audit short watch missing levels',
     direction: 'SHORT',
     priority: 95,
@@ -138,7 +138,7 @@ function buildFixtureTrace() {
     executionStatus: ExecutionStatus.Conditional,
   });
   const blockedCandidate = candidate({
-    setupType: SetupType.HtfDisplacementFvgContinuation,
+    setupType: SetupType.IntradayMssMicroContinuation,
     scenarioLabel: 'Lifecycle audit blocked data-limited candidate',
     direction: 'LONG',
     priority: 97,

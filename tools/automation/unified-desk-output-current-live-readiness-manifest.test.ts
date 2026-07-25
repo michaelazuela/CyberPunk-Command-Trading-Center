@@ -14,8 +14,8 @@ const preview = (policy: 'latest_completed_5m_proof_per_session' | 'proven_lane_
     order: policy,
     proposedPriority: policy === 'proven_lane_priority_then_latest_proof'
       ? {
-        morning: ['OpeningDriveFvgContinuation', 'HtfDisplacementFvgContinuation', 'IntradayMssMicroContinuation', 'TurtleSoup'],
-        lunch: ['AfterLunchDriveFvgContinuation', 'IntradayMssMicroContinuation', 'TurtleSoup'],
+        morning: ['OpeningDriveFvgContinuation', 'SweepMssFvgRetrace', 'IntradayMssMicroContinuation', 'raidReclaim'],
+        lunch: ['AfterLunchDriveFvgContinuation', 'IntradayMssMicroContinuation', 'raidReclaim'],
       }
       : null,
   },
@@ -55,7 +55,7 @@ const preview = (policy: 'latest_completed_5m_proof_per_session' | 'proven_lane_
       cardId: `lunch|${policy}|IntradayMssMicroContinuation`,
       date: '2026-07-22',
       session: 'lunch' as const,
-      model: policy === 'proven_lane_priority_then_latest_proof' ? 'IntradayMssMicroContinuation' : 'TurtleSoup',
+      model: policy === 'proven_lane_priority_then_latest_proof' ? 'IntradayMssMicroContinuation' : 'raidReclaim',
       direction: policy === 'proven_lane_priority_then_latest_proof' ? 'LONG' as const : 'SHORT' as const,
       proofTime: policy === 'proven_lane_priority_then_latest_proof' ? '2026-07-22T15:45:00' : '2026-07-22T15:50:00',
       entry: 200,
@@ -69,9 +69,9 @@ const preview = (policy: 'latest_completed_5m_proof_per_session' | 'proven_lane_
 
 const report = buildUnifiedDeskOutputCurrentLiveReadinessManifestReport({
   proposedPreviewPath: 'fixture-proven-lane-preview.json',
-  proposedPreview: preview('proven_lane_priority_then_latest_proof', 'HtfDisplacementFvgContinuation', '2026-07-22T09:10:00'),
+  proposedPreview: preview('proven_lane_priority_then_latest_proof', 'SweepMssFvgRetrace', '2026-07-22T09:10:00'),
   comparisonPreviewPath: 'fixture-latest-preview.json',
-  comparisonPreview: preview('latest_completed_5m_proof_per_session', 'TurtleSoup', '2026-07-22T11:45:00'),
+  comparisonPreview: preview('latest_completed_5m_proof_per_session', 'raidReclaim', '2026-07-22T11:45:00'),
 }, '2026-07-22T22:00:00.000Z');
 
 assert.equal(report.reportType, 'unified_desk_output_current_live_readiness_manifest');
@@ -116,20 +116,20 @@ assert.equal(report.summary.readbackSteps, 6);
 assert.equal(report.summary.rollbackSteps, 4);
 assert.equal(report.summary.blockedRows, 0);
 assert.equal(report.summary.recommendation, 'ready_to_install_disabled_runtime_gate_manifest');
-assert.equal(report.selectedCandidates[0]?.model, 'HtfDisplacementFvgContinuation');
+assert.equal(report.selectedCandidates[0]?.model, 'SweepMssFvgRetrace');
 assert.match(report.markdown, /local manifest only/i);
 
 const blocked = buildUnifiedDeskOutputCurrentLiveReadinessManifestReport({
   proposedPreviewPath: 'fixture-proven-lane-preview.json',
   proposedPreview: {
-    ...preview('proven_lane_priority_then_latest_proof', 'HtfDisplacementFvgContinuation', '2026-07-22T09:10:00'),
+    ...preview('proven_lane_priority_then_latest_proof', 'SweepMssFvgRetrace', '2026-07-22T09:10:00'),
     summary: {
-      ...preview('proven_lane_priority_then_latest_proof', 'HtfDisplacementFvgContinuation', '2026-07-22T09:10:00').summary,
+      ...preview('proven_lane_priority_then_latest_proof', 'SweepMssFvgRetrace', '2026-07-22T09:10:00').summary,
       discordPostRows: 1,
     },
   },
   comparisonPreviewPath: 'fixture-latest-preview.json',
-  comparisonPreview: preview('latest_completed_5m_proof_per_session', 'TurtleSoup', '2026-07-22T11:45:00'),
+  comparisonPreview: preview('latest_completed_5m_proof_per_session', 'raidReclaim', '2026-07-22T11:45:00'),
 });
 
 assert.equal(blocked.status, 'blocked');

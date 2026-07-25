@@ -95,7 +95,7 @@ const OLD_PRICE_ACTION_BUTTONS = new Set([
   'Keep Advisory',
   'Reject',
   'Model 1 Review',
-  'Turtle Soup Review',
+  'Raid Reclaim Reversal Review',
   'Human Rule Review Queue',
   'New Model Candidate',
   'Insufficient Context',

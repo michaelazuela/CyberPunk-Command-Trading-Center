@@ -7,7 +7,7 @@ import { selectScannerPlan } from './scannerPlanSelectionAgent';
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.LiquiditySweep,
+    setupType: SetupType.RaidReclaimReversal,
     scenarioLabel: 'Liquidity Sweep Reversal failed breakdown wick rejection impulse market structure shift imbalance discount',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,
@@ -124,9 +124,9 @@ assert.equal(
   true,
 );
 
-const turtleSoupShortWatch = candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Turtle Soup SHORT',
+const raidReclaimShortWatch = candidate({
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Raid Reclaim Reversal SHORT',
   direction: 'SHORT',
   detectedStatus: SetupCandidateStatus.Blocked,
   executionStatus: ExecutionStatus.Blocked,
@@ -140,46 +140,46 @@ const turtleSoupShortWatch = candidate({
   nextAction: 'Waiting for completed 5M confirmation.',
   evidence: ['Buy-side sweep and reclaim context present.'],
 });
-const turtleSoupWatchSelection = selectScannerPlan({
+const raidReclaimWatchSelection = selectScannerPlan({
   normalized: {
     canExecute: false,
     decisionStatus: TradeDecisionStatus.Wait,
     decision: 'NO TRADE',
-    setupCandidates: [turtleSoupShortWatch],
+    setupCandidates: [raidReclaimShortWatch],
   } as any,
   currentPrice: 7454,
 });
-assert.equal(turtleSoupWatchSelection.stateForAlert, 'Conditional');
-assert.notEqual(turtleSoupWatchSelection.candidate, turtleSoupShortWatch);
-assert.equal(turtleSoupWatchSelection.candidate?.setupType, SetupType.TurtleSoup);
-assert.equal(turtleSoupWatchSelection.candidate?.direction, 'SHORT');
-assert.equal(turtleSoupWatchSelection.candidate?.executionStatus, ExecutionStatus.Conditional);
-assert.equal(turtleSoupWatchSelection.candidate?.blockReason, null);
-assert.equal(turtleSoupShortWatch.executionStatus, ExecutionStatus.Blocked);
-assert.equal(turtleSoupShortWatch.blockReason, NoTradeReason.InvalidStopLocation);
-assert.ok(turtleSoupWatchSelection.candidate?.requiredTrigger?.includes('Line in the sand is 7451.25'));
-assert.ok(turtleSoupWatchSelection.candidate?.requiredTrigger?.includes('completed 5M close below'));
-assert.ok(turtleSoupWatchSelection.candidate?.requiredTrigger?.includes('stop above 7456'));
-assert.ok(turtleSoupWatchSelection.candidate?.requiredTrigger?.includes('No chase if T1 7441.5 is already reached'));
-assert.equal(turtleSoupWatchSelection.reviewStatus, null);
-assert.equal(turtleSoupWatchSelection.stale.stale, false);
+assert.equal(raidReclaimWatchSelection.stateForAlert, 'Conditional');
+assert.notEqual(raidReclaimWatchSelection.candidate, raidReclaimShortWatch);
+assert.equal(raidReclaimWatchSelection.candidate?.setupType, SetupType.RaidReclaimReversal);
+assert.equal(raidReclaimWatchSelection.candidate?.direction, 'SHORT');
+assert.equal(raidReclaimWatchSelection.candidate?.executionStatus, ExecutionStatus.Conditional);
+assert.equal(raidReclaimWatchSelection.candidate?.blockReason, null);
+assert.equal(raidReclaimShortWatch.executionStatus, ExecutionStatus.Blocked);
+assert.equal(raidReclaimShortWatch.blockReason, NoTradeReason.InvalidStopLocation);
+assert.ok(raidReclaimWatchSelection.candidate?.requiredTrigger?.includes('Line in the sand is 7451.25'));
+assert.ok(raidReclaimWatchSelection.candidate?.requiredTrigger?.includes('completed 5M close below'));
+assert.ok(raidReclaimWatchSelection.candidate?.requiredTrigger?.includes('stop above 7456'));
+assert.ok(raidReclaimWatchSelection.candidate?.requiredTrigger?.includes('No chase if T1 7441.5 is already reached'));
+assert.equal(raidReclaimWatchSelection.reviewStatus, null);
+assert.equal(raidReclaimWatchSelection.stale.stale, false);
 assert.equal(
   shouldSendScannerAlert({
-    state: turtleSoupWatchSelection.stateForAlert,
+    state: raidReclaimWatchSelection.stateForAlert,
     confidence: 78,
     window: resolveScannerWindow(new Date('2026-06-09T10:10:00-04:00')),
-    candidate: turtleSoupWatchSelection.candidate,
-    stale: turtleSoupWatchSelection.stale.stale,
+    candidate: raidReclaimWatchSelection.candidate,
+    stale: raidReclaimWatchSelection.stale.stale,
   }).shouldSend,
   true,
 );
 
-const turtleSoupWatchWithOppositeEarlyMove = selectScannerPlan({
+const raidReclaimWatchWithOppositeEarlyMove = selectScannerPlan({
   normalized: {
     canExecute: false,
     decisionStatus: TradeDecisionStatus.Wait,
     decision: 'NO TRADE',
-    setupCandidates: [turtleSoupShortWatch],
+    setupCandidates: [raidReclaimShortWatch],
     earlyMoveReview: {
       status: 'already_triggered_no_fresh_entry',
       direction: 'LONG',
@@ -188,14 +188,14 @@ const turtleSoupWatchWithOppositeEarlyMove = selectScannerPlan({
   } as any,
   currentPrice: 7454,
 });
-assert.equal(turtleSoupWatchWithOppositeEarlyMove.stateForAlert, 'Conditional');
-assert.equal(turtleSoupWatchWithOppositeEarlyMove.candidate?.direction, 'SHORT');
-assert.equal(turtleSoupWatchWithOppositeEarlyMove.reviewStatus, null);
-assert.ok(turtleSoupWatchWithOppositeEarlyMove.auditWarnings.some((warning) => warning.includes('Opposite-direction early-move review ignored')));
+assert.equal(raidReclaimWatchWithOppositeEarlyMove.stateForAlert, 'Conditional');
+assert.equal(raidReclaimWatchWithOppositeEarlyMove.candidate?.direction, 'SHORT');
+assert.equal(raidReclaimWatchWithOppositeEarlyMove.reviewStatus, null);
+assert.ok(raidReclaimWatchWithOppositeEarlyMove.auditWarnings.some((warning) => warning.includes('Opposite-direction early-move review ignored')));
 
-const invalidatedTurtleSoupShort = candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Invalidated Turtle Soup SHORT',
+const invalidatedraidReclaimShort = candidate({
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Invalidated Raid Reclaim Reversal SHORT',
   direction: 'SHORT',
   detectedStatus: SetupCandidateStatus.Blocked,
   executionStatus: ExecutionStatus.Blocked,
@@ -209,9 +209,9 @@ const invalidatedTurtleSoupShort = candidate({
   nextAction: 'Old short watch should not be reused after stop is breached.',
   evidence: ['Buy-side sweep and reclaim context present.'],
 });
-const validTurtleSoupLong = candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Current Turtle Soup LONG',
+const validraidReclaimLong = candidate({
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Current Raid Reclaim Reversal LONG',
   direction: 'LONG',
   detectedStatus: SetupCandidateStatus.Blocked,
   executionStatus: ExecutionStatus.Blocked,
@@ -230,20 +230,20 @@ const invalidatedShortSkippedForLongWatch = selectScannerPlan({
     canExecute: false,
     decisionStatus: TradeDecisionStatus.Wait,
     decision: 'NO TRADE',
-    setupCandidates: [invalidatedTurtleSoupShort, validTurtleSoupLong],
+    setupCandidates: [invalidatedraidReclaimShort, validraidReclaimLong],
   } as any,
   currentPrice: 7440,
   latestCompletedBar: { high: 7443.25, low: 7434.25 },
 });
 assert.equal(invalidatedShortSkippedForLongWatch.stateForAlert, 'Conditional');
 assert.equal(invalidatedShortSkippedForLongWatch.candidate?.direction, 'LONG');
-assert.equal(invalidatedShortSkippedForLongWatch.candidate?.setupType, SetupType.TurtleSoup);
+assert.equal(invalidatedShortSkippedForLongWatch.candidate?.setupType, SetupType.RaidReclaimReversal);
 assert.equal(invalidatedShortSkippedForLongWatch.candidate?.blockReason, null);
 assert.ok(invalidatedShortSkippedForLongWatch.candidate?.requiredTrigger?.includes('completed 5M close above'));
 
 const htfOpposedShort = candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'HTF-opposed Turtle Soup SHORT',
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'HTF-opposed Raid Reclaim Reversal SHORT',
   direction: 'SHORT',
   detectedStatus: SetupCandidateStatus.Conditional,
   executionStatus: ExecutionStatus.Conditional,
@@ -256,7 +256,7 @@ const htfOpposedShort = candidate({
   rankScore: 240,
   priority: 96,
   missingEvidence: ['Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.'],
-  requiredTrigger: 'Bearish Turtle Soup short pending.',
+  requiredTrigger: 'Bearish Raid Reclaim Reversal short pending.',
   nextAction: 'Short is HTF-opposed review only.',
 });
 const nonConflictedLongReview = candidate({
@@ -408,8 +408,8 @@ assert.equal(missedPendingDeskPlaySelection.stale.stale, true);
 assert.ok(missedPendingDeskPlaySelection.stale.reason?.includes('No chase'));
 
 const staleLongReclaimAfterFailedCampaign = candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Bullish Turtle Soup Reversal',
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Bullish Raid Reclaim Reversal Reversal',
   direction: 'LONG',
   executionStatus: ExecutionStatus.Executable,
   entry: 7366.5,
@@ -419,10 +419,10 @@ const staleLongReclaimAfterFailedCampaign = candidate({
   riskPoints: 31.5,
   priority: 99,
   rankScore: 99,
-  evidence: ['Failed-low / Turtle Soup long line in the sand: 7366.50.'],
+  evidence: ['Failed-low / Raid Reclaim Reversal long line in the sand: 7366.50.'],
 });
 const juneTenShortFailedLongCampaign = candidate({
-  setupType: SetupType.TurtleSoup,
+  setupType: SetupType.RaidReclaimReversal,
   scenarioLabel: 'Bearish failed-plan reversal after reclaim failure',
   direction: 'SHORT',
   executionStatus: ExecutionStatus.Executable,
@@ -455,7 +455,7 @@ const juneTenFailedCampaignSelection = selectScannerPlan({
 });
 assert.notEqual(juneTenFailedCampaignSelection.candidate, staleLongReclaimAfterFailedCampaign);
 assert.equal(juneTenFailedCampaignSelection.candidate?.direction, 'SHORT');
-assert.equal(juneTenFailedCampaignSelection.candidate?.setupType, SetupType.TurtleSoup);
+assert.equal(juneTenFailedCampaignSelection.candidate?.setupType, SetupType.RaidReclaimReversal);
 assert.equal(juneTenFailedCampaignSelection.candidate?.entry, 7338.25);
 assert.equal(juneTenFailedCampaignSelection.candidate?.stop, 7360.5);
 assert.equal(juneTenFailedCampaignSelection.candidate?.target1, 7247);
@@ -581,7 +581,7 @@ const staleFallbackShouldNotSuppressIntradayMssWatch = selectScannerPlan({
     decision: 'NO TRADE',
     setupCandidates: [
       candidate({
-        setupType: SetupType.LiquiditySweep,
+        setupType: SetupType.RaidReclaimReversal,
         scenarioLabel: 'Stale generic fallback candidate',
         direction: 'LONG',
         executionStatus: ExecutionStatus.Executable,
@@ -773,7 +773,8 @@ const staleFallback = selectScannerPlan({
   currentPrice: 108,
 });
 assert.equal(staleFallback.stateForAlert, 'Missed');
-assert.equal(staleFallback.candidate, fallbackStaleCandidate);
+assert.equal(staleFallback.candidate?.setupType, fallbackStaleCandidate.setupType);
+assert.equal(staleFallback.candidate?.entry, fallbackStaleCandidate.entry);
 assert.equal(staleFallback.reviewStatus, 'already_triggered_no_fresh_entry');
 
 const staleSmallModelOne = candidate({
@@ -789,9 +790,9 @@ const staleSmallModelOne = candidate({
   priority: 100,
   rankScore: 100,
 });
-const solidTurtleSoupLong = candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Bullish Turtle Soup failed-low reclaim',
+const solidraidReclaimLong = candidate({
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Bullish Raid Reclaim Reversal failed-low reclaim',
   direction: 'LONG',
   executionStatus: ExecutionStatus.Executable,
   entry: 7366.5,
@@ -803,7 +804,7 @@ const solidTurtleSoupLong = candidate({
   rankScore: 90,
   requiredTrigger: 'Completed 5M hold/retest/reclaim above 7366.50.',
   evidence: [
-    'Failed-low / Turtle Soup long line in the sand: 7366.50.',
+    'Failed-low / Raid Reclaim Reversal long line in the sand: 7366.50.',
     '9:40 ET candle reclaimed hard after sweeping down to 7335.25 and closed at 7366.50.',
   ],
 });
@@ -812,27 +813,27 @@ const solidPlanSelection = selectScannerPlan({
     canExecute: false,
     decisionStatus: TradeDecisionStatus.Wait,
     decision: 'NO TRADE',
-    setupCandidates: [staleSmallModelOne, solidTurtleSoupLong],
+    setupCandidates: [staleSmallModelOne, solidraidReclaimLong],
   } as any,
   currentPrice: 7384,
 });
 assert.equal(solidPlanSelection.stateForAlert, 'Missed');
-assert.notEqual(solidPlanSelection.candidate, solidTurtleSoupLong);
-assert.equal(solidPlanSelection.candidate?.setupType, SetupType.TurtleSoup);
+assert.notEqual(solidPlanSelection.candidate, solidraidReclaimLong);
+assert.equal(solidPlanSelection.candidate?.setupType, SetupType.RaidReclaimReversal);
 assert.equal(solidPlanSelection.candidate?.entry, 7366.5);
 assert.equal(solidPlanSelection.candidate?.stop, 7335);
 assert.equal(solidPlanSelection.candidate?.target1, 7430);
 assert.equal(solidPlanSelection.candidate?.target2, 7450);
 assert.equal(solidPlanSelection.candidate?.activeRuleset?.htfLineInSand?.lineInSand, 7366.5);
-assert.ok(solidPlanSelection.candidate?.activeRuleset?.htfLineInSand?.lineReason?.includes('Turtle Soup sweep/reclaim decision line'));
+assert.ok(solidPlanSelection.candidate?.activeRuleset?.htfLineInSand?.lineReason?.includes('Raid Reclaim Reversal sweep/reclaim decision line'));
 assert.ok(solidPlanSelection.candidate?.activeRuleset?.htfLineInSand?.requiredClose?.includes('hold/retest/reclaim above'));
 assert.equal(solidPlanSelection.reviewStatus, 'already_triggered_no_fresh_entry');
 assert.equal(solidPlanSelection.stale.stale, true);
 assert.ok(solidPlanSelection.stale.reason?.includes('Do not chase'));
 
-const julyOneTurtleSoupLong = candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Bullish Turtle Soup failed-low reclaim',
+const julyOneraidReclaimLong = candidate({
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Bullish Raid Reclaim Reversal failed-low reclaim',
   direction: 'LONG',
   executionStatus: ExecutionStatus.Executable,
   entry: 7548.25,
@@ -844,7 +845,7 @@ const julyOneTurtleSoupLong = candidate({
   rankScore: 99,
   decisionQualityScore: 82,
   evidence: [
-    'Failed-low / Turtle Soup long line in the sand: 7548.25.',
+    'Failed-low / Raid Reclaim Reversal long line in the sand: 7548.25.',
     'Structured 5M reclaim and protected stop are present.',
   ],
 });
@@ -877,12 +878,12 @@ const julyOneSelection = selectScannerPlan({
     canExecute: false,
     decisionStatus: TradeDecisionStatus.Wait,
     decision: 'NO TRADE',
-    setupCandidates: [julyOneWideIntradayMssLong, julyOneTurtleSoupLong],
+    setupCandidates: [julyOneWideIntradayMssLong, julyOneraidReclaimLong],
   } as any,
   currentPrice: 7549,
   latestCompletedBar: { high: 7549.75, low: 7547.5 },
 });
-assert.equal(julyOneSelection.candidate?.setupType, SetupType.TurtleSoup);
+assert.equal(julyOneSelection.candidate?.setupType, SetupType.RaidReclaimReversal);
 assert.equal(julyOneSelection.candidate?.entry, 7548.25);
 assert.equal(julyOneSelection.candidate?.stop, 7539.75);
 assert.equal(julyOneSelection.candidate?.target1, 7561);
@@ -895,7 +896,7 @@ const julyOneLateSelection = selectScannerPlan({
     canExecute: false,
     decisionStatus: TradeDecisionStatus.Wait,
     decision: 'NO TRADE',
-    setupCandidates: [julyOneWideIntradayMssLong, julyOneTurtleSoupLong],
+    setupCandidates: [julyOneWideIntradayMssLong, julyOneraidReclaimLong],
   } as any,
   currentPrice: 7555,
   latestCompletedBar: { high: 7555.5, low: 7547.5 },

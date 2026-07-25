@@ -6,8 +6,8 @@ import {
 } from './unified-positive-held-local-preview-payload';
 import type { UnifiedPositiveHeldLocalWordingGuardReport } from './unified-positive-held-local-wording-guard';
 import type {
-  UnifiedPositiveHeldLocalPreviewTurtleSoupReviewNotePlacementSimulationReport,
-} from './unified-positive-held-local-preview-turtlesoup-review-note-placement-simulation';
+  UnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport,
+} from './unified-positive-held-local-preview-raidReclaim-review-note-placement-simulation';
 
 const inspectionSurface = {
   reportType: 'unified_positive_held_local_inspection_surface',
@@ -51,7 +51,7 @@ const inspectionSurface = {
       ticketId: 'long-ticket',
       sourceSnapshotId: 'scanner-long',
       session: null,
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       status: 'inspectable_held_local_ticket',
       normalDeskOutput: {
@@ -85,7 +85,7 @@ const inspectionSurface = {
         dryRunZeroLivePublishBehaviorChange: true,
       },
       deskText: {
-        what: 'TurtleSoup LONG held-local ACTIVE_REVIEW ticket.',
+        what: 'raidReclaim LONG held-local ACTIVE_REVIEW ticket.',
         where: 'Line 100.00; entry 100.00; stop 96.00; T1 106.00; T2 108.00.',
         when: 'Fresh completed 5M proof.',
         why: 'HTF context supports review only.',
@@ -181,7 +181,7 @@ assert.match(report.markdown, /shouldDispatch=false payloads: 1/);
 assert.equal(report.summary.reviewNotePlacementAppliedPayloads, 0);
 
 const placementSimulation = {
-  reportType: 'unified_positive_held_local_preview_turtlesoup_review_note_placement_simulation',
+  reportType: 'unified_positive_held_local_preview_raidReclaim_review_note_placement_simulation',
   generatedAt: '2026-07-16T00:01:30.000Z',
   status: 'pass',
   authority: {
@@ -239,7 +239,7 @@ const placementSimulation = {
     reason: 'missing_full_plan_levels',
     session: 'morning',
     direction: 'LONG',
-    proposedNote: 'TurtleSoup long remains review-only: the liquidity-raid idea is visible, but this cluster lacks full plan-level proof. Require fresh completed 5M entry, protected stop, invalidation, and app targets before treating it as actionable.',
+    proposedNote: 'raidReclaim long remains review-only: the liquidity-raid idea is visible, but this cluster lacks full plan-level proof. Require fresh completed 5M entry, protected stop, invalidation, and app targets before treating it as actionable.',
     ticketVisibleBefore: true,
     ticketVisibleAfter: true,
     orderPreserved: true,
@@ -253,7 +253,7 @@ const placementSimulation = {
   blockers: [],
   recommendations: [],
   markdown: '',
-} satisfies UnifiedPositiveHeldLocalPreviewTurtleSoupReviewNotePlacementSimulationReport;
+} satisfies UnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport;
 
 const placementSurface = structuredClone(inspectionSurface) as UnifiedPositiveHeldLocalInspectionSurfaceReport;
 placementSurface.rows[0].session = 'morning';
@@ -261,11 +261,11 @@ const placementReport = buildUnifiedPositiveHeldLocalPreviewPayloadReport({
   inspectionSurface: placementSurface,
   wordingGuard,
   placementSimulation,
-  turtleSoupReviewNotePlacementSimulationPath: 'placement.json',
+  raidReclaimReviewNotePlacementSimulationPath: 'placement.json',
 }, '2026-07-16T00:02:30.000Z');
 
 assert.equal(placementReport.status, 'pass');
-assert.equal(placementReport.source.turtleSoupReviewNotePlacementSimulationPath, 'placement.json');
+assert.equal(placementReport.source.raidReclaimReviewNotePlacementSimulationPath, 'placement.json');
 assert.equal(placementReport.summary.previewPayloadsCreated, 1);
 assert.equal(placementReport.summary.reviewNotePlacementAppliedPayloads, 1);
 assert.equal(placementReport.rows[0].session, 'morning');
@@ -284,7 +284,7 @@ failingGuard.summary.rowsFailed = 1;
 failingGuard.findings = [
   {
     ticketId: 'long-ticket',
-    setupType: 'TurtleSoup',
+    setupType: 'raidReclaim',
     direction: 'LONG',
     reason: 'generic_below_above_invalidation_wording',
     evidence: 'Invalid below/above.',

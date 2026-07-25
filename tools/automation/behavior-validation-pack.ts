@@ -148,7 +148,7 @@ function finding(checkId: string, reason: string, evidence: string[] = []): Beha
 
 function failedHighBreakdownCandidate(): SetupCandidate {
   return {
-    setupType: SetupType.TurtleSoup,
+    setupType: SetupType.RaidReclaimReversal,
     scenarioLabel: '5M failed-high line-in-the-sand breakdown',
     direction: 'SHORT',
     detectedStatus: SetupCandidateStatus.Conditional,

@@ -13,7 +13,7 @@ import {
 import { targetsFromEntryStop, TRADE_RULES } from '../config/tradeRules';
 
 type Direction = SetupCandidate['direction'];
-const PRIMARY_MODEL_SETUP_TYPES = new Set<SetupType>([SetupType.SweepMssFvgRetrace, SetupType.TurtleSoup]);
+const PRIMARY_MODEL_SETUP_TYPES = new Set<SetupType>([SetupType.RaidReclaimReversal, SetupType.SweepMssFvgRetrace]);
 
 interface FailedReclaimShortReference {
   reference: number;
@@ -71,7 +71,7 @@ interface IctModelOneReference {
   evidence: string[];
 }
 
-interface TurtleSoupReference {
+interface RaidReclaimReversalReference {
   direction: Exclude<Direction, 'NO TRADE'>;
   entry: number;
   stop: number;
@@ -601,7 +601,7 @@ function wickRejectionSupport(
   };
 }
 
-function detectTurtleSoup(chartContext: ChartContext): TurtleSoupReference[] {
+function detectRaidReclaimReversal(chartContext: ChartContext): RaidReclaimReversalReference[] {
   const candles = readableCandles(chartContext);
   const tick = TRADE_RULES.targetModel.tickSize;
   if (candles.length < 3) return [];
@@ -611,7 +611,7 @@ function detectTurtleSoup(chartContext: ChartContext): TurtleSoupReference[] {
   const sweeps = (chartContext.liquiditySweeps || chartContext.liquidityEvents || [])
     .filter((event) => event.type === 'sweep' && event.reclaimed && confidenceIsReadable(event.confidence) && isPrice(event.level));
 
-  return sweeps.flatMap((sweep): TurtleSoupReference[] => {
+  return sweeps.flatMap((sweep): RaidReclaimReversalReference[] => {
     const direction = sweep.direction === 'LONG' ? 'LONG' : sweep.direction === 'SHORT' ? 'SHORT' : null;
     if (!direction || !isPrice(sweep.level)) return [];
 
@@ -667,8 +667,8 @@ function detectTurtleSoup(chartContext: ChartContext): TurtleSoupReference[] {
       referenceLevel: roundToTick(sweep.level),
       sweepExtreme: roundToTick(sweepExtreme),
       trigger: direction === 'LONG'
-        ? `Bullish Turtle Soup: sell-side sweep below ${roundToTick(sweep.level)}, reclaim back above the swept low, then confirm upward rejection or expansion.`
-        : `Bearish Turtle Soup: buy-side sweep above ${roundToTick(sweep.level)}, reclaim back below the swept high, then confirm downward rejection or expansion.`,
+        ? `Bullish Raid Reclaim Reversal: sell-side raid below ${roundToTick(sweep.level)}, reclaim back above the raided low, then confirm upward rejection or expansion.`
+        : `Bearish Raid Reclaim Reversal: buy-side raid above ${roundToTick(sweep.level)}, reclaim back below the raided high, then confirm downward rejection or expansion.`,
       invalidation: direction === 'LONG'
         ? `Invalid if price trades below the sweep wick structure stop near ${stop}.`
         : `Invalid if price trades above the sweep wick structure stop near ${stop}.`,
@@ -676,7 +676,7 @@ function detectTurtleSoup(chartContext: ChartContext): TurtleSoupReference[] {
         `${direction === 'LONG' ? 'Sell-side' : 'Buy-side'} liquidity was swept and reclaimed.`,
         wickSupport.label || 'No qualifying wick rejection support; wick evidence is optional and cannot trigger by itself.',
         confluence || 'No breaker/FVG overlap confluence; breaker context is optional and cannot trigger by itself.',
-        `Turtle Soup ${breakoutText} has clean 1.5R tactical target room; 2.0R remains T2/extension management.`,
+        `Raid Reclaim Reversal ${breakoutText} has clean 1.5R tactical target room; 2.0R remains T2/extension management.`,
         matchingDisplacement
           ? `${direction === 'LONG' ? 'Bullish' : 'Bearish'} expansion confirms the reversal attempt.`
           : 'Expansion is not fully confirmed; keep as conditional until price confirms.',
@@ -1038,27 +1038,27 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
   const openingRangeContinuation = detectMorningOpeningRangeContinuation(chartContext);
   const imbalancePullback = detectImbalancePullback(chartContext);
   const ictModelOne = detectIctModelOne(chartContext);
-  const turtleSoupPlans = detectTurtleSoup(chartContext);
+  const raidReclaimPlans = detectRaidReclaimReversal(chartContext);
 
   const plans: SetupCandidate[] = [];
 
-  for (const turtleSoup of turtleSoupPlans) {
+  for (const raidReclaim of raidReclaimPlans) {
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.TurtleSoup,
-      scenarioLabel: `${turtleSoup.direction === 'LONG' ? 'Bullish' : 'Bearish'} Turtle Soup Reversal`,
-      direction: turtleSoup.direction,
-      entry: turtleSoup.entry,
-      stop: turtleSoup.stop,
+      setupType: SetupType.RaidReclaimReversal,
+      scenarioLabel: `${raidReclaim.direction === 'LONG' ? 'Bullish' : 'Bearish'} Raid Reclaim Reversal`,
+      direction: raidReclaim.direction,
+      entry: raidReclaim.entry,
+      stop: raidReclaim.stop,
       priority: 96,
-      confidence: turtleSoup.confidence,
-      evidence: turtleSoup.evidence,
-      requiredTrigger: turtleSoup.trigger,
+      confidence: raidReclaim.confidence,
+      evidence: raidReclaim.evidence,
+      requiredTrigger: raidReclaim.trigger,
       nextAction: 'Preferred plan: take only the reclaim-confirmed reversal or the retrace after expansion; do not chase the first reversal candle.',
-      invalidation: turtleSoup.invalidation,
-      hasTrigger: turtleSoup.hasConfirmation,
-      target1Override: turtleSoup.target1,
-      target2Override: turtleSoup.target2,
+      invalidation: raidReclaim.invalidation,
+      hasTrigger: raidReclaim.hasConfirmation,
+      target1Override: raidReclaim.target1,
+      target2Override: raidReclaim.target2,
     }));
   }
 
@@ -1083,12 +1083,14 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
     }));
   }
 
+  return plans;
+
   if (rejectionEvidence || resistance || support) {
     const entry = firstPrice(failedReclaimShort?.entry, breakdownSupport ? roundToTick(breakdownSupport - TRADE_RULES.targetModel.tickSize) : null);
     const stop = firstPrice(failedReclaimShort?.stop, resistance ? roundToTick(resistance + TRADE_RULES.targetModel.tickSize) : null);
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.MorningFailedHighLiquidityRejection,
+      setupType: SetupType.RaidReclaimReversal,
       direction: 'SHORT',
       entry,
       stop,
@@ -1131,7 +1133,7 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
     const reclaimTargetPhrase = nyPremarketHighTarget ? ` toward NY Premarket High ${nyPremarketHighTarget}` : '';
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.MorningReclaimLong,
+      setupType: SetupType.RaidReclaimReversal,
       scenarioLabel: nyPremarketHighTarget
         ? 'Reclaim continuation toward NY Premarket High'
         : 'Reclaim continuation',
@@ -1171,7 +1173,7 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
   if (openingRangeContinuation) {
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.MorningOpeningRangeContinuation,
+      setupType: SetupType.OpeningDriveFvgContinuation,
       scenarioLabel: openingRangeContinuation.direction === 'LONG'
         ? 'Opening Range Retest Continuation Long'
         : 'Opening Range Retest Continuation Short',
@@ -1196,7 +1198,7 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
   if (imbalancePullback) {
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.FvgImbalancePullback,
+      setupType: SetupType.SweepMssFvgRetrace,
       scenarioLabel: `${imbalancePullback.direction === 'LONG' ? 'Long' : 'Short'} Imbalance Pullback`,
       direction: imbalancePullback.direction,
       entry: imbalancePullback.entry,
@@ -1269,27 +1271,27 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
   const hasCompletedMorningContext = Boolean(morning?.complete && morningHigh && morningLow);
   const imbalancePullback = detectImbalancePullback(chartContext);
   const ictModelOne = detectIctModelOne(chartContext);
-  const turtleSoupPlans = detectTurtleSoup(chartContext);
+  const raidReclaimPlans = detectRaidReclaimReversal(chartContext);
   const plans: SetupCandidate[] = [];
 
-  for (const turtleSoup of turtleSoupPlans) {
+  for (const raidReclaim of raidReclaimPlans) {
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.TurtleSoup,
-      scenarioLabel: `${turtleSoup.direction === 'LONG' ? 'Bullish' : 'Bearish'} Turtle Soup Reversal`,
-      direction: turtleSoup.direction,
-      entry: turtleSoup.entry,
-      stop: turtleSoup.stop,
+      setupType: SetupType.RaidReclaimReversal,
+      scenarioLabel: `${raidReclaim.direction === 'LONG' ? 'Bullish' : 'Bearish'} Raid Reclaim Reversal`,
+      direction: raidReclaim.direction,
+      entry: raidReclaim.entry,
+      stop: raidReclaim.stop,
       priority: 96,
-      confidence: turtleSoup.confidence,
-      evidence: turtleSoup.evidence,
+      confidence: raidReclaim.confidence,
+      evidence: raidReclaim.evidence,
       missingEvidence: hasCompletedMorningContext ? [] : ['Completed Morning context is incomplete; keep this as conditional only.'],
-      requiredTrigger: turtleSoup.trigger,
+      requiredTrigger: raidReclaim.trigger,
       nextAction: 'Preferred plan: take only the reclaim-confirmed reversal or the retrace after expansion; do not chase the first reversal candle.',
-      invalidation: turtleSoup.invalidation,
-      hasTrigger: hasCompletedMorningContext && turtleSoup.hasConfirmation,
-      target1Override: turtleSoup.target1,
-      target2Override: turtleSoup.target2,
+      invalidation: raidReclaim.invalidation,
+      hasTrigger: hasCompletedMorningContext && raidReclaim.hasConfirmation,
+      target1Override: raidReclaim.target1,
+      target2Override: raidReclaim.target2,
     }));
   }
 
@@ -1315,12 +1317,14 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     }));
   }
 
+  return plans;
+
   if (morningHigh || morning?.failedHoldAboveMorningHigh || morning?.morningHighSwept) {
     const entry = morningHigh ? roundToTick(morningHigh - TRADE_RULES.targetModel.tickSize) : null;
     const stop = sweepHigh ? roundToTick(sweepHigh + TRADE_RULES.targetModel.tickSize) : null;
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.LunchFailedHighReversal,
+      setupType: SetupType.RaidReclaimReversal,
       scenarioLabel: nyPremarketLowTarget
         ? 'Failed high reversal toward NY Premarket Low'
         : 'Failed high reversal',
@@ -1352,7 +1356,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     const stop = sweepLow ? roundToTick(sweepLow - TRADE_RULES.targetModel.tickSize) : null;
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.LunchFailedLowReversal,
+      setupType: SetupType.RaidReclaimReversal,
       scenarioLabel: nyPremarketHighTarget
         ? 'Failed low reclaim toward NY Premarket High'
         : 'Failed low reclaim',
@@ -1395,7 +1399,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
         : null;
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.LunchCompressionBreakout,
+      setupType: SetupType.AfterLunchDriveFvgContinuation,
       scenarioLabel: direction === 'LONG'
         ? (nyPremarketHighTarget ? 'Compression breakout toward NY Premarket High' : 'Compression breakout long')
         : direction === 'SHORT'
@@ -1427,7 +1431,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
   if (imbalancePullback) {
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.FvgImbalancePullback,
+      setupType: SetupType.SweepMssFvgRetrace,
       scenarioLabel: `${imbalancePullback.direction === 'LONG' ? 'Long' : 'Short'} Imbalance Pullback`,
       direction: imbalancePullback.direction,
       entry: imbalancePullback.entry,
@@ -1458,7 +1462,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     const stop = stopBase ? roundToTick(stopBase - TRADE_RULES.targetModel.tickSize) : null;
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.LunchRangeReclaim,
+      setupType: SetupType.AfterLunchDriveFvgContinuation,
       scenarioLabel: nyPremarketHighTarget
         ? 'Range reclaim continuation toward NY Premarket High'
         : 'Range reclaim continuation',
@@ -1497,7 +1501,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     const stop = stopBase ? roundToTick(stopBase + TRADE_RULES.targetModel.tickSize) : null;
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.LunchFailedContinuation,
+      setupType: SetupType.AfterLunchDriveFvgContinuation,
       scenarioLabel: nyPremarketLowTarget
         ? 'Failed bullish continuation toward NY Premarket Low'
         : 'Failed bullish continuation',
@@ -1536,7 +1540,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     const stop = stopBase ? roundToTick(stopBase - TRADE_RULES.targetModel.tickSize) : null;
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.LunchFailedContinuation,
+      setupType: SetupType.AfterLunchDriveFvgContinuation,
       scenarioLabel: nyPremarketHighTarget
         ? 'Failed bearish continuation toward NY Premarket High'
         : 'Failed bearish continuation',

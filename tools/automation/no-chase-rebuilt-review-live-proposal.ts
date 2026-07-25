@@ -263,7 +263,7 @@ export function buildNoChaseRebuiltReviewLiveProposalReport(args: {
         'Do not write Supabase or journal/RAG records from this package.',
         'Do not change entry, stop, T1, T2, risk, invalidation, or target-room math.',
         'Do not make HTF context execution authority.',
-        'Do not broaden to TurtleSoup, SweepMssFvgRetrace, OpeningDriveFvgContinuation, or other model families without separate replay evidence.',
+        'Do not broaden to raidReclaim, SweepMssFvgRetrace, OpeningDriveFvgContinuation, or other model families without separate replay evidence.',
       ],
       requiredFutureProof: [
         'A separate approval checkpoint before any scanner-visible implementation.',

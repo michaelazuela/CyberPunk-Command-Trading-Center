@@ -91,7 +91,7 @@ function authority(): NoSilentDropPolicyAuditReport['authority'] {
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.LiquiditySweep,
+    setupType: SetupType.RaidReclaimReversal,
     scenarioLabel: 'No silent drop fixture',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,

@@ -295,7 +295,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
         'No setupScanner runtime execution or scanner-visible ranking.',
         'No canExecute changes or trader-facing executable instruction changes.',
         'No entry, stop, target, risk, invalidation, target-room, or session-window math changes.',
-        'No broadening to TurtleSoup, FailedPlanReversal, HTF displacement, OpeningDriveFvgContinuation, AfterLunchDriveFvgContinuation, IntradayMssMicroContinuation, or any other model family.',
+        'No broadening to raidReclaim, RaidReclaimReversal, HTF displacement, OpeningDriveFvgContinuation, AfterLunchDriveFvgContinuation, IntradayMssMicroContinuation, or any other model family.',
       ],
       requiredRegressionCommands: [
         'npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-implementation-preflight.test.ts',

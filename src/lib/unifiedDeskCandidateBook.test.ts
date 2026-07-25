@@ -28,7 +28,7 @@ function candidate(overrides: Partial<SetupCandidate>): SetupCandidate {
 }
 
 const strictCandidate = candidate({
-  setupType: SetupType.TurtleSoup,
+  setupType: SetupType.RaidReclaimReversal,
   scenarioLabel: 'strict',
   confidence: 'High',
   priority: 95,
@@ -38,7 +38,7 @@ const strictCandidate = candidate({
   nextAction: 'Existing deterministic gates passed.',
 });
 
-const strictKey = 'TurtleSoup|strict|LONG|100.00|0';
+const strictKey = 'RaidReclaimReversal|strict|LONG|100.00|0';
 const executableBook = buildUnifiedDeskCandidateBook({
   sessionType: 'morning',
   candidates: [strictCandidate],
@@ -259,8 +259,8 @@ const validSweepLead = candidate({
   blockReason: NoTradeReason.EntryTriggerPending,
   requiredTrigger: 'Wait for completed 5M retest/re-entry proof.',
 });
-const turtleSoupBlockedRisk = candidate({
-  setupType: SetupType.TurtleSoup,
+const raidReclaimBlockedRisk = candidate({
+  setupType: SetupType.RaidReclaimReversal,
   scenarioLabel: 'turtle-risk',
   direction: 'LONG',
   priority: 90,
@@ -273,10 +273,10 @@ const turtleSoupBlockedRisk = candidate({
 
 const sweepPenaltyBook = buildUnifiedDeskCandidateBook({
   sessionType: 'morning',
-  candidates: [invalidStopSweep, turtleSoupBlockedRisk, validSweepLead],
+  candidates: [invalidStopSweep, raidReclaimBlockedRisk, validSweepLead],
 });
 const invalidStopSweepItem = sweepPenaltyBook.candidates.find((item) => item.candidateKey.includes('invalid-stop-sweep'));
-const turtleSoupRiskItem = sweepPenaltyBook.candidates.find((item) => item.candidateKey.includes('turtle-risk'));
+const raidReclaimRiskItem = sweepPenaltyBook.candidates.find((item) => item.candidateKey.includes('turtle-risk'));
 const validSweepLeadItem = sweepPenaltyBook.candidates.find((item) => item.candidateKey.includes('valid-sweep-lead'));
 
 assert.equal(sweepPenaltyBook.primaryDeskIdea?.candidateKey, 'SweepMssFvgRetrace|valid-sweep-lead|LONG|100.00|2');
@@ -286,11 +286,11 @@ assert.equal(validSweepLeadItem?.entry, validSweepLead.entry);
 assert.equal(validSweepLeadItem?.stop, validSweepLead.stop);
 assert.equal(validSweepLeadItem?.target1, validSweepLead.target1);
 assert.equal(validSweepLeadItem?.target2, validSweepLead.target2);
-assert.equal(turtleSoupRiskItem?.setupType, SetupType.TurtleSoup);
-assert.equal(turtleSoupRiskItem?.state, 'blocked');
+assert.equal(raidReclaimRiskItem?.setupType, SetupType.RaidReclaimReversal);
+assert.equal(raidReclaimRiskItem?.state, 'blocked');
 assert.equal(invalidStopSweepItem?.state, 'blocked');
 assert.ok(
-  (turtleSoupRiskItem?.score || 0) > (invalidStopSweepItem?.score || 0),
+  (raidReclaimRiskItem?.score || 0) > (invalidStopSweepItem?.score || 0),
   'invalid-stop Sweep penalty should demote only the blocked invalid-stop Sweep row inside blocked candidates',
 );
 assert.equal(sweepPenaltyBook.approvalBoundary.changesCanExecute, false);

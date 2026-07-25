@@ -18,7 +18,7 @@
   "supportedLabels": [
     "strong_advisory_candidate",
     "covered_by_model_1",
-    "covered_by_turtle_soup",
+    "covered_by_RAID_RECLAIM",
     "weak_or_noisy",
     "needs_chart_review",
     "reject_time_window_standalone"
@@ -30,7 +30,7 @@
     "labelCounts": {
       "strong_advisory_candidate": 0,
       "covered_by_model_1": 0,
-      "covered_by_turtle_soup": 0,
+      "covered_by_RAID_RECLAIM": 0,
       "weak_or_noisy": 0,
       "needs_chart_review": 2,
       "reject_time_window_standalone": 0
@@ -1574,12 +1574,12 @@
       }
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2024-02-08",
-      "sourceBucket": "turtle_soup_overlap_samples",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2024-02-08",
+      "sourceBucket": "RAID_RECLAIM_overlap_samples",
       "window": "PM 2:00-3:00 NY",
       "symbol": "MES",
       "dateTime": "2024-02-08 2:00-3:00",
-      "suggestedLabel": "covered_by_turtle_soup",
+      "suggestedLabel": "covered_by_RAID_RECLAIM",
       "finalHumanLabel": null,
       "reviewer": null,
       "reviewedAt": null,
@@ -1595,12 +1595,12 @@
       }
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2023-12-28",
-      "sourceBucket": "turtle_soup_overlap_samples",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2023-12-28",
+      "sourceBucket": "RAID_RECLAIM_overlap_samples",
       "window": "PM 2:00-3:00 NY",
       "symbol": "MES",
       "dateTime": "2023-12-28 2:00-3:00",
-      "suggestedLabel": "covered_by_turtle_soup",
+      "suggestedLabel": "covered_by_RAID_RECLAIM",
       "finalHumanLabel": null,
       "reviewer": null,
       "reviewedAt": null,
@@ -1616,12 +1616,12 @@
       }
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2024-12-05",
-      "sourceBucket": "turtle_soup_overlap_samples",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2024-12-05",
+      "sourceBucket": "RAID_RECLAIM_overlap_samples",
       "window": "PM 2:00-3:00 NY",
       "symbol": "MES",
       "dateTime": "2024-12-05 2:00-3:00",
-      "suggestedLabel": "covered_by_turtle_soup",
+      "suggestedLabel": "covered_by_RAID_RECLAIM",
       "finalHumanLabel": null,
       "reviewer": null,
       "reviewedAt": null,
@@ -1637,12 +1637,12 @@
       }
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-03-06",
-      "sourceBucket": "turtle_soup_overlap_samples",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-03-06",
+      "sourceBucket": "RAID_RECLAIM_overlap_samples",
       "window": "PM 2:00-3:00 NY",
       "symbol": "MES",
       "dateTime": "2025-03-06 2:00-3:00",
-      "suggestedLabel": "covered_by_turtle_soup",
+      "suggestedLabel": "covered_by_RAID_RECLAIM",
       "finalHumanLabel": null,
       "reviewer": null,
       "reviewedAt": null,
@@ -1658,12 +1658,12 @@
       }
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-11-20",
-      "sourceBucket": "turtle_soup_overlap_samples",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-20",
+      "sourceBucket": "RAID_RECLAIM_overlap_samples",
       "window": "PM 2:00-3:00 NY",
       "symbol": "MES",
       "dateTime": "2025-11-20 2:00-3:00",
-      "suggestedLabel": "covered_by_turtle_soup",
+      "suggestedLabel": "covered_by_RAID_RECLAIM",
       "finalHumanLabel": null,
       "reviewer": null,
       "reviewedAt": null,
@@ -1679,12 +1679,12 @@
       }
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-11-21",
-      "sourceBucket": "turtle_soup_overlap_samples",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-21",
+      "sourceBucket": "RAID_RECLAIM_overlap_samples",
       "window": "PM 2:00-3:00 NY",
       "symbol": "MES",
       "dateTime": "2025-11-21 2:00-3:00",
-      "suggestedLabel": "covered_by_turtle_soup",
+      "suggestedLabel": "covered_by_RAID_RECLAIM",
       "finalHumanLabel": null,
       "reviewer": null,
       "reviewedAt": null,
@@ -1700,12 +1700,12 @@
       }
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-03-05",
-      "sourceBucket": "turtle_soup_overlap_samples",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-03-05",
+      "sourceBucket": "RAID_RECLAIM_overlap_samples",
       "window": "PM 2:00-3:00 NY",
       "symbol": "MES",
       "dateTime": "2025-03-05 2:00-3:00",
-      "suggestedLabel": "covered_by_turtle_soup",
+      "suggestedLabel": "covered_by_RAID_RECLAIM",
       "finalHumanLabel": null,
       "reviewer": null,
       "reviewedAt": null,
@@ -1721,12 +1721,12 @@
       }
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-12-04",
-      "sourceBucket": "turtle_soup_overlap_samples",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-12-04",
+      "sourceBucket": "RAID_RECLAIM_overlap_samples",
       "window": "PM 2:00-3:00 NY",
       "symbol": "MES",
       "dateTime": "2025-12-04 2:00-3:00",
-      "suggestedLabel": "covered_by_turtle_soup",
+      "suggestedLabel": "covered_by_RAID_RECLAIM",
       "finalHumanLabel": null,
       "reviewer": null,
       "reviewedAt": null,
@@ -1742,12 +1742,12 @@
       }
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-11-18",
-      "sourceBucket": "turtle_soup_overlap_samples",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-18",
+      "sourceBucket": "RAID_RECLAIM_overlap_samples",
       "window": "PM 2:00-3:00 NY",
       "symbol": "MES",
       "dateTime": "2025-11-18 2:00-3:00",
-      "suggestedLabel": "covered_by_turtle_soup",
+      "suggestedLabel": "covered_by_RAID_RECLAIM",
       "finalHumanLabel": null,
       "reviewer": null,
       "reviewedAt": null,
@@ -1763,12 +1763,12 @@
       }
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2026-02-05",
-      "sourceBucket": "turtle_soup_overlap_samples",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2026-02-05",
+      "sourceBucket": "RAID_RECLAIM_overlap_samples",
       "window": "PM 2:00-3:00 NY",
       "symbol": "MES",
       "dateTime": "2026-02-05 2:00-3:00",
-      "suggestedLabel": "covered_by_turtle_soup",
+      "suggestedLabel": "covered_by_RAID_RECLAIM",
       "finalHumanLabel": null,
       "reviewer": null,
       "reviewedAt": null,

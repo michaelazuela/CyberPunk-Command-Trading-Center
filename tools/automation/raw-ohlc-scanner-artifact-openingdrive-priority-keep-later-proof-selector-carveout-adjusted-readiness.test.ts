@@ -18,7 +18,7 @@ const readinessSummary = {
   },
   modelRows: [
     { setupType: 'SweepMssFvgRetrace', evidenceState: 'positive_strict_ready_subset' },
-    { setupType: 'TurtleSoup', evidenceState: 'weak_or_mixed_subset' },
+    { setupType: 'raidReclaim', evidenceState: 'weak_or_mixed_subset' },
   ],
 };
 

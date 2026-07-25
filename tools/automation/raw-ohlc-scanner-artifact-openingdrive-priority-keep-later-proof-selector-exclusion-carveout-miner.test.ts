@@ -8,10 +8,10 @@ const blockerDrilldown = {
   status: 'pass',
   rows: [
     {
-      ticketId: '2026-06-23|evening|TurtleSoup|SHORT|prefer_replacement|snapshot-entry-missing',
+      ticketId: '2026-06-23|evening|raidReclaim|SHORT|prefer_replacement|snapshot-entry-missing',
       tradeDate: '2026-06-23',
       session: 'evening',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       snapshotId: 'snapshot-entry-missing',
       likelyCause: 'matching_side_missing_levels',
@@ -42,10 +42,10 @@ const levelPathDiagnostic = {
   status: 'pass',
   rows: [
     {
-      ticketId: '2026-06-23|evening|TurtleSoup|SHORT|prefer_replacement|snapshot-entry-missing',
+      ticketId: '2026-06-23|evening|raidReclaim|SHORT|prefer_replacement|snapshot-entry-missing',
       tradeDate: '2026-06-23',
       session: 'evening',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       snapshotId: 'snapshot-entry-missing',
       pathState: 'waiting_for_entry_trigger',

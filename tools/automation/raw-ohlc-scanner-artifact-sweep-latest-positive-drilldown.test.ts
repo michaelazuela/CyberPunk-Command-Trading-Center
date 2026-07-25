@@ -126,7 +126,7 @@ const trainReport = report([
   ...lossBearingTrain,
   row({
     id: 'ignored-htf',
-    setupType: 'HtfDisplacementMssContinuation',
+    setupType: 'IntradayMssMicroContinuation',
     session: 'lunch',
     direction: 'SHORT',
     riskPoints: 18,

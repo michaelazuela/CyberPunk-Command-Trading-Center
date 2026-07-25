@@ -44,7 +44,7 @@ describe('ResearchReviewDashboard', () => {
         maeDollars: -8.75,
       },
       researchQualityScore: { score: 74, label: 'Moderate', reasons: ['fixture'], source: 'research-only-score', researchOnly: true },
-      warningFailureReason: 'Approved Model 1 or Turtle Soup gates were not evaluated by research backfill.',
+      warningFailureReason: 'Approved Model 1 or Raid Reclaim Reversal gates were not evaluated by research backfill.',
       advisoryOnly: true,
     }],
   };

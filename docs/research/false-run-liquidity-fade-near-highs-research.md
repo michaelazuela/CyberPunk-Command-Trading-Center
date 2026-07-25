@@ -16,7 +16,7 @@
 * Plain-English meaning: price runs aggressively toward ATH, high of day, or a major buy-side pool, then fails to sustain above it.
 * Transcript evidence / timestamp: task source identifies a run to ATH and fade concept; exact transcript timestamp was not provided in the prompt.
 * Why it may matter for 6K: it may describe a repeatable research context for bearish failure near highs.
-* Current 6K coverage: partially covered by liquidity mapping and Turtle Soup when a true sweep + reclaim exists.
+* Current 6K coverage: partially covered by liquidity mapping and Raid Reclaim Reversal when a true sweep + reclaim exists.
 * Watchlist status: research-only watchlist idea.
 
 ### Judas Swing / False Run Logic As A Source Concept
@@ -24,7 +24,7 @@
 * Plain-English meaning: a false move creates a directional trap before price reverses toward the intended draw.
 * Transcript evidence / timestamp: task source references Judas Swing / false-run logic; exact transcript timestamp was not provided in the prompt.
 * Why it may matter for 6K: it helps describe manipulation-style context, but must not become a duplicate executable model.
-* Current 6K coverage: partially covered by Turtle Soup if there is a true sweep/raid plus reclaim.
+* Current 6K coverage: partially covered by Raid Reclaim Reversal if there is a true sweep/reclaim.
 * Watchlist status: research-only context unless current approved rules confirm.
 
 ### Market Maker Sell Model / MMSM As Source Narrative
@@ -147,15 +147,15 @@
 * Current 6K coverage: research-only caution.
 * Watchlist status: research-only context.
 
-## 3. Judas Swing / Turtle Soup Taxonomy
+## 3. Judas Swing / Raid Reclaim Reversal Taxonomy
 
 Judas Swing is a broad false-move/manipulation concept. The external Judas Swing guide describes a stricter session-open pattern tied to the New York midnight open and the 00:00-05:00 NY window, usually after London open. That stricter source pattern requires daily bias, a false move against that bias, return through the opening level, and lower-timeframe MSS before any trade concept is considered.
 
-Turtle Soup is the stricter 6K executable path when there is an actual sweep/raid of established liquidity plus reclaim. If the transcript pattern includes sweep + reclaim, future diagnostics should classify it through existing Turtle Soup rather than creating a new model.
+Raid Reclaim Reversal is the stricter 6K executable path when there is an actual sweep/raid of established liquidity plus reclaim. If the transcript pattern includes sweep + reclaim, future diagnostics should classify it through existing Raid Reclaim Reversal rather than creating a new model.
 
 If the pattern only runs toward liquidity, falls short, stalls, or reverses without a true sweep + reclaim, it remains advisory-only research. If the event occurs outside the source Judas Swing window, use broader false-run / liquidity-fade language instead of strict Judas Swing labeling.
 
-Do not create a separate executable Judas Swing model. Do not duplicate Turtle Soup under a new name. Judas Swing/MMSM/false-run may be supporting context, not execution authority.
+Do not create a separate executable Judas Swing model. Do not duplicate Raid Reclaim Reversal under a new name. Judas Swing/MMSM/false-run may be supporting context, not execution authority.
 
 ## 4. Candidate Watchlist Model
 
@@ -175,7 +175,7 @@ Status:
 * No T1/T2.
 * No outcome buttons.
 * No auto-alerts unless separately approved later.
-* If sweep + reclaim qualifies, evaluate through current Turtle Soup instead.
+* If sweep + reclaim qualifies, evaluate through current Raid Reclaim Reversal instead.
 
 ## 5. Candidate Conditions
 
@@ -207,12 +207,12 @@ Caution / invalidation conditions:
 * Price already reached sell-side target.
 * Move is too extended to chase.
 * Risk would be too wide under current approved rules.
-* No true sweep + reclaim exists, meaning it cannot be treated as Turtle Soup.
+* No true sweep + reclaim exists, meaning it cannot be treated as Raid Reclaim Reversal.
 
 ## 6. Comparison to Existing 6K Rules
 
 * Current Model 1: partially covered. Model 1 may include displacement/FVG/reclaim components, but MMSM/Judas Swing narrative cannot bypass current Model 1 gates.
-* Current Turtle Soup: partially covered. Judas Swing with true sweep + reclaim may already be covered by Turtle Soup. Judas Swing / false-run behavior without true sweep + reclaim is not currently an executable 6K model.
+* Current Raid Reclaim Reversal: partially covered. Judas Swing with true sweep + reclaim may already be covered by Raid Reclaim Reversal. Judas Swing / false-run behavior without true sweep + reclaim is not currently an executable 6K model.
 * Current Morning Continuation Watchlist: not covered. That watchlist is advisory and continuation-focused; this note is bearish fade research near highs.
 * Current ICT-style Displacement/FVG Pullback diagnostic category: partially covered. Bearish FVG/SIBI and IFVG concepts may appear as components, but this note must remain advisory unless approved rules confirm.
 * Current scanner health / selection safety layers: already covered as safety layers only. They do not approve or reject this research idea.
@@ -229,7 +229,7 @@ Future smoke-test plan only. Do not implement as part of this note.
 * Focus on sessions where price runs toward ATH / HOD / buy-side liquidity.
 * Identify whether price actually swept/raided established liquidity.
 * Identify whether price reclaimed after the sweep.
-* If sweep + reclaim exists, classify through current Turtle Soup gates.
+* If sweep + reclaim exists, classify through current Raid Reclaim Reversal gates.
 * If no sweep + reclaim exists, classify as advisory-only false-run / liquidity-fade context.
 * Identify bearish FVG/SIBI/IFVG/order block/premium wick structures.
 * Identify whether bodies stayed below the relevant midpoint.
@@ -242,15 +242,15 @@ Future smoke-test plan only. Do not implement as part of this note.
 
 Draft only, not implementation:
 
-“False-Run Liquidity Fade Near Highs candidate forming. Watch only - price ran toward major buy-side liquidity / ATH and may be drawing back toward sell-side liquidity. If a true sweep + reclaim forms, evaluate through current Turtle Soup rules. Otherwise, keep this as research-only context. Do not chase.”
+“False-Run Liquidity Fade Near Highs candidate forming. Watch only - price ran toward major buy-side liquidity / ATH and may be drawing back toward sell-side liquidity. If a true sweep + reclaim forms, evaluate through current Raid Reclaim Reversal rules. Otherwise, keep this as research-only context. Do not chase.”
 
 ## 9. Guardrails
 
 * This is not an approved executable model.
 * Do not create entries, stops, T1/T2, or outcome buttons.
-* Do not override Model 1 or Turtle Soup.
+* Do not override Model 1 or Raid Reclaim Reversal.
 * Do not allow this to approve trades.
-* Do not duplicate Turtle Soup under a new Judas Swing or false-run label.
+* Do not duplicate Raid Reclaim Reversal under a new Judas Swing or false-run label.
 * Do not use later downside delivery to retroactively validate an invalid setup.
 * Collect 20-30 examples first.
 
@@ -266,7 +266,7 @@ Keep as research note only. Create a future advisory-only bridge smoke-test prom
   "status": "research_only",
   "candidateName": "False-Run Liquidity Fade Near Highs Watchlist",
   "primaryIdea": "Fade a run toward ATH or major buy-side liquidity when price fails to sustain and begins drawing toward sell-side liquidity.",
-  "taxonomyNote": "If sweep + reclaim exists, evaluate through existing Turtle Soup; otherwise keep as advisory research.",
+  "taxonomyNote": "If sweep + reclaim exists, evaluate through existing Raid Reclaim Reversal; otherwise keep as advisory research.",
   "recommendedNextStep": "Collect 20-30 bridge-backed examples before any rule review.",
   "ruleChange": "none",
   "approvalBoundarySummary": "Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.",

@@ -34,7 +34,7 @@ const conditionalPlan = normalizeTradePlan({
   checks: [],
   current_rule_analysis: {
     summary: 'Conditional app-owned plan with levels, but no final approval.',
-    setup_detected: 'HTF Draw Continuation After Raid/Reclaim',
+    setup_detected: 'HTF Context Continuation After Raid/Reclaim',
     rule_category: 'APP_OWNED_ACTUAL_OHLC_REPLAY',
     entry: 7625.5,
     stop: 7622.5,

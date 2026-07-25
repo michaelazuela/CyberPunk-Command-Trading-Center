@@ -68,7 +68,7 @@ const samebar = {
     row({ ticketId: 'od-a', setupType: 'OpeningDriveFvgContinuation', proofTime: '2026-07-17T10:00:00', oneMesPl: 100 }),
     row({ ticketId: 'sweep-a', setupType: 'SweepMssFvgRetrace', proofTime: '2026-07-17T10:00:00', oneMesPl: 150 }),
     row({ ticketId: 'od-b', setupType: 'OpeningDriveFvgContinuation', proofTime: '2026-07-17T10:05:00', oneMesPl: 120, direction: 'SHORT' }),
-    row({ ticketId: 'htf-b', setupType: 'HtfDisplacementMssContinuation', proofTime: '2026-07-17T10:05:00', oneMesPl: 200, direction: 'SHORT' }),
+    row({ ticketId: 'htf-b', setupType: 'IntradayMssMicroContinuation', proofTime: '2026-07-17T10:05:00', oneMesPl: 200, direction: 'SHORT' }),
     row({ ticketId: 'wrong-side-ignore', setupType: 'SweepMssFvgRetrace', proofTime: '2026-07-17T10:05:00', oneMesPl: 500, direction: 'LONG' }),
   ],
   blockers: [],

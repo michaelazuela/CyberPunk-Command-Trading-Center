@@ -17,15 +17,15 @@ The broader OpeningDrive keep-later-proof research package produced:
 - 22 resolved rows and 16 unresolved/no-fill rows.
 - +1,220.00 gross one-MES P/L across strict-ready rows.
 - SweepMssFvgRetrace: 19 rows, 12 resolved, 7 unresolved, +1,272.50 gross one-MES P/L.
-- TurtleSoup: 18 rows, 10 resolved, 8 unresolved, -52.50 gross one-MES P/L.
-- HtfDisplacementMssContinuation: 1 unresolved row.
+- RaidReclaimReversal: 18 rows, 10 resolved, 8 unresolved, -52.50 gross one-MES P/L.
+- IntradayMssMicroContinuation: 1 unresolved row.
 
 The 12 originally excluded rows were later classified as research-accounting carveouts:
 
 - 4 fresh-entry-pending rows.
 - 5 stale-invalidated rows.
 - 1 countertrend/opposing-MSS conditional row.
-- 1 FailedPlanReversal row lacking deterministic entry/stop/T1/T2.
+- 1 RaidReclaimReversal row lacking deterministic entry/stop/T1/T2.
 - 1 HTF MSS continuation row lacking protected 5M stop because completed 5M MSS opposed the direction.
 
 Adjusted readiness cleared blocked-row accounting, and the proposal guard passed with:
@@ -54,11 +54,11 @@ The selector may only be evaluated for candidates that are:
 
 ## Explicit Non-Goals
 
-Do not remove or weaken TurtleSoup.
+Do not remove or weaken RaidReclaimReversal.
 
 Do not remove or weaken SweepMssFvgRetrace.
 
-Do not broaden the selector to FailedPlanReversal, HTF displacement, OpeningDriveFvgContinuation, AfterLunchDriveFvgContinuation, IntradayMssMicroContinuation, or any other model family in this proposal.
+Do not broaden the selector to RaidReclaimReversal, HTF displacement, OpeningDriveFvgContinuation, AfterLunchDriveFvgContinuation, IntradayMssMicroContinuation, or any other model family in this proposal.
 
 Do not loosen `canExecute`.
 

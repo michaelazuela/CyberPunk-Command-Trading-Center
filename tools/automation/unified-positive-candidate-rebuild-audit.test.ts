@@ -37,7 +37,7 @@ const reviewTicket = candidate({
   modelConfidenceScore: 90,
 });
 const needsProof = candidate({
-  setupType: SetupType.TurtleSoup,
+  setupType: SetupType.RaidReclaimReversal,
   scenarioLabel: 'stale',
   evidence: ['15M context support only.'],
   requiredTrigger: 'No chase. Wait for fresh completed 5M re-entry proof.',
@@ -132,7 +132,7 @@ const diagnostic = {
       currentSelectedKey: null,
       currentSelectedState: null,
       currentCanExecute: false,
-      unifiedPrimaryKey: 'TurtleSoup|stale|LONG|100.00|0',
+      unifiedPrimaryKey: 'RaidReclaimReversal|stale|LONG|100.00|0',
       unifiedPrimaryState: 'no_chase',
       unifiedPrimaryTradingModelState: 'ranked_candidate',
       unifiedPrimaryScore: 50,

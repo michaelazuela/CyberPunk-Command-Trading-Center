@@ -36,9 +36,9 @@ const formalReplay = {
           session: 'morning',
           source: 'selectedCandidate',
           direction: 'SHORT',
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           state: 'Conditional',
-          trigger: 'Bearish Turtle Soup sweep and reclaim.',
+          trigger: 'Bearish Raid Reclaim Reversal sweep and reclaim.',
           entry: 100,
           stop: 104,
           confidence: 0,
@@ -90,7 +90,7 @@ const ohlcOutcome: UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport = {
     unresolvedRows: 0,
     blockedRows: 0,
     grossResolvedOneMesPl: 90,
-    turtleSoupResolvedOneMesPl: 30,
+    raidReclaimResolvedOneMesPl: 30,
     sweepMssFvgRetraceResolvedOneMesPl: 60,
     livePromotionAllowedRows: 0,
   },
@@ -99,7 +99,7 @@ const ohlcOutcome: UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport = {
       ticketId: 'turtle-1',
       tradeDate: '2026-06-16',
       session: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       sourceSnapshotId: 'snap-1',
       proofTime: '2026-06-16T10:05:00',
@@ -163,7 +163,7 @@ const modelDecision = {
   reportType: 'unified_positive_held_local_preview_model_decision',
   status: 'pass',
   rows: [
-    { setupType: 'TurtleSoup', removeModel: false, broadenLiveBehavior: false, changeCanExecute: false },
+    { setupType: 'raidReclaim', removeModel: false, broadenLiveBehavior: false, changeCanExecute: false },
     { setupType: 'SweepMssFvgRetrace', removeModel: false, broadenLiveBehavior: false, changeCanExecute: false },
   ],
 } as UnifiedPositiveHeldLocalPreviewModelDecisionReport;
@@ -211,8 +211,8 @@ assert.equal(report.summary.candidateFilterFindings, 2);
 assert.equal(report.summary.removeModelRecommendations, 0);
 assert.equal(report.summary.broadenLiveBehaviorRecommendations, 0);
 assert.equal(report.summary.changeCanExecuteRecommendations, 0);
-assert.equal(report.rows.find((row) => row.setupType === 'TurtleSoup')?.formalLosing.completedRetestProofCount, 0);
-assert.equal(report.rows.find((row) => row.setupType === 'TurtleSoup')?.reviewedWinning.completedRetestProofCount, 1);
+assert.equal(report.rows.find((row) => row.setupType === 'raidReclaim')?.formalLosing.completedRetestProofCount, 0);
+assert.equal(report.rows.find((row) => row.setupType === 'raidReclaim')?.reviewedWinning.completedRetestProofCount, 1);
 assert.match(report.rows[0].recommendation, /scanner-owned held-local proof/);
 assert.match(report.markdown, /does not post Discord/);
 

@@ -46,10 +46,10 @@ const readinessReport: UnifiedDeskOutputVisibilityReadinessReport = {
     blockedRows: 0,
   },
   candidates: [
-    candidate('morning', 'HtfDisplacementFvgContinuation', '2026-07-22T09:10:00'),
-    candidate('morning', 'TurtleSoup', '2026-07-22T11:45:00'),
+    candidate('morning', 'SweepMssFvgRetrace', '2026-07-22T09:10:00'),
+    candidate('morning', 'raidReclaim', '2026-07-22T11:45:00'),
     candidate('lunch', 'IntradayMssMicroContinuation', '2026-07-22T15:45:00'),
-    candidate('lunch', 'TurtleSoup', '2026-07-22T15:50:00', 'SHORT'),
+    candidate('lunch', 'raidReclaim', '2026-07-22T15:50:00', 'SHORT'),
   ],
   blockers: [],
 };
@@ -85,12 +85,12 @@ assert.equal(report.summary.recommendation, 'review_policy_before_runtime_instal
 
 const morning = report.comparisons.find((row) => row.session === 'morning');
 const lunch = report.comparisons.find((row) => row.session === 'lunch');
-assert.equal(morning?.latestProof?.model, 'TurtleSoup');
-assert.equal(morning?.provenLanePriority?.model, 'HtfDisplacementFvgContinuation');
+assert.equal(morning?.latestProof?.model, 'raidReclaim');
+assert.equal(morning?.provenLanePriority?.model, 'SweepMssFvgRetrace');
 assert.equal(morning?.changedSelection, true);
-assert.equal(lunch?.latestProof?.model, 'TurtleSoup');
+assert.equal(lunch?.latestProof?.model, 'raidReclaim');
 assert.equal(lunch?.provenLanePriority?.model, 'IntradayMssMicroContinuation');
 assert.equal(lunch?.changedSelection, true);
-assert.match(report.markdown, /Latest-proof selects TurtleSoup/);
+assert.match(report.markdown, /Latest-proof selects raidReclaim/);
 
 console.log('Unified desk output current scanner selection-policy audit verified.');

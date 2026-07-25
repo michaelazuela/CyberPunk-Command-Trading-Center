@@ -76,7 +76,7 @@ assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.failedGateCount, 0);
 assert.equal(report.summary.recommendation, 'draft_saved_artifact_adapter_dry_run_next');
 assert.ok(report.adapterContract.requiredRegressionCommands.includes('npm run test'));
-assert.ok(report.adapterContract.forbiddenOutputs.some((item) => item.includes('No broadening to TurtleSoup')));
+assert.ok(report.adapterContract.forbiddenOutputs.some((item) => item.includes('No broadening to raidReclaim')));
 assert.ok(report.adapterContract.implementationInvariants.some((item) => item.includes('canExecute remains internal/audit-only')));
 assert.match(report.markdown, /OpeningDrive Sweep Keep-Later-Proof Selector Adapter Contract/);
 

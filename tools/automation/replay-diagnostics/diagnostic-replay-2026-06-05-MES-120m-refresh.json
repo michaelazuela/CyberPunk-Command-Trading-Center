@@ -1753,7 +1753,7 @@
       "executableUnderCurrentRules": false
     },
     {
-      "model": "Turtle Soup Reversal",
+      "model": "Raid Reclaim Reversal Reversal",
       "passedGates": [],
       "failedGates": [],
       "missingRequiredConditions": [
@@ -1806,7 +1806,7 @@
         "instrument": "MES",
         "session": "morning",
         "alertType": "trade",
-        "candidateSetupType": "TurtleSoup",
+        "candidateSetupType": "RaidReclaimReversal",
         "direction": "LONG",
         "scannerState": "Approved",
         "selectedCandidateDirection": "LONG",

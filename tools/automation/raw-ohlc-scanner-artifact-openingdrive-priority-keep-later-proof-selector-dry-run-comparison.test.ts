@@ -7,10 +7,10 @@ const strictReplayPackage = {
   status: 'pass',
   rows: [
     {
-      ticketId: '2026-06-10|morning|TurtleSoup|SHORT|prefer_replacement|snap-a',
+      ticketId: '2026-06-10|morning|raidReclaim|SHORT|prefer_replacement|snap-a',
       tradeDate: '2026-06-10',
       session: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       entry: 7500,
       stop: 7510,

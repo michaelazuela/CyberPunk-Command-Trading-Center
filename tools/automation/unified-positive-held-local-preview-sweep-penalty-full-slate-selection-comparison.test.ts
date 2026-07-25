@@ -112,10 +112,10 @@ const installedScore: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreC
       riskPreserved: true,
     },
     {
-      ticketId: '2026-07-10-morning-TurtleSoup-LONG-valid',
+      ticketId: '2026-07-10-morning-raidReclaim-LONG-valid',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',

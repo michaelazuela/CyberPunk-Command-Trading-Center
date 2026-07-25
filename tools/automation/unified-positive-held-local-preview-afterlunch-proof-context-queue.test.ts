@@ -74,7 +74,7 @@ const sourceProofTimingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourc
     timingRow('baseline', { proofTime: '2026-06-10T13:00:00', resolvedOneMesPl: 125 }),
     timingRow('replacement', { proofTime: '2026-06-10T13:05:00', resolvedOneMesPl: 115, riskPoints: 11 }),
     timingRow('next-slate', { tradeDate: '2026-06-11', proofTime: '2026-06-11T13:00:00', resolvedOneMesPl: 110 }),
-    timingRow('other-model', { setupType: 'TurtleSoup', proofTime: '2026-06-11T13:05:00' }),
+    timingRow('other-model', { setupType: 'raidReclaim', proofTime: '2026-06-11T13:05:00' }),
   ],
   blockers: [],
   recommendations: [],

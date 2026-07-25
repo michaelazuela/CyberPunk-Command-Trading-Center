@@ -50,7 +50,7 @@ export interface UnifiedPositiveHeldLocalPreviewSweepPenaltyLiveProposalReport {
     };
     penaltyPoints: number;
     preservesValidSweepLead: true;
-    preservesTurtleSoup: true;
+    preservesraidReclaim: true;
     preservesModelAvailability: true;
     preservesCanExecute: true;
   };
@@ -155,7 +155,7 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewSweepPenaltyL
     `- Secondary boundary: ${report.proposedLiveBoundary.secondaryBoundary}.`,
     `- Preferred install path: ${report.proposedLiveBoundary.preferredBoundary}.`,
     `- Proposed rule: apply a ${report.proposedRule.penaltyPoints}-point rank penalty only to SweepMssFvgRetrace rows with executionStatus=${report.proposedRule.appliesOnlyWhen.executionStatus} and blockReason=${report.proposedRule.appliesOnlyWhen.blockReason}.`,
-    '- TurtleSoup and SweepMssFvgRetrace model availability remain unchanged.',
+    '- raidReclaim and SweepMssFvgRetrace model availability remain unchanged.',
     '- canExecute remains a final compatibility/execution flag and is not created or loosened by this rule.',
     '',
     '## Evidence',
@@ -233,7 +233,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPenaltyLiveProposalRepo
       preferredBoundary: 'audit_book_first_then_pipeline_only_after_regression',
       prohibitedBoundaries: [
         'Do not change setup eligibility in src/lib/setupScanner.ts.',
-        'Do not remove SweepMssFvgRetrace or TurtleSoup from the primary model registry.',
+        'Do not remove SweepMssFvgRetrace or raidReclaim from the primary model registry.',
         'Do not change canExecute, entry, stop, target, risk, bridge, Discord, or Supabase behavior.',
         'Do not use realized outcome P/L as live scoring input.',
       ],
@@ -246,7 +246,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPenaltyLiveProposalRepo
       },
       penaltyPoints: PENALTY_POINTS,
       preservesValidSweepLead: true,
-      preservesTurtleSoup: true,
+      preservesraidReclaim: true,
       preservesModelAvailability: true,
       preservesCanExecute: true,
     },
@@ -272,7 +272,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPenaltyLiveProposalRepo
       'Confirm the selected-candidate output returns to the pre-install baseline and Discord/Supabase/bridge behavior remains unchanged.',
     ],
     nonGoals: [
-      'No TurtleSoup removal.',
+      'No raidReclaim removal.',
       'No SweepMssFvgRetrace removal.',
       'No canExecute removal or loosening.',
       'No target, stop, entry, risk, session, bridge, Supabase, Discord, or automated execution change.',

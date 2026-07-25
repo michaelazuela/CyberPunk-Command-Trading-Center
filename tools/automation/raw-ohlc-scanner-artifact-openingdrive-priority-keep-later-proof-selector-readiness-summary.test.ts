@@ -21,7 +21,7 @@ const outcome = {
         grossResolvedOneMesPl: 318.75,
       },
       {
-        setupType: 'TurtleSoup',
+        setupType: 'raidReclaim',
         rows: 3,
         resolvedRows: 1,
         unresolvedRows: 2,
@@ -39,7 +39,7 @@ const blockerDrilldown = {
     blockedRows: 3,
   },
   rows: [
-    { setupType: 'TurtleSoup' },
+    { setupType: 'raidReclaim' },
     { setupType: 'SweepMssFvgRetrace' },
     { setupType: 'SweepMssFvgRetrace' },
   ],
@@ -53,7 +53,7 @@ const levelPathDiagnostic = {
     invalidatedWithoutReplayableEntryRows: 1,
   },
   rows: [
-    { setupType: 'TurtleSoup', pathState: 'waiting_for_entry_trigger' },
+    { setupType: 'raidReclaim', pathState: 'waiting_for_entry_trigger' },
     { setupType: 'SweepMssFvgRetrace', pathState: 'waiting_for_entry_trigger' },
     { setupType: 'SweepMssFvgRetrace', pathState: 'invalidated_without_replayable_entry' },
   ],
@@ -87,7 +87,7 @@ assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'continue_research_no_live_selector');
 
 const sweep = report.modelRows.find((row) => row.setupType === 'SweepMssFvgRetrace');
-const turtle = report.modelRows.find((row) => row.setupType === 'TurtleSoup');
+const turtle = report.modelRows.find((row) => row.setupType === 'raidReclaim');
 assert.equal(sweep?.evidenceState, 'positive_strict_ready_subset');
 assert.equal(sweep?.grossResolvedOneMesPl, 318.75);
 assert.equal(sweep?.blockedRows, 2);

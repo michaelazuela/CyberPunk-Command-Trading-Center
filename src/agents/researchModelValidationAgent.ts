@@ -386,7 +386,7 @@ export function renderResearchModelValidationMarkdown(report: Omit<ResearchModel
     '- Continue collecting outcome data and review samples before any rule discussion.',
     '',
     '## 10. Do-Not-Change-Yet Items',
-    '- Do not change Model 1 or Turtle Soup gates.',
+    '- Do not change Model 1 or Raid Reclaim Reversal gates.',
     '- Do not promote research concepts.',
     '- Do not add entries, stops, targets, alerts, outcome buttons, or RAG writes.',
     '',

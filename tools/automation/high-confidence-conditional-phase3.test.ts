@@ -48,8 +48,8 @@ const phase3Cases: Phase3Case[] = [
   {
     label: 'Morning short high-confidence conditional supervisor card',
     session: 'morning',
-    setupType: SetupType.TurtleSoup,
-    scenarioLabel: 'Bearish Turtle Soup Reversal',
+    setupType: SetupType.RaidReclaimReversal,
+    scenarioLabel: 'Bearish Raid Reclaim Reversal Reversal',
     direction: 'SHORT',
     executionStatus: ExecutionStatus.Executable,
     canExecute: false,
@@ -80,8 +80,8 @@ const phase3Cases: Phase3Case[] = [
   {
     label: 'Lunch long execution-approved supervisor card',
     session: 'lunch',
-    setupType: SetupType.HtfDisplacementFvgContinuation,
-    scenarioLabel: 'HTF Displacement FVG Continuation',
+    setupType: SetupType.IntradayMssMicroContinuation,
+    scenarioLabel: 'HTF Context FVG Continuation',
     direction: 'LONG',
     executionStatus: ExecutionStatus.Executable,
     canExecute: true,

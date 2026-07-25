@@ -187,7 +187,7 @@ assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.trendConfirmation?.di
 assert.equal(pollutedSelection.deskState?.selectedCandidate?.direction, 'LONG');
 assert.equal(pollutedSelection.deskState?.selectedCandidate?.setupType, 'IntradayMssMicroContinuation');
 assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.modelRouting?.shortModelFit?.status, 'best_fit');
-assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.modelRouting?.shortModelFit?.setupType, 'TurtleSoup');
+assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.modelRouting?.shortModelFit?.setupType, 'raidReclaim');
 assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.approvalBoundary?.changesCanExecute, false);
 assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.approvalBoundary?.changesTradeApprovals, false);
 assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.approvalBoundary?.changesEntryStopTargets, false);

@@ -12,7 +12,7 @@
   "suggestedReviewLabels": [
     "strong_advisory_candidate",
     "covered_by_model_1",
-    "covered_by_turtle_soup",
+    "covered_by_RAID_RECLAIM",
     "weak_or_noisy",
     "needs_chart_review",
     "reject_time_window_standalone"
@@ -22,7 +22,7 @@
     "best_clean_draw_delivery_achieved_samples": 0,
     "clean_draw_failed_delivery_samples": 6,
     "model_1_overlap_samples": 10,
-    "turtle_soup_overlap_samples": 10
+    "RAID_RECLAIM_overlap_samples": 10
   },
   "allAdvisoryOnlySamplesIncluded": true,
   "selectionLogic": [
@@ -30,7 +30,7 @@
     "Select up to 10 clean-draw delivery-achieved samples, preferring FVG/inefficiency, MSS, sweep/reclaim, and larger expected delivery distance.",
     "Select up to 10 clean-draw failed-delivery samples for failure-mode review.",
     "Select up to 10 Model 1 overlap samples, preferring clean draw and delivery achieved.",
-    "Select up to 10 Turtle Soup overlap samples, preferring clean draw and delivery achieved.",
+    "Select up to 10 Raid Reclaim Reversal overlap samples, preferring clean draw and delivery achieved.",
     "Suggested labels are not final labels and do not change readiness, model approval, scanner behavior, or execution authority."
   ],
   "samples": [
@@ -49,7 +49,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -60,7 +60,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -81,7 +81,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -92,7 +92,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -114,7 +114,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -125,7 +125,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -147,7 +147,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -158,7 +158,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "Clean draw observed.",
         "Failed delivery included to reduce survivorship bias.",
         "FVG/inefficiency present.",
@@ -182,7 +182,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -193,7 +193,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -215,7 +215,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -226,7 +226,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -248,7 +248,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -259,7 +259,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -280,7 +280,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -291,7 +291,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -313,7 +313,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -324,7 +324,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "Market structure shift present."
       ],
       "researchOnly": true,
@@ -345,7 +345,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -356,7 +356,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "Market structure shift present."
       ],
       "researchOnly": true,
@@ -377,7 +377,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -388,7 +388,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -410,7 +410,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -421,7 +421,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -443,7 +443,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -454,7 +454,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -476,7 +476,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -487,7 +487,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -508,7 +508,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -519,7 +519,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -541,7 +541,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -552,7 +552,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -574,7 +574,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -585,7 +585,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -607,7 +607,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -618,7 +618,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -639,7 +639,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -650,7 +650,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -672,7 +672,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -683,7 +683,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "Market structure shift present."
       ],
       "researchOnly": true,
@@ -704,7 +704,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -715,7 +715,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "Market structure shift present."
       ],
       "researchOnly": true,
@@ -736,7 +736,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -747,7 +747,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -769,7 +769,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -780,7 +780,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup."
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
@@ -800,7 +800,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -811,7 +811,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -832,7 +832,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -843,7 +843,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -865,7 +865,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -876,7 +876,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -898,7 +898,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -909,7 +909,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -931,7 +931,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -942,7 +942,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "Delivery achieved.",
         "FVG/inefficiency present."
       ],
@@ -964,7 +964,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -975,7 +975,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -997,7 +997,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1008,7 +1008,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1030,7 +1030,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1041,7 +1041,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -1062,7 +1062,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1073,7 +1073,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1095,7 +1095,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1106,7 +1106,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1128,7 +1128,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1139,7 +1139,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1161,7 +1161,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1172,7 +1172,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -1193,7 +1193,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1204,7 +1204,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1226,7 +1226,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1237,7 +1237,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1259,7 +1259,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1270,7 +1270,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -1291,7 +1291,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1302,7 +1302,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1324,7 +1324,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1335,7 +1335,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "Market structure shift present."
       ],
       "researchOnly": true,
@@ -1356,7 +1356,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1367,7 +1367,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -1388,7 +1388,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1399,7 +1399,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "Delivery achieved.",
         "FVG/inefficiency present.",
         "Market structure shift present."
@@ -1422,7 +1422,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1433,7 +1433,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1455,7 +1455,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1466,7 +1466,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "Market structure shift present."
       ],
       "researchOnly": true,
@@ -1487,7 +1487,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1498,7 +1498,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1520,7 +1520,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1531,7 +1531,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -1552,7 +1552,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1563,7 +1563,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1585,7 +1585,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1596,7 +1596,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "Market structure shift present."
       ],
       "researchOnly": true,
@@ -1617,7 +1617,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1628,7 +1628,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1650,7 +1650,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1661,7 +1661,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -1682,7 +1682,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1693,7 +1693,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1715,7 +1715,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1726,7 +1726,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1748,7 +1748,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1759,7 +1759,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -1780,7 +1780,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1791,7 +1791,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1813,7 +1813,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1824,7 +1824,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -1845,7 +1845,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1856,7 +1856,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present."
       ],
       "researchOnly": true,
@@ -1877,7 +1877,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1888,7 +1888,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for advisory only samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "FVG/inefficiency present.",
         "Market structure shift present."
       ],
@@ -1910,7 +1910,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -1945,7 +1945,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -1980,7 +1980,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -1994,7 +1994,7 @@
         "Failed delivery included to reduce survivorship bias.",
         "FVG/inefficiency present.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
@@ -2014,7 +2014,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -2024,7 +2024,7 @@
       "reportPath": null,
       "inclusionReasons": [
         "Selected for clean draw failed delivery samples.",
-        "Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.",
+        "Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.",
         "Clean draw observed.",
         "Failed delivery included to reduce survivorship bias.",
         "FVG/inefficiency present.",
@@ -2048,7 +2048,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -2062,7 +2062,7 @@
         "Failed delivery included to reduce survivorship bias.",
         "Market structure shift present.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
@@ -2082,7 +2082,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -2095,7 +2095,7 @@
         "Clean draw observed.",
         "Failed delivery included to reduce survivorship bias.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
@@ -2115,7 +2115,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2150,7 +2150,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2185,7 +2185,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2219,7 +2219,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2253,7 +2253,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2287,7 +2287,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2321,7 +2321,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2355,7 +2355,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2389,7 +2389,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2423,7 +2423,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "turtleSoupOverlap": false,
+      "raidReclaimOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2443,13 +2443,13 @@
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2024-02-08",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2024-02-08",
       "sourceCandidateId": "pm_liquidity_delivery_window-2024-02-08",
       "date": "2024-02-08",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "turtle_soup_overlap_samples",
+      "classificationBucket": "RAID_RECLAIM_overlap_samples",
       "drawType": "previous_week_low",
       "drawLevel": 5396.25,
       "fvgOrInefficiencyPresent": true,
@@ -2457,33 +2457,33 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
-        "covered_by_turtle_soup",
+        "covered_by_RAID_RECLAIM",
         "needs_chart_review"
       ],
       "chartPath": null,
       "reportPath": null,
       "inclusionReasons": [
-        "Selected for turtle soup overlap samples.",
+        "Selected for Raid Reclaim Reversal overlap samples.",
         "Clean draw observed.",
         "Failed delivery included to reduce survivorship bias.",
         "FVG/inefficiency present.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2023-12-28",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2023-12-28",
       "sourceCandidateId": "pm_liquidity_delivery_window-2023-12-28",
       "date": "2023-12-28",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "turtle_soup_overlap_samples",
+      "classificationBucket": "RAID_RECLAIM_overlap_samples",
       "drawType": "previous_week_low",
       "drawLevel": 5273.5,
       "fvgOrInefficiencyPresent": false,
@@ -2491,33 +2491,33 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
-        "covered_by_turtle_soup",
+        "covered_by_RAID_RECLAIM",
         "needs_chart_review"
       ],
       "chartPath": null,
       "reportPath": null,
       "inclusionReasons": [
-        "Selected for turtle soup overlap samples.",
+        "Selected for Raid Reclaim Reversal overlap samples.",
         "Clean draw observed.",
         "Failed delivery included to reduce survivorship bias.",
         "Market structure shift present.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2024-12-05",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2024-12-05",
       "sourceCandidateId": "pm_liquidity_delivery_window-2024-12-05",
       "date": "2024-12-05",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "turtle_soup_overlap_samples",
+      "classificationBucket": "RAID_RECLAIM_overlap_samples",
       "drawType": "previous_week_low",
       "drawLevel": 6316.5,
       "fvgOrInefficiencyPresent": false,
@@ -2525,32 +2525,32 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
-        "covered_by_turtle_soup",
+        "covered_by_RAID_RECLAIM",
         "needs_chart_review"
       ],
       "chartPath": null,
       "reportPath": null,
       "inclusionReasons": [
-        "Selected for turtle soup overlap samples.",
+        "Selected for Raid Reclaim Reversal overlap samples.",
         "Clean draw observed.",
         "Failed delivery included to reduce survivorship bias.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-03-06",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-03-06",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-03-06",
       "date": "2025-03-06",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "turtle_soup_overlap_samples",
+      "classificationBucket": "RAID_RECLAIM_overlap_samples",
       "drawType": "equal_highs",
       "drawLevel": 6027.63,
       "fvgOrInefficiencyPresent": true,
@@ -2558,32 +2558,32 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
-        "covered_by_turtle_soup",
+        "covered_by_RAID_RECLAIM",
         "needs_chart_review"
       ],
       "chartPath": null,
       "reportPath": null,
       "inclusionReasons": [
-        "Selected for turtle soup overlap samples.",
+        "Selected for Raid Reclaim Reversal overlap samples.",
         "Delivery achieved.",
         "FVG/inefficiency present.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-11-20",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-20",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-11-20",
       "date": "2025-11-20",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "turtle_soup_overlap_samples",
+      "classificationBucket": "RAID_RECLAIM_overlap_samples",
       "drawType": "previous_day_low",
       "drawLevel": 6721.75,
       "fvgOrInefficiencyPresent": false,
@@ -2591,32 +2591,32 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
-        "covered_by_turtle_soup",
+        "covered_by_RAID_RECLAIM",
         "needs_chart_review"
       ],
       "chartPath": null,
       "reportPath": null,
       "inclusionReasons": [
-        "Selected for turtle soup overlap samples.",
+        "Selected for Raid Reclaim Reversal overlap samples.",
         "Delivery achieved.",
         "Market structure shift present.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-11-21",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-21",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-11-21",
       "date": "2025-11-21",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "turtle_soup_overlap_samples",
+      "classificationBucket": "RAID_RECLAIM_overlap_samples",
       "drawType": "equal_highs",
       "drawLevel": 6751.38,
       "fvgOrInefficiencyPresent": true,
@@ -2624,32 +2624,32 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
-        "covered_by_turtle_soup",
+        "covered_by_RAID_RECLAIM",
         "needs_chart_review"
       ],
       "chartPath": null,
       "reportPath": null,
       "inclusionReasons": [
-        "Selected for turtle soup overlap samples.",
+        "Selected for Raid Reclaim Reversal overlap samples.",
         "Delivery achieved.",
         "FVG/inefficiency present.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-03-05",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-03-05",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-03-05",
       "date": "2025-03-05",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "turtle_soup_overlap_samples",
+      "classificationBucket": "RAID_RECLAIM_overlap_samples",
       "drawType": "previous_week_low",
       "drawLevel": 6127,
       "fvgOrInefficiencyPresent": true,
@@ -2657,32 +2657,32 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
-        "covered_by_turtle_soup",
+        "covered_by_RAID_RECLAIM",
         "needs_chart_review"
       ],
       "chartPath": null,
       "reportPath": null,
       "inclusionReasons": [
-        "Selected for turtle soup overlap samples.",
+        "Selected for Raid Reclaim Reversal overlap samples.",
         "Delivery achieved.",
         "FVG/inefficiency present.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-12-04",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-12-04",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-12-04",
       "date": "2025-12-04",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "turtle_soup_overlap_samples",
+      "classificationBucket": "RAID_RECLAIM_overlap_samples",
       "drawType": "previous_session_low",
       "drawLevel": 6953.5,
       "fvgOrInefficiencyPresent": true,
@@ -2690,32 +2690,32 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
-        "covered_by_turtle_soup",
+        "covered_by_RAID_RECLAIM",
         "needs_chart_review"
       ],
       "chartPath": null,
       "reportPath": null,
       "inclusionReasons": [
-        "Selected for turtle soup overlap samples.",
+        "Selected for Raid Reclaim Reversal overlap samples.",
         "Delivery achieved.",
         "FVG/inefficiency present.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2025-11-18",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-18",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-11-18",
       "date": "2025-11-18",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "turtle_soup_overlap_samples",
+      "classificationBucket": "RAID_RECLAIM_overlap_samples",
       "drawType": "equal_highs",
       "drawLevel": 6775.25,
       "fvgOrInefficiencyPresent": true,
@@ -2723,32 +2723,32 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
-        "covered_by_turtle_soup",
+        "covered_by_RAID_RECLAIM",
         "needs_chart_review"
       ],
       "chartPath": null,
       "reportPath": null,
       "inclusionReasons": [
-        "Selected for turtle soup overlap samples.",
+        "Selected for Raid Reclaim Reversal overlap samples.",
         "Delivery achieved.",
         "FVG/inefficiency present.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "turtle_soup_overlap_samples-pm_liquidity_delivery_window-2026-02-05",
+      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2026-02-05",
       "sourceCandidateId": "pm_liquidity_delivery_window-2026-02-05",
       "date": "2026-02-05",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "turtle_soup_overlap_samples",
+      "classificationBucket": "RAID_RECLAIM_overlap_samples",
       "drawType": "equal_highs",
       "drawLevel": 6902.88,
       "fvgOrInefficiencyPresent": true,
@@ -2756,20 +2756,20 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "turtleSoupOverlap": true,
+      "raidReclaimOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
-        "covered_by_turtle_soup",
+        "covered_by_RAID_RECLAIM",
         "needs_chart_review"
       ],
       "chartPath": null,
       "reportPath": null,
       "inclusionReasons": [
-        "Selected for turtle soup overlap samples.",
+        "Selected for Raid Reclaim Reversal overlap samples.",
         "Delivery achieved.",
         "FVG/inefficiency present.",
         "Sweep/raid plus reclaim present.",
-        "Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules."
+        "Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules."
       ],
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority"
@@ -2778,7 +2778,7 @@
   "humanReviewInstructions": [
     "Review charts before applying any final human label.",
     "Use covered_by_model_1 only if the sample should remain under existing Model 1 review.",
-    "Use covered_by_turtle_soup only if the sample should remain under existing Turtle Soup review.",
+    "Use covered_by_RAID_RECLAIM only if the sample should remain under existing Raid Reclaim Reversal review.",
     "Use strong_advisory_candidate only for research discussion, not execution approval.",
     "Reject time-window standalone behavior when the evidence is noisy or already covered by approved models."
   ],
@@ -2798,8 +2798,8 @@
     "pmAdvisoryOnly": 57,
     "amModelOneOverlap": 503,
     "pmModelOneOverlap": 140,
-    "amTurtleSoupOverlap": 196,
-    "pmTurtleSoupOverlap": 60,
+    "amraidReclaimOverlap": 196,
+    "pmraidReclaimOverlap": 60,
     "amRejectionPosture": "After TWLD-5, AM remains research-only/advisory-only: strong=1, needs_chart_review=1, rejected_standalone=7.",
     "comparisonRead": "too_early_to_tell",
     "note": "PM has separate research evidence, but no promotion decision is made. PM requires human review before any standalone interpretation."

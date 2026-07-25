@@ -40,7 +40,7 @@ const checklist: UnifiedDeskOutputFinalProductionReadinessChecklistInput = {
     date: '2026-07-22',
     session: 'morning',
     state: 'APPROVED_DESK_PLAN',
-    model: 'HtfDisplacementFvgContinuation',
+    model: 'SweepMssFvgRetrace',
     direction: 'LONG',
     proofTime: '2026-07-22T09:10:00.0000000',
     entry: 7519.5,
@@ -120,7 +120,7 @@ const thirdModelBlocked = await writeUnifiedDeskOutputProductionGoLiveGate({
     ...checklist,
     selectedCandidates: [{
       ...checklist.selectedCandidates[0],
-      model: 'TurtleSoup',
+      model: 'raidReclaim',
     }, checklist.selectedCandidates[1]],
   },
   runtimeSurfacePath: thirdModelBlockedPath,

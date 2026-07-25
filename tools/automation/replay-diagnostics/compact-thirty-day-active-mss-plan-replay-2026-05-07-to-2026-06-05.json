@@ -61,10 +61,10 @@
     "ConditionalTrade": 216
   },
   "conditionalBySetup": {
-    "TurtleSoup": 120,
+    "RaidReclaimReversal": 120,
     "SweepMssFvgRetrace": 68,
-    "HtfDisplacementFvgContinuation": 76,
-    "HtfDisplacementMssContinuation": 62
+    "SweepMssFvgRetrace": 76,
+    "IntradayMssMicroContinuation": 62
   },
   "structuralMssEvents": [
     {

@@ -44,7 +44,7 @@ const report = {
     date: '2026-07-22',
     session: 'morning',
     state: 'APPROVED_DESK_PLAN',
-    model: 'HtfDisplacementFvgContinuation',
+    model: 'SweepMssFvgRetrace',
     direction: 'LONG',
     proofTime: '2026-07-22T09:10:00.0000000',
     entry: 7519.5,
@@ -103,7 +103,7 @@ assert.equal(ready.summary.lunchRows, 1);
 assert.equal(ready.summary.discordPostRows, 0);
 assert.equal(ready.summary.supabaseWriteRows, 0);
 assert.equal(ready.summary.canExecuteTrueRows, 0);
-assert.equal(ready.rows[0].headline, 'Approved Desk Plan | MORNING | LONG | HtfDisplacementFvgContinuation');
+assert.equal(ready.rows[0].headline, 'Approved Desk Plan | MORNING | LONG | SweepMssFvgRetrace');
 assert.equal(ready.rows[1].model, 'IntradayMssMicroContinuation');
 
 const remote = buildUnifiedDeskOutputDisabledScannerRuntimePreview({

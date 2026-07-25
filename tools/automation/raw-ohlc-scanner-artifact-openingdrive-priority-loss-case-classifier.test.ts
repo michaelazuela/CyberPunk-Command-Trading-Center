@@ -39,7 +39,7 @@ const structuralContext = {
   rows: lossProfile.rows.map((row, index) => ({
     ticketId: `ticket-${index}`,
     ...row,
-    bestConditionalSetupType: 'TurtleSoup',
+    bestConditionalSetupType: 'raidReclaim',
     executionStatus: 'Conditional',
     blockReason: 'EntryTriggerPending',
     targetRoomStatus: 'blocked_before_t1',

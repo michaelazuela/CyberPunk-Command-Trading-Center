@@ -7,8 +7,8 @@ const sourceProof = {
   status: 'pass',
   rows: [
     {
-      rowId: '2026-06-16-morning-TurtleSoup-LONG',
-      setupType: 'TurtleSoup',
+      rowId: '2026-06-16-morning-raidReclaim-LONG',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       decision: 'accepted_for_research_validation',
     },
@@ -25,7 +25,7 @@ const historicalTape = {
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'TurtleSoup',
+            setupType: 'raidReclaim',
             direction: 'LONG',
             detectedStatus: 'Conditional',
             executionStatus: 'Conditional',
@@ -111,7 +111,7 @@ const currentDayTape = {
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'TurtleSoup',
+            setupType: 'raidReclaim',
             direction: 'SHORT',
             detectedStatus: 'Conditional',
             executionStatus: 'Conditional',
@@ -166,7 +166,7 @@ assert.equal(newCandidate?.intakeDecision, 'candidate_for_review_intake');
 assert.equal(newCandidate?.occurrences, 2);
 assert.match(newCandidate?.nextAction || '', /reviewed preview\/replay row/);
 
-const knownCandidate = report.rows.find((row) => row.intakeId === '2026-06-16-morning-TurtleSoup-LONG');
+const knownCandidate = report.rows.find((row) => row.intakeId === '2026-06-16-morning-raidReclaim-LONG');
 assert.equal(knownCandidate?.intakeDecision, 'already_processed');
 assert.match(report.markdown, /New review intake candidates: 1/);
 

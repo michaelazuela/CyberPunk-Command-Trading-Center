@@ -18,7 +18,7 @@ function bar(time: string, open: number, high: number, low: number, close: numbe
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.LiquiditySweep,
+    setupType: SetupType.RaidReclaimReversal,
     scenarioLabel: 'Desk integration fixture',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,
@@ -147,7 +147,7 @@ const outcomeClosure = buildOutcomeClosureRecord({
   tradeDate: '2026-06-02',
   instrument: 'MES',
   originalNormalizedPlan: { canExecute: true, decisionStatus: TradeDecisionStatus.ApprovedTrade },
-  selectedCandidateSnapshot: { setupType: SetupType.LiquiditySweep },
+  selectedCandidateSnapshot: { setupType: SetupType.RaidReclaimReversal },
   outcome: 'win',
   tradeTaken: true,
   pnlTicks: 34,

@@ -6,9 +6,9 @@ import { buildUnifiedPositiveHeldLocalTicketAdapterReport } from './unified-posi
 
 const artifact = buildHeldLocalReviewTicketArtifact({
   ticketId: 'fixture-ticket',
-  setupType: SetupType.TurtleSoup,
+  setupType: SetupType.RaidReclaimReversal,
   direction: 'LONG',
-  sourceCandidateKey: 'TurtleSoup|fixture|LONG|100.00|0',
+  sourceCandidateKey: 'raidReclaim|fixture|LONG|100.00|0',
   entry: 100,
   stop: 96,
   target1: 106,
@@ -76,7 +76,7 @@ const comparison = {
     {
       ticketId: '2026-07-01-morning-fixture-ticket',
       sourceSnapshotId: 'scanner-morning-fixture',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       compatibilityStatus: 'compatible_held_local',
       compatibleWithDeskTicket: true,
@@ -92,7 +92,7 @@ const comparison = {
     {
       ticketId: '2026-07-01-lunch-blocked-ticket',
       sourceSnapshotId: 'scanner-lunch-blocked',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       compatibilityStatus: 'blocked_contract_gap',
       compatibleWithDeskTicket: false,

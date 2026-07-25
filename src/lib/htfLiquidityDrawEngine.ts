@@ -651,7 +651,7 @@ export function describeHtfLiquidityDrawStateForDisplay(state: Pick<HtfLiquidity
     case 'MSS_HOLD_CONFIRMED':
       return 'MSS hold confirmed by completed 5M close. Scanner candidate fields may be reviewed, but final app-owned gates still control canExecute.';
     case 'REVERSAL_DELIVERY_PLAN_CANDIDATE':
-      return 'HTF Draw Continuation After Raid/Reclaim candidate detected. HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.';
+      return 'HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align as context. This is not a standalone model; an active scanner model still needs deterministic entry, stop, target, risk, and final pipeline gates.';
     case 'QUALIFIED_CONDITIONAL':
       return 'Qualified conditional. Directional structure supports the model, but execution still needs the listed trigger, retest, risk, or validation requirement.';
     case 'FAILED_MSS':
@@ -663,7 +663,7 @@ export function describeHtfLiquidityDrawStateForDisplay(state: Pick<HtfLiquidity
     case 'EXECUTABLE':
       return 'Scanner candidate fields are complete. Final trade wording belongs only to the app-owned pipeline after all gates pass.';
     default:
-      return 'No qualified HTF Draw Continuation After Raid/Reclaim state. Context only. No executable trade.';
+      return 'No qualified HTF draw context state. Context only. No executable trade.';
   }
 }
 

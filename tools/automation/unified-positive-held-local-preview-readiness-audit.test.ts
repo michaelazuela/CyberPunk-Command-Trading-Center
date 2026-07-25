@@ -46,7 +46,7 @@ const bundleReport: HeldLocalPreviewUiIndexReport = {
     {
       ticketId: 'preview-long',
       sourceSnapshotId: 'scanner-preview',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       pngPath: 'card-long.png',
       imageSrc: 'data:image/png;base64,iVBORw0KGgo=',

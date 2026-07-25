@@ -7,9 +7,9 @@ import type { UnifiedPositiveHeldLocalPreviewRendererReport } from './unified-po
 
 const content = [
   '[HELD-LOCAL REVIEW] MES - LONG ACTIVE_REVIEW',
-  'TurtleSoup LONG ACTIVE_REVIEW local preview',
+  'raidReclaim LONG ACTIVE_REVIEW local preview',
   '',
-  'What: TurtleSoup LONG held-local ACTIVE_REVIEW ticket.',
+  'What: raidReclaim LONG held-local ACTIVE_REVIEW ticket.',
   'Where: Line 100.00; entry 100.00; stop 96.00; T1 106.00; T2 108.00.',
   'When: Fresh completed 5M proof.',
   'Why: HTF context supports review only.',
@@ -60,14 +60,14 @@ const rendererReport = {
     {
       ticketId: 'long-ticket',
       sourceSnapshotId: 'scanner-long',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       status: 'rendered',
       renderedCard: {
         sourceOfTruth: 'scanner_owned_held_local_local_preview_render',
         ticketId: 'long-ticket',
         sourceSnapshotId: 'scanner-long',
-        setupType: 'TurtleSoup',
+        setupType: 'raidReclaim',
         direction: 'LONG',
         status: 'rendered_local_preview_card',
         postable: false,
@@ -145,7 +145,7 @@ assert.ok(oversizedReport.findings.some((finding) => finding.reason === 'oversiz
 const dirtyRenderer = structuredClone(rendererReport) as UnifiedPositiveHeldLocalPreviewRendererReport;
 if (dirtyRenderer.rows[0].renderedCard) {
   dirtyRenderer.rows[0].renderedCard.content = dirtyRenderer.rows[0].renderedCard.content
-    .replace('What: TurtleSoup LONG held-local ACTIVE_REVIEW ticket.\n', '')
+    .replace('What: raidReclaim LONG held-local ACTIVE_REVIEW ticket.\n', '')
     .replace('not posted to Discord and not written to Supabase', 'shouldPost=true and publishDiscord=true')
     .replace('Invalid if price trades below the protected 5M stop line at 96.00.', 'Invalid below/above the protected 5M stop line at 96.00.');
   dirtyRenderer.rows[0].renderedCard.shouldDispatch = true as false;

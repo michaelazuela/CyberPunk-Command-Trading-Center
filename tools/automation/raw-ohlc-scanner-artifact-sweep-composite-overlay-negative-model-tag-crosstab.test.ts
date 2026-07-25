@@ -47,7 +47,7 @@ const outcomeComparison = {
   rows: [
     {
       slateId: 'slate-1',
-      negativeTopSetupType: 'HtfDisplacementMssContinuation',
+      negativeTopSetupType: 'IntradayMssMicroContinuation',
       replacementOutcomeLabel: 't1_and_t2_hit',
       replacementOutcomeStatus: 'resolved',
       replacementResolvedOneMesPl: 125,
@@ -77,10 +77,10 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.summary.changedSlates, 2);
 assert.equal(report.summary.joinedRows, 2);
 assert.equal(report.summary.groups, 2);
-assert.equal(report.summary.htfMssRows, 1);
-assert.equal(report.summary.htfMssResolvedRows, 1);
-assert.equal(report.summary.htfMssResolvedGrossOneMesPl, 125);
-assert.equal(report.summary.nonHtfMssResolvedGrossOneMesPl, -25);
+assert.equal(report.summary.htfMssRows, 2);
+assert.equal(report.summary.htfMssResolvedRows, 2);
+assert.equal(report.summary.htfMssResolvedGrossOneMesPl, 100);
+assert.equal(report.summary.nonHtfMssResolvedGrossOneMesPl, null);
 assert.equal(report.summary.noChaseOrStaleRows, 2);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'isolate_htf_mss_research_overlay');

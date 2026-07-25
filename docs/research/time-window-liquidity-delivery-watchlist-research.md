@@ -159,9 +159,9 @@
 
 This research note studies whether certain recurring market windows create useful context for liquidity delivery. It is not an approved 6K executable model.
 
-In 6K, time-window liquidity delivery is treated as research context only. If the setup satisfies current Model 1 gates, classify it through existing Model 1. If the setup includes a true sweep/raid plus reclaim, classify it through existing Turtle Soup.
+In 6K, time-window liquidity delivery is treated as research context only. If the setup satisfies current Model 1 gates, classify it through existing Model 1. If the setup includes a true sweep/raid plus reclaim, classify it through existing Raid Reclaim Reversal.
 
-If the setup only has time window + FVG/inefficiency + draw-on-liquidity, keep it advisory-only research. Do not create a separate executable time-window model. Do not duplicate Model 1 or Turtle Soup under a new label.
+If the setup only has time window + FVG/inefficiency + draw-on-liquidity, keep it advisory-only research. Do not create a separate executable time-window model. Do not duplicate Model 1 or Raid Reclaim Reversal under a new label.
 
 Time-window context may support research and review, but it cannot approve trades.
 
@@ -184,7 +184,7 @@ Status:
 * No outcome buttons.
 * No auto-alerts unless separately approved later.
 * If Model 1 qualifies, evaluate through current Model 1.
-* If sweep + reclaim qualifies, evaluate through current Turtle Soup.
+* If sweep + reclaim qualifies, evaluate through current Raid Reclaim Reversal.
 
 ## 5. Candidate Conditions
 
@@ -217,12 +217,12 @@ Caution / invalidation conditions:
 * FVG is not respected.
 * Price is too extended to chase.
 * Risk would be too wide under current approved rules.
-* The condition does not satisfy current Model 1 or Turtle Soup gates.
+* The condition does not satisfy current Model 1 or Raid Reclaim Reversal gates.
 
 ## 6. Comparison to Existing 6K Rules
 
 * Current Model 1: partially covered. Time-window FVG/inefficiency + liquidity draw may overlap with Model 1, but only Model 1 can approve when its gates pass.
-* Current Turtle Soup: partially covered. Sweep + reclaim may overlap with Turtle Soup, but only Turtle Soup can approve when its gates pass.
+* Current Raid Reclaim Reversal: partially covered. Sweep + reclaim may overlap with Raid Reclaim Reversal, but only Raid Reclaim Reversal can approve when its gates pass.
 * Current Morning Continuation Watchlist: partially covered as advisory-only awareness. It does not create execution authority.
 * Current Bridge Diagnostic Replay categories: partially covered. A future diagnostic can classify time-window-only conditions as advisory research when approved gates do not pass.
 * Current scanner health / selection safety layers: already covered as safety layers only. They do not approve this research idea.
@@ -244,7 +244,7 @@ Future smoke-test plan only. Do not implement as part of this note.
 * Identify FVG/inefficiency inside the window.
 * Identify whether MSS occurred.
 * Identify whether bodies respected the FVG.
-* Determine whether current Model 1 or Turtle Soup gates actually passed.
+* Determine whether current Model 1 or Raid Reclaim Reversal gates actually passed.
 * If approved gates do not pass, classify as advisory-only time-window research.
 * Track 20-30 examples per window before any rule approval discussion.
 
@@ -252,15 +252,15 @@ Future smoke-test plan only. Do not implement as part of this note.
 
 Draft only, not implementation:
 
-“Time-Window Liquidity Delivery candidate forming. Watch only - a draw on liquidity and FVG/inefficiency may be aligning inside a defined market window. Evaluate only through current 6K Model 1 or Turtle Soup rules. Do not chase.”
+“Time-Window Liquidity Delivery candidate forming. Watch only - a draw on liquidity and FVG/inefficiency may be aligning inside a defined market window. Evaluate only through current 6K Model 1 or Raid Reclaim Reversal rules. Do not chase.”
 
 ## 9. Guardrails
 
 * This is not an approved executable model.
 * Do not create entries, stops, T1/T2, or outcome buttons.
-* Do not override Model 1 or Turtle Soup.
+* Do not override Model 1 or Raid Reclaim Reversal.
 * Do not allow this to approve trades.
-* Do not duplicate Model 1 or Turtle Soup under a time-window label.
+* Do not duplicate Model 1 or Raid Reclaim Reversal under a time-window label.
 * Do not use later target delivery to retroactively validate an invalid setup.
 * Collect 20-30 examples per window first.
 
@@ -276,7 +276,7 @@ Keep as research note only. Create a future advisory-only bridge smoke-test prom
   "status": "research_only",
   "candidateName": "Time-Window Liquidity Delivery Watchlist",
   "primaryIdea": "Study FVG/inefficiency delivery toward liquidity during defined market windows.",
-  "taxonomyNote": "If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.",
+  "taxonomyNote": "If Model 1 or Raid Reclaim Reversal gates pass, classify through existing approved models; otherwise keep as advisory research.",
   "recommendedNextStep": "Collect 20-30 bridge-backed examples per window before any rule review.",
   "ruleChange": "none",
   "approvalBoundarySummary": "Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.",

@@ -90,7 +90,7 @@ function intakeRow(
 
 const invalidSweepId = '2026-07-09-evening-SweepMssFvgRetrace-SHORT';
 const validSweepId = '2026-07-09-evening-SweepMssFvgRetrace-LONG';
-const turtleId = '2026-07-09-evening-TurtleSoup-LONG';
+const turtleId = '2026-07-09-evening-raidReclaim-LONG';
 
 const sourceProofTimingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport = {
   reportType: 'unified_positive_held_local_preview_replay_package_source_proof_timing',
@@ -122,7 +122,7 @@ const sourceProofTimingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourc
   rows: [
     timingRow(invalidSweepId, 'SweepMssFvgRetrace'),
     timingRow(validSweepId, 'SweepMssFvgRetrace'),
-    timingRow(turtleId, 'TurtleSoup'),
+    timingRow(turtleId, 'raidReclaim'),
   ],
   blockers: [],
   recommendations: [],
@@ -149,7 +149,7 @@ const intakeTriageReport: UnifiedPositiveHeldLocalPreviewIntakeTriageReport = {
   rows: [
     intakeRow(invalidSweepId, 'SweepMssFvgRetrace', 'Blocked', 'InvalidStopLocation'),
     intakeRow(validSweepId, 'SweepMssFvgRetrace', 'Conditional', 'EntryTriggerPending'),
-    intakeRow(turtleId, 'TurtleSoup', 'Conditional', 'EntryTriggerPending'),
+    intakeRow(turtleId, 'raidReclaim', 'Conditional', 'EntryTriggerPending'),
   ],
   selectedReplayPackage: [],
   blockers: [],

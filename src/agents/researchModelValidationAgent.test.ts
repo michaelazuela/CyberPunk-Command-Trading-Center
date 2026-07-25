@@ -162,7 +162,7 @@ function sample(
     summary: 'fixture',
     whyAdvisoryOnly: 'Research-only fixture.',
     model1Overlap: false,
-    turtleSoupOverlap: false,
+    raidReclaimOverlap: false,
     researchDetectorReason: 'fixture',
     warningFailureReason: 'fixture',
     dataQualityNotes: [],

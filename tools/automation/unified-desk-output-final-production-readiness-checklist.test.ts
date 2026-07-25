@@ -28,7 +28,7 @@ const source = (reportType: string, summary: Record<string, unknown> = {}) => ({
   selectedCandidates: [
     {
       session: 'morning',
-      model: 'HtfDisplacementFvgContinuation',
+      model: 'SweepMssFvgRetrace',
       direction: 'LONG',
       proofTime: '2026-07-22T09:10:00',
     },

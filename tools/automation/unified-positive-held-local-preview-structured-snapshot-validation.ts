@@ -332,7 +332,7 @@ export function buildUnifiedPositiveHeldLocalPreviewStructuredSnapshotValidation
       : candidateCount
         ? [
           'Promote only the candidate validation questions into a broader replay package; do not install live filters from this diagnostic.',
-          'Keep TurtleSoup enabled while validating whether blocked protected-stop states should be ranked lower or held for stricter review.',
+          'Keep raidReclaim enabled while validating whether blocked protected-stop states should be ranked lower or held for stricter review.',
         ]
         : ['No accepted classifier survived session/day validation; add more reviewed rows before any scanner-visible change.'],
   };

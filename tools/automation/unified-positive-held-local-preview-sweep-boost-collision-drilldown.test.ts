@@ -97,7 +97,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
     timingRow('htf-lower', {
       ticketId: 'htf-lower',
       tradeDate: '2026-07-10',
-      setupType: 'HtfDisplacementMssContinuation',
+      setupType: 'IntradayMssMicroContinuation',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
       resolvedOneMesPl: 25,
@@ -167,7 +167,7 @@ const boostReport: UnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationR
       session: 'morning',
       rows: 2,
       topBeforeTicketId: 'htf-lower',
-      topBeforeSetupType: 'HtfDisplacementMssContinuation',
+      topBeforeSetupType: 'IntradayMssMicroContinuation',
       topBeforeOneMesPl: 25,
       topAfterTicketId: 'sweep-better',
       topAfterSetupType: 'SweepMssFvgRetrace',

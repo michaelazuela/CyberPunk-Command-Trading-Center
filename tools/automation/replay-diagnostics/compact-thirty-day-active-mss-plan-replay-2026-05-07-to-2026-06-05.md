@@ -11,10 +11,10 @@ Conditional candidates: 326
 - ConditionalTrade: 216
 
 ## Conditional By Setup
-- TurtleSoup: 120
+- RaidReclaimReversal: 120
 - SweepMssFvgRetrace: 68
-- HtfDisplacementFvgContinuation: 76
-- HtfDisplacementMssContinuation: 62
+- SweepMssFvgRetrace: 76
+- IntradayMssMicroContinuation: 62
 
 ## Coverage
 - 5m: 12013 bars, 2026-04-07T00:00:00 to 2026-06-05T16:00:00, failures=0

@@ -126,7 +126,7 @@ _No samples in this bucket._
 ## Label Options For Later Review
 - strong_advisory_candidate
 - covered_by_model_1
-- covered_by_turtle_soup
+- covered_by_RAID_RECLAIM
 - weak_or_noisy
 - needs_chart_review
 - reject_time_window_standalone

@@ -1181,10 +1181,7 @@ function discordPromotionDecisionLine(candidate: SetupCandidate | null, normaliz
 function compactActionText(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, status: DiscordDecisionStatus): string {
   if (status === 'NO TRADE') return 'Stand down. Recheck at next scheduled scan.';
   if (!candidate) return 'Stand down. No active plan candidate.';
-  if (candidate.failedPlanReversal?.staleOrNoFreshEntry) {
-    return 'Failed-plan reversal is stale. Do not chase. Wait for a new completed 5M trigger/retest.';
-  }
-  if (candidate.candidateState === 'NO_FRESH_ENTRY') {
+if (candidate.candidateState === 'NO_FRESH_ENTRY') {
     return 'Conditional review only. Do not chase. Wait for a fresh completed 5M trigger/retest with protected structure.';
   }
   if (candidate.humanReview?.status === 'HumanReviewReady') {
@@ -1193,27 +1190,6 @@ function compactActionText(candidate: SetupCandidate | null, normalized: Compact
   if (status === 'EXECUTABLE') return 'Verify completed 5M trigger, protected stop, target room, and invalidation before trader action.';
   if (candidate.executionStatus === 'Blocked') return `Stand down. ${candidate.blockReason || normalized.noTradeReason || 'Required gate failed.'}`;
   return candidate.requiredTrigger || candidate.nextAction || 'Wait for completed 5M trigger. No early entry.';
-}
-
-function failedPlanReversalLines(candidate: SetupCandidate): string[] {
-  const state = candidate.failedPlanReversal;
-  if (!state && candidate.pathway !== 'failed_plan_reversal') return [];
-  const timeframeLine = state?.timeframeConfirmations?.length
-    ? `TF: ${state.timeframeConfirmations
-      .map((item) => `${item.timeframe} ${item.direction} ${item.status}`)
-      .join(' | ')}`
-    : null;
-  const blockerLine = state?.blockers?.length
-    ? `Blockers: ${state.blockers.slice(0, 2).join(' | ')}`
-    : null;
-  return [
-    'Failed Plan Reversal:',
-    `State: ${candidate.candidateState || state?.decisionState || 'pending'} | Level: ${priceLine(state?.failedDecisionLevel ?? null)}`,
-    `${state ? `${state.originalPlanDirection} -> ${state.oppositeDirection}` : 'N/A'} | HTF: ${state?.htfStackStatus || 'unknown'} | 5M: ${state?.fiveMinuteTriggerStatus || 'unknown'}`,
-    ...(timeframeLine ? [timeframeLine] : []),
-    ...(blockerLine ? [compactLine(blockerLine, 120)] : []),
-    'Boundary: decision support only; not execution approval.',
-  ];
 }
 
 function lineInSandLines(candidate: SetupCandidate): string[] {
@@ -1319,7 +1295,6 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
       'Human review required. Decision-support plan only.',
       'Trader must confirm entry before action.',
     ] : []),
-    ...failedPlanReversalLines(candidate),
     ...htfFvgReactionCandidateLines(candidate),
     ...lineInSandLines(candidate),
     `Entry: ${priceLine(candidate.entry)}`,
@@ -1369,7 +1344,6 @@ function compactReviewPlanLines(candidate: SetupCandidate, normalized: CompactNo
       'Human review required. Decision-support plan only.',
       'Trader must confirm entry before action.',
     ] : []),
-    ...failedPlanReversalLines(candidate),
     ...htfFvgReactionCandidateLines(candidate),
     ...lineLines,
     ...(!lineLines.length && isFinitePrice(htfLine) ? [

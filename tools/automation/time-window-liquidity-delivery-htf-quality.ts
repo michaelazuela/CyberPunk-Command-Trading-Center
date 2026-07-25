@@ -88,7 +88,7 @@ interface HtfFirstCandidate {
   marketStructureShiftPresent: boolean;
   sweepRaidPlusReclaimPresent: boolean;
   modelOneOverlapPossible: boolean;
-  turtleSoupOverlapPossible: boolean;
+  raidReclaimOverlapPossible: boolean;
   drawReferences: DrawReference[];
   notes: string[];
   researchOnly: true;

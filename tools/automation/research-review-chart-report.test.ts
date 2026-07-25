@@ -24,7 +24,7 @@ try {
         conceptTitle: 'Time-Window Liquidity Delivery',
         direction: 'LONG',
         agentInspectionLabel: 'keep_advisory',
-        warningFailureReason: 'Approved Model 1 or Turtle Soup gates were not evaluated by research backfill.',
+        warningFailureReason: 'Approved Model 1 or Raid Reclaim Reversal gates were not evaluated by research backfill.',
         reviewEvidence: {
           chartAvailable: true,
           chartWithheld: false,

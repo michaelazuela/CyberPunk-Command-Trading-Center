@@ -39,7 +39,7 @@ fs.writeFileSync(path.join(auditDir, 'tape.json'), JSON.stringify({
       },
       setupCandidateStatus: {
         selected: {
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           direction: 'SHORT',
           rankScore: 175,
           decisionQualityScore: 44,

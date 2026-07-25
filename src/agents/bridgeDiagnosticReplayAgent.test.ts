@@ -325,8 +325,8 @@ const june11LongBias = candidate({
   decisionQualityScore: 87,
 });
 const june11CounterShort = candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Bearish Turtle Soup Reversal',
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Bearish Raid Reclaim Reversal Reversal',
   direction: 'SHORT',
   entry: 7298,
   stop: 7314.5,
@@ -335,7 +335,7 @@ const june11CounterShort = candidate({
   riskPoints: 16.5,
   executionStatus: ExecutionStatus.Conditional,
   blockReason: NoTradeReason.EntryTriggerPending,
-  requiredTrigger: 'Bearish Turtle Soup requires completed 5M acceptance below 7303.50.',
+  requiredTrigger: 'Bearish Raid Reclaim Reversal requires completed 5M acceptance below 7303.50.',
   missingEvidence: [
     'Active timeframe MSS ruleset found opposing completed 5M bullish MSS.',
     'Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.',

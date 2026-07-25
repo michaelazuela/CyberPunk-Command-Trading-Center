@@ -9,12 +9,12 @@ const row = {
   session: 'morning' as const,
   state: 'APPROVED_DESK_PLAN' as const,
   stateLabel: 'Approved Desk Plan' as const,
-  model: 'HtfDisplacementFvgContinuation',
+  model: 'SweepMssFvgRetrace',
   direction: 'LONG' as const,
-  headline: 'Approved Desk Plan | MORNING | LONG | HtfDisplacementFvgContinuation',
+  headline: 'Approved Desk Plan | MORNING | LONG | SweepMssFvgRetrace',
   bodyLines: [
     'morning long desk plan from the validated disabled runtime gate.',
-    'HtfDisplacementFvgContinuation is the selected scanner-owned lane for this window.',
+    'SweepMssFvgRetrace is the selected scanner-owned lane for this window.',
   ],
   levelLine: 'Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528',
   riskLine: 'Risk 4.25 points from scanner-owned entry/stop.',
@@ -122,7 +122,7 @@ assert.equal(report.summary.recommendation, 'ready_for_hidden_local_preview_impo
 assert.equal(report.scannerSurfaceSmokeImportPayload?.reportType, 'unified_desk_output_scanner_surface_smoke');
 assert.equal(report.scannerSurfaceSmokeImportPayload?.status, 'pass');
 assert.equal(report.scannerSurfaceSmokeImportPayload?.summary.renderedRows, 2);
-assert.equal(report.scannerSurfaceSmokeImportPayload?.surface.rows[0].model, 'HtfDisplacementFvgContinuation');
+assert.equal(report.scannerSurfaceSmokeImportPayload?.surface.rows[0].model, 'SweepMssFvgRetrace');
 assert.deepEqual(report.blockers, []);
 
 const dirty = structuredClone(consumerProbe);

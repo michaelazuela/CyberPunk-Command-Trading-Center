@@ -14,7 +14,7 @@ fs.writeFileSync(path.join(auditDir, 'snapshot-entry-missing.json'), JSON.string
   normalizedPlan: {
     setupCandidates: [
       {
-        setupType: 'TurtleSoup',
+        setupType: 'raidReclaim',
         direction: 'SHORT',
         stop: 7455.75,
         executionStatus: 'Conditional',
@@ -65,10 +65,10 @@ const blockerDrilldown = {
   status: 'pass',
   rows: [
     {
-      ticketId: '2026-06-23|evening|TurtleSoup|SHORT|prefer_replacement|snapshot-entry-missing',
+      ticketId: '2026-06-23|evening|raidReclaim|SHORT|prefer_replacement|snapshot-entry-missing',
       tradeDate: '2026-06-23',
       session: 'evening',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       snapshotId: 'snapshot-entry-missing',
     },
@@ -107,7 +107,7 @@ assert.equal(report.summary.unclassifiedRows, 0);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'keep_blocked_until_fresh_entry_or_valid_stop');
 
-const wait = report.rows.find((row) => row.setupType === 'TurtleSoup');
+const wait = report.rows.find((row) => row.setupType === 'raidReclaim');
 assert.equal(wait?.pathState, 'waiting_for_entry_trigger');
 assert.equal(wait?.replayUse, 'do_not_replay_until_fresh_entry');
 assert.equal(wait?.requiredTrigger, 'Fresh completed 5M reclaim trigger is required.');

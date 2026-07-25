@@ -38,7 +38,7 @@ function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
 }
 
 const executable = candidate({
-  setupType: SetupType.TurtleSoup,
+  setupType: SetupType.RaidReclaimReversal,
   scenarioLabel: 'strict',
   confidence: 'High',
   priority: 99,
@@ -59,7 +59,7 @@ const noChase = candidate({
 });
 
 const humanReview = candidate({
-  setupType: SetupType.HtfDisplacementFvgContinuation,
+  setupType: SetupType.IntradayMssMicroContinuation,
   scenarioLabel: 'fresh-retest',
   priority: 85,
   modelConfidenceScore: 82,
@@ -149,7 +149,7 @@ fs.writeFileSync(outcomePath, `${JSON.stringify({
     {
       tradeDate: '2026-07-01',
       sessionType: 'morning',
-      setupType: SetupType.HtfDisplacementFvgContinuation,
+      setupType: SetupType.IntradayMssMicroContinuation,
       direction: 'LONG',
       replayOutcome: 'T2_HIT',
       replayOneMesGross: 125,

@@ -89,7 +89,7 @@ const POSITIVE_FAMILY_SETUPS = new Set([
   'AfterLunchDriveFvgContinuation',
   'SweepMssFvgRetrace',
   'OpeningDriveFvgContinuation',
-  'HtfDisplacementMssContinuation',
+  'IntradayMssMicroContinuation',
 ]);
 
 const FILTERS: FilterProbe[] = [
@@ -100,18 +100,18 @@ const FILTERS: FilterProbe[] = [
     keep: (row) => row.riskPoints <= 7,
   },
   {
-    filterId: 'turtle_soup_risk_lte_10',
-    description: 'TurtleSoup target rows must have entry-to-stop risk <= 10 points.',
-    targetSetupTypes: ['TurtleSoup'],
+    filterId: 'RAID_RECLAIM_risk_lte_10',
+    description: 'raidReclaim target rows must have entry-to-stop risk <= 10 points.',
+    targetSetupTypes: ['raidReclaim'],
     keep: (row) => row.riskPoints <= 10,
   },
   {
     filterId: 'intraday_turtle_model_specific_risk_caps',
-    description: 'Combined model-specific risk caps: IntradayMssMicroContinuation <= 7 points and TurtleSoup <= 10 points.',
-    targetSetupTypes: ['IntradayMssMicroContinuation', 'TurtleSoup'],
+    description: 'Combined model-specific risk caps: IntradayMssMicroContinuation <= 7 points and raidReclaim <= 10 points.',
+    targetSetupTypes: ['IntradayMssMicroContinuation', 'raidReclaim'],
     keep: (row) => (
       row.setupType === 'IntradayMssMicroContinuation' ? row.riskPoints <= 7 :
-        row.setupType === 'TurtleSoup' ? row.riskPoints <= 10 :
+        row.setupType === 'raidReclaim' ? row.riskPoints <= 10 :
           true
     ),
   },

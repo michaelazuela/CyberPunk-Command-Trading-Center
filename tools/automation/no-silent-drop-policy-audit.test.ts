@@ -45,7 +45,7 @@ assert.equal(missingModeReport.status, 'fail');
 assert.ok(missingModeReport.findings.some((finding) => finding.reason.includes('DATA_QUALITY_BLOCKER')));
 
 const noEvidenceCandidate: SetupCandidate = {
-  setupType: SetupType.LiquiditySweep,
+  setupType: SetupType.RaidReclaimReversal,
   scenarioLabel: 'No evidence fixture',
   direction: 'LONG',
   detectedStatus: SetupCandidateStatus.Detected,

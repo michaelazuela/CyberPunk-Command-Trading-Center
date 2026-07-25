@@ -145,13 +145,13 @@ export const HUMAN_REVIEW_LABEL_METADATA: Record<string, HumanReviewLabelMetadat
     suggestedNextAction: 'add_context_or_collect_more_samples',
     boundary: 'research_only_not_execution_authority',
   },
-  possible_turtle_soup_mapping_review: {
-    label: 'possible_turtle_soup_mapping_review',
-    displayName: 'Turtle Soup Mapping Review',
+  possible_RAID_RECLAIM_mapping_review: {
+    label: 'possible_RAID_RECLAIM_mapping_review',
+    displayName: 'Raid Reclaim Reversal Mapping Review',
     category: 'watchlist',
     formalLedgerEligible: false,
     countsTowardCandidateGates: false,
-    meaning: 'Legacy label: queue for human-only mapping review against current Turtle Soup gates.',
+    meaning: 'Legacy label: queue for human-only mapping review against current Raid Reclaim Reversal gates.',
     doesNotMean: DOES_NOT_APPROVE,
     suggestedNextAction: 'add_context_or_collect_more_samples',
     boundary: 'research_only_not_execution_authority',

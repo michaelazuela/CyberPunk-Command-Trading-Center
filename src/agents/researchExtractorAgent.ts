@@ -147,13 +147,13 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Fading run toward all-time high / major buy-side liquidity': {
     plainEnglishMeaning: 'Price aggressively moves toward ATH, high of day, or major buy-side liquidity, then fails to sustain the run.',
-    whyItMayMatterFor6K: 'It may identify a research-only bearish fade context without replacing Turtle Soup sweep/reclaim requirements.',
+    whyItMayMatterFor6K: 'It may identify a research-only bearish fade context without replacing Raid Reclaim Reversal sweep/reclaim requirements.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
   'Judas Swing / false run logic as a source concept, with taxonomy caution': {
     plainEnglishMeaning: 'A false move concept that must be labeled carefully because strict Judas Swing has a specific session-open definition.',
-    whyItMayMatterFor6K: 'It can help taxonomy, but should route true sweep/reclaim events through existing Turtle Soup.',
+    whyItMayMatterFor6K: 'It can help taxonomy, but should route true sweep/reclaim events through existing Raid Reclaim Reversal.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -321,7 +321,7 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'FVG forms inside the 60-minute window': {
     plainEnglishMeaning: 'The imbalance appears during the studied window.',
-    whyItMayMatterFor6K: 'May become a research tag, but current Model 1/Turtle Soup gates still decide.',
+    whyItMayMatterFor6K: 'May become a research tag, but current Model 1/Raid Reclaim Reversal gates still decide.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -363,7 +363,7 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Manipulation immediately after the opening price': {
     plainEnglishMeaning: 'Price runs one side of the opening range or nearby liquidity before reversing.',
-    whyItMayMatterFor6K: 'May overlap Turtle Soup only when a true sweep/raid plus reclaim occurs.',
+    whyItMayMatterFor6K: 'May overlap Raid Reclaim Reversal only when a true sweep/raid plus reclaim occurs.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -393,13 +393,13 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Bullish AMD: buying near/below open after sell-side engineering': {
     plainEnglishMeaning: 'A bullish research case studies a sell-side run below open/old low followed by expansion higher.',
-    whyItMayMatterFor6K: 'Routes through Turtle Soup if sweep + reclaim qualifies; otherwise remains advisory context.',
+    whyItMayMatterFor6K: 'Routes through Raid Reclaim Reversal if sweep + reclaim qualifies; otherwise remains advisory context.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
   'Bearish AMD: selling near/above open after buy-side engineering': {
     plainEnglishMeaning: 'A bearish research case studies a buy-side run above open/old high followed by expansion lower.',
-    whyItMayMatterFor6K: 'Routes through Turtle Soup if sweep + reclaim qualifies; otherwise remains advisory context.',
+    whyItMayMatterFor6K: 'Routes through Raid Reclaim Reversal if sweep + reclaim qualifies; otherwise remains advisory context.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -423,13 +423,13 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Run below old low to engineer sell-side liquidity in bullish context': {
     plainEnglishMeaning: 'A bullish research case watches a run below an old low before potential higher delivery.',
-    whyItMayMatterFor6K: 'If it is a true sweep plus reclaim, evaluate through Turtle Soup.',
+    whyItMayMatterFor6K: 'If it is a true sweep plus reclaim, evaluate through Raid Reclaim Reversal.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
   'Run above old high to engineer buy-side liquidity in bearish context': {
     plainEnglishMeaning: 'A bearish research case watches a run above an old high before potential lower delivery.',
-    whyItMayMatterFor6K: 'If it is a true sweep plus reclaim, evaluate through Turtle Soup.',
+    whyItMayMatterFor6K: 'If it is a true sweep plus reclaim, evaluate through Raid Reclaim Reversal.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -471,7 +471,7 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Avoid treating the concept as an entry model without approved 6K gates': {
     plainEnglishMeaning: 'AMD is a lens, not an app-approved entry model.',
-    whyItMayMatterFor6K: 'Directly protects Model 1, Turtle Soup, risk, and scanner selection authority.',
+    whyItMayMatterFor6K: 'Directly protects Model 1, Raid Reclaim Reversal, risk, and scanner selection authority.',
     currentCoverage: 'already_covered',
     watchlistOnly: true,
   },
@@ -575,11 +575,11 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
         note: 'AMD context may overlap Model 1 only when current Model 1 gates independently pass.',
       };
     }
-    if (amdResearch && lower.includes('turtle')) {
+    if (amdResearch && lower.includes('raid reclaim')) {
       return {
         target,
         comparison: 'partially_covered' as const,
-        note: 'AMD manipulation may overlap Turtle Soup when the manipulation leg creates a true sweep/raid plus reclaim.',
+        note: 'AMD manipulation may overlap Raid Reclaim Reversal when the manipulation leg creates a true sweep/raid plus reclaim as a sweep/reclaim event.',
       };
     }
     if (timeWindowResearch && lower.includes('model 1')) {
@@ -589,18 +589,18 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
         note: 'Time-window FVG/inefficiency plus liquidity draw may overlap with Model 1 components, but only current Model 1 gates can approve.',
       };
     }
-    if (timeWindowResearch && lower.includes('turtle')) {
+    if (timeWindowResearch && lower.includes('raid reclaim')) {
       return {
         target,
         comparison: 'partially_covered' as const,
-        note: 'A true sweep/raid plus reclaim should be evaluated through existing Turtle Soup; time-window context cannot approve by itself.',
+        note: 'A true sweep/reclaim should be evaluated through existing Raid Reclaim Reversal; time-window context cannot approve by itself.',
       };
     }
-    if (falseRunResearch && lower.includes('turtle')) {
+    if (falseRunResearch && lower.includes('raid reclaim')) {
       return {
         target,
         comparison: 'partially_covered' as const,
-        note: 'A true sweep/raid plus reclaim should be evaluated through existing Turtle Soup; false-run behavior without true sweep + reclaim remains research-only context.',
+        note: 'A true sweep/reclaim should be evaluated through existing Raid Reclaim Reversal; false-run behavior without true sweep + reclaim remains research-only context.',
       };
     }
     if (lower.includes('model 1')) {
@@ -612,11 +612,11 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           : 'Model 1 already requires approved sweep/reclaim/displacement/MSS/FVG gates; the final-hour draw idea cannot bypass those gates.',
       };
     }
-    if (lower.includes('turtle')) {
+    if (lower.includes('raid reclaim')) {
       return {
         target,
         comparison: 'partially_covered' as const,
-        note: 'Turtle Soup already handles sweep/reclaim reversals; final-hour liquidity draw remains context only unless approved 5M gates confirm.',
+        note: 'Raid Reclaim Reversal already handles sweep/reclaim reversals; final-hour liquidity draw remains context only unless approved 5M gates confirm.',
       };
     }
     if (lower.includes('watchlist') || lower.includes('fvg')) {
@@ -646,7 +646,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
         status: 'research_only',
         candidateName: 'Accumulation–Manipulation–Distribution Range Model Watchlist',
         primaryIdea: 'Study open-based accumulation, liquidity manipulation, and later distribution behavior.',
-        taxonomyNote: 'If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+        taxonomyNote: 'If Model 1 or Raid Reclaim Reversal gates pass, classify through existing approved models; otherwise keep as advisory research.',
         recommendedNextStep: 'Collect 20-30 bridge-backed examples before any rule review.',
         ruleChange: 'none',
         approvalBoundarySummary: 'Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.',
@@ -658,7 +658,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
         status: 'research_only',
         candidateName: 'Time-Window Liquidity Delivery Watchlist',
         primaryIdea: 'Study FVG/inefficiency delivery toward liquidity during defined market windows.',
-        taxonomyNote: 'If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+        taxonomyNote: 'If Model 1 or Raid Reclaim Reversal gates pass, classify through existing approved models; otherwise keep as advisory research.',
         recommendedNextStep: 'Collect 20-30 bridge-backed examples per window before any rule review.',
         ruleChange: 'none',
         approvalBoundarySummary: 'Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.',
@@ -670,7 +670,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
         status: 'research_only',
         candidateName: 'False-Run Liquidity Fade Near Highs Watchlist',
         primaryIdea: 'Fade a run toward ATH or major buy-side liquidity when price fails to sustain and begins drawing toward sell-side liquidity.',
-        taxonomyNote: 'If sweep + reclaim exists, evaluate through existing Turtle Soup; otherwise keep as advisory research.',
+        taxonomyNote: 'If sweep + reclaim exists, evaluate through existing Raid Reclaim Reversal; otherwise keep as advisory research.',
         recommendedNextStep: 'Collect 20-30 bridge-backed examples before any rule review.',
         ruleChange: 'none',
         approvalBoundarySummary: 'Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.',
@@ -731,7 +731,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
             'No clear opening reference.',
             'No clear accumulation.',
             'No liquidity run/manipulation.',
-            'No true sweep + reclaim if attempting to map to Turtle Soup.',
+            'No true sweep + reclaim if attempting to map to Raid Reclaim Reversal.',
             'No Model 1 gates if attempting to map to Model 1.',
             'Larger-timeframe context conflicts.',
             'Price already reached the likely distribution target.',
@@ -761,7 +761,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
             'FVG is not respected.',
             'Price is too extended to chase.',
             'Risk would be too wide under current approved rules.',
-            'The condition does not satisfy current Model 1 or Turtle Soup gates.',
+            'The condition does not satisfy current Model 1 or Raid Reclaim Reversal gates.',
           ],
         }
       : falseRunResearch
@@ -789,7 +789,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
             'Price already reached sell-side target.',
             'Move is too extended to chase.',
             'Risk would be too wide under current approved rules.',
-            'No true sweep + reclaim exists, meaning it cannot be treated as Turtle Soup.',
+            'No true sweep + reclaim exists, meaning it cannot be treated as Raid Reclaim Reversal.',
           ],
         }
       : {
@@ -825,7 +825,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Identify accumulation around the opening reference.',
           'Identify manipulation through nearby old high/low or equal high/low.',
           'Determine whether the manipulation produced a true sweep/raid plus reclaim.',
-          'If sweep + reclaim exists, classify through Turtle Soup gates.',
+          'If sweep + reclaim exists, classify through Raid Reclaim Reversal gates.',
           'Determine whether Model 1 gates independently passed.',
           'If approved gates do not pass, classify as advisory-only AMD research.',
           'Track the later distribution direction as after-action context only.',
@@ -840,7 +840,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Identify FVG/inefficiency inside the window.',
           'Identify whether MSS occurred.',
           'Identify whether bodies respected the FVG.',
-          'Determine whether current Model 1 or Turtle Soup gates actually passed.',
+          'Determine whether current Model 1 or Raid Reclaim Reversal gates actually passed.',
           'If approved gates do not pass, classify as advisory-only time-window research.',
           'Track 20-30 examples per window before any rule approval discussion.',
         ]
@@ -851,7 +851,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Focus on sessions where price runs toward ATH / HOD / buy-side liquidity.',
           'Identify whether price actually swept/raided established liquidity.',
           'Identify whether price reclaimed after the sweep.',
-          'If sweep + reclaim exists, classify through current Turtle Soup gates.',
+          'If sweep + reclaim exists, classify through current Raid Reclaim Reversal gates.',
           'If no sweep + reclaim exists, classify as advisory-only false-run / liquidity-fade context.',
           'Identify bearish FVG/SIBI/IFVG/order block/premium wick structures.',
           'Identify whether bodies stayed below the relevant midpoint.',
@@ -872,19 +872,19 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Track 20-30 examples before any rule approval discussion.',
         ],
     advisoryDiscordDraft: amdResearch
-      ? 'Accumulation-Manipulation-Distribution range behavior forming. Watch only - price may be engineering liquidity around the opening reference. Evaluate only through current 6K Model 1 or Turtle Soup rules. Do not chase.'
+      ? 'Accumulation-Manipulation-Distribution range behavior forming. Watch only - price may be engineering liquidity around the opening reference. Evaluate only through current 6K Model 1 or Raid Reclaim Reversal rules. Do not chase.'
       : timeWindowResearch
-      ? 'Time-Window Liquidity Delivery candidate forming. Watch only - a draw on liquidity and FVG/inefficiency may be aligning inside a defined market window. Evaluate only through current 6K Model 1 or Turtle Soup rules. Do not chase.'
+      ? 'Time-Window Liquidity Delivery candidate forming. Watch only - a draw on liquidity and FVG/inefficiency may be aligning inside a defined market window. Evaluate only through current 6K Model 1 or Raid Reclaim Reversal rules. Do not chase.'
       : falseRunResearch
-      ? 'False-Run Liquidity Fade Near Highs candidate forming. Watch only - price ran toward major buy-side liquidity / ATH and may be drawing back toward sell-side liquidity. If a true sweep + reclaim forms, evaluate through current Turtle Soup rules. Otherwise, keep this as research-only context. Do not chase.'
+      ? 'False-Run Liquidity Fade Near Highs candidate forming. Watch only - price ran toward major buy-side liquidity / ATH and may be drawing back toward sell-side liquidity. If a true sweep + reclaim forms, evaluate through current Raid Reclaim Reversal rules. Otherwise, keep this as research-only context. Do not chase.'
       : 'Final-Hour Liquidity Draw forming. Watch only - price may be drawing toward clean buy-side liquidity during the 3:15-3:45 macro. Wait for current approved 6K rules to confirm. Do not chase.',
     guardrails: amdResearch
       ? [
           'This is not an approved executable model.',
           'Do not create entries, stops, T1/T2, or outcome buttons.',
-          'Do not override Model 1 or Turtle Soup.',
+          'Do not override Model 1 or Raid Reclaim Reversal.',
           'Do not allow this to approve trades.',
-          'Do not duplicate Model 1 or Turtle Soup under an AMD label.',
+          'Do not duplicate Model 1 or Raid Reclaim Reversal under an AMD label.',
           'Do not use later distribution success to retroactively validate an invalid setup.',
           'Collect 20-30 examples first.',
         ]
@@ -892,9 +892,9 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
       ? [
           'This is not an approved executable model.',
           'Do not create entries, stops, T1/T2, or outcome buttons.',
-          'Do not override Model 1 or Turtle Soup.',
+          'Do not override Model 1 or Raid Reclaim Reversal.',
           'Do not allow this to approve trades.',
-          'Do not duplicate Model 1 or Turtle Soup under a time-window label.',
+          'Do not duplicate Model 1 or Raid Reclaim Reversal under a time-window label.',
           'Do not use later target delivery to retroactively validate an invalid setup.',
           'Collect 20-30 examples per window first.',
         ]
@@ -902,16 +902,16 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
       ? [
           'This is not an approved executable model.',
           'Do not create entries, stops, T1/T2, or outcome buttons.',
-          'Do not override Model 1 or Turtle Soup.',
+          'Do not override Model 1 or Raid Reclaim Reversal.',
           'Do not allow this to approve trades.',
-          'Do not duplicate Turtle Soup under a new Judas Swing or false-run label.',
+          'Do not duplicate Raid Reclaim Reversal under a new Judas Swing or false-run label.',
           'Do not use later downside delivery to retroactively validate an invalid setup.',
           'Collect 20-30 examples first.',
         ]
       : [
           'This is not an approved executable model.',
           'Do not create entries, stops, T1/T2, or outcome buttons.',
-          'Do not override Model 1 or Turtle Soup.',
+          'Do not override Model 1 or Raid Reclaim Reversal.',
           'Do not allow this to approve trades.',
           'Do not use later success to retroactively validate an invalid setup.',
           'Collect 20-30 examples first.',

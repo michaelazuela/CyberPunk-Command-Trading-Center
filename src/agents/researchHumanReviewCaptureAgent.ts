@@ -598,7 +598,7 @@ export function renderHumanReviewMarkdown(pack: ResearchSampleReviewPack): strin
     '- No entries, stops, targets, alerts, outcome buttons, RAG writes, or execution approval are created.',
     '',
     '## 8. Do-Not-Change-Yet Items',
-    '- Do not change Model 1 or Turtle Soup gates from this review pack.',
+    '- Do not change Model 1 or Raid Reclaim Reversal gates from this review pack.',
     '- Do not promote research concepts into executable models.',
     '- Human review may queue future discussion only.',
   ].join('\n');

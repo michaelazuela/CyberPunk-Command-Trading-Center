@@ -35,7 +35,7 @@ writeTape('2026-06-01', 'morning', {
       t2: 104,
       canExecute: true,
     },
-    setupCandidateStatus: { selected: { setupType: 'TurtleSoup', direction: 'LONG', requiredTrigger: 'completed 5M close above 100' } },
+    setupCandidateStatus: { selected: { setupType: 'raidReclaim', direction: 'LONG', requiredTrigger: 'completed 5M close above 100' } },
     visibility: { visibilityMode: 'POST_PLAN' },
   },
   t1: {

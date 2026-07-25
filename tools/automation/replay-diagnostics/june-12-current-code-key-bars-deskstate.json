@@ -87,8 +87,8 @@
         }
       },
       "bestLong": {
-        "candidateKey": "TurtleSoup|LONG|scenario|Blocked",
-        "setupType": "TurtleSoup",
+        "candidateKey": "RaidReclaimReversal|LONG|scenario|Blocked",
+        "setupType": "RaidReclaimReversal",
         "scenarioLabel": null,
         "direction": "LONG",
         "detectedStatus": "Blocked",
@@ -114,8 +114,8 @@
           "Candidate invalidated: current 5M price action has already traded through the structure stop/invalidation."
         ],
         "missingLevels": [],
-        "nextTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7391.25 required before long continuation is active.",
-        "requiredTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7391.25 required before long continuation is active.",
+        "nextTrigger": "Countertrend bullish Raid Reclaim Reversal requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7391.25 required before long continuation is active.",
+        "requiredTrigger": "Countertrend bullish Raid Reclaim Reversal requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7391.25 required before long continuation is active.",
         "entry": null,
         "stop": 7410.25,
         "target1": null,
@@ -473,8 +473,8 @@
         }
       },
       "bestLong": {
-        "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-        "setupType": "TurtleSoup",
+        "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+        "setupType": "RaidReclaimReversal",
         "scenarioLabel": null,
         "direction": "LONG",
         "detectedStatus": "Possible",
@@ -497,8 +497,8 @@
           "No chase: wait for a completed 5M or 15M close above 7443.50 because 7443.50 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Current Imported Window High (current_window high)."
         ],
         "missingLevels": [],
-        "nextTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7443.50 required before long continuation is active.",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7443.50 required before long continuation is active.",
+        "nextTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7443.50 required before long continuation is active.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7443.50 required before long continuation is active.",
         "entry": null,
         "stop": 7410.25,
         "target1": null,
@@ -737,9 +737,9 @@
         "filteredOutReason": "InvalidStopLocation"
       },
       "bestShort": {
-        "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Blocked",
-        "setupType": "TurtleSoup",
-        "scenarioLabel": "Bearish Turtle Soup Reversal",
+        "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Blocked",
+        "setupType": "RaidReclaimReversal",
+        "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
         "direction": "SHORT",
         "detectedStatus": "Blocked",
         "executionStatus": "Blocked",
@@ -754,8 +754,8 @@
           "Candidate invalidated: current 5M price action has already traded through the structure stop/invalidation."
         ],
         "missingLevels": [],
-        "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-        "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
         "entry": 7401.5,
         "stop": 7425,
         "target1": 7353.75,
@@ -940,9 +940,9 @@
         "filteredOutReason": "InvalidStopLocation"
       },
       "bestShort": {
-        "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Blocked",
-        "setupType": "TurtleSoup",
-        "scenarioLabel": "Bearish Turtle Soup Reversal",
+        "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Blocked",
+        "setupType": "RaidReclaimReversal",
+        "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
         "direction": "SHORT",
         "detectedStatus": "Blocked",
         "executionStatus": "Blocked",
@@ -957,8 +957,8 @@
           "Candidate invalidated: current 5M price action has already traded through the structure stop/invalidation."
         ],
         "missingLevels": [],
-        "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-        "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
         "entry": 7401.5,
         "stop": 7425,
         "target1": 7353.75,
@@ -1143,9 +1143,9 @@
         "filteredOutReason": "InvalidStopLocation"
       },
       "bestShort": {
-        "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Blocked",
-        "setupType": "TurtleSoup",
-        "scenarioLabel": "Bearish Turtle Soup Reversal",
+        "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Blocked",
+        "setupType": "RaidReclaimReversal",
+        "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
         "direction": "SHORT",
         "detectedStatus": "Blocked",
         "executionStatus": "Blocked",
@@ -1160,8 +1160,8 @@
           "Candidate invalidated: current 5M price action has already traded through the structure stop/invalidation."
         ],
         "missingLevels": [],
-        "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-        "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
         "entry": 7401.5,
         "stop": 7425,
         "target1": 7353.75,

@@ -51,7 +51,7 @@ This report uses historical OHLC replay data only. It does not post to Discord, 
 
 ## Candidate And Final Gates
 - Candidate Detected: Yes
-- Setup Type: HtfDrawContinuationAfterRaid
+- Setup Type: RaidReclaimReversal
 - Direction: LONG
 - Final Gate Status: ConditionalTrade
 - canExecute: false

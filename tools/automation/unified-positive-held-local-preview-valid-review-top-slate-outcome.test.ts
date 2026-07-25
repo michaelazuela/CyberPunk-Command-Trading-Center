@@ -77,10 +77,10 @@ const installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCompar
       riskPreserved: true,
     },
     {
-      ticketId: '2026-06-12-morning-TurtleSoup-LONG',
+      ticketId: '2026-06-12-morning-raidReclaim-LONG',
       tradeDate: '2026-06-12',
       session: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -171,10 +171,10 @@ const timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRepor
       issueTags: [],
     },
     {
-      ticketId: '2026-06-12-morning-TurtleSoup-LONG',
+      ticketId: '2026-06-12-morning-raidReclaim-LONG',
       tradeDate: '2026-06-12',
       session: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -226,7 +226,7 @@ assert.equal(report.summary.winners, 1);
 assert.equal(report.summary.losses, 1);
 assert.equal(report.summary.grossResolvedOneMesPl, 125);
 assert.equal(report.summary.canExecuteFalseRows, 2);
-assert.equal(report.rows.some((row) => row.ticketId === '2026-06-12-morning-TurtleSoup-LONG'), false);
+assert.equal(report.rows.some((row) => row.ticketId === '2026-06-12-morning-raidReclaim-LONG'), false);
 assert.equal(report.rows.every((row) => row.livePromotionAllowed === false), true);
 assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.writesSupabase, false);

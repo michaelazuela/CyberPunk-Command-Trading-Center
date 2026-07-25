@@ -8,7 +8,7 @@ const decisionSummary = {
   rows: [
     {
       ticketId: 'ticket-complete',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       decisionAction: 'queue_for_replay_research',
     },
@@ -20,7 +20,7 @@ const decisionSummary = {
     },
     {
       ticketId: 'ticket-held',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       decisionAction: 'hold_for_manual_review',
     },
@@ -32,7 +32,7 @@ const replayQueue = {
   rows: [
     {
       ticketId: 'ticket-complete',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       replayStatus: 'ready_for_read_only_outcome_replay',
     },
@@ -50,7 +50,7 @@ const ohlcOutcome = {
   rows: [
     {
       ticketId: 'ticket-complete',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       outcomeStatus: 'resolved',
       resolvedOneMesPl: 50,
@@ -70,7 +70,7 @@ const sourceProof = {
   rows: [
     {
       rowId: 'ticket-complete',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       decision: 'accepted_for_research_validation',
     },

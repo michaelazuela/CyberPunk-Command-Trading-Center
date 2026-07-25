@@ -8,11 +8,11 @@ const intakeReport = {
   status: 'pass',
   rows: [
     {
-      intakeId: '2026-06-16-morning-TurtleSoup-LONG',
+      intakeId: '2026-06-16-morning-raidReclaim-LONG',
       tradeDate: '2026-06-16',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       firstSeenTime: '2026-06-16T09:55:00.0000000',
       lastSeenTime: '2026-06-16T09:55:00.0000000',
@@ -146,7 +146,7 @@ assert.equal(report.selectedReplayPackage.filter((row) => row.setupType === 'Ope
 assert.ok(report.selectedReplayPackage.some((row) => row.setupType === 'AfterLunchDriveFvgContinuation'));
 assert.ok(report.selectedReplayPackage.every((row) => row.triageDecision === 'selected_for_replay_package'));
 assert.equal(
-  report.rows.find((row) => row.intakeId === '2026-06-16-morning-TurtleSoup-LONG')?.triageDecision,
+  report.rows.find((row) => row.intakeId === '2026-06-16-morning-raidReclaim-LONG')?.triageDecision,
   'already_processed_reference',
 );
 assert.match(report.markdown, /Selected replay package rows: 3/);

@@ -47,12 +47,12 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
   rows: [
     {
       ticketId: 'unreviewed-ticket',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       visibleInHiddenTab: true,
       noteDisposition: 'unreviewed',
       noteValid: true,
-      systemReviewNotes: ['TurtleSoup long remains review-only: this cluster lacks full plan-level proof.'],
+      systemReviewNotes: ['raidReclaim long remains review-only: this cluster lacks full plan-level proof.'],
       systemNotesAffectDisposition: false,
       reviewOnly: true,
       livePromotionAllowed: false,

@@ -78,7 +78,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-morning-2026-06-24-MES-MORNING-mis
   normalizedPlan: {
     setupCandidates: [
       {
-        setupType: 'TurtleSoup',
+        setupType: 'raidReclaim',
         direction: 'SHORT',
         entry: 7442,
         stop: 7452,
@@ -109,10 +109,10 @@ const missingReplayPackage = {
     },
     {
       packagePriority: 2,
-      replayQueueKey: '2026-06-24|morning|TurtleSoup|SHORT|prefer_replacement',
+      replayQueueKey: '2026-06-24|morning|raidReclaim|SHORT|prefer_replacement',
       tradeDate: '2026-06-24',
       sessionType: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       selectorDecision: 'prefer_replacement',
       shadowRows: 16,
@@ -158,7 +158,7 @@ assert.equal(ready?.proofTime, '2026-06-23T19:55:00');
 assert.equal(ready?.barsLoaded, 2);
 assert.equal(ready?.barsAfterProof, 2);
 
-const blocked = report.rows.find((row) => row.setupType === 'TurtleSoup');
+const blocked = report.rows.find((row) => row.setupType === 'raidReclaim');
 assert.equal(blocked?.outcomeInputStatus, 'blocked');
 assert.ok(blocked?.blockers.includes('missing scanner decision tape'));
 assert.ok(blocked?.blockers.includes('missing completed 5M bars from scanner decision tape'));

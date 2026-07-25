@@ -29,7 +29,7 @@ const previewPayloadReport = {
   source: {
     inspectionSurfacePath: 'inspection.json',
     wordingGuardPath: 'wording.json',
-    turtleSoupReviewNotePlacementSimulationPath: null,
+    raidReclaimReviewNotePlacementSimulationPath: null,
   },
   summary: {
     inspectionRowsLoaded: 1,
@@ -47,7 +47,7 @@ const previewPayloadReport = {
       ticketId: 'long-ticket',
       sourceSnapshotId: 'scanner-long',
       session: null,
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       status: 'preview_payload_created',
       payload: {
@@ -55,7 +55,7 @@ const previewPayloadReport = {
         ticketId: 'long-ticket',
         sourceSnapshotId: 'scanner-long',
         session: null,
-        setupType: 'TurtleSoup',
+        setupType: 'raidReclaim',
         direction: 'LONG',
         state: 'ACTIVE_REVIEW',
         publishDiscord: false,
@@ -66,9 +66,9 @@ const previewPayloadReport = {
         reviewOnly: true,
         humanReviewOnly: true,
         noAutomatedOrders: true,
-        title: 'TurtleSoup LONG ACTIVE_REVIEW local preview',
+        title: 'raidReclaim LONG ACTIVE_REVIEW local preview',
         sections: {
-          what: 'TurtleSoup LONG held-local ACTIVE_REVIEW ticket.',
+          what: 'raidReclaim LONG held-local ACTIVE_REVIEW ticket.',
           where: 'Line 100.00; entry 100.00; stop 96.00; T1 106.00; T2 108.00.',
           when: 'Fresh completed 5M proof.',
           why: 'HTF context supports review only.',

@@ -1,27 +1,19 @@
 import { SetupType, type SetupCandidate } from '../types';
 
 export type IctModelLabel =
+  | 'Raid Reclaim Reversal'
   | 'Sweep -> MSS -> FVG Retrace'
-  | 'Turtle Soup Reversal'
-  | 'HTF Draw Continuation After Raid/Reclaim'
-  | 'HTF Displacement + 5M MSS Continuation'
-  | 'HTF Displacement + FVG Continuation'
   | 'Opening Drive FVG Continuation'
   | 'After-Lunch Drive FVG Continuation'
   | 'Intraday MSS Micro Continuation'
-  | 'Failed Plan Reversal'
   | 'ICT setup';
 
 export function normalizeIctModelLabel(setupType?: SetupType | string | null): IctModelLabel {
+  if (setupType === SetupType.RaidReclaimReversal) return 'Raid Reclaim Reversal';
   if (setupType === SetupType.SweepMssFvgRetrace) return 'Sweep -> MSS -> FVG Retrace';
-  if (setupType === SetupType.TurtleSoup) return 'Turtle Soup Reversal';
-  if (setupType === SetupType.HtfDrawContinuationAfterRaid) return 'HTF Draw Continuation After Raid/Reclaim';
-  if (setupType === SetupType.HtfDisplacementMssContinuation) return 'HTF Displacement + 5M MSS Continuation';
-  if (setupType === SetupType.HtfDisplacementFvgContinuation) return 'HTF Displacement + FVG Continuation';
   if (setupType === SetupType.OpeningDriveFvgContinuation) return 'Opening Drive FVG Continuation';
   if (setupType === SetupType.AfterLunchDriveFvgContinuation) return 'After-Lunch Drive FVG Continuation';
   if (setupType === SetupType.IntradayMssMicroContinuation) return 'Intraday MSS Micro Continuation';
-  if (setupType === SetupType.FailedPlanReversal) return 'Failed Plan Reversal';
   return 'ICT setup';
 }
 

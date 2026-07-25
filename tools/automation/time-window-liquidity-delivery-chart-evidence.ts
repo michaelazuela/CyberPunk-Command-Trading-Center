@@ -7,7 +7,7 @@ type AuditWindowCode = 'LONDON' | 'AM' | 'PM';
 type HumanReviewLabel =
   | 'strong_advisory_candidate'
   | 'covered_by_model_1'
-  | 'covered_by_turtle_soup'
+  | 'covered_by_RAID_RECLAIM'
   | 'weak_or_noisy'
   | 'needs_chart_review'
   | 'reject_time_window_standalone';
@@ -17,7 +17,7 @@ type ChartReviewRecommendation =
   | 'downgrade_to_weak_or_noisy'
   | 'reject_time_window_standalone'
   | 'covered_by_model_1'
-  | 'covered_by_turtle_soup';
+  | 'covered_by_RAID_RECLAIM';
 
 interface ReviewedSample {
   sampleId: string;
@@ -59,7 +59,7 @@ interface CuratedSample {
   sweepRaidPlusReclaimPresent: boolean;
   deliveryStatus: 'achieved' | 'failed' | 'not_observed';
   modelOneOverlap: boolean;
-  turtleSoupOverlap: boolean;
+  raidReclaimOverlap: boolean;
   advisoryOnly: boolean;
   chartPath: string | null;
   reportPath: string | null;
@@ -133,7 +133,7 @@ interface ChartEvidenceRecord {
   drawReachedBeforeWindow: 'yes' | 'no' | 'not_recorded';
   drawValidDuringWindow: 'yes' | 'no' | 'not_recorded';
   modelOneOverlap: boolean;
-  turtleSoupOverlap: boolean;
+  raidReclaimOverlap: boolean;
   remainsAdvisoryOnly: boolean;
   sourceChartPath: string | null;
   sourceReportPath: string | null;
@@ -203,7 +203,7 @@ const RECOMMENDATIONS: ChartReviewRecommendation[] = [
   'downgrade_to_weak_or_noisy',
   'reject_time_window_standalone',
   'covered_by_model_1',
-  'covered_by_turtle_soup',
+  'covered_by_RAID_RECLAIM',
 ];
 const SAFETY_FIELDS: ReviewSafetyFields = {
   activatesModel: false,
@@ -286,7 +286,7 @@ function advisoryOnlyReason(sample: CuratedSample | undefined): string {
   if (!sample) return 'Curated sample details were not available; preserve needs-chart-review status until manually inspected.';
   if (sample.advisoryOnly) return 'Curated as advisory-only time-window research, not an executable model label.';
   if (sample.modelOneOverlap) return 'Curated as possible Model 1 overlap; do not duplicate Model 1 under TWLD.';
-  if (sample.turtleSoupOverlap) return 'Curated as possible Turtle Soup overlap; do not duplicate Turtle Soup under TWLD.';
+  if (sample.raidReclaimOverlap) return 'Curated as possible Raid Reclaim Reversal overlap; do not duplicate Raid Reclaim Reversal under TWLD.';
   return 'Curated for research review only.';
 }
 
@@ -304,10 +304,10 @@ function recommendationFor(sample: CuratedSample | undefined, audit: AuditCandid
       reasons: ['Curated evidence marks this as possible Model 1 overlap. Keep TWLD advisory-only and route through existing Model 1 review.'],
     };
   }
-  if (sample.turtleSoupOverlap) {
+  if (sample.raidReclaimOverlap) {
     return {
-      recommendation: 'covered_by_turtle_soup',
-      reasons: ['Curated evidence marks this as possible Turtle Soup overlap. Keep TWLD advisory-only and route through existing Turtle Soup review.'],
+      recommendation: 'covered_by_RAID_RECLAIM',
+      reasons: ['Curated evidence marks this as possible Raid Reclaim Reversal overlap. Keep TWLD advisory-only and route through existing Raid Reclaim Reversal review.'],
     };
   }
   if (audit?.priceAlreadyReachedDrawBeforeSetup === true) {
@@ -378,7 +378,7 @@ export function buildTimeWindowLiquidityDeliveryChartEvidenceReport(options: Cha
         drawReachedBeforeWindow: triState(auditCandidate?.priceAlreadyReachedDrawBeforeSetup),
         drawValidDuringWindow: triState(auditCandidate ? auditCandidate.cleanDrawObserved === true && auditCandidate.priceAlreadyReachedDrawBeforeSetup !== true : undefined),
         modelOneOverlap: curatedSample?.modelOneOverlap ?? false,
-        turtleSoupOverlap: curatedSample?.turtleSoupOverlap ?? false,
+        raidReclaimOverlap: curatedSample?.raidReclaimOverlap ?? false,
         remainsAdvisoryOnly: curatedSample?.advisoryOnly ?? true,
         sourceChartPath: curatedSample?.chartPath || null,
         sourceReportPath: curatedSample?.reportPath || null,
@@ -443,7 +443,7 @@ function renderRecordDetails(record: ChartEvidenceRecord): string[] {
     `- Draw Reached Before Window: ${record.drawReachedBeforeWindow}`,
     `- Draw Valid During Window: ${record.drawValidDuringWindow}`,
     `- Model 1 Overlap: ${yesNo(record.modelOneOverlap)}`,
-    `- Turtle Soup Overlap: ${yesNo(record.turtleSoupOverlap)}`,
+    `- Raid Reclaim Reversal Overlap: ${yesNo(record.raidReclaimOverlap)}`,
     `- Remains Advisory-Only: ${yesNo(record.remainsAdvisoryOnly)}`,
     `- Why Chart Review Was Needed: ${record.chartReviewReason}`,
     `- Advisory-Only Reason: ${record.advisoryOnlyReason}`,
@@ -482,10 +482,10 @@ export function renderTimeWindowLiquidityDeliveryChartEvidenceMarkdown(report: T
     ...RECOMMENDATIONS.map((recommendation) => `- ${recommendation}: ${report.summary.recommendationCounts[recommendation]}`),
     '',
     '## Chart Evidence Records',
-    '| Sample ID | Date | Draw Type | Draw Level | FVG | MSS | Sweep/Reclaim | Delivery | FVG Respected | Draw Reached Before Window | Draw Valid During Window | Model 1 Overlap | Turtle Soup Overlap | Recommendation | Chart/Report Path |',
+    '| Sample ID | Date | Draw Type | Draw Level | FVG | MSS | Sweep/Reclaim | Delivery | FVG Respected | Draw Reached Before Window | Draw Valid During Window | Model 1 Overlap | Raid Reclaim Reversal Overlap | Recommendation | Chart/Report Path |',
     '|---|---|---|---:|---:|---:|---:|---|---|---|---|---:|---:|---|---|',
     ...report.records.map((record) =>
-      `| ${record.sampleId} | ${record.date} | ${record.drawType} | ${formatDrawLevel(record.drawLevel)} | ${yesNo(record.fvgOrInefficiencyPresent)} | ${yesNo(record.marketStructureShiftPresent)} | ${yesNo(record.sweepRaidPlusReclaimPresent)} | ${record.deliveryStatus} | ${record.fvgOrInefficiencyRespected} | ${record.drawReachedBeforeWindow} | ${record.drawValidDuringWindow} | ${yesNo(record.modelOneOverlap)} | ${yesNo(record.turtleSoupOverlap)} | ${record.recommendation} | ${record.sourceChartPath || record.sourceReportPath || record.generatedEvidenceReportPath} |`
+      `| ${record.sampleId} | ${record.date} | ${record.drawType} | ${formatDrawLevel(record.drawLevel)} | ${yesNo(record.fvgOrInefficiencyPresent)} | ${yesNo(record.marketStructureShiftPresent)} | ${yesNo(record.sweepRaidPlusReclaimPresent)} | ${record.deliveryStatus} | ${record.fvgOrInefficiencyRespected} | ${record.drawReachedBeforeWindow} | ${record.drawValidDuringWindow} | ${yesNo(record.modelOneOverlap)} | ${yesNo(record.raidReclaimOverlap)} | ${record.recommendation} | ${record.sourceChartPath || record.sourceReportPath || record.generatedEvidenceReportPath} |`
     ),
     '',
     '## Per-Sample Notes',

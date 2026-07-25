@@ -140,10 +140,10 @@ assert.ok(blocked.blockers.some((blocker) => blocker.includes('does not cap at o
 const priorityReadinessReport = {
   ...readinessReport,
   candidates: [
-    candidate('morning', '2026-07-22T09:10:00', 'APPROVED_DESK_PLAN', 'HtfDisplacementFvgContinuation'),
-    candidate('morning', '2026-07-22T11:45:00', 'APPROVED_DESK_PLAN', 'TurtleSoup'),
+    candidate('morning', '2026-07-22T09:10:00', 'APPROVED_DESK_PLAN', 'SweepMssFvgRetrace'),
+    candidate('morning', '2026-07-22T11:45:00', 'APPROVED_DESK_PLAN', 'raidReclaim'),
     candidate('lunch', '2026-07-22T15:45:00', 'APPROVED_DESK_PLAN', 'IntradayMssMicroContinuation'),
-    candidate('lunch', '2026-07-22T15:50:00', 'APPROVED_DESK_PLAN', 'TurtleSoup'),
+    candidate('lunch', '2026-07-22T15:50:00', 'APPROVED_DESK_PLAN', 'raidReclaim'),
   ],
 } satisfies UnifiedDeskOutputVisibilityReadinessReport;
 
@@ -158,14 +158,14 @@ const provenLanePriority = buildUnifiedDeskOutputGuardedScannerLanePreview({
   selectionPolicyOrder: 'proven_lane_priority_then_latest_proof',
 });
 
-assert.equal(latestPolicy.selectedCandidates[0].model, 'TurtleSoup');
-assert.equal(latestPolicy.selectedCandidates[1].model, 'TurtleSoup');
+assert.equal(latestPolicy.selectedCandidates[0].model, 'raidReclaim');
+assert.equal(latestPolicy.selectedCandidates[1].model, 'raidReclaim');
 assert.equal(provenLanePriority.selectionPolicy.order, 'proven_lane_priority_then_latest_proof');
 assert.deepEqual(provenLanePriority.selectionPolicy.proposedPriority?.morning.slice(0, 2), [
   'OpeningDriveFvgContinuation',
-  'HtfDisplacementFvgContinuation',
+  'SweepMssFvgRetrace',
 ]);
-assert.equal(provenLanePriority.selectedCandidates[0].model, 'HtfDisplacementFvgContinuation');
+assert.equal(provenLanePriority.selectedCandidates[0].model, 'SweepMssFvgRetrace');
 assert.equal(provenLanePriority.selectedCandidates[1].model, 'IntradayMssMicroContinuation');
 assert.equal(provenLanePriority.summary.discordPostRows, 0);
 assert.equal(provenLanePriority.summary.supabaseWriteRows, 0);

@@ -51,7 +51,7 @@ const phase4Cases: Phase4Case[] = [
   {
     label: 'Morning short high-confidence conditional live dry-run',
     session: 'morning',
-    setupType: SetupType.TurtleSoup,
+    setupType: SetupType.RaidReclaimReversal,
     scenarioLabel: 'Failed Breakout Reversal',
     direction: 'SHORT',
     executionStatus: ExecutionStatus.Executable,
@@ -69,8 +69,8 @@ const phase4Cases: Phase4Case[] = [
   {
     label: 'Lunch long execution-approved live dry-run',
     session: 'lunch',
-    setupType: SetupType.HtfDisplacementFvgContinuation,
-    scenarioLabel: 'HTF Displacement FVG Continuation',
+    setupType: SetupType.IntradayMssMicroContinuation,
+    scenarioLabel: 'HTF Context FVG Continuation',
     direction: 'LONG',
     executionStatus: ExecutionStatus.Executable,
     canExecute: true,

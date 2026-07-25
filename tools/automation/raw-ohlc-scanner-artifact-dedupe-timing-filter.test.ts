@@ -114,7 +114,7 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
       ticketId: 'delayed-1',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'HtfDisplacementFvgContinuation',
+      setupType: 'SweepMssFvgRetrace',
       direction: 'LONG',
       proofTime: '2026-06-10T13:00:00',
       outcomeStatus: 'resolved',
@@ -190,7 +190,7 @@ assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.summary.inputRows, 4);
-assert.equal(report.summary.campaigns, 3);
+assert.equal(report.summary.campaigns, 2);
 assert.equal(report.summary.selectedCampaignRows, 1);
 assert.equal(report.summary.sameBarExcludedRows, 2);
 assert.equal(report.summary.duplicateCampaignRows, 0);

@@ -5,7 +5,7 @@ import type { UnifiedPositiveHeldLocalTicketAdapterReport } from './unified-posi
 import type { UnifiedPositiveHeldLocalPreviewModelDecisionReport } from './unified-positive-held-local-preview-model-decision';
 import type { UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport } from './unified-positive-held-local-preview-ohlc-outcome';
 
-type TargetSetupType = 'TurtleSoup' | 'SweepMssFvgRetrace';
+type TargetSetupType = 'raidReclaim' | 'SweepMssFvgRetrace';
 
 interface FormalReplayTrade {
   date?: string;
@@ -99,7 +99,7 @@ export interface UnifiedPositiveHeldLocalPreviewFilterDifferenceReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const TARGET_MODELS: TargetSetupType[] = ['TurtleSoup', 'SweepMssFvgRetrace'];
+const TARGET_MODELS: TargetSetupType[] = ['raidReclaim', 'SweepMssFvgRetrace'];
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -380,7 +380,7 @@ export function buildUnifiedPositiveHeldLocalPreviewFilterDifferenceReport(args:
     recommendations: blockers.length
       ? ['Do not use this filter-difference report for implementation until all source artifacts load and reviewed winners carry completed 5M retest/re-entry proof.']
       : [
-        'Do not remove TurtleSoup or SweepMssFvgRetrace from this evidence.',
+        'Do not remove raidReclaim or SweepMssFvgRetrace from this evidence.',
         'Do not broaden either model or change canExecute from this evidence.',
         'Next narrow fix should validate a source/proof filter: scanner-owned held-local artifact plus completed 5M retest/re-entry proof before the row enters higher-confidence research ranking.',
       ],

@@ -67,7 +67,7 @@ const artifact: BuilderInput['scannerArtifact'] = {
             reducedRiskPlan: null,
           },
           {
-            setupType: SetupType.HtfDisplacementMssContinuation,
+            setupType: SetupType.IntradayMssMicroContinuation,
             direction: 'LONG',
             detectedStatus: SetupCandidateStatus.Conditional,
             executionStatus: ExecutionStatus.Conditional,
@@ -130,10 +130,10 @@ const outcome = {
       resolvedOneMesPl: -20,
     },
     {
-      ticketId: '2026-07-10-morning-HtfDisplacementMssContinuation-LONG-20260710T094000',
+      ticketId: '2026-07-10-morning-IntradayMssMicroContinuation-LONG-20260710T094000',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'HtfDisplacementMssContinuation',
+      setupType: 'IntradayMssMicroContinuation',
       direction: 'LONG',
       proofTime: '2026-07-10T09:40:00',
       outcomeStatus: 'resolved',

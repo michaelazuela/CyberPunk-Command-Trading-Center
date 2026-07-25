@@ -150,13 +150,13 @@
   },
   "setupDetection": {
     "candidateDetected": true,
-    "setupType": "HtfDrawContinuationAfterRaid",
-    "label": "HTF Draw Continuation After Raid/Reclaim",
+    "setupType": "RaidReclaimReversal",
+    "label": "HTF Context Continuation After Raid/Reclaim",
     "direction": "LONG",
     "candidate": {
-      "setupType": "HtfDrawContinuationAfterRaid",
-      "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
-      "pathway": "htf_liquidity_draw_mss",
+      "setupType": "RaidReclaimReversal",
+      "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
+      "pathway": "intraday_mss_micro_continuation",
       "direction": "LONG",
       "candidateState": "REVERSAL_DELIVERY_PLAN_CANDIDATE",
       "detectedStatus": "Conditional",
@@ -170,7 +170,7 @@
       "requiredTrigger": "Long only after sell-side raid, reclaim, confirmed bullish 5M MSS with displacement, then clean retest or defined reclaim trigger.",
       "nextAction": "HTF/MSS candidate has scanner levels and direction. Execution still requires final app-owned entry, stop, target, risk, invalidation, session, screenshot-quality, and canExecute gates.",
       "evidence": [
-        "HTF Draw Continuation After Raid/Reclaim candidate detected. HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.",
+        "HTF Context Continuation After Raid/Reclaim candidate detected. HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.",
         "15M potential MSS / pending confirm. Liquidity map supports the idea, but 5M confirmation controls plan creation.",
         "Post-MSS digestion. Consolidation after displacement is not an opposite MSS unless post-displacement structure breaks with clear displacement.",
         "HTF liquidity draw detected",
@@ -206,9 +206,9 @@
     },
     "fullDeterministicGatesPass": {
       "scannerCandidate": {
-        "setupType": "HtfDrawContinuationAfterRaid",
-        "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
-        "pathway": "htf_liquidity_draw_mss",
+        "setupType": "RaidReclaimReversal",
+        "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "candidateState": "EXECUTABLE",
         "detectedStatus": "Detected",
@@ -222,7 +222,7 @@
         "requiredTrigger": "Long only after sell-side raid, reclaim, confirmed bullish 5M MSS with displacement, then clean retest or defined reclaim trigger.",
         "nextAction": "HTF/MSS candidate has scanner levels and direction. Execution still requires final app-owned entry, stop, target, risk, invalidation, session, screenshot-quality, and canExecute gates.",
         "evidence": [
-          "HTF Draw Continuation After Raid/Reclaim candidate detected. HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.",
+          "HTF Context Continuation After Raid/Reclaim candidate detected. HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.",
           "15M potential MSS / pending confirm. Liquidity map supports the idea, but 5M confirmation controls plan creation.",
           "Post-MSS digestion. Consolidation after displacement is not an opposite MSS unless post-displacement structure breaks with clear displacement.",
           "HTF liquidity draw detected",

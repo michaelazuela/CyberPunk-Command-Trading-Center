@@ -19,9 +19,9 @@ type MatrixCase = {
 
 const phase2Matrix: MatrixCase[] = [
   {
-    label: 'Turtle Soup / failed breakout reversal',
-    setupType: SetupType.TurtleSoup,
-    scenarioLabel: 'Bearish Turtle Soup Reversal',
+    label: 'Raid Reclaim Reversal / failed breakout reversal',
+    setupType: SetupType.RaidReclaimReversal,
+    scenarioLabel: 'Bearish Raid Reclaim Reversal Reversal',
     direction: 'SHORT',
     executionStatus: ExecutionStatus.Executable,
     score: 98,
@@ -46,8 +46,8 @@ const phase2Matrix: MatrixCase[] = [
   },
   {
     label: 'HTF FVG cascade routed setup',
-    setupType: SetupType.HtfDisplacementFvgContinuation,
-    scenarioLabel: 'HTF Displacement FVG Continuation',
+    setupType: SetupType.IntradayMssMicroContinuation,
+    scenarioLabel: 'HTF Context FVG Continuation',
     direction: 'LONG',
     executionStatus: ExecutionStatus.Conditional,
     score: 91,
@@ -72,8 +72,8 @@ const phase2Matrix: MatrixCase[] = [
   },
   {
     label: 'Opposite-side high-confidence conditional',
-    setupType: SetupType.FailedPlanReversal,
-    scenarioLabel: 'Failed Plan Reversal',
+    setupType: SetupType.RaidReclaimReversal,
+    scenarioLabel: 'Raid Reclaim Reversal',
     direction: 'SHORT',
     executionStatus: ExecutionStatus.Conditional,
     score: 90,
@@ -85,7 +85,7 @@ const phase2Matrix: MatrixCase[] = [
   },
   {
     label: 'Tactical watch promoted only when full planning levels exist',
-    setupType: SetupType.MorningFailedHighLiquidityRejection,
+    setupType: SetupType.RaidReclaimReversal,
     scenarioLabel: 'Morning Failed High / Liquidity Rejection',
     direction: 'SHORT',
     executionStatus: ExecutionStatus.Conditional,

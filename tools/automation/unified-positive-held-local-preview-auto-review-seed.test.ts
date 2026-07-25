@@ -46,7 +46,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
   },
   rows: [{
     ticketId: 'eligible-ticket',
-    setupType: 'TurtleSoup',
+    setupType: 'raidReclaim',
     direction: 'LONG',
     visibleInHiddenTab: true,
     reviewOnly: true,
@@ -67,7 +67,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
 const editableTemplate = {
   rows: [{
     ticketId: 'eligible-ticket',
-    setupType: 'TurtleSoup',
+    setupType: 'raidReclaim',
     direction: 'LONG',
     visibleInHiddenTab: true,
     reviewOnly: true,

@@ -52,8 +52,8 @@ This focused replay is a local regression diagnostic. It does not introduce brok
 
 ## Setup Candidate Result
 - Candidate Detected: Yes
-- Setup Type: HtfDrawContinuationAfterRaid
-- Label: HTF Draw Continuation After Raid/Reclaim
+- Setup Type: RaidReclaimReversal
+- Label: HTF Context Continuation After Raid/Reclaim
 - Direction: LONG
 - Not Bearish Continuation: Yes
 

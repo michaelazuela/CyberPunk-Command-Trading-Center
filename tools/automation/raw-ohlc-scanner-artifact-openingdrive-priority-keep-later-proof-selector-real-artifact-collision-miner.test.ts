@@ -35,7 +35,7 @@ const artifact = {
             riskPoints: 8,
           },
           {
-            setupType: 'TurtleSoup',
+            setupType: 'raidReclaim',
             direction: 'SHORT',
           },
         ],

@@ -56,7 +56,7 @@ function candidate(overrides: Record<string, unknown>) {
     marketStructureShiftPresent: true,
     sweepRaidPlusReclaimPresent: true,
     modelOneOverlapPossible: false,
-    turtleSoupOverlapPossible: false,
+    raidReclaimOverlapPossible: false,
     drawReferences: [
       {
         kind: 'prior_swing_high',

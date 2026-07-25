@@ -13,7 +13,6 @@ import {
   buildScannerDataQualityNoticePayload,
   buildScannerHistoryPreloadPlan,
   buildSegmentedHistoryRepairWindows,
-  attachFailedPlanReversalContextFromScannerState,
   aggregateScannerFiveMinuteBarsToTimeframe,
   appOwnedFailedDecisionEventFromCandidate,
   appOwnedFailedPlanEventsFromScannerAudits,
@@ -182,9 +181,9 @@ const unifiedDeskOutputSurface = {
     session: 'morning',
     state: 'APPROVED_DESK_PLAN',
     stateLabel: 'Approved Desk Plan',
-    model: 'HtfDisplacementFvgContinuation',
+    model: 'IntradayMssMicroContinuation',
     direction: 'LONG',
-    headline: 'Approved Desk Plan | MORNING | LONG | HtfDisplacementFvgContinuation',
+    headline: 'Approved Desk Plan | MORNING | LONG | IntradayMssMicroContinuation',
     bodyLines: ['Morning long desk plan.', 'Scanner-owned lane.'],
     levelLine: 'Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528',
     riskLine: 'Risk 4.25 points from scanner-owned entry/stop.',
@@ -222,7 +221,7 @@ const unifiedDeskOutputSurface = {
 await fs.writeFile(unifiedDeskOutputSurfacePath, `${JSON.stringify(unifiedDeskOutputSurface, null, 2)}\n`);
 const loadedUnifiedDeskOutputSurface = await readUnifiedDeskOutputProductionScannerSurface(unifiedDeskOutputSurfacePath);
 assert.equal(loadedUnifiedDeskOutputSurface?.status, 'active');
-assert.match(unifiedDeskOutputProductionScannerSummaryLine(loadedUnifiedDeskOutputSurface as any), /rows=2 morning:HtfDisplacementFvgContinuation:LONG:09:10/);
+assert.match(unifiedDeskOutputProductionScannerSummaryLine(loadedUnifiedDeskOutputSurface as any), /rows=2 morning:IntradayMssMicroContinuation:LONG:09:10/);
 await writeUnifiedDeskOutputProductionScannerReadback({
   tradeDate: '2026-07-22',
   instrument: 'MES',
@@ -243,7 +242,7 @@ await fs.writeFile(dirtyUnifiedDeskOutputSurfacePath, `${JSON.stringify({
   ...unifiedDeskOutputSurface,
   rows: [{
     ...unifiedDeskOutputSurface.rows[0],
-    model: 'TurtleSoup',
+    model: 'raidReclaim',
   }, unifiedDeskOutputSurface.rows[1]],
 }, null, 2)}\n`);
 assert.equal(await readUnifiedDeskOutputProductionScannerSurface(dirtyUnifiedDeskOutputSurfacePath), null);
@@ -1014,8 +1013,8 @@ const scannerDataQualityNoticeConfig: ScannerConfig = {
 const reviewOnlyPrimaryAlertGateFixture: Parameters<typeof evaluateScannerPrimaryAlertPublishingGate>[0] = {
   alertDecision: { shouldSend: true, reason: 'High-Quality Trade Plan qualified for Discord.' },
   candidate: {
-    setupType: SetupType.TurtleSoup,
-    scenarioLabel: 'Bearish Turtle Soup Reversal',
+    setupType: SetupType.RaidReclaimReversal,
+    scenarioLabel: 'Bearish Raid Reclaim Reversal Reversal',
     direction: 'SHORT',
     detectedStatus: SetupCandidateStatus.Conditional,
     executionStatus: ExecutionStatus.Conditional,
@@ -1171,7 +1170,7 @@ const oppositeHtfRoutingPrimaryAlertGate = evaluateScannerPrimaryAlertPublishing
       },
     },
   } as unknown as DeskState,
-  staleReason: 'Bullish Turtle Soup: sell-side sweep below 7468, reclaim back above the swept low.',
+  staleReason: 'Bullish Raid Reclaim Reversal: sell-side sweep below 7468, reclaim back above the swept low.',
 });
 assert.equal(oppositeHtfRoutingPrimaryAlertGate.shouldSend, false);
 assert.match(oppositeHtfRoutingPrimaryAlertGate.reason, /candidate side LONG conflicts with active HTF FVG routing SHORT/);
@@ -2765,7 +2764,7 @@ const completeCanonicalPublishDecision = {
   displaySource: 'selected_candidate',
   candidateKey: 'fixture-short',
   direction: 'SHORT',
-  setupType: SetupType.TurtleSoup,
+  setupType: SetupType.RaidReclaimReversal,
   lineInSand: 7595.5,
   triggerCondition: 'completed 5M close below 7595.50',
   entry: 7595.5,
@@ -3048,7 +3047,7 @@ const tacticalCampaignFromLifecycle = scannerTacticalCampaignMapFromDeskState({
     ...baseDeskPlanRefreshState,
     bestShortPlan: {
       ...baseDeskPlanRefreshState.bestShortPlan,
-      setupType: SetupType.HtfDisplacementMssContinuation,
+      setupType: SetupType.IntradayMssMicroContinuation,
       direction: 'SHORT',
       candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
       requiredTrigger: 'Completed 5M close-through/retest below 7416.50 required before short continuation can execute.',
@@ -3073,7 +3072,7 @@ assert.match(tacticalCampaignFromLifecycle.reason, /app-owned 5M candidate lifec
 const shortExhaustionLongWatchState = {
   ...baseDeskPlanRefreshState,
   bestLongPlan: {
-    setupType: SetupType.TurtleSoup,
+    setupType: SetupType.RaidReclaimReversal,
     direction: 'LONG',
     lineInSand: 7411,
     entry: 7411,
@@ -3400,7 +3399,7 @@ const longExhaustionShortWatchState = {
     targetReactionLabel: 'HTF resistance',
   },
   bestShortPlan: {
-    setupType: SetupType.TurtleSoup,
+    setupType: SetupType.RaidReclaimReversal,
     direction: 'SHORT',
     lineInSand: 7424,
     entry: 7424,
@@ -4240,7 +4239,7 @@ const targetToLineLongReviewMapDeskPlaySuppression = evaluateScannerDeskPlayDisc
     decision: 'NO TRADE',
     noTradeReason: NoTradeReason.EntryTriggerPending,
     setupCandidates: [{
-      setupType: SetupType.TurtleSoup,
+      setupType: SetupType.RaidReclaimReversal,
       scenarioLabel: 'June 29 target-to-line long review',
       direction: 'LONG',
       detectedStatus: SetupCandidateStatus.Conditional,
@@ -4348,7 +4347,7 @@ const tacticalRequiredTriggerDeskPlaySuppression = evaluateScannerDeskPlayDiscor
     ...baseDeskPlanRefreshState,
     bestShortPlan: {
       ...baseDeskPlanRefreshState.bestShortPlan,
-      setupType: SetupType.HtfDisplacementMssContinuation,
+      setupType: SetupType.IntradayMssMicroContinuation,
       direction: 'SHORT',
       candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
       requiredTrigger: 'Completed 5M close-through/retest below 7416.50 required before short continuation can execute.',
@@ -4535,11 +4534,11 @@ const missingProofPreDeliveryGuard = scannerDeskPlayCanonicalPreDeliveryHold(
     shouldPost: true,
     reason: 'Complete levels exist, but scanner operator decision is still held.',
     displaySource: 'selected_candidate',
-    candidateKey: 'TurtleSoup|LONG|Bullish Turtle Soup Reversal|Conditional',
+    candidateKey: 'raidReclaim|LONG|Bullish Raid Reclaim Reversal Reversal|Conditional',
     direction: 'LONG',
-    setupType: SetupType.TurtleSoup,
+    setupType: SetupType.RaidReclaimReversal,
     lineInSand: 7620,
-    triggerCondition: 'Bullish Turtle Soup requires completed 5M confirmation.',
+    triggerCondition: 'Bullish Raid Reclaim Reversal requires completed 5M confirmation.',
     entry: 7620.5,
     stop: 7613.75,
     t1: 7630.75,
@@ -4887,7 +4886,7 @@ const staleReferenceTargetDeskPlaySuppression = evaluateScannerDeskPlayDiscordSu
     invalidation: null,
     setupCandidates: [{
       direction: 'LONG',
-      setupType: SetupType.TurtleSoup,
+      setupType: SetupType.RaidReclaimReversal,
       detectedStatus: SetupCandidateStatus.Conditional,
       executionStatus: ExecutionStatus.Conditional,
       entry: 7429.5,
@@ -5485,8 +5484,8 @@ assert.equal(releasedSkippedAfterSuppression, true);
 assert.match(skippedReleaseReason, /Final scanner publishing gate suppressed alert after durable claim/);
 
 const juneFiveSameCycleFailedLong = appOwnedFailedDecisionEventFromCandidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Bullish Turtle Soup Reversal',
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Bullish Raid Reclaim Reversal Reversal',
   pathway: 'primary_setup_scanner',
   direction: 'LONG',
   detectedStatus: SetupCandidateStatus.Detected,
@@ -5580,7 +5579,7 @@ await fs.writeFile(existingDecisionTapePath, JSON.stringify({
     '2026-06-03T10:10:00.0000000': {
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           direction: 'SHORT',
           entry: 7338.25,
           stop: 7360.5,
@@ -5752,7 +5751,7 @@ assert.equal(tapeEvent.candidateLifecycleTrace.discordDecision.shouldSend, false
 assert.equal(tapeEvent.candidateLifecycleTrace.discordDecision.reason, 'TriggerPending is logged locally as developing context.');
 assert.equal(tapeEvent.tradeDecisionMapAudit.sourceOfTruth, 'setup_registry_trade_decision_map_audit');
 assert.equal(tapeEvent.tradeDecisionMapAudit.tradingLogicChanged, false);
-assert.ok(tapeEvent.tradeDecisionMapAudit.entries.some((entry: any) => entry.setupType === SetupType.TurtleSoup));
+assert.ok(tapeEvent.tradeDecisionMapAudit.entries.some((entry: any) => entry.setupType === SetupType.RaidReclaimReversal));
 assert.equal(tapeEvent.reversalWatch.lines.sourceOfTruth, 'scanner_campaign_exhaustion_reversal_watch_lines');
 assert.equal(tapeEvent.reversalWatch.state.sourceOfTruth, 'scanner_campaign_exhaustion_reversal_watch_state');
 assert.equal(tapeEvent.reversalWatch.state.approvalBoundary.changesCanExecute, false);
@@ -5764,18 +5763,7 @@ assert.equal(tapeEvent.deskState.promotion.sourceOfTruth, 'scanner_desk_state_pr
 assert.equal(tapeEvent.deskState.promotion.approvalBoundary.changesTradeApprovals, false);
 assert.equal(tapeEvent.deskState.promotion.approvalBoundary.changesCanExecute, false);
 assert.equal(tapeEvent.deskState.promotion.canPromoteNow, false);
-assert.equal(tapeEvent.failedPlanReversal.present, true);
-assert.equal(tapeEvent.failedPlanReversal.state, 'OPPOSITE_SIDE_RETEST_PENDING');
-assert.equal(tapeEvent.failedPlanReversal.htfStackStatus, 'data_limited');
-assert.equal(tapeEvent.failedPlanReversal.fiveMinuteTriggerStatus, 'pending_retest');
-assert.deepEqual(
-  tapeEvent.failedPlanReversal.timeframeConfirmations.map((item: any) => `${item.timeframe}:${item.direction}:${item.status}`),
-  ['15M:SHORT:confirmed', '1H:SHORT:confirmed', '2H:NEUTRAL:neutral', '4H:UNKNOWN:data_limited', '5M:SHORT:aligned'],
-);
-assert.equal(tapeEvent.failedPlanReversal.createsCandidate, false);
-assert.equal(tapeEvent.failedPlanReversal.approvesExecution, false);
-assert.ok(tapeEvent.failedPlanReversal.blockers.some((item: string) => item.includes('2H structure is neutral')));
-assert.ok(tapeEvent.failedPlanReversal.blockers.some((item: string) => item.includes('4H structured OHLC is data-limited')));
+assert.equal(tapeEvent.failedPlanReversal, undefined);
 assert.equal(tapeEvent.authority.decisionTapeCanExecute, false);
 const fourHourCoverageBars = Array.from({ length: 1129 }, (_, index) => {
   const first = Date.parse('2026-05-03T18:05:00-04:00');
@@ -6056,23 +6044,6 @@ const failedPlanChartContext = {
     notes: [],
   },
 } as ChartContext;
-const failedPlanIntegration = attachFailedPlanReversalContextFromScannerState({
-  chartContext: failedPlanChartContext,
-  failedPlanEvents,
-});
-assert.equal(failedPlanIntegration.eventCount, 1);
-assert.equal(failedPlanIntegration.chartContext?.failedBreakEvents?.length, 1);
-assert.ok(failedPlanIntegration.chartContext?.setupReadyFacts?.notes?.some((note) => note.includes('app-owned failed decision/reclaim level')));
-assert.equal(failedPlanIntegration.failedPlanReversal?.originalPlanDirection, 'LONG');
-assert.equal(failedPlanIntegration.failedPlanReversal?.oppositeDirection, 'SHORT');
-assert.equal(failedPlanIntegration.failedPlanReversal?.failedDecisionLevel, 7518);
-assert.equal(failedPlanIntegration.failedPlanReversal?.htfStackStatus, 'full_confirmation');
-assert.equal(failedPlanIntegration.failedPlanReversal?.fiveMinuteTriggerStatus, 'confirmed');
-assert.equal(failedPlanIntegration.failedPlanReversal?.decisionState, 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED');
-assert.equal(failedPlanIntegration.failedPlanReversal?.createsCandidate, true);
-assert.equal(failedPlanIntegration.failedPlanReversal?.approvesExecution, false);
-assert.equal(failedPlanIntegration.chartContext?.failedPlanReversal?.approvesExecution, false);
-
 const candles = Array.from({ length: 48 }, (_, index) => {
   const base = index < 16 ? 5328 - index * 0.35 : 5322 + (index - 16) * 0.42;
   const open = base;
@@ -6133,7 +6104,7 @@ const chartContext: Partial<ChartContext> = {
 };
 
 const candidate: SetupCandidate = {
-  setupType: SetupType.LiquiditySweep,
+  setupType: SetupType.RaidReclaimReversal,
   scenarioLabel: 'Liquidity sweep reclaim',
   direction: 'LONG',
   detectedStatus: SetupCandidateStatus.Detected,
@@ -6181,7 +6152,7 @@ const candidate: SetupCandidate = {
 };
 
 const pendingDelivery = createPendingScannerAlertDeliveryRecord({
-  alertKey: '2026-06-02|MES|morning|LONG|TurtleSoup|7603.25|Approved',
+  alertKey: '2026-06-02|MES|morning|LONG|raidReclaim|7603.25|Approved',
   planVersionId: 'MORNING-20260602-140348',
   instrument: 'MES',
   tradeDate: '2026-06-02',
@@ -6756,7 +6727,7 @@ try {
     state: 'Approved',
     candidate: {
       ...candidate,
-      setupType: SetupType.TurtleSoup,
+      setupType: SetupType.RaidReclaimReversal,
       direction: 'LONG',
       entry: 7603.25,
       stop: 7599,
@@ -7863,8 +7834,8 @@ try {
 
   const riskTooWideCandidate: SetupCandidate = {
     ...candidate,
-    setupType: SetupType.TurtleSoup,
-    scenarioLabel: 'Turtle Soup LONG',
+    setupType: SetupType.RaidReclaimReversal,
+    scenarioLabel: 'Raid Reclaim Reversal LONG',
     entry: 7597,
     stop: 7588.75,
     target1: 7620,

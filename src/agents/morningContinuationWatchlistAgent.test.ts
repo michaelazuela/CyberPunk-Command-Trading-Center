@@ -256,7 +256,7 @@ assert.equal('executionStatus' in smallReview, false);
 assert.equal(JSON.stringify(smallPerformanceInput), smallPerformanceBefore);
 
 const largePerformanceInput = Array.from({ length: 24 }, (_, index) => {
-  if (index < 8) return performanceRecord(index, { laterValidSetupFormed: true, laterSetupType: 'TurtleSoup', laterOutcome: 'valid_setup' });
+  if (index < 8) return performanceRecord(index, { laterValidSetupFormed: true, laterSetupType: 'raidReclaim', laterOutcome: 'valid_setup' });
   if (index < 14) return performanceRecord(index, { laterOutcome: 'ran_without_pullback', reviewNotes: 'Ran without pullback.' });
   if (index < 18) return performanceRecord(index, { laterOutcome: 'failed', reviewNotes: 'Failed and reversed.' });
   return performanceRecord(index);

@@ -11,8 +11,8 @@ import type {
   UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport,
 } from './unified-positive-held-local-preview-sweep-penalty-installed-score-comparison';
 import type {
-  UnifiedPositiveHeldLocalPreviewTurtleSoupExtremeRiskCompanionFilterReport,
-} from './unified-positive-held-local-preview-turtlesoup-extreme-risk-companion-filter';
+  UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport,
+} from './unified-positive-held-local-preview-raidReclaim-extreme-risk-companion-filter';
 
 type InstalledRow = UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport['rows'][number];
 type TimingRow = UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport['rows'][number];
@@ -180,7 +180,7 @@ function failureClass(args: {
 }
 
 function buildRows(args: {
-  companion: UnifiedPositiveHeldLocalPreviewTurtleSoupExtremeRiskCompanionFilterReport | null;
+  companion: UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport | null;
   installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport | null;
   timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport | null;
   outcome: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport | null;
@@ -255,7 +255,7 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewReplacementBl
 export function buildUnifiedPositiveHeldLocalPreviewReplacementBlockerDrilldownReport(args: {
   reportDir: string;
   companionFilterPath: string | null;
-  companionFilterReport: UnifiedPositiveHeldLocalPreviewTurtleSoupExtremeRiskCompanionFilterReport | null;
+  companionFilterReport: UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport | null;
   installedScoreComparisonPath: string | null;
   installedScoreComparisonReport: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport | null;
   sourceProofTimingPath: string | null;
@@ -351,7 +351,7 @@ export function writeUnifiedPositiveHeldLocalPreviewReplacementBlockerDrilldownR
 export function runUnifiedPositiveHeldLocalPreviewReplacementBlockerDrilldownCli(args = process.argv.slice(2)): void {
   const outDir = readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR;
   const companionFilterPath = readFlag(args, '--companion-filter') ||
-    latestMatchingFile(outDir, /^unified-positive-held-local-preview-turtlesoup-extreme-risk-companion-filter-\d+\.json$/);
+    latestMatchingFile(outDir, /^unified-positive-held-local-preview-raidReclaim-extreme-risk-companion-filter-\d+\.json$/);
   const installedScoreComparisonPath = readFlag(args, '--installed-score-comparison') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-sweep-penalty-installed-score-comparison-\d+\.json$/);
   const sourceProofTimingPath = readFlag(args, '--source-proof-timing') ||
@@ -362,7 +362,7 @@ export function runUnifiedPositiveHeldLocalPreviewReplacementBlockerDrilldownCli
     reportDir: outDir,
     companionFilterPath,
     companionFilterReport: companionFilterPath && fs.existsSync(companionFilterPath)
-      ? readJson<UnifiedPositiveHeldLocalPreviewTurtleSoupExtremeRiskCompanionFilterReport>(companionFilterPath)
+      ? readJson<UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport>(companionFilterPath)
       : null,
     installedScoreComparisonPath,
     installedScoreComparisonReport: installedScoreComparisonPath && fs.existsSync(installedScoreComparisonPath)

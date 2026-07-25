@@ -14,7 +14,7 @@ fs.writeFileSync(path.join(auditDir, 'snapshot-missing-levels.json'), JSON.strin
   normalizedPlan: {
     setupCandidates: [
       {
-        setupType: 'TurtleSoup',
+        setupType: 'raidReclaim',
         direction: 'SHORT',
         stop: 7455.75,
         executionStatus: 'Conditional',
@@ -22,7 +22,7 @@ fs.writeFileSync(path.join(auditDir, 'snapshot-missing-levels.json'), JSON.strin
         blockReason: 'EntryTriggerMissing',
       },
       {
-        setupType: 'TurtleSoup',
+        setupType: 'raidReclaim',
         direction: 'LONG',
         entry: 7442.5,
         stop: 7438.5,
@@ -71,11 +71,11 @@ const strictReplayPackage = {
   },
   rows: [
     {
-      ticketId: '2026-06-23|evening|TurtleSoup|SHORT|prefer_replacement|snapshot-missing-levels',
+      ticketId: '2026-06-23|evening|raidReclaim|SHORT|prefer_replacement|snapshot-missing-levels',
       tradeDate: '2026-06-23',
       session: 'evening',
       instrument: 'MES',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       proofTime: '2026-06-23T19:55:00',
       firstSeenTime: '2026-06-23T19:55:00',
@@ -184,7 +184,7 @@ assert.equal(report.summary.missingMatchingCandidateRows, 0);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'inspect_matching_side_level_generation');
 
-const missing = report.rows.find((row) => row.setupType === 'TurtleSoup');
+const missing = report.rows.find((row) => row.setupType === 'raidReclaim');
 assert.equal(missing?.likelyCause, 'matching_side_missing_levels');
 assert.equal(missing?.validSameSetupOppositeDirectionCandidates, 1);
 assert.equal(missing?.validExecutableCandidates, 1);

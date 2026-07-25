@@ -66,8 +66,8 @@ const validation = {
       openingDriveTicketId: 'od-b',
       openingDriveOneMesPl: 120,
       openingDriveOutcomeLabel: 't1_hit_only',
-      priorityTicketId: 'htf-b',
-      prioritySetupType: 'HtfDisplacementMssContinuation',
+      priorityTicketId: 'sweep-b',
+      prioritySetupType: 'SweepMssFvgRetrace',
       priorityOneMesPl: 200,
       priorityOutcomeLabel: 't1_and_t2_hit',
       deltaOneMesPl: 80,
@@ -97,7 +97,7 @@ assert.equal(report.summary.proposalDeltaOneMesPl, 330);
 assert.equal(report.summary.proposalPriorityLosses, 0);
 assert.equal(report.summary.recommendation, 'installed_overlay_matches_oos_priority_proposal');
 assert.equal(report.rows[0].installedPrimaryTicketId, 'sweep-a');
-assert.equal(report.rows[1].installedPrimaryTicketId, 'htf-b');
+assert.equal(report.rows[1].installedPrimaryTicketId, 'sweep-b');
 assert.ok((report.rows[0].priorityScore || 0) > (report.rows[0].openingDriveScore || 0));
 assert.match(report.markdown, /OpeningDrive OOS Installed Priority Comparison/);
 

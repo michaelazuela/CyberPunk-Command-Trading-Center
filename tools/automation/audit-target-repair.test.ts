@@ -7,7 +7,7 @@ import { repairAuditTargetFiles, repairDuplicateAuditTargets } from './audit-tar
 const fixture = {
   source: 'live-scanner',
   candidate: {
-    setupType: 'TurtleSoup',
+    setupType: 'raidReclaim',
     direction: 'SHORT',
     entry: 7338.25,
     stop: 7360.5,
@@ -16,7 +16,7 @@ const fixture = {
   },
   setupCandidateStatus: {
     statuses: [{
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       entry: 7338.25,
       stop: 7360.5,

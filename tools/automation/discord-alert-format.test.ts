@@ -80,7 +80,7 @@ assert.throws(() => validateDiscordPayload({
 
 function sampleCandidate(direction: 'LONG' | 'SHORT' = 'LONG'): SetupCandidate {
   return {
-    setupType: SetupType.LiquiditySweep,
+    setupType: SetupType.RaidReclaimReversal,
     scenarioLabel: 'Liquidity sweep reclaim',
     direction,
     detectedStatus: SetupCandidateStatus.Detected,
@@ -1031,7 +1031,7 @@ const deskPlayPayload = compactDiscordSummary({
       },
       shortBias: {
         state: 'countertrend_review',
-        scenarioLabel: 'Bearish Turtle Soup Reversal',
+        scenarioLabel: 'Bearish Raid Reclaim Reversal Reversal',
         decisionQualityScore: 58,
         modelConfidenceScore: 61,
         lineInSand: 7303.5,
@@ -1048,7 +1048,7 @@ const deskPlayPayload = compactDiscordSummary({
           strength: 'strong',
           whyItMayReact: 'Real session liquidity where short delivery can stall or reverse.',
         },
-        nextTrigger: 'Bearish Turtle Soup requires completed 5M acceptance below 7303.50.',
+        nextTrigger: 'Bearish Raid Reclaim Reversal requires completed 5M acceptance below 7303.50.',
         tradeReadiness: {
           sourceOfTruth: 'scanner_trade_readiness_routing',
           direction: 'SHORT',
@@ -1204,7 +1204,7 @@ assert.ok(!/^Entry: 7430\.50$/m.test(farAwayConditionalText));
 
 const targetToLineReviewCandidate = {
   ...sampleCandidate('LONG'),
-  setupType: SetupType.TurtleSoup,
+  setupType: SetupType.RaidReclaimReversal,
   scenarioLabel: 'June 29 target-to-line long review',
   entry: null,
   stop: null,
@@ -1641,7 +1641,7 @@ assert.ok(!invalidDeskMapText.includes('SHORT BELOW 7437.50 | Entry 7441.00'));
 assert.ok(!invalidDeskMapText.includes('Stop 7433.00 | T1 7429.00 | T2 7425.00'));
 
 const pullbackReviewCandidate = sampleCandidate('LONG');
-pullbackReviewCandidate.setupType = SetupType.TurtleSoup;
+pullbackReviewCandidate.setupType = SetupType.RaidReclaimReversal;
 pullbackReviewCandidate.entry = 7432.5;
 pullbackReviewCandidate.stop = 7414.75;
 pullbackReviewCandidate.target1 = 7470;
@@ -2573,7 +2573,7 @@ const freshReentryWatchPayload = compactDiscordSummary({
           stop: 7487,
           target1: 7464,
           target2: 7459.25,
-          triggerNeeded: 'Bearish Turtle Soup trigger already moved into target context.',
+          triggerNeeded: 'Bearish Raid Reclaim Reversal trigger already moved into target context.',
         },
         routingSummary: 'HTF-first routing: 240M parent FVG frames the map.',
         standDown: 'Stand down on completed 5M acceptance above parent zone 7512.00.',
@@ -2628,7 +2628,7 @@ const freshReentryWatchPayload = compactDiscordSummary({
       },
       shortBias: {
         state: 'primary',
-        scenarioLabel: 'Missed TurtleSoup short with fresh re-entry watch',
+        scenarioLabel: 'Missed raidReclaim short with fresh re-entry watch',
         lineInSand: 7464,
         nextTrigger: 'Completed 5M close/hold below 7464.00 with fresh protected 5M structure.',
         reason: 'Fresh line watch after old entry missed.',
@@ -2762,15 +2762,15 @@ assert.deepEqual((lunch.components || []).flatMap((row: any) => row.components.m
 assert.ok(!JSON.stringify(lunch.components).includes('Long T1 Hit'));
 
 const eveningMissedCandidate = sampleCandidate('LONG');
-eveningMissedCandidate.setupType = SetupType.TurtleSoup;
-eveningMissedCandidate.scenarioLabel = 'Bullish Turtle Soup Reversal - normalized plan not executable';
+eveningMissedCandidate.setupType = SetupType.RaidReclaimReversal;
+eveningMissedCandidate.scenarioLabel = 'Bullish Raid Reclaim Reversal Reversal - normalized plan not executable';
 eveningMissedCandidate.entry = 7552.5;
 eveningMissedCandidate.stop = 7546.5;
 eveningMissedCandidate.target1 = 7565;
 eveningMissedCandidate.target2 = 7570;
 eveningMissedCandidate.riskPoints = 6;
 eveningMissedCandidate.modelConfidenceScore = 85;
-eveningMissedCandidate.requiredTrigger = 'Bullish Turtle Soup: sell-side sweep below 7548.5, reclaim back above the swept low, then confirm upward rejection or expansion.';
+eveningMissedCandidate.requiredTrigger = 'Bullish Raid Reclaim Reversal: sell-side sweep below 7548.5, reclaim back above the swept low, then confirm upward rejection or expansion.';
 eveningMissedCandidate.nextAction = 'Preferred plan: take only the reclaim-confirmed reversal or the retrace after expansion; do not chase the first reversal candle. Risk exceeds standard limit. Human final decision required. Normalized app-owned plan is not executable. Wait for a fresh completed 5M trigger/retest before human review.';
 eveningMissedCandidate.invalidation = 'Invalid if price trades below the sweep wick structure stop near 7546.5.';
 const eveningMissed = compactDiscordSummary({
@@ -3021,13 +3021,13 @@ assert.ok(!scannerHtfOppositionExecutableText.includes('HTF Runner Map:'));
 assert.ok(!scannerHtfOppositionExecutableText.includes('Memory:'));
 
 const scannerReadyCandidate = sampleCandidate('LONG');
-scannerReadyCandidate.setupType = SetupType.HtfDrawContinuationAfterRaid;
-scannerReadyCandidate.scenarioLabel = 'HTF Draw Continuation After Raid/Reclaim';
+scannerReadyCandidate.setupType = SetupType.IntradayMssMicroContinuation;
+scannerReadyCandidate.scenarioLabel = 'HTF Context Continuation After Raid/Reclaim';
 scannerReadyCandidate.executionStatus = ExecutionStatus.Executable;
 scannerReadyCandidate.candidateState = 'MSS_HOLD_CONFIRMED';
 scannerReadyCandidate.decisionQualityScore = 93;
 scannerReadyCandidate.evidence = [
-  'HTF Draw Continuation After Raid/Reclaim candidate detected. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.',
+  'HTF Context Continuation After Raid/Reclaim candidate detected. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.',
 ];
 scannerReadyCandidate.nextAction = 'Execution still requires final app-owned gates.';
 scannerReadyCandidate.htfLiquidityDrawState = htfStateFixture(false) as HtfLiquidityDrawState;
@@ -3064,7 +3064,7 @@ assert.equal(/APPROVED|EXECUTABLE/i.test(scannerReadyPayload.content || ''), fal
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
 
 const blockedTargetRoomHighScoreCandidate = sampleCandidate('LONG');
-blockedTargetRoomHighScoreCandidate.setupType = SetupType.TurtleSoup;
+blockedTargetRoomHighScoreCandidate.setupType = SetupType.RaidReclaimReversal;
 blockedTargetRoomHighScoreCandidate.decisionQualityScore = 98;
 blockedTargetRoomHighScoreCandidate.decisionQualityHardBlocker = 'Clean 1.5R path unavailable: imbalance sits before T1.';
 blockedTargetRoomHighScoreCandidate.targetRoom = {
@@ -3097,8 +3097,8 @@ assert.ok(!blockedTargetRoomText.includes('HIGH-CONFIDENCE CONDITIONAL'));
 assert.ok(blockedTargetRoomText.includes('NO TRADE') || blockedTargetRoomText.includes('WAIT'));
 
 const discordChartDriftCandidate = sampleCandidate('LONG');
-discordChartDriftCandidate.setupType = SetupType.TurtleSoup;
-discordChartDriftCandidate.scenarioLabel = 'Bullish Turtle Soup Reversal - normalized plan not executable';
+discordChartDriftCandidate.setupType = SetupType.RaidReclaimReversal;
+discordChartDriftCandidate.scenarioLabel = 'Bullish Raid Reclaim Reversal Reversal - normalized plan not executable';
 discordChartDriftCandidate.entry = 7426.75;
 discordChartDriftCandidate.stop = 7422;
 discordChartDriftCandidate.target1 = 7437.5;
@@ -3106,7 +3106,7 @@ discordChartDriftCandidate.target2 = 7440;
 discordChartDriftCandidate.riskPoints = 4.75;
 discordChartDriftCandidate.decisionQualityScore = 87;
 discordChartDriftCandidate.modelConfidenceScore = 87;
-discordChartDriftCandidate.requiredTrigger = 'Bullish Turtle Soup: sell-side sweep below 7422.5, reclaim back above the swept low, then confirm upward rejection or expansion.';
+discordChartDriftCandidate.requiredTrigger = 'Bullish Raid Reclaim Reversal: sell-side sweep below 7422.5, reclaim back above the swept low, then confirm upward rejection or expansion.';
 discordChartDriftCandidate.invalidation = 'Invalid if price trades below the sweep wick structure stop near 7422.';
 discordChartDriftCandidate.targetObjectivePlan = {
   ...discordChartDriftCandidate.targetObjectivePlan!,
@@ -3238,8 +3238,8 @@ assert.ok(openingDriveText.includes('Stop: 7522.00'));
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(openingDriveText), false);
 
 const scannerRetestPendingCandidate = sampleCandidate('SHORT');
-scannerRetestPendingCandidate.setupType = SetupType.HtfDisplacementMssContinuation;
-scannerRetestPendingCandidate.scenarioLabel = 'HTF Displacement + 5M MSS Continuation';
+scannerRetestPendingCandidate.setupType = SetupType.IntradayMssMicroContinuation;
+scannerRetestPendingCandidate.scenarioLabel = 'HTF Context + 5M MSS Continuation';
 scannerRetestPendingCandidate.executionStatus = ExecutionStatus.Conditional;
 scannerRetestPendingCandidate.candidateState = 'MSS_CONTINUATION_RETEST_PENDING';
 scannerRetestPendingCandidate.requiredTrigger = 'Fresh short requires completed 5M retest/rejection below the decision level, or a new completed 5M bearish continuation close.';
@@ -3271,8 +3271,8 @@ assert.ok(scannerRetestPendingText.length < 1400, `expected retest-pending scann
 assert.equal(/EXECUTABLE -|Trade now|Entry confirmed|Take the trade|Enter now|Sell now|Trade approved/i.test(scannerRetestPendingText), false);
 
 const dataLimitedScannerCandidate = sampleCandidate('LONG');
-dataLimitedScannerCandidate.setupType = SetupType.HtfDrawContinuationAfterRaid;
-dataLimitedScannerCandidate.scenarioLabel = 'HTF Draw Continuation After Raid/Reclaim';
+dataLimitedScannerCandidate.setupType = SetupType.IntradayMssMicroContinuation;
+dataLimitedScannerCandidate.scenarioLabel = 'HTF Context Continuation After Raid/Reclaim';
 dataLimitedScannerCandidate.executionStatus = ExecutionStatus.Conditional;
 dataLimitedScannerCandidate.htfLiquidityDrawState = htfStateFixture(true) as HtfLiquidityDrawState;
 dataLimitedScannerCandidate.requiredTrigger = 'Wait for sufficient HTF context and completed 5M trigger.';
@@ -3303,937 +3303,8 @@ assert.ok(!dataLimitedScannerText.includes('Candidate Promotion: blocked by data
 assert.equal(/HTF conflict confirmed|Bullish structure confirmed|Bearish structure confirmed|Candidate ready|structural confirmation allowed/i.test(dataLimitedScannerText), false);
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(dataLimitedScannerText), false);
 
-const failedPlanReversalCandidate = sampleCandidate('SHORT');
-failedPlanReversalCandidate.setupType = SetupType.FailedPlanReversal;
-failedPlanReversalCandidate.scenarioLabel = 'Failed Plan Reversal';
-failedPlanReversalCandidate.pathway = 'failed_plan_reversal';
-failedPlanReversalCandidate.candidateState = 'OPPOSITE_SIDE_TRIGGER_CONFIRMED';
-failedPlanReversalCandidate.executionStatus = ExecutionStatus.Executable;
-failedPlanReversalCandidate.entry = 7517.75;
-failedPlanReversalCandidate.stop = 7520.75;
-failedPlanReversalCandidate.target1 = 7513.25;
-failedPlanReversalCandidate.target2 = 7511.75;
-failedPlanReversalCandidate.riskPoints = 3;
-failedPlanReversalCandidate.riskAdvisoryStatus = 'RISK_WITHIN_STANDARD_LIMIT';
-failedPlanReversalCandidate.failedPlanReversal = {
-  source: 'ninjatrader_ohlc',
-  boundary: 'opposite_side_review_only_not_execution_authority',
-  originalPlanDirection: 'LONG',
-  oppositeDirection: 'SHORT',
-  failedDecisionLevel: 7518,
-  failedDecisionLevelRole: 'short_side_resistance',
-  failedPlanEvidence: ['Long plan failed below 7518.'],
-  htfStackStatus: 'full_confirmation',
-  timeframeConfirmations: [
-    { timeframe: '15M', direction: 'SHORT', status: 'confirmed', evidence: ['15M bearish MSS.'] },
-    { timeframe: '1H', direction: 'SHORT', status: 'confirmed', evidence: ['1H bearish MSS.'] },
-    { timeframe: '2H', direction: 'SHORT', status: 'confirmed', evidence: ['2H bearish structure.'] },
-    { timeframe: '4H', direction: 'SHORT', status: 'confirmed', evidence: ['4H bearish structure.'] },
-    { timeframe: '5M', direction: 'SHORT', status: 'confirmed', evidence: ['5M trigger confirmed.'] },
-  ],
-  fiveMinuteTriggerStatus: 'confirmed',
-  decisionState: 'OPPOSITE_SIDE_TRIGGER_CONFIRMED',
-  freshTriggerRequired: true,
-  staleOrNoFreshEntry: false,
-  reasons: ['Fresh 5M retest confirmed.'],
-  blockers: [],
-  createsCandidate: true,
-  approvesExecution: false,
-};
-const failedPlanPayload = compactDiscordSummary({
-  session: 'morning',
-  tradeDate: '2026-06-05',
-  instrument: 'MES',
-  planVersionId: 'FAILED-PLAN-REVERSAL',
-  normalized: {
-    canExecute: false,
-    decisionStatus: TradeDecisionStatus.Wait,
-    decision: 'SHORT',
-    noTradeReason: null,
-    invalidation: 'Invalid if price reclaims above failed decision level.',
-  },
-  candidates: [failedPlanReversalCandidate],
-  attachments: { chartPlan: true, priceLevelMap: true },
-  sourceLabel: 'Scanner',
-  statusOverride: 'Executable',
-});
-validateDiscordPayload(failedPlanPayload, ['chart-plan.png', 'price-level-map.png']);
-const failedPlanText = flattenDiscordPayloadText(failedPlanPayload);
-assert.ok(failedPlanPayload.content?.includes('[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY'));
-assert.ok(failedPlanText.includes('MES Current Desk Plan'));
-assert.ok(failedPlanText.includes('Primary: 🐻 SHORT'));
-assert.ok(failedPlanText.includes('Entry: 7517.75'));
-assert.ok(failedPlanText.includes('Stop: 7520.75'));
-assert.ok(failedPlanText.includes('T1: 7513.25'));
-assert.ok(failedPlanText.includes('T2: 7511.75'));
-assert.ok(!failedPlanText.includes('Failed Plan Reversal:'));
-assert.ok(!failedPlanText.includes('Boundary: decision support only; not execution approval.'));
-assert.equal(/EXECUTABLE -|Trade now|Take the trade|Trade approved/i.test(failedPlanText), false);
-
-const rawConditionalCanExecutePayload = compactDiscordSummary({
-  session: 'morning',
-  tradeDate: '2026-06-01',
-  instrument: 'MES',
-  planVersionId: 'RAW-CONDITIONAL-CANEXECUTE',
-  normalized: {
-    canExecute: true,
-    decisionStatus: TradeDecisionStatus.ConditionalTrade,
-    decision: 'LONG',
-    noTradeReason: null,
-    invalidation: 'Invalid if protected structure fails.',
-  },
-  candidates: [scannerReadyCandidate],
-  attachments: { chartPlan: true, priceLevelMap: true },
-  sourceLabel: 'Scanner',
-  statusOverride: 'Executable',
-});
-validateDiscordPayload(rawConditionalCanExecutePayload, ['chart-plan.png', 'price-level-map.png']);
-const rawConditionalText = flattenDiscordPayloadText(rawConditionalCanExecutePayload);
-assert.ok(rawConditionalCanExecutePayload.content?.startsWith('🟡'), 'ConditionalTrade with raw canExecute=true must remain yellow/non-executable');
-assert.ok(rawConditionalText.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; execution arms only after the named completed 5M condition.'));
-assert.ok(rawConditionalText.includes('Status: High-confidence conditional trade plan; armed after the named completed 5M condition.'));
-assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(rawConditionalText), false);
-
-const riskTooWideCandidate = sampleCandidate('LONG');
-riskTooWideCandidate.setupType = SetupType.TurtleSoup;
-riskTooWideCandidate.scenarioLabel = 'Turtle Soup LONG';
-riskTooWideCandidate.entry = 7597;
-riskTooWideCandidate.stop = 7588.75;
-riskTooWideCandidate.target1 = 7620;
-riskTooWideCandidate.target2 = 7620;
-riskTooWideCandidate.riskPoints = 8.25;
-riskTooWideCandidate.blockReason = NoTradeReason.RiskTooWide;
-riskTooWideCandidate.executionStatus = ExecutionStatus.Conditional;
-riskTooWideCandidate.requiredTrigger = 'Wait for a fresh completed 5M retest that keeps risk inside limits.';
-riskTooWideCandidate.nextAction = 'Manual decision only. Do not chase the reclaim candle.';
-riskTooWideCandidate.evidence = [
-  'Sell-side sweep at 10:50.',
-  'Reclaim at 10:55.',
-  'HTF stack aligned LONG: 4H / 1H / 15M / 5M.',
-  'Target room toward 7620.',
-];
-const riskTooWideBefore = JSON.stringify(riskTooWideCandidate);
-const riskTooWidePayload = compactDiscordSummary({
-  session: 'morning',
-  tradeDate: '2026-05-29',
-  instrument: 'MES',
-  planVersionId: 'RISK-WIDE-TEST',
-  normalized: {
-    canExecute: false,
-    decisionStatus: TradeDecisionStatus.Wait,
-    decision: 'LONG',
-    noTradeReason: NoTradeReason.RiskTooWide,
-    invalidation: 'Invalid if protected structure fails.',
-  },
-  candidates: [riskTooWideCandidate],
-  attachments: { chartPlan: true, priceLevelMap: true },
-  sourceLabel: 'Scanner',
-  decisionOverride: 'Conditional',
-  statusOverride: 'Conditional',
-  components: buildOutcomeComponents({
-    planVersionId: 'RISK-WIDE-TEST',
-    sessionType: 'morning',
-    tradeDate: '2026-05-29',
-    instrument: 'MES',
-    direction: 'LONG',
-  }),
-});
-validateDiscordPayload(riskTooWidePayload, ['chart-plan.png', 'price-level-map.png']);
-assert.equal(JSON.stringify(riskTooWideCandidate), riskTooWideBefore, 'risk advisory formatter must not mutate the candidate');
-const riskTooWideText = flattenDiscordPayloadText(riskTooWidePayload);
-assert.ok(riskTooWideText.includes('MES Current Desk Plan'));
-assert.ok(riskTooWideText.includes('Status: Risk review only; standard risk gate not clean.'));
-assert.ok(!riskTooWideText.includes('Risk Advisory:'));
-assert.ok(!riskTooWideText.includes('Risk Score:'));
-assert.ok(!riskTooWideText.includes('Risk exceeds standard limit. Human final decision required.'));
-assert.equal(riskTooWideText.includes('Not app-approved executable.'), false);
-assert.ok(!riskTooWideText.includes('Do not chase'));
-assert.ok(!/ApprovedTrade|Trade now|Entry confirmed/i.test(riskTooWideText));
-assert.ok(riskTooWidePayload.components);
-assert.deepEqual(
-  (riskTooWidePayload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)),
-  ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']
-);
-
-const noTrade = compactDiscordSummary({
-  session: 'morning',
-  tradeDate: '2026-05-26',
-  instrument: 'MES',
-  planVersionId: 'NO-TRADE-TEST',
-  normalized: {
-    canExecute: false,
-    decisionStatus: TradeDecisionStatus.NoTrade,
-    decision: 'WAIT',
-    noTradeReason: 'No completed 5M trigger inside the active window.',
-    invalidation: null,
-  },
-  candidates: [],
-  attachments: { chartPlan: false, priceLevelMap: false },
-  sourceLabel: 'Morning',
-});
-validateDiscordPayload(noTrade, []);
-const noTradeText = flattenDiscordPayloadText(noTrade);
-assert.ok(noTradeText.includes('[AM REVIEW] MES - NO TRADE'));
-assert.ok(noTradeText.includes('Reason: No completed 5M trigger inside the active window.'));
-assert.ok(noTradeText.includes('Key Levels:'));
-assert.ok(noTradeText.includes('Action:'));
-assert.ok(noTradeText.includes('Stand down. Recheck at next scheduled scan.'));
-assert.ok(!noTradeText.includes('Plan:'));
-
-const conditionalReplayCandidate = sampleCandidate('SHORT');
-conditionalReplayCandidate.setupType = SetupType.IntradayMssMicroContinuation;
-conditionalReplayCandidate.scenarioLabel = 'Intraday MSS Micro Continuation';
-conditionalReplayCandidate.entry = 7362.5;
-conditionalReplayCandidate.stop = null;
-conditionalReplayCandidate.target1 = null;
-conditionalReplayCandidate.target2 = null;
-conditionalReplayCandidate.riskPoints = null;
-conditionalReplayCandidate.requiredTrigger = 'Human-review short: completed bearish 5M MSS plus bearish 15M MSS/displacement context, then completed close-through/retest below 7384.00.';
-conditionalReplayCandidate.nextAction = 'Intraday MSS micro-continuation watch. No chase. Completed 5M bearish MSS close-through/retest confirmed; protected stop still required.';
-conditionalReplayCandidate.missingEvidence = ['Protected 5M retest swing stop is not confirmed.'];
-conditionalReplayCandidate.activeRuleset = {
-  htfLineInSand: {
-    applied: true,
-    status: 'passed',
-    required: 'completed_5m_or_15m_close_beyond_htf_line',
-    appliesToAllModels: true,
-    affectsExecution: false,
-    direction: 'SHORT',
-    lineInSand: 7384,
-    lineReason: 'Completed 5M close-through/retest below bearish MSS line.',
-    requiredClose: 'Short needs a completed 5M close/retest hold below 7384.00.',
-    obstacleType: 'swing',
-    obstacleSource: 'ninjatrader',
-    evidence: ['Line in the sand came from OHLC-derived 5M structure.'],
-    blockers: [],
-  },
-};
-const conditionalReplayPayload = compactDiscordSummary({
-  session: 'morning',
-  tradeDate: '2026-06-09',
-  instrument: 'MES',
-  planVersionId: 'CONDITIONAL-REPLAY-TEST',
-  normalized: {
-    canExecute: false,
-    decisionStatus: TradeDecisionStatus.NoTrade,
-    decision: 'NO TRADE',
-    noTradeReason: null,
-    invalidation: 'Do not execute until entry and protected stop are defined.',
-  },
-  candidates: [conditionalReplayCandidate],
-  attachments: { chartPlan: false, priceLevelMap: false },
-  sourceLabel: 'Morning',
-});
-validateDiscordPayload(conditionalReplayPayload, []);
-const conditionalReplayText = flattenDiscordPayloadText(conditionalReplayPayload);
-assert.ok(conditionalReplayText.includes('[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY'));
-assert.ok(conditionalReplayText.includes('Line in the Sand:'));
-assert.ok(conditionalReplayText.includes('7384.00'));
-assert.ok(conditionalReplayText.includes('Missing Proof:'));
-assert.ok(conditionalReplayText.includes('Protected 5M structure stop not confirmed.'));
-assert.ok(conditionalReplayText.includes('Protected 5M retest swing stop is not confirmed.'));
-assert.ok(conditionalReplayText.includes('No chase. Wait for completed 5M proof and protected structure.'));
-assert.ok(!conditionalReplayText.includes('No active plan candidate available.'));
-assert.ok(!conditionalReplayText.includes('Stand down. Recheck at next scheduled scan.'));
-assert.ok(!/EXECUTABLE -|Trade now|Entry confirmed/i.test(conditionalReplayText));
-
-const watchlist = morningWatchlistDiscordSummary({
-  tradeDate: '2026-05-28',
-  instrument: 'MES',
-  watchlist: {
-    watchlistDetected: true,
-    watchlistType: 'morning_continuation_watchlist',
-    direction: 'LONG',
-    status: 'WATCH_ONLY',
-    canExecute: false,
-    freshEntryAvailable: false,
-    tradeAlertEligible: false,
-    reason: 'Strong bullish continuation is developing, but no fresh entry remains under current approved rules.',
-    noChaseWarning: true,
-    requiredNextCondition: 'Wait for a completed 5M pullback or retest that passes existing approved rules.',
-    memoryEligible: true,
-    evidence: ['Strong bullish displacement detected after the open.'],
-    missingEvidence: ['No safe fresh structure stop is available from this watchlist event.'],
-    auditWarnings: ['Advisory only.'],
-    approvalBoundary: {
-      watchlistApprovesTrade: false,
-      watchlistChangesRules: false,
-      watchlistCreatesEntry: false,
-      watchlistCreatesTargets: false,
-      watchlistOverridesScanner: false,
-    },
-  },
-});
-validateDiscordPayload(watchlist, []);
-const watchlistText = flattenDiscordPayloadText(watchlist);
-assert.ok(watchlistText.includes('[AM WATCHLIST] MES - LONG DEVELOPING'));
-assert.ok(watchlistText.includes('WATCH ONLY - NO FRESH ENTRY'));
-assert.ok(watchlistText.includes('DO NOT CHASE'));
-assert.ok(watchlistText.includes('Wait for a completed 5M pullback or retest that passes existing current rules.'));
-assert.ok(watchlistText.includes('Watch only. No entry until current rules confirm.'));
-assert.ok(!/^Entry:/m.test(watchlistText));
-assert.ok(!/^Stop:/m.test(watchlistText));
-assert.ok(!/^T1:/m.test(watchlistText));
-assert.ok(!/^T2:/m.test(watchlistText));
-assert.ok(!/Risk:|R\/R|risk\/reward ladder/i.test(watchlistText));
-assert.ok(!/Approved|Executable|Trade now|Entry confirmed/i.test(watchlistText));
-assert.equal(watchlist.components, undefined);
-assert.equal(JSON.stringify(watchlist).includes('Win'), false);
-assert.equal(JSON.stringify(watchlist).includes('Loss'), false);
-assert.equal(JSON.stringify(watchlist).includes('Scratch'), false);
-
-assert.equal(shouldSendScannerHealthAlert('READY', 'READY'), false);
-assert.equal(shouldSendScannerHealthAlert('DEGRADED', 'DEGRADED'), false);
-assert.equal(shouldSendScannerHealthAlert('BLOCKED', 'BLOCKED'), false);
-assert.equal(shouldSendScannerHealthAlert('READY', 'DEGRADED'), true);
-assert.equal(shouldSendScannerHealthAlert('DEGRADED', 'BLOCKED'), true);
-assert.equal(shouldSendScannerHealthAlert('BLOCKED', 'READY'), true);
-assert.equal(shouldSendScannerHealthAlert(null, 'READY'), false);
-assert.equal(shouldSendScannerHealthAlert(undefined, 'DEGRADED'), true);
-assert.equal(shouldSendScannerHealthAlert(undefined, 'BLOCKED'), true);
-
-const healthBase = {
-  config: {
-    appInstrument: 'MES',
-    bridgeInstrument: 'MES 06-26',
-    timestampMode: 'close',
-    barTimeZone: 'eastern',
-    discordEnabled: true,
-    dryRun: false,
-    macroCalendarEnabled: true,
-    maxStaleBarMinutes: 10,
-  },
-  bridgeHealth: { ok: true, defaultInstrument: 'MES 06-26' },
-  bridgeReachable: true,
-  latestCompleted5mBar: { time: '2026-05-28T10:00:00-04:00', open: 7500, high: 7510, low: 7498, close: 7508, volume: 1000 },
-  barStaleness: { stale: false, latestTime: '2026-05-28T10:00:00-04:00', ageMinutes: 2, maxAllowedMinutes: 10, reason: null },
-  discordWebhookConfigured: true,
-  marketMapStatus: { loaded: true, usableBars: 400, fallbackBridgeDataAvailable: true },
-  completedFiveMinuteBarAssurance: {
-    status: 'ready' as const,
-    message: 'Completed 5M Bar Assurance Gate ready: latest completed 5M bar is usable.',
-    latestCompletedTime: '2026-05-28T10:00:00-04:00',
-    expectedCompletedTime: '2026-05-28T10:00:00-04:00',
-    sourceSummary: 'live 5M bars=30; history 5M=6000 from market_bars_bridge_repair',
-    recoverySteps: [],
-  },
-  scannerStateFileStatus: { status: 'ok' as const },
-  macroCalendarStatus: { enabled: true, loaded: true },
-};
-
-const readyHealth = evaluateScannerHealth(healthBase);
-const readyHealthBefore = JSON.stringify(readyHealth);
-const readyHealthPayload = scannerHealthDiscordSummary({
-  instrument: 'MES',
-  bridgeInstrument: 'MES 06-26',
-  dryRun: false,
-  report: readyHealth,
-});
-validateDiscordPayload(readyHealthPayload, []);
-const readyHealthText = flattenDiscordPayloadText(readyHealthPayload);
-assert.ok(readyHealthText.includes('[SCANNER HEALTH] MES - READY'));
-assert.ok(readyHealthText.includes('Status: Alerts can be trusted'));
-assert.ok(readyHealthText.includes('Action: Scanner recovered. Trade/watchlist alerts may resume.'));
-assert.equal(JSON.stringify(readyHealth), readyHealthBefore);
-
-const degradedHealth = evaluateScannerHealth({
-  ...healthBase,
-  macroCalendarStatus: { enabled: true, unavailable: true, message: 'Macro calendar unavailable' },
-});
-const degradedPayload = scannerHealthDiscordSummary({
-  instrument: 'MES',
-  bridgeInstrument: 'MES 06-26',
-  dryRun: false,
-  report: degradedHealth,
-});
-validateDiscordPayload(degradedPayload, []);
-const degradedText = flattenDiscordPayloadText(degradedPayload);
-assert.ok(degradedText.includes('[SCANNER HEALTH] MES - DEGRADED'));
-assert.ok(degradedText.includes('Status: Alerts allowed with caution'));
-assert.ok(degradedText.includes('Warnings:'));
-assert.ok(degradedText.includes('Macro calendar unavailable'));
-assert.ok(degradedText.includes('Action: Scanner continues. Review warnings if alerts look unusual.'));
-
-const blockedHealth = evaluateScannerHealth({
-  ...healthBase,
-  bridgeReachable: false,
-  bridgeHealth: { ok: false, error: 'Bridge unreachable' },
-  latestCompleted5mBar: null,
-  barStaleness: { stale: true, latestTime: null, ageMinutes: null, maxAllowedMinutes: 10, reason: 'Latest completed 5M candle is stale' },
-});
-const blockedPayload = scannerHealthDiscordSummary({
-  instrument: 'MES',
-  bridgeInstrument: 'MES 06-26',
-  dryRun: false,
-  report: blockedHealth,
-});
-validateDiscordPayload(blockedPayload, []);
-const blockedText = flattenDiscordPayloadText(blockedPayload);
-assert.ok(blockedText.includes('[SCANNER HEALTH] MES - BLOCKED'));
-assert.ok(blockedText.includes('Status: Trade/watchlist alerts suppressed'));
-assert.ok(blockedText.includes('Blocking reasons:'));
-assert.ok(blockedText.includes('Bridge unreachable'));
-assert.ok(blockedText.includes('Action: Fix NinjaTrader/bridge/data issue, then restart or wait for recovery.'));
-
-for (const payload of [readyHealthPayload, degradedPayload, blockedPayload]) {
-  const text = flattenDiscordPayloadText(payload);
-  assert.equal(payload.components, undefined);
-  assert.ok(!/^Entry:/m.test(text));
-  assert.ok(!/^Stop:/m.test(text));
-  assert.ok(!/^T1:/m.test(text));
-  assert.ok(!/^T2:/m.test(text));
-  assert.ok(!/risk\/reward ladder|Win|Loss|Scratch|ApprovedTrade|Executable trade|Trade now|Entry confirmed/i.test(text));
-}
-
-assert.equal(
-  compactAttachmentLine({ chartPlan: true, priceLevelMap: false }, true),
-  'Details: Chart attached; Level Map unavailable.'
-);
-assert.equal(
-  compactAttachmentLine({ chartPlan: false, priceLevelMap: true }, true),
-  'Details: Price Level Map attached. Chart Plan unavailable.'
-);
-assert.equal(
-  compactAttachmentLine({ chartPlan: false, priceLevelMap: false }, true),
-  'Details: Visuals unavailable; review local logs before action.'
-);
-assert.equal(
-  compactAttachmentLine({ chartPlan: false, priceLevelMap: false }, false),
-  'Details: Visual attachments not generated because no active plan candidate was available.'
-);
-
-const originalConsoleWarn = console.warn;
-const capturedSingleChartWarnings: string[] = [];
-console.warn = (...args: unknown[]) => {
-  capturedSingleChartWarnings.push(args.map(String).join(' '));
-};
-try {
-  validateDiscordPayload({
-    username: 'Quant Desk',
-    content: 'MES Current Desk Plan',
-    embeds: [{
-      title: 'MES Current Desk Plan',
-      description: [
-        'Primary: 🛑 WAIT',
-        'Bias: No HTF-supported directional play confirmed.',
-        'Line in the Sand: 7410.00',
-        '',
-        'LONG ABOVE 7410.00',
-        'Entry: pending',
-        'Stop: pending',
-        'T1: pending',
-        'T2: pending',
-        '',
-        'Invalid below: pending',
-        'HTF target: N/A / runner N/A',
-        '',
-        'Status: Review only until 5M trigger + canExecute.',
-        'Chart: attached to Discord post.',
-      ].join('\n'),
-      color: 0,
-      fields: [],
-      footer: { text: 'Quant Desk' },
-      timestamp: new Date().toISOString(),
-    }],
-    components: buildOutcomeComponents({
-      planVersionId: 'CURRENT-DESK-PLAN-SINGLE-CHART-TEST',
-      sessionType: 'morning',
-      tradeDate: '2026-06-15',
-      instrument: 'MES',
-      direction: null,
-    }),
-  }, ['desk-play-chart.png']);
-} finally {
-  console.warn = originalConsoleWarn;
-}
-assert.equal(capturedSingleChartWarnings.length, 0);
-
-assert.throws(() => validateDiscordPayload({
-  username: 'Quant Desk',
-  content: 'Bad payload',
-  embeds: [{
-    title: 'Compact Trade Plan Summary',
-    description: 'Missing rea...',
-    color: 0,
-    fields: [],
-    footer: { text: 'Quant Desk' },
-    timestamp: new Date().toISOString(),
-  }],
-}), /truncation artifact/);
-
-for (const marker of BANNED_ACTIVE_DISCORD_ALERT_TEXT) {
-  assert.throws(() => validateDiscordPayload({
-    username: 'Quant Desk',
-    content: 'Bad payload',
-    embeds: [{
-      title: 'Compact Trade Plan Summary',
-      description: `Old report leaked into the compact alert:\n${marker}`,
-      color: 0,
-      fields: [],
-      footer: { text: 'Quant Desk' },
-      timestamp: new Date().toISOString(),
-    }],
-  }), /old long-form scanner card section/);
-}
-
-assert.throws(() => validateDiscordPayload({
-  username: 'Quant Desk',
-  content: 'Bad payload',
-  embeds: [{
-    title: 'Compact Trade Plan Summary',
-    description: 'Counte...',
-    color: 0,
-    fields: [],
-    footer: { text: 'Quant Desk' },
-    timestamp: new Date().toISOString(),
-  }],
-}), /truncation artifact/);
-
-const htfParentZoneDeskPayload = compactDiscordSummary({
-  session: 'morning',
-  tradeDate: '2026-06-25',
-  instrument: 'MES',
-  planVersionId: 'MORNING-DESK-PLAY-HTF-PARENT-ZONES',
-  normalized: {
-    decision: 'SHORT',
-    decisionStatus: TradeDecisionStatus.Wait,
-    canExecute: false,
-    entry: 7454.75,
-    stop: 7490.75,
-    t1: 7400.75,
-    t2: 7382.75,
-  },
-  candidates: [],
-  currentPrice: 7474,
-  attachments: { chartPlan: true, priceLevelMap: true },
-  deskState: {
-    discordAction: 'hold',
-    canExecute: false,
-    htfContextStatus: 'sufficient',
-    primaryDeskPlay: {
-      discordEligible: true,
-      direction: 'SHORT',
-      lineInSand: 7444,
-      shortBelow: 7444,
-      summary: 'HTF parent FVG is active; execution still requires 5M proof.',
-      activeTacticalZone: {
-        direction: 'SHORT',
-        lower: 7444,
-        upper: 7465.25,
-        state: 'waiting_retest',
-        nextTrigger: 'Completed 5M hold/reject below the zone required.',
-      },
-      shortBias: {
-        state: 'primary',
-        decisionQualityScore: 98,
-        tradeReadiness: {
-          status: 'not_aligned',
-          reason: 'SHORT is not supported by aligned protected 15M+5M structure this cycle.',
-          displayStatus: 'htf_zone_active_waiting_5m_rejection',
-          displayLabel: 'HTF FVG ACTIVE - WAITING 5M REJECTION',
-          displayAction: 'Completed 5M hold/reject below the zone required.',
-          displayReason: 'HTF parent FVG is active and the tactical zone is mapped; completed 5M rejection/hold still controls.',
-          missingProof: ['15M and 5M protected structure are not aligned for this side.'],
-        },
-      },
-      htfFvgReactionMemory: {
-        direction: 'SHORT',
-        activeReaction: {
-          direction: 'SHORT',
-          timeframe: '240M',
-          lower: 7472.25,
-          upper: 7512,
-          state: 'rejected',
-          latestReaction: { state: 'rejected', close: 7455.25 },
-        },
-        parentZones: [
-          {
-            direction: 'SHORT',
-            timeframe: '240M',
-            lower: 7472.25,
-            upper: 7512,
-            state: 'rejected',
-            confidence: 'High',
-            lifecycle: { touchCount: 9 },
-            latestReaction: { close: 7455.25 },
-          },
-          {
-            direction: 'SHORT',
-            timeframe: '120M',
-            lower: 7472.25,
-            upper: 7496.5,
-            state: 'inside_zone',
-            confidence: 'High',
-            lifecycle: { touchCount: 14 },
-            latestReaction: { close: 7455.25 },
-          },
-        ],
-      },
-      htfFvgCascade: {
-        direction: 'SHORT',
-        parentZone: {
-          direction: 'SHORT',
-          timeframe: '240M',
-          lower: 7472.25,
-          upper: 7512,
-          state: 'rejected',
-        },
-        childExecutionZone: {
-          direction: 'SHORT',
-          timeframe: '5M',
-          lower: 7444,
-          upper: 7465.25,
-          triggerNeeded: 'Completed 5M hold/reject below the zone required.',
-        },
-      },
-    },
-  },
-});
-const htfParentZoneDeskText = flattenDiscordPayloadText(htfParentZoneDeskPayload);
-assert.match(htfParentZoneDeskText, /HTF (?:FVG|imbalance) Parent Zones:/);
-assert.match(htfParentZoneDeskText, /240M 7472\.25-7512\.00/);
-assert.match(htfParentZoneDeskText, /120M 7472\.25-7496\.50/);
-assert.match(htfParentZoneDeskText, /Active tactical zone: 7444\.00-7465\.25/);
-assert.match(htfParentZoneDeskText, /Readiness: HTF (?:FVG|imbalance) ACTIVE - WAITING 5M REJECTION - Completed 5M hold\/reject below the zone required\./);
-
-const sameSideCampaignPayload = compactDiscordSummary({
-  session: 'morning',
-  tradeDate: '2026-06-30',
-  instrument: 'MES',
-  planVersionId: 'MORNING-SAME-SIDE-CAMPAIGN',
-  normalized: {
-    decision: 'LONG',
-    decisionStatus: TradeDecisionStatus.ConditionalTrade,
-    canExecute: false,
-    entry: 7514.5,
-    stop: 7499.75,
-    t1: 7550,
-    t2: 7560,
-  },
-  candidates: [],
-  currentPrice: 7533.75,
-  attachments: { chartPlan: true, priceLevelMap: true },
-  deskState: {
-    discordAction: 'post_review',
-    canExecute: false,
-    htfContextStatus: 'sufficient',
-    primaryDeskPlay: {
-      discordEligible: true,
-      direction: 'LONG',
-      lineInSand: 7530,
-      longAbove: 7514.5,
-      shortBelow: 7511.25,
-      summary: 'LONG campaign stack active; no fresh entry after price moved away.',
-      longBias: { state: 'primary', decisionQualityScore: 92 },
-      sameSideCampaignStack: {
-        sourceOfTruth: 'scanner_same_side_campaign_stack',
-        campaignStackId: 'same-side-campaign|LONG|7510.5-7518.25|IntradayMssMicroContinuation+OpeningDriveFvgContinuation+SweepMssFvgRetrace',
-        campaignDirection: 'LONG',
-        sharedReactionZone: { lower: 7510.5, upper: 7518.25, label: '7510.50-7518.25 same-side campaign reaction zone' },
-        stackStatus: 'no_chase',
-        leadTacticalPlanKey: 'SweepMssFvgRetrace|LONG|ICT Model 1 Long: Sweep Reclaim Imbalance Retrace|Conditional',
-        campaignThesisKey: 'IntradayMssMicroContinuation|LONG|Intraday MSS Micro Continuation|Conditional',
-        freshEntryStatus: 'no_chase',
-        managementInstruction: 'Entry worked or moved away: current price 7533.75 is above the campaign entry zone 7510.50-7518.25. If already in, manage the lead plan; if not in, wait for a fresh pullback/retest.',
-        standDownCondition: 'Stand down if completed 5M loses 7510.50 or the lead invalidation.',
-        antiDrift: {
-          sameSideCandidatesGrouped: true,
-          leadTacticalPlanPreserved: true,
-          staleEntryCannotPresentAsFresh: true,
-          oppositeSideRequiresCompleted5mFailureProof: true,
-          appTargetsFromLeadTacticalPlanOnly: true,
-        },
-        campaignStackMembers: [
-          {
-            candidateKey: 'SweepMssFvgRetrace|LONG|ICT Model 1 Long: Sweep Reclaim Imbalance Retrace|Conditional',
-            setupType: 'SweepMssFvgRetrace',
-            scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
-            role: 'lead_tactical_plan',
-            decisionQualityScore: 92,
-            entry: 7514.5,
-            stop: 7499.75,
-            target1: 7550,
-            target2: 7560,
-            riskPoints: 14.75,
-          },
-          {
-            candidateKey: 'OpeningDriveFvgContinuation|LONG|Opening Drive FVG Continuation|Conditional',
-            setupType: 'OpeningDriveFvgContinuation',
-            scenarioLabel: 'Opening Drive FVG Continuation',
-            role: 'entry_evidence',
-            decisionQualityScore: 73,
-            modelConfidenceScore: 93,
-            entry: 7514.375,
-            stop: 7510.25,
-            target1: 7520.5,
-            target2: 7522.75,
-            riskPoints: 4.125,
-          },
-          {
-            candidateKey: 'IntradayMssMicroContinuation|LONG|Intraday MSS Micro Continuation|Conditional',
-            setupType: 'IntradayMssMicroContinuation',
-            scenarioLabel: 'Intraday MSS Micro Continuation',
-            role: 'continuation_confirmation',
-            decisionQualityScore: 84,
-            modelConfidenceScore: 100,
-            entry: 7532.5,
-            stop: 7492,
-            target1: 7593.25,
-            target2: 7613.5,
-            riskPoints: 40.5,
-          },
-        ],
-      },
-    },
-  },
-});
-const sameSideCampaignText = flattenDiscordPayloadText(sameSideCampaignPayload);
-assert.match(sameSideCampaignText, /Same-Side Campaign Stack:/);
-assert.match(sameSideCampaignText, /Lead tactical plan: .*Sweep Reclaim Imbalance/);
-assert.match(sameSideCampaignText, /Campaign thesis: Intraday.*Micro Continuation\./);
-assert.match(sameSideCampaignText, /Supporting evidence: Opening Drive.*Continuation\./);
-assert.match(sameSideCampaignText, /Lead Entry: 7514\.50 \| Stop: 7499\.75/);
-assert.match(sameSideCampaignText, /App Targets: T1 7550\.00 \| T2 7560\.00/);
-assert.match(sameSideCampaignText, /T1: 7550\.00 \| T2: 7560\.00/);
-assert.match(sameSideCampaignText, /Fresh-entry status: no chase\./);
-assert.match(sameSideCampaignText, /wait for a fresh pullback\/retest/);
-assert.doesNotMatch(sameSideCampaignText, /Lead Entry: 7532\.50 \| Stop: 7492\.00/);
-assert.doesNotMatch(sameSideCampaignText, /T1: 7536\.75 \| T2: 7544\.00/);
-
-const htfFvgMicroMssCandidate = sampleCandidate('LONG');
-htfFvgMicroMssCandidate.setupType = SetupType.IntradayMssMicroContinuation;
-htfFvgMicroMssCandidate.scenarioLabel = 'HTF FVG Reaction + 5M Micro MSS Reversal';
-htfFvgMicroMssCandidate.entry = 7501.25;
-htfFvgMicroMssCandidate.stop = 7492.75;
-htfFvgMicroMssCandidate.target1 = 7514;
-htfFvgMicroMssCandidate.target2 = 7518.25;
-htfFvgMicroMssCandidate.riskPoints = 8.5;
-htfFvgMicroMssCandidate.requiredTrigger = 'Completed 5M retest/hold above 7500.75 after the 14:20 ET protected swing low at 7493.00.';
-htfFvgMicroMssCandidate.nextAction = 'Human-review long plan from 60M HTF FVG reaction and 5M retest/hold above 7500.75.';
-htfFvgMicroMssCandidate.invalidation = 'Invalid if completed 5M accepts below the protected 5M retest swing stop 7492.75.';
-htfFvgMicroMssCandidate.activeRuleset = {
-  htfLineInSand: {
-    applied: true,
-    status: 'passed',
-    required: 'completed_5m_or_15m_close_beyond_htf_line',
-    appliesToAllModels: true,
-    affectsExecution: false,
-    direction: 'LONG',
-    lineInSand: 7500.75,
-    lineReason: '7500.75 is the completed 5M MSS close-through/reclaim line after the 60M HTF FVG reaction.',
-    requiredClose: 'Completed 5M close and hold above 7500.75.',
-    obstacleType: 'imbalance_zone',
-    obstacleSource: 'ninjatrader',
-    evidence: ['60M HTF FVG reaction is mapped from NinjaTrader OHLC.'],
-    blockers: [],
-  },
-};
-const htfFvgMicroMssPayload = compactDiscordSummary({
-  session: 'lunch',
-  tradeDate: '2026-07-02',
-  instrument: 'MES',
-  planVersionId: 'HTF-FVG-MICRO-MSS-TEST',
-  normalized: {
-    decision: 'LONG',
-    decisionStatus: TradeDecisionStatus.Wait,
-    canExecute: false,
-    entry: 7501.25,
-    stop: 7492.75,
-    t1: 7514,
-    t2: 7518.25,
-  },
-  candidates: [htfFvgMicroMssCandidate],
-  currentPrice: 7501.25,
-  attachments: { chartPlan: true, priceLevelMap: true },
-  deskState: {
-    discordAction: 'post_review',
-    canExecute: false,
-    htfContextStatus: 'sufficient',
-    primaryDeskPlay: {
-      discordEligible: true,
-      direction: 'LONG',
-      lineInSand: 7500.75,
-      longAbove: 7500.75,
-      shortBelow: 7503,
-      nextTrigger: 'Completed 5M retest/hold above 7500.75 creates the human-review long plan.',
-      invalidation: 'Invalid if completed 5M accepts below the protected 5M retest swing stop 7492.75.',
-      longBias: {
-        state: 'primary',
-        decisionQualityScore: 88,
-        tradeReadiness: {
-          status: 'review_only_missing_proof',
-          displayLabel: 'HUMAN REVIEW READY',
-          displayAction: 'Review only; trader confirms. canExecute remains false.',
-          displayReason: 'HTF FVG reaction plus completed 5M micro MSS/retest hold created the plan.',
-        },
-      },
-      shortBias: { state: 'secondary', lineInSand: 7503 },
-      activeTacticalLine: {
-        originalLine: 7500.75,
-        activeLine: 7500.75,
-        nextTrigger: 'Active line 7500.75: completed 5M hold/retest above required before fresh execution consideration.',
-        standDown: 'Fresh LONG stand down on completed 5M acceptance below 7500.75.',
-      },
-      htfFvgReactionMemory: {
-        activeReaction: {
-          direction: 'LONG',
-          timeframe: '60M',
-          lower: 7481.75,
-          upper: 7491.25,
-          state: 'rejected',
-          latestReaction: {
-            state: 'rejected',
-            timestamp: '2026-07-02T14:00:00.0000000',
-            close: 7482,
-          },
-        },
-        childConfirmation: {
-          direction: 'LONG',
-          state: 'child_fvg_confirmed',
-          lower: 7500.75,
-          upper: 7504.5,
-        },
-        parentZones: [{
-          direction: 'LONG',
-          timeframe: '60M',
-          lower: 7481.75,
-          upper: 7491.25,
-          state: 'rejected',
-          confidence: 'High',
-        }],
-      },
-      htfFvgReactionRouting: {
-        status: 'routed_active_reaction',
-        direction: 'LONG',
-        lineInSand: 7491.25,
-        lineLabel: 'LONG ABOVE 7491.25 from 60M parent FVG 7481.75-7491.25',
-        lifecycleState: 'rejected',
-        standDown: 'Stand down on completed 5M acceptance below parent zone 7481.75.',
-      },
-      htfFvgMicroMssProof: {
-        direction: 'LONG',
-        htfFvgProof: {
-          status: 'sufficient',
-          timeframe: '60M',
-          zoneLower: 7481.75,
-          zoneUpper: 7491.25,
-          lifecycleState: 'rejected',
-        },
-        fiveMinuteTriggerProof: {
-          status: 'completed',
-          lineInSand: 7500.75,
-        },
-        protectedSwingProof: {
-          status: 'confirmed',
-          stop: 7492.75,
-        },
-        promotionReadiness: 'full_plan_allowed',
-        summary: 'HTF FVG proof, completed 5M trigger proof, and protected 5M swing proof are present for human-review plan display.',
-      },
-      htfFvgCascade: {
-        direction: 'LONG',
-        parentZone: {
-          direction: 'LONG',
-          timeframe: '60M',
-          lower: 7481.75,
-          upper: 7491.25,
-          state: 'rejected',
-        },
-        childExecutionZone: {
-          direction: 'LONG',
-          lower: 7500.75,
-          upper: 7504.5,
-          triggerNeeded: 'Completed 5M retest/hold above 7500.75.',
-        },
-        routingSummary: '60M parent FVG frames the map; 5M micro MSS supplies execution route.',
-        standDown: 'Stand down on completed 5M acceptance below parent zone 7481.75.',
-      },
-      htfProtectedStructureMap: { reliability: 'sufficient', rows: [] },
-    },
-  },
-});
-validateDiscordPayload(htfFvgMicroMssPayload, ['chart-plan.png', 'price-level-map.png']);
-const htfFvgMicroMssText = flattenDiscordPayloadText(htfFvgMicroMssPayload);
-assert.match(htfFvgMicroMssText, /HTF (?:FVG|imbalance)(?: Reaction)?|HTF FVG Reaction Memory|Defended HTF FVG Reaction Memory/);
-assert.match(htfFvgMicroMssText, /60M/);
-assert.match(htfFvgMicroMssText, /Line in the Sand:/i);
-assert.match(htfFvgMicroMssText, /Entry: 7501\.25/);
-assert.match(htfFvgMicroMssText, /Stop: 7492\.75/);
-assert.match(htfFvgMicroMssText, /T1: 7514\.00/);
-assert.match(htfFvgMicroMssText, /T2: 7518\.25/);
-assert.match(htfFvgMicroMssText, /completed 5M retest\/hold above 7500\.75/i);
-assert.match(htfFvgMicroMssText, /Proof Check:/);
-assert.match(htfFvgMicroMssText, /HTF FVG proof: sufficient/i);
-assert.match(htfFvgMicroMssText, /5M trigger proof: completed/i);
-assert.match(htfFvgMicroMssText, /Protected 5M swing proof: confirmed/i);
-assert.match(htfFvgMicroMssText, /Promotion: full plan allowed/i);
-assert.match(htfFvgMicroMssText, /Invalid:/);
-assert.match(htfFvgMicroMssText, /Review only|Decision support only|canExecute/i);
-assert.doesNotMatch(htfFvgMicroMssText, /No active plan candidate available|Stand down\. Recheck at next scheduled scan/);
-
-const unarmedShortDeskPlayPayload = compactDiscordSummary({
-  session: 'morning',
-  tradeDate: '2026-07-07',
-  instrument: 'MES',
-  planVersionId: 'MORNING-UNARMED-SHORT-LINE-TEST',
-  normalized: {
-    decision: 'SHORT',
-    decisionStatus: TradeDecisionStatus.Wait,
-    canExecute: false,
-    entry: 7539.5,
-    stop: 7561,
-    t1: 7507.25,
-    t2: 7496.5,
-  },
-  candidates: [],
-  currentPrice: 7542.25,
-  attachments: { chartPlan: false, priceLevelMap: false },
-  deskState: {
-    discordAction: 'post_review',
-    canExecute: false,
-    htfContextStatus: 'sufficient',
-    primaryDeskPlay: {
-      discordEligible: true,
-      direction: 'SHORT',
-      lineInSand: 7540,
-      shortBelow: 7540,
-      longAbove: 7580.25,
-      nextTrigger: 'Completed 5M or 15M close below 7540.00 required before short continuation is active.',
-      noChase: 'No chase: wait for a completed 5M or 15M close below 7540.00.',
-      shortBias: {
-        state: 'primary',
-        decisionQualityScore: 90,
-        tradeReadiness: {
-          status: 'review_only_missing_proof',
-          displayLabel: 'WAITING FOR COMPLETED CLOSE',
-          displayAction: 'Wait for completed 5M close below the line.',
-          displayReason: 'Current price is above the short line.',
-        },
-      },
-      longBias: { state: 'secondary', lineInSand: 7580.25 },
-      htfProtectedStructureMap: {
-        reliability: 'sufficient',
-        rows: [
-          { timeframe: '1H', currentBias: 'BEAR', biasChangeLine: 7580.25, protectedStructure: 7552.5 },
-          { timeframe: '15M', currentBias: 'BEAR', biasChangeLine: 7578.25, protectedStructure: 7572.5 },
-          { timeframe: '5M', currentBias: 'BEAR', biasChangeLine: 7578.25, protectedStructure: 7572.5 },
-        ],
-      },
-    },
-  },
-});
-const unarmedShortDeskPlayText = flattenDiscordPayloadText(unarmedShortDeskPlayPayload);
-assert.match(unarmedShortDeskPlayPayload.content || '', /WAIT \/ SHORT BELOW 7540\.00/);
-assert.doesNotMatch(unarmedShortDeskPlayPayload.content || '', /MES - SHORT REVIEW/);
-assert.match(unarmedShortDeskPlayText, /No short plan yet\. Current 7542\.25 is above the line 7540\.00/);
-assert.match(unarmedShortDeskPlayText, /completed 5M close below 7540\.00/);
-assert.match(unarmedShortDeskPlayText, /Battle Plan:/);
-assert.match(unarmedShortDeskPlayText, /Entry: 7539\.50 \| Risk: 21\.50 pts/);
-assert.match(unarmedShortDeskPlayText, /Stop: 7561\.00 \| Protected 5M swing: 7572\.50/);
-assert.match(unarmedShortDeskPlayText, /T1: 7507\.25 \| T2: 7496\.50/);
-
 const staleZoneShortCandidate = sampleCandidate('SHORT');
-staleZoneShortCandidate.setupType = SetupType.HtfDisplacementMssContinuation;
+staleZoneShortCandidate.setupType = SetupType.IntradayMssMicroContinuation;
 staleZoneShortCandidate.entry = 7536;
 staleZoneShortCandidate.stop = 7571;
 staleZoneShortCandidate.target1 = 7483.5;

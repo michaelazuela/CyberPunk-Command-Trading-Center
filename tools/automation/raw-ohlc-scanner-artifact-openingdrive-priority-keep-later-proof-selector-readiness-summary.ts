@@ -285,7 +285,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
     modelRows: rows,
     conclusions: [
       'SweepMssFvgRetrace strict-ready evidence is positive in this package, but blocked placeholder/no-chase rows remain excluded.',
-      'TurtleSoup strict-ready evidence is weak in this package, but the blocked TurtleSoup row is waiting for fresh entry and is not removal proof.',
+      'raidReclaim strict-ready evidence is weak in this package, but the blocked raidReclaim row is waiting for fresh entry and is not removal proof.',
       'No scanner-visible selector, model removal, canExecute change, or entry/stop/target/risk change is supported by this summary alone.',
     ],
     blockers,

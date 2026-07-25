@@ -209,7 +209,7 @@ function likelySeparator(details: CandidateDetail[], selectedTicketId: string): 
     row.oneMesPl > selected.oneMesPl
   ));
   if (!betterSameDirection.length) return 'insufficient_detail';
-  if (betterSameDirection.some((row) => row.setupType === 'SweepMssFvgRetrace' || row.setupType === 'HtfDisplacementMssContinuation')) {
+  if (betterSameDirection.some((row) => row.setupType === 'SweepMssFvgRetrace' || row.setupType === 'IntradayMssMicroContinuation')) {
     return 'same_direction_sweep_or_htf_priority';
   }
   return 'same_direction_higher_pl_competitor';
@@ -335,7 +335,7 @@ export function buildRawOhlcScannerArtifactOpeningDriveOosLaggingCollisionDrilld
     blockers,
     recommendations: recommendation === 'research_sweep_htf_priority_over_openingdrive_same_event'
       ? [
-        'Research a same-event priority rule where clean same-direction SweepMssFvgRetrace or HtfDisplacementMssContinuation outranks OpeningDrive when both are present.',
+        'Research a same-event priority rule where clean same-direction SweepMssFvgRetrace or IntradayMssMicroContinuation outranks OpeningDrive when both are present.',
         'Keep this research-only until validated out of sample; do not remove OpeningDrive or broaden model behavior from this drilldown alone.',
       ]
       : recommendation === 'keep_observing'

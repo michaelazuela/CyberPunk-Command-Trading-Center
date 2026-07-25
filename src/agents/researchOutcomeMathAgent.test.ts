@@ -193,7 +193,7 @@ const backfillSource = {
     warningFailureReason: 'fixture',
     dataQualityNotes: [],
     possibleModel1Overlap: false,
-    possibleTurtleSoupOverlap: false,
+    possibleraidReclaimOverlap: false,
     sourceSessionMetadata: { session: 'fixture', selectedConcept: 'all', dateRange: { from: '2026-05-28', to: '2026-05-28' } },
     researchOnlySignals: {},
     referencePrice: 100,

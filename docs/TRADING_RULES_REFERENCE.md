@@ -33,9 +33,9 @@ This model looks for a complete sequence:
 
 The preferred behavior is patience after displacement. The plan should wait for the FVG or imbalance retrace and a protected structure stop. It should not chase an extended displacement candle.
 
-### Turtle Soup Reversal
+### Raid Reclaim Reversal Reversal
 
-Official label: `Turtle Soup Reversal`.
+Official label: `Raid Reclaim Reversal Reversal`.
 
 This model looks for a failed breakout or failed breakdown after a raid:
 

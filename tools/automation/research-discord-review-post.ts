@@ -104,7 +104,7 @@ const RECOMMENDATION_TEXT: Record<ResearchHumanInspectionLabel, string> = {
   reject: 'Reject/Deprioritize',
   reject_or_deprioritize: 'Reject/Deprioritize',
   possible_model1_mapping_review: 'Queue for Model 1 Review',
-  possible_turtle_soup_mapping_review: 'Queue for Turtle Soup Review',
+  possible_RAID_RECLAIM_mapping_review: 'Queue for Raid Reclaim Reversal Review',
   human_rule_review_queue: 'Human Rule Review Queue',
   new_model_candidate_review: 'Candidate Label Review',
   approved_for_future_model_candidate_review: 'Approve for Candidate Review',

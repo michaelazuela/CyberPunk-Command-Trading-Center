@@ -75,31 +75,11 @@ function formatDecisionStatus(status?: TradeDecisionStatus, effectiveCanExecute 
 
 function formatSetupType(setupType?: SetupType | string): string {
   const labels: Record<string, string> = {
-    [SetupType.OrderBlock618]: 'Order Block / 61.8%',
-    [SetupType.LiquiditySweep]: 'Liquidity Sweep',
-    [SetupType.MomentumRunaway]: 'Momentum / Runaway',
-    [SetupType.FairValueGap]: 'Fair Value Gap',
-    [SetupType.FvgImbalancePullback]: 'FVG / Imbalance Pullback',
-    [SetupType.MarketStructureShift]: 'Market Structure Shift / ChoCH',
-    [SetupType.HtfDrawContinuationAfterRaid]: 'HTF Draw Continuation After Raid/Reclaim',
-    [SetupType.OpeningOrderBlock]: 'Opening Order Block',
-    [SetupType.EqualHighsLows]: 'Equal Highs / Equal Lows',
-    [SetupType.InitialBalanceExtension]: 'Initial Balance Extension',
-    [SetupType.PreviousDaySweep]: 'Previous Day High/Low Sweep',
-    [SetupType.CompressionBreakout]: 'Compression Breakout',
-    [SetupType.OpeningGapFill]: 'Opening Gap Fill',
-    [SetupType.BreakerBlock]: 'Breaker Block',
-    [SetupType.AlgoKillZone]: 'Algo Kill Zone',
-    [SetupType.MitigationBlock]: 'Mitigation Block',
-    [SetupType.MomentumPullbackBreatherReclaim]: 'Momentum Pullback / Breather Reclaim',
-    [SetupType.MorningFailedHighLiquidityRejection]: 'Morning Failed High / Liquidity Rejection',
-    [SetupType.MorningReclaimLong]: 'Morning Reclaim Long',
-    [SetupType.MorningOpeningRangeContinuation]: 'Opening Range Continuation',
-    [SetupType.LunchFailedHighReversal]: 'Lunch Failed High Reversal',
-    [SetupType.LunchFailedLowReversal]: 'Lunch Failed Low Reversal',
-    [SetupType.LunchCompressionBreakout]: 'Lunch Compression Breakout',
-    [SetupType.LunchFailedContinuation]: 'Lunch Failed Continuation',
-    [SetupType.LunchRangeReclaim]: 'Lunch Range Reclaim',
+    [SetupType.RaidReclaimReversal]: 'Raid Reclaim Reversal',
+    [SetupType.SweepMssFvgRetrace]: 'Sweep MSS FVG Retrace',
+    [SetupType.OpeningDriveFvgContinuation]: 'Opening Drive FVG Continuation',
+    [SetupType.AfterLunchDriveFvgContinuation]: 'After-Lunch Drive FVG Continuation',
+    [SetupType.IntradayMssMicroContinuation]: 'Intraday MSS Micro Continuation',
     [SetupType.NoSetup]: 'No Setup',
   };
   const raw = setupType || 'Unknown';
@@ -481,13 +461,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
   const candidates = plan.setupCandidates || [];
   if (candidates.length === 0) return null;
   const effectiveCanExecute = getEffectiveCanExecute(plan);
-  const hasLunchSubtype = candidates.some(candidate =>
-    candidate.setupType === SetupType.LunchFailedHighReversal ||
-    candidate.setupType === SetupType.LunchFailedLowReversal ||
-    candidate.setupType === SetupType.LunchCompressionBreakout ||
-    candidate.setupType === SetupType.LunchFailedContinuation ||
-    candidate.setupType === SetupType.LunchRangeReclaim
-  );
+  const hasLunchSubtype = candidates.some(candidate => candidate.setupType === SetupType.AfterLunchDriveFvgContinuation);
 
   const executableCount = candidates.filter(candidate => candidate.executionStatus === ExecutionStatus.Executable).length;
   const conditionalCount = candidates.filter(candidate => candidate.executionStatus === ExecutionStatus.Conditional).length;

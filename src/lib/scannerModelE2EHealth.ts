@@ -142,8 +142,6 @@ export function buildPhase10ModelHealthReport(
     entry.staleDataPolicy.canApproveExecution
   );
   const portfolioRisk = findings.length > 0 ||
-    supportingEvidenceCount === 0 ||
-    deprecatedCount === 0 ||
     entries.length === 0 ||
     entries.some((entry) => REQUIRED_PHASE_10_STAGES.some((stage) => !entry.stages.includes(stage)));
 

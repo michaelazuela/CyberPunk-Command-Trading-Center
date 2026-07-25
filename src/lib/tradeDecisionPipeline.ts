@@ -29,7 +29,6 @@ import { buildConditionalPlans } from './conditionalPlanBuilder';
 import { applyTargetObjectivesToCandidates } from './targetObjectiveEngine';
 import { applyLevelSanity } from './levelSanityEngine';
 import { buildHtfLiquidityDrawStateFromChartContext } from './htfLiquidityDrawEngine';
-import { buildFailedPlanReversalContextFromChartContext } from './failedPlanReversalEngine';
 
 export type PipelineSessionType = ChartContext['sessionType'];
 type Direction = 'LONG' | 'SHORT' | 'NO TRADE';
@@ -141,17 +140,6 @@ function setupFromText(...parts: Array<unknown>): SetupType {
   const text = parts.filter(Boolean).join(' ').toUpperCase();
   if (!text || text.includes('NO TRADE')) return SetupType.NoSetup;
   if (
-    text.includes('FAILED PLAN REVERSAL') ||
-    text.includes('FAILED_PLAN_REVERSAL') ||
-    text.includes('OPPOSITE-SIDE DECISION LEVEL') ||
-    text.includes('OPPOSITE SIDE DECISION LEVEL')
-  ) return SetupType.FailedPlanReversal;
-  if (
-    text.includes('HTF DISPLACEMENT + FVG CONTINUATION') ||
-    text.includes('HTF DISPLACEMENT FVG CONTINUATION') ||
-    text.includes('HTF_DISPLACEMENT_FVG_CONTINUATION')
-  ) return SetupType.HtfDisplacementFvgContinuation;
-  if (
     text.includes('AFTER-LUNCH DRIVE FVG CONTINUATION') ||
     text.includes('AFTER LUNCH DRIVE FVG CONTINUATION') ||
     text.includes('AFTER_LUNCH_DRIVE_FVG_CONTINUATION')
@@ -165,12 +153,7 @@ function setupFromText(...parts: Array<unknown>): SetupType {
     text.includes('INTRADAY_MSS_MICRO_CONTINUATION') ||
     text.includes('MICRO CONTINUATION RETEST')
   ) return SetupType.IntradayMssMicroContinuation;
-  if (
-    text.includes('HTF DISPLACEMENT + MSS CONTINUATION') ||
-    text.includes('HTF DISPLACEMENT MSS CONTINUATION') ||
-    text.includes('HTF_DISPLACEMENT_MSS_CONTINUATION')
-  ) return SetupType.HtfDisplacementMssContinuation;
-  if (text.includes('TURTLE SOUP') || text.includes('FAILED BREAKOUT REVERSAL') || text.includes('FAILED BREAKDOWN REVERSAL')) return SetupType.TurtleSoup;
+  if (text.includes('RAID RECLAIM REVERSAL') || text.includes('FAILED BREAKOUT REVERSAL') || text.includes('FAILED BREAKDOWN REVERSAL')) return SetupType.RaidReclaimReversal;
   const hasSweepOrReclaim = text.includes('LIQUIDITY') || text.includes('SWEEP') || text.includes('RECLAIM') || text.includes('FAILED BREAKOUT') || text.includes('FAILED BREAKDOWN');
   const hasStructureOrImbalance = text.includes('MSS') || text.includes('STRUCTURE SHIFT') || text.includes('FVG') || text.includes('FAIR VALUE') || text.includes('IMBALANCE') || text.includes('DISPLACEMENT');
   if (hasSweepOrReclaim || hasStructureOrImbalance) return SetupType.SweepMssFvgRetrace;
@@ -233,7 +216,6 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
     multiTimeframeContext: structured.multiTimeframeContext,
     timeframeMssEvidence: structured.timeframeMssEvidence,
     htfLiquidityDrawState: structured.htfLiquidityDrawState,
-    failedPlanReversal: structured.failedPlanReversal,
     targetObjectives: structured.targetObjectives,
     extractedLevels: structured.extractedLevels,
     candles: structured.candles,
@@ -270,18 +252,11 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
     marketContext: structured.marketContext || input.result?.reasoning || input.result?.current_rule_analysis?.summary || 'No market context extracted.',
     ocrText: structured.ocrText || input.result?.agentReports?.map((report) => report.findings).join('\n') || null,
   };
-  const withHtfDraw: ChartContext = {
+  return {
     ...chartContext,
     htfLiquidityDrawState:
       chartContext.htfLiquidityDrawState ||
       buildHtfLiquidityDrawStateFromChartContext(chartContext) ||
-      undefined,
-  };
-  return {
-    ...withHtfDraw,
-    failedPlanReversal:
-      withHtfDraw.failedPlanReversal ||
-      buildFailedPlanReversalContextFromChartContext(withHtfDraw) ||
       undefined,
   };
 }
@@ -454,14 +429,10 @@ function confidenceScore(confidence: Confidence): number {
 function setupScore(setupType: SetupType): number {
   switch (setupType) {
     case SetupType.SweepMssFvgRetrace: return 100;
-    case SetupType.HtfDrawContinuationAfterRaid: return 99;
-    case SetupType.HtfDisplacementMssContinuation: return 99;
-    case SetupType.HtfDisplacementFvgContinuation: return 97;
+    case SetupType.RaidReclaimReversal: return 99;
     case SetupType.OpeningDriveFvgContinuation: return 98;
     case SetupType.AfterLunchDriveFvgContinuation: return 98;
     case SetupType.IntradayMssMicroContinuation: return 97;
-    case SetupType.FailedPlanReversal: return 98;
-    case SetupType.TurtleSoup: return 98;
     default: return 0;
   }
 }
@@ -670,7 +641,7 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
   const hasDisplacement = candidateTextIncludes(candidate, 'displacement');
   const hasMss = candidateTextIncludes(candidate, 'market structure shift', 'mss');
   const hasFvg = candidateTextIncludes(candidate, 'fair value gap', 'fvg', 'imbalance');
-  const hasTurtle = candidate.setupType === SetupType.TurtleSoup || candidateTextIncludes(candidate, 'turtle soup');
+  const hasRaidReclaim = candidate.setupType === SetupType.RaidReclaimReversal || candidateTextIncludes(candidate, 'raid reclaim', 'failed breakout', 'failed breakdown');
   const htfAligned = candidateTextIncludes(candidate, 'higher-timeframe', 'big-picture', 'structure supports') ||
     chartContext.multiTimeframeContext?.alignment?.alignedDirection === candidate.direction;
   const hasLiquidityMap =
@@ -680,8 +651,8 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
   const modelScore = clampQualityScore(
     (hasSweep ? 6 : 0) +
     (hasReclaim ? 6 : 0) +
-    (hasTurtle || hasFvg ? 7 : 0) +
-    (hasDisplacement || hasMss || hasTurtle ? 6 : 0),
+    (hasRaidReclaim || hasFvg ? 7 : 0) +
+    (hasDisplacement || hasMss || hasRaidReclaim ? 6 : 0),
     25
   );
   const executionScore = clampQualityScore(
@@ -722,22 +693,14 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
       max: 25,
       status: qualityStatus(modelScore, 25),
       note:
-        candidate.setupType === SetupType.TurtleSoup
-          ? 'Turtle Soup reversal sequence quality.'
-          : candidate.setupType === SetupType.HtfDrawContinuationAfterRaid
-            ? 'HTF draw continuation after raid/reclaim sequence quality.'
-          : candidate.setupType === SetupType.HtfDisplacementMssContinuation
-              ? 'HTF displacement + 5M MSS continuation sequence quality.'
-          : candidate.setupType === SetupType.HtfDisplacementFvgContinuation
-              ? 'HTF displacement + FVG continuation sequence quality.'
+        candidate.setupType === SetupType.RaidReclaimReversal
+          ? 'Raid/reclaim reversal sequence quality.'
           : candidate.setupType === SetupType.OpeningDriveFvgContinuation
               ? 'Opening drive FVG continuation sequence quality.'
           : candidate.setupType === SetupType.AfterLunchDriveFvgContinuation
               ? 'After-lunch drive FVG continuation sequence quality.'
           : candidate.setupType === SetupType.IntradayMssMicroContinuation
               ? 'Intraday MSS micro-continuation sequence quality.'
-          : candidate.setupType === SetupType.FailedPlanReversal
-              ? 'Failed plan reversal sequence quality.'
             : 'Sweep -> MSS -> FVG retrace sequence quality.',
     },
     {
@@ -794,23 +757,8 @@ function qualitySort(a: SetupCandidate, b: SetupCandidate): number {
   return (b.decisionQualityScore || 0) - (a.decisionQualityScore || 0) || rankSetupCandidate(b) - rankSetupCandidate(a);
 }
 
-function structurallyCompleteFailedPlanReversal(candidate: SetupCandidate): boolean {
-  return (
-    candidate.setupType === SetupType.FailedPlanReversal &&
-    candidate.pathway === 'failed_plan_reversal' &&
-    candidate.executionStatus === ExecutionStatus.Executable &&
-    candidate.failedPlanReversal?.createsCandidate === true &&
-    candidate.failedPlanReversal.approvesExecution === false &&
-    candidate.failedPlanReversal.fiveMinuteTriggerStatus === 'confirmed' &&
-    candidate.failedPlanReversal.staleOrNoFreshEntry === false
-  );
-}
-
 function finalSelectionSort(a: SetupCandidate, b: SetupCandidate): number {
-  const failedPlanPriority =
-    (structurallyCompleteFailedPlanReversal(b) ? 1 : 0) -
-    (structurallyCompleteFailedPlanReversal(a) ? 1 : 0);
-  return failedPlanPriority || qualitySort(a, b);
+  return qualitySort(a, b);
 }
 
 function chooseDisplayCandidate(candidates: SetupCandidate[]): SetupCandidate | null {

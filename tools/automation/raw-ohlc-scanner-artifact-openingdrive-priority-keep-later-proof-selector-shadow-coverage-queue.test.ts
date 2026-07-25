@@ -31,7 +31,7 @@ const outcomeJoin = {
     {
       tradeDate: '2026-06-10',
       sessionType: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       selectorDecision: 'prefer_replacement',
       shadowRows: 8,

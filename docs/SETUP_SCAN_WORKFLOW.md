@@ -13,7 +13,7 @@ AI may extract visible chart context. The app must own setup scanning, execution
 The setup scanner creates active candidates only for the current primary models:
 
 - Sweep -> MSS -> FVG Retrace
-- Turtle Soup Reversal
+- Raid Reclaim Reversal Reversal
 
 Supporting evidence may contribute facts, reasons, missing evidence, tags, notes, and scoring signals:
 
@@ -144,7 +144,7 @@ Confidence: High
 Execution: Conditional
 Reason: Waiting for retrace into imbalance
 
-2. Turtle Soup Reversal
+2. Raid Reclaim Reversal Reversal
 Status: Possible
 Direction: Short
 Confidence: Medium

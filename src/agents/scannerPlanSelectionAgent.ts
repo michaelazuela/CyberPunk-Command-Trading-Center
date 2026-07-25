@@ -262,14 +262,14 @@ function earlyMoveReviewAppliesToCandidate(normalized: NormalizedTradePlan, cand
   return normalized.earlyMoveReview.direction === candidate.direction;
 }
 
-function turtleSoupWatchCandidateFromPool(
+function raidReclaimWatchCandidateFromPool(
   normalized: NormalizedTradePlan,
   currentPrice: number | null,
   latestCompletedBar?: LatestCompletedBarPriceRange,
 ): SetupCandidate | null {
   const candidate = (normalized.setupCandidates || [])
     .filter((item) =>
-      item.setupType === SetupType.TurtleSoup &&
+      item.setupType === SetupType.RaidReclaimReversal &&
       (item.direction === 'LONG' || item.direction === 'SHORT') &&
       item.blockReason === NoTradeReason.InvalidStopLocation &&
       isValidPrice(item.entry) &&
@@ -295,15 +295,15 @@ function turtleSoupWatchCandidateFromPool(
     executionStatus: ExecutionStatus.Conditional,
     blockReason: null,
     candidateState: 'QUALIFIED_CONDITIONAL',
-    requiredTrigger: `Turtle Soup ${candidate.direction.toLowerCase()} forming. Line in the sand is ${candidate.entry}. A completed 5M close ${directionText} confirms; stop ${stopText} ${candidate.stop}.${noChaseTarget}`,
+    requiredTrigger: `Raid Reclaim Reversal ${candidate.direction.toLowerCase()} forming. Line in the sand is ${candidate.entry}. A completed 5M close ${directionText} confirms; stop ${stopText} ${candidate.stop}.${noChaseTarget}`,
     nextAction: `Watch only. Wait for a completed 5M close ${directionText} ${candidate.entry}; do not chase if price has already delivered into T1.`,
     evidence: [
       ...(candidate.evidence || []),
-      `Turtle Soup watch: line in the sand ${candidate.entry}; completed 5M close ${directionText} required before promotion.`,
+      `Raid Reclaim Reversal watch: line in the sand ${candidate.entry}; completed 5M close ${directionText} required before promotion.`,
     ],
     missingEvidence: [
       ...(candidate.missingEvidence || []),
-      'Completed 5M confirmation close still required for Turtle Soup promotion.',
+      'Completed 5M confirmation close still required for Raid Reclaim Reversal promotion.',
     ],
   };
 }
@@ -317,18 +317,18 @@ function formatWatchPrice(value: number): string {
   return value.toFixed(2);
 }
 
-function turtleSoupLineReason(candidate: SetupCandidate): string {
+function raidReclaimLineReason(candidate: SetupCandidate): string {
   const evidence = candidate.evidence || [];
   return evidence.find((item) => /sweep|reclaim|swept|closed/i.test(item) && !/line in the sand/i.test(item)) ||
     evidence.find((item) => /sweep|reclaim|line in the sand|failed-low|failed-high/i.test(item)) ||
     candidate.scenarioLabel ||
-    'Turtle Soup sweep/reclaim decision line from structured 5M OHLC.';
+    'Raid Reclaim Reversal sweep/reclaim decision line from structured 5M OHLC.';
 }
 
-function withTurtleSoupLineInSand(candidate: SetupCandidate | null): SetupCandidate | null {
+function withraidReclaimLineInSand(candidate: SetupCandidate | null): SetupCandidate | null {
   if (
     !candidate ||
-    candidate.setupType !== SetupType.TurtleSoup ||
+    candidate.setupType !== SetupType.RaidReclaimReversal ||
     (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') ||
     !isValidPrice(candidate.entry)
   ) {
@@ -337,7 +337,7 @@ function withTurtleSoupLineInSand(candidate: SetupCandidate | null): SetupCandid
 
   const lineText = formatWatchPrice(candidate.entry);
   const side = candidate.direction === 'LONG' ? 'above' : 'below';
-  const reason = turtleSoupLineReason(candidate);
+  const reason = raidReclaimLineReason(candidate);
   return {
     ...candidate,
     activeRuleset: {
@@ -350,12 +350,12 @@ function withTurtleSoupLineInSand(candidate: SetupCandidate | null): SetupCandid
         affectsExecution: false,
         direction: candidate.direction,
         lineInSand: candidate.entry,
-        lineReason: `${lineText} matters because it is the Turtle Soup sweep/reclaim decision line. ${reason}`,
+        lineReason: `${lineText} matters because it is the Raid Reclaim Reversal sweep/reclaim decision line. ${reason}`,
         requiredClose: `Completed 5M hold/retest/reclaim ${side} ${lineText} required. No chase after extension.`,
         obstacleType: null,
         obstacleSource: null,
         evidence: [
-          `Turtle Soup line in the sand: ${lineText}.`,
+          `Raid Reclaim Reversal line in the sand: ${lineText}.`,
           reason,
         ],
         blockers: [
@@ -506,21 +506,21 @@ function earlyMoveContextOnlyState(normalized: NormalizedTradePlan): ScannerPlan
   };
 }
 
-function turtleSoupWatchState(candidate: SetupCandidate, earlyMoveIgnored = false): ScannerPlanSelection {
+function raidReclaimWatchState(candidate: SetupCandidate, earlyMoveIgnored = false): ScannerPlanSelection {
   return {
     candidate,
     stale: {
       state: 'Conditional',
       stale: false,
-      reason: candidate.requiredTrigger || 'Turtle Soup watch is forming; completed 5M confirmation is still required.',
+      reason: candidate.requiredTrigger || 'Raid Reclaim Reversal watch is forming; completed 5M confirmation is still required.',
     },
     state: 'Conditional',
     stateForAlert: 'Conditional',
     reviewStatus: null,
     auditWarnings: [
       earlyMoveIgnored
-        ? 'Opposite-direction early-move review ignored for Turtle Soup watch. Watch remains decision-support only and canExecute remains false.'
-        : 'Turtle Soup watch surfaced before full promotion. Completed 5M confirmation is required and canExecute remains false.',
+        ? 'Opposite-direction early-move review ignored for Raid Reclaim Reversal watch. Watch remains decision-support only and canExecute remains false.'
+        : 'Raid Reclaim Reversal watch surfaced before full promotion. Completed 5M confirmation is required and canExecute remains false.',
     ],
   };
 }
@@ -636,7 +636,7 @@ function selectScannerPlanCore(args: {
   }
 
   if (args.normalized.earlyMoveReview?.status === 'already_triggered_no_fresh_entry') {
-    const oppositeProofCandidate = withTurtleSoupLineInSand(
+    const oppositeProofCandidate = withraidReclaimLineInSand(
       freshOppositeEarlyMoveCandidateFromFallbackPool(args.normalized, args.currentPrice, args.latestCompletedBar, args.guards),
     );
     if (oppositeProofCandidate && earlyMoveReviewOppositeDirectionCandidate(args.normalized, oppositeProofCandidate)) {
@@ -665,15 +665,15 @@ function selectScannerPlanCore(args: {
     if (humanReviewCandidate && earlyMoveReviewAppliesToCandidate(args.normalized, humanReviewCandidate)) {
       return humanReviewNoChaseState(args.normalized, humanReviewCandidate);
     }
-    const turtleSoupWatchCandidate = turtleSoupWatchCandidateFromPool(args.normalized, args.currentPrice, args.latestCompletedBar);
-    if (turtleSoupWatchCandidate) {
-      return turtleSoupWatchState(turtleSoupWatchCandidate, !earlyMoveReviewAppliesToCandidate(args.normalized, turtleSoupWatchCandidate));
+    const raidReclaimWatchCandidate = raidReclaimWatchCandidateFromPool(args.normalized, args.currentPrice, args.latestCompletedBar);
+    if (raidReclaimWatchCandidate) {
+      return raidReclaimWatchState(raidReclaimWatchCandidate, !earlyMoveReviewAppliesToCandidate(args.normalized, raidReclaimWatchCandidate));
     }
     const intradayMssWatchCandidate = intradayMssRetestPendingWatchCandidateFromPool(args.normalized, args.currentPrice, args.guards);
     if (intradayMssWatchCandidate) {
       return intradayMssWatchState(intradayMssWatchCandidate, !earlyMoveReviewAppliesToCandidate(args.normalized, intradayMssWatchCandidate));
     }
-    const proofCandidate = withTurtleSoupLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.latestCompletedBar, args.guards));
+    const proofCandidate = withraidReclaimLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.latestCompletedBar, args.guards));
     if (!proofCandidate) return earlyMoveContextOnlyState(args.normalized);
     if (!earlyMoveReviewAppliesToCandidate(args.normalized, proofCandidate)) {
       const stale = applyStaleChaseGuard({
@@ -704,10 +704,10 @@ function selectScannerPlanCore(args: {
   }
 
   const intradayMssWatchCandidate = intradayMssRetestPendingWatchCandidateFromPool(args.normalized, args.currentPrice, args.guards);
-  const fallback = withTurtleSoupLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.latestCompletedBar, args.guards));
+  const fallback = withraidReclaimLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.latestCompletedBar, args.guards));
   if (!fallback) {
-    const turtleSoupWatchCandidate = turtleSoupWatchCandidateFromPool(args.normalized, args.currentPrice, args.latestCompletedBar);
-    if (turtleSoupWatchCandidate) return turtleSoupWatchState(turtleSoupWatchCandidate);
+    const raidReclaimWatchCandidate = raidReclaimWatchCandidateFromPool(args.normalized, args.currentPrice, args.latestCompletedBar);
+    if (raidReclaimWatchCandidate) return raidReclaimWatchState(raidReclaimWatchCandidate);
     if (intradayMssWatchCandidate) return intradayMssWatchState(intradayMssWatchCandidate);
   }
   const stale = applyStaleChaseGuard({

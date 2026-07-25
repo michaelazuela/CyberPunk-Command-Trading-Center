@@ -114,7 +114,7 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
       ticketId: 'delayed-win-ignored',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'HtfDisplacementFvgContinuation',
+      setupType: 'SweepMssFvgRetrace',
       direction: 'LONG',
       proofTime: '2026-06-10T13:00:00',
       outcomeStatus: 'resolved',

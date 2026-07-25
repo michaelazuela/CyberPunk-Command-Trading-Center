@@ -1897,7 +1897,7 @@
       "executableUnderCurrentRules": false
     },
     {
-      "model": "Turtle Soup Reversal",
+      "model": "Raid Reclaim Reversal Reversal",
       "passedGates": [],
       "failedGates": [],
       "missingRequiredConditions": [
@@ -2364,9 +2364,9 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -2379,8 +2379,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -2474,8 +2474,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -2501,8 +2501,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7409.25 because 7409.25 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: RTH Open (rth_morning rth_open)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
-                "requiredTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
+                "nextTrigger": "Countertrend bullish Raid Reclaim Reversal requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
+                "requiredTrigger": "Countertrend bullish Raid Reclaim Reversal requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -2537,9 +2537,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -2565,8 +2565,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7409.25 because 7409.25 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: RTH Open (rth_morning rth_open)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -2692,9 +2692,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -2736,9 +2736,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -2779,9 +2779,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -3037,9 +3037,9 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -3052,8 +3052,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -3147,8 +3147,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -3174,8 +3174,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7409.25 because 7409.25 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: RTH Open (rth_morning rth_open)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
-                "requiredTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
+                "nextTrigger": "Countertrend bullish Raid Reclaim Reversal requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
+                "requiredTrigger": "Countertrend bullish Raid Reclaim Reversal requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -3210,9 +3210,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -3238,8 +3238,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7409.25 because 7409.25 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: RTH Open (rth_morning rth_open)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7409.25 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -3365,9 +3365,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -3409,9 +3409,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -3452,9 +3452,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -3982,9 +3982,9 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -3997,8 +3997,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -4092,8 +4092,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -4119,8 +4119,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Countertrend bullish Raid Reclaim Reversal requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Countertrend bullish Raid Reclaim Reversal requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -4155,9 +4155,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -4183,8 +4183,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -4310,9 +4310,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -4354,9 +4354,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -4397,9 +4397,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -4655,9 +4655,9 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -4670,8 +4670,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -4765,8 +4765,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -4792,8 +4792,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Countertrend bullish Raid Reclaim Reversal requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Countertrend bullish Raid Reclaim Reversal requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -4828,9 +4828,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -4856,8 +4856,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -4983,9 +4983,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -5027,9 +5027,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -5070,9 +5070,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -5594,9 +5594,9 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -5609,8 +5609,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -5702,8 +5702,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -5727,8 +5727,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -5763,9 +5763,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -5791,8 +5791,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -5918,9 +5918,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -5962,9 +5962,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -6005,9 +6005,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -6267,9 +6267,9 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -6282,8 +6282,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -6375,8 +6375,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -6400,8 +6400,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -6436,9 +6436,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -6464,8 +6464,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -6591,9 +6591,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -6635,9 +6635,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -6678,9 +6678,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -7255,9 +7255,9 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -7270,8 +7270,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -7365,8 +7365,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -7390,8 +7390,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -7427,9 +7427,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -7455,8 +7455,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -7585,9 +7585,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -7630,9 +7630,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -7674,9 +7674,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -7941,9 +7941,9 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -7956,8 +7956,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -8051,8 +8051,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -8076,8 +8076,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -8113,9 +8113,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -8141,8 +8141,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -8271,9 +8271,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -8316,9 +8316,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -8360,9 +8360,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -8941,9 +8941,9 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -8956,8 +8956,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -9052,8 +9052,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -9077,8 +9077,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -9114,9 +9114,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -9142,8 +9142,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -9272,9 +9272,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -9317,9 +9317,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -9361,9 +9361,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -9623,9 +9623,9 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -9638,8 +9638,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -9734,8 +9734,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -9759,8 +9759,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -9796,9 +9796,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -9824,8 +9824,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -9954,9 +9954,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -9999,9 +9999,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -10043,9 +10043,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -10325,9 +10325,9 @@
             "filteredOutReason": null
           },
           "bestShortPlan": {
-            "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-            "setupType": "TurtleSoup",
-            "scenarioLabel": "Bearish Turtle Soup Reversal",
+            "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+            "setupType": "RaidReclaimReversal",
+            "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
             "direction": "SHORT",
             "detectedStatus": "Conditional",
             "executionStatus": "Executable",
@@ -10340,8 +10340,8 @@
             "blockReason": null,
             "missingEvidence": [],
             "missingLevels": [],
-            "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-            "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+            "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+            "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
             "entry": 7401.5,
             "stop": 7425,
             "target1": 7366.25,
@@ -10516,9 +10516,9 @@
             "shortBias": {
               "direction": "SHORT",
               "state": "secondary",
-              "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-              "setupType": "TurtleSoup",
-              "scenarioLabel": "Bearish Turtle Soup Reversal",
+              "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+              "setupType": "RaidReclaimReversal",
+              "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
               "rankScore": 259,
               "decisionQualityScore": 92,
               "modelConfidenceScore": null,
@@ -10546,9 +10546,9 @@
                   "changesCanExecute": false
                 }
               },
-              "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+              "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
               "invalidation": "Invalid if price trades above the sweep wick structure stop near 7425.",
-              "reason": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+              "reason": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
               "blockers": []
             },
             "htfConflict": true,
@@ -10723,9 +10723,9 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -10738,8 +10738,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -10775,8 +10775,8 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -10800,8 +10800,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -10837,9 +10837,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -10865,8 +10865,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -10995,9 +10995,9 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -11040,9 +11040,9 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -11084,9 +11084,9 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -11247,9 +11247,9 @@
               "filteredOutReason": null
             },
             "bestShortPlan": {
-              "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-              "setupType": "TurtleSoup",
-              "scenarioLabel": "Bearish Turtle Soup Reversal",
+              "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+              "setupType": "RaidReclaimReversal",
+              "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
               "direction": "SHORT",
               "detectedStatus": "Conditional",
               "executionStatus": "Executable",
@@ -11262,8 +11262,8 @@
               "blockReason": null,
               "missingEvidence": [],
               "missingLevels": [],
-              "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-              "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+              "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+              "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
               "entry": 7401.5,
               "stop": 7425,
               "target1": 7366.25,
@@ -11360,9 +11360,9 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -11375,8 +11375,8 @@
                 "blockReason": null,
                 "missingEvidence": [],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7401.5,
                 "stop": 7425,
                 "target1": 7366.25,
@@ -11412,8 +11412,8 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
-                "setupType": "TurtleSoup",
+                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
+                "setupType": "RaidReclaimReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -11437,8 +11437,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": 7396.75,
                 "target1": null,
@@ -11474,9 +11474,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -11502,8 +11502,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -11632,9 +11632,9 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -11677,9 +11677,9 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -11721,9 +11721,9 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -11838,7 +11838,7 @@
         "instrument": "MES",
         "session": "morning",
         "alertType": "trade",
-        "candidateSetupType": "TurtleSoup",
+        "candidateSetupType": "RaidReclaimReversal",
         "direction": "SHORT",
         "scannerState": "Approved",
         "selectedCandidateDirection": "SHORT",
@@ -12003,9 +12003,9 @@
             "filteredOutReason": "InvalidStopLocation"
           },
           "bestShortPlan": {
-            "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-            "setupType": "TurtleSoup",
-            "scenarioLabel": "Bearish Turtle Soup Reversal",
+            "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+            "setupType": "RaidReclaimReversal",
+            "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
             "direction": "SHORT",
             "detectedStatus": "Conditional",
             "executionStatus": "Executable",
@@ -12028,8 +12028,8 @@
               "No chase: wait for a completed 5M or 15M close below 7404.00 because 7404.00 matters because it is the nearest structured HTF/session support or downside objective in the trade path: RTH Open (rth_morning rth_open)."
             ],
             "missingLevels": [],
-            "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
-            "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+            "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+            "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
             "entry": 7409.75,
             "stop": 7422,
             "target1": 7383,
@@ -12065,9 +12065,9 @@
             "filteredOutReason": null
           },
           "selectedCandidate": {
-            "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-            "setupType": "TurtleSoup",
-            "scenarioLabel": "Bearish Turtle Soup Reversal",
+            "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+            "setupType": "RaidReclaimReversal",
+            "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
             "direction": "SHORT",
             "detectedStatus": "Conditional",
             "executionStatus": "Executable",
@@ -12090,8 +12090,8 @@
               "No chase: wait for a completed 5M or 15M close below 7404.00 because 7404.00 matters because it is the nearest structured HTF/session support or downside objective in the trade path: RTH Open (rth_morning rth_open)."
             ],
             "missingLevels": [],
-            "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
-            "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+            "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+            "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
             "entry": 7409.75,
             "stop": 7422,
             "target1": 7383,
@@ -12153,7 +12153,7 @@
                 "changesEntryStopTargets": false
               }
             },
-            "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+            "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
             "invalidation": "Invalid if price trades above the sweep wick structure stop near 7422.",
             "noChase": "No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.",
             "longBias": {
@@ -12202,9 +12202,9 @@
             "shortBias": {
               "direction": "SHORT",
               "state": "countertrend_review",
-              "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-              "setupType": "TurtleSoup",
-              "scenarioLabel": "Bearish Turtle Soup Reversal",
+              "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+              "setupType": "RaidReclaimReversal",
+              "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
               "rankScore": 199,
               "decisionQualityScore": 90,
               "modelConfidenceScore": null,
@@ -12236,7 +12236,7 @@
                   "changesCanExecute": false
                 }
               },
-              "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+              "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
               "invalidation": "Invalid if price trades above the sweep wick structure stop near 7422.",
               "reason": "Structured evidence exists, but opposing HTF/MSS context makes this a review-only countertrend idea until fresh completed 5M proof confirms.",
               "blockers": [
@@ -12264,7 +12264,7 @@
             ]
           },
           "lineInSand": 7404,
-          "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+          "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
           "invalidation": "Invalid if price trades above the sweep wick structure stop near 7422.",
           "visibilityMode": "POST_REVIEW",
           "discordAction": "post_review",
@@ -12276,7 +12276,7 @@
             "sourceOfTruth": "scanner_desk_state_promotion_path",
             "currentStage": "human_review_ready",
             "nextStage": "posted_plan",
-            "promotionTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+            "promotionTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
             "missingProof": [
               "Valid entry after reclaim or retrace",
               "App T1/T2 from actual entry/stop risk",
@@ -12344,7 +12344,7 @@
             "visibilityMode": "POST_REVIEW",
             "discordAction": "post_review",
             "suppressionReason": null,
-            "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+            "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
             "dataQualityBlocker": null,
             "holdWithReason": "Candidate is structurally visible, but normalized canExecute is false.",
             "noTradeWithReason": null,
@@ -12370,9 +12370,9 @@
             "candidateCount": 9,
             "createdCandidates": [
               {
-                "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-                "setupType": "TurtleSoup",
-                "scenarioLabel": "Bearish Turtle Soup Reversal",
+                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Executable",
@@ -12395,8 +12395,8 @@
                   "No chase: wait for a completed 5M or 15M close below 7404.00 because 7404.00 matters because it is the nearest structured HTF/session support or downside objective in the trade path: RTH Open (rth_morning rth_open)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
-                "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+                "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
                 "entry": 7409.75,
                 "stop": 7422,
                 "target1": 7383,
@@ -12496,9 +12496,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -12521,8 +12521,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -12705,9 +12705,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -12750,9 +12750,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -12794,9 +12794,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -12947,9 +12947,9 @@
               "filteredOutReason": "InvalidStopLocation"
             },
             "bestShortPlan": {
-              "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-              "setupType": "TurtleSoup",
-              "scenarioLabel": "Bearish Turtle Soup Reversal",
+              "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+              "setupType": "RaidReclaimReversal",
+              "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
               "direction": "SHORT",
               "detectedStatus": "Conditional",
               "executionStatus": "Executable",
@@ -12972,8 +12972,8 @@
                 "No chase: wait for a completed 5M or 15M close below 7404.00 because 7404.00 matters because it is the nearest structured HTF/session support or downside objective in the trade path: RTH Open (rth_morning rth_open)."
               ],
               "missingLevels": [],
-              "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
-              "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+              "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+              "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
               "entry": 7409.75,
               "stop": 7422,
               "target1": 7383,
@@ -13008,11 +13008,11 @@
               "selected": true,
               "filteredOutReason": null
             },
-            "selectedCandidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
+            "selectedCandidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
             "selectedCandidate": {
-              "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Executable",
-              "setupType": "TurtleSoup",
-              "scenarioLabel": "Bearish Turtle Soup Reversal",
+              "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+              "setupType": "RaidReclaimReversal",
+              "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
               "direction": "SHORT",
               "detectedStatus": "Conditional",
               "executionStatus": "Executable",
@@ -13035,8 +13035,8 @@
                 "No chase: wait for a completed 5M or 15M close below 7404.00 because 7404.00 matters because it is the nearest structured HTF/session support or downside objective in the trade path: RTH Open (rth_morning rth_open)."
               ],
               "missingLevels": [],
-              "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
-              "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+              "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+              "requiredTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
               "entry": 7409.75,
               "stop": 7422,
               "target1": 7383,
@@ -13137,9 +13137,9 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "FailedPlanReversal|LONG|Failed Plan Reversal|FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED",
-                "setupType": "FailedPlanReversal",
-                "scenarioLabel": "Failed Plan Reversal",
+                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
                 "executionStatus": "Conditional",
@@ -13162,8 +13162,8 @@
                   "No chase: wait for a completed 5M or 15M close above 7410.00 because 7410.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7410 (app round_number)."
                 ],
                 "missingLevels": [],
-                "nextTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
-                "requiredTrigger": "Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "nextTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
+                "requiredTrigger": "Raid Reclaim Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest. Completed 5M or 15M close above 7410.00 required before long continuation is active.",
                 "entry": null,
                 "stop": null,
                 "target1": null,
@@ -13346,9 +13346,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementMssContinuation|NO TRADE|HTF Displacement + 5M MSS Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementMssContinuation",
-                "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+                "candidateKey": "IntradayMssMicroContinuation|NO TRADE|HTF Context + 5M MSS Continuation|NO_QUALIFIED_STATE",
+                "setupType": "IntradayMssMicroContinuation",
+                "scenarioLabel": "HTF Context + 5M MSS Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -13391,9 +13391,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDisplacementFvgContinuation|NO TRADE|HTF Displacement + FVG Continuation|NO_QUALIFIED_STATE",
-                "setupType": "HtfDisplacementFvgContinuation",
-                "scenarioLabel": "HTF Displacement + FVG Continuation",
+                "candidateKey": "SweepMssFvgRetrace|NO TRADE|HTF Context + FVG Continuation|NO_QUALIFIED_STATE",
+                "setupType": "SweepMssFvgRetrace",
+                "scenarioLabel": "HTF Context + FVG Continuation",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -13435,9 +13435,9 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "HtfDrawContinuationAfterRaid|NO TRADE|HTF Draw Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "HtfDrawContinuationAfterRaid",
-                "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "RaidReclaimReversal",
+                "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
                 "executionStatus": "NotDetected",
@@ -13540,7 +13540,7 @@
               "External liquidity target",
               "App-owned entry, stop, target, risk, and invalidation gates"
             ],
-            "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
+            "nextTrigger": "Bearish Raid Reclaim Reversal: buy-side sweep above 7419, reclaim back below the swept high, then confirm downward rejection or expansion.",
             "notes": [
               "Lifecycle trace reports the existing scanner cycle only; it does not rerank, suppress, or approve candidates.",
               "Discord post/suppress reason is copied from the existing alert decision so formatter paths can explain quiet outcomes."

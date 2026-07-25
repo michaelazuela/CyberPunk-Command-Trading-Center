@@ -66,7 +66,7 @@ fs.writeFileSync(tapePath, JSON.stringify({
       scannerState: 'Approved',
       setupCandidateStatus: {
         selected: {
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           direction: 'LONG',
           executionStatus: 'Executable',
           entry: 7549,
@@ -204,7 +204,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-19-MES-morni
       scannerState: 'Approved',
       setupCandidateStatus: {
         selected: {
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           direction: 'LONG',
           executionStatus: 'Executable',
           entry: 7483.75,
@@ -299,7 +299,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-17-MES-morni
       scannerState: 'Watching',
       setupCandidateStatus: {
         selected: {
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           direction: 'SHORT',
           executionStatus: 'Watching',
         },
@@ -550,7 +550,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-20-MES-morni
       scannerState: 'Missed',
       setupCandidateStatus: {
         selected: {
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           direction: 'SHORT',
           executionStatus: 'Conditional',
           entry: 7477.75,
@@ -651,7 +651,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-22-MES-morni
       scannerState: 'TriggerPending',
       setupCandidateStatus: {
         selected: {
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           direction: 'SHORT',
           executionStatus: 'Conditional',
           entry: 7472.5,
@@ -705,7 +705,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-22-MES-morni
           },
         },
       },
-      staleReason: 'Bearish Turtle Soup: buy-side sweep above 7475.5, reclaim back below the swept high, then confirm downward rejection or expansion.',
+      staleReason: 'Bearish Raid Reclaim Reversal: buy-side sweep above 7475.5, reclaim back below the swept high, then confirm downward rejection or expansion.',
       discord: {
         shouldSend: false,
         sendOrSuppressReason: 'Duplicate alert suppressed for same setup/reference/direction/state.',

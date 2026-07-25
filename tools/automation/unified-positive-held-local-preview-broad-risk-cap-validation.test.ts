@@ -70,7 +70,7 @@ const intakeTriageReport = {
       tradeDate: '2026-06-19',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       firstSeenTime: '2026-06-19T12:00:00',
       entry: 300,
@@ -86,7 +86,7 @@ const intakeTriageReport = {
       tradeDate: '2026-06-20',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       firstSeenTime: '2026-06-20T12:00:00',
       entry: 400,
@@ -127,7 +127,7 @@ assert.equal(intraday?.keptLosses, 0);
 assert.equal(intraday?.rejectedLosses, 1);
 assert.equal(intraday?.falseRejectWinnerRows, 0);
 
-const turtle = report.capRows.find((row) => row.setupType === 'TurtleSoup');
+const turtle = report.capRows.find((row) => row.setupType === 'raidReclaim');
 assert.equal(turtle?.decision, 'rejected_for_now');
 assert.equal(turtle?.falseRejectWinnerRows, 1);
 assert.match(report.markdown, /Broad Risk-Cap Validation/);

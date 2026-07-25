@@ -149,7 +149,7 @@ function mergeOhlcOutcomeReports(reports: UnifiedPositiveHeldLocalPreviewOhlcOut
       unresolvedRows: rows.filter((row) => row.outcomeStatus === 'unresolved').length,
       blockedRows: rows.filter((row) => row.outcomeStatus === 'blocked').length,
       grossResolvedOneMesPl: sum(rows.map((row) => row.resolvedOneMesPl)) ?? 0,
-      turtleSoupResolvedOneMesPl: sum(rows.filter((row) => row.setupType === 'TurtleSoup').map((row) => row.resolvedOneMesPl)) ?? 0,
+      raidReclaimResolvedOneMesPl: sum(rows.filter((row) => row.setupType === 'raidReclaim').map((row) => row.resolvedOneMesPl)) ?? 0,
       sweepMssFvgRetraceResolvedOneMesPl: sum(rows.filter((row) => row.setupType === 'SweepMssFvgRetrace').map((row) => row.resolvedOneMesPl)) ?? 0,
       livePromotionAllowedRows: 0,
     },

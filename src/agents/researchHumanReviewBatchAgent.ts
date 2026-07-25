@@ -28,7 +28,7 @@ export interface HumanReviewTemplateRow {
   agentReason: string;
   agentConcerns: string;
   model1Overlap: string;
-  turtleSoupOverlap: string;
+  raidReclaimOverlap: string;
   sampleSourceReportPath: string;
   humanInspectionLabel: string;
   humanInspectionLabelTaxonomy: string;
@@ -76,7 +76,7 @@ export const HUMAN_REVIEW_TEMPLATE_COLUMNS = [
   'agentReason',
   'agentConcerns',
   'model1Overlap',
-  'turtleSoupOverlap',
+  'raidReclaimOverlap',
   'sampleSourceReportPath',
   'humanInspectionLabel',
   'humanInspectionLabelTaxonomy',
@@ -172,7 +172,7 @@ function rowFromSample(sample: ResearchReviewSample): HumanReviewTemplateRow {
     agentReason: sample.agentReason,
     agentConcerns: sample.agentConcerns.join(' | '),
     model1Overlap: String(sample.model1Overlap),
-    turtleSoupOverlap: String(sample.turtleSoupOverlap),
+    raidReclaimOverlap: String(sample.raidReclaimOverlap),
     sampleSourceReportPath: sample.sampleSourceReportPath,
     humanInspectionLabel: '',
     humanInspectionLabelTaxonomy: SUPPORTED_HUMAN_REVIEW_LABELS

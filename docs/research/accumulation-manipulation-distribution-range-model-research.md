@@ -22,7 +22,7 @@
 
 * Plain-English meaning: price runs one side of the open or nearby liquidity before reversing or expanding.
 * Transcript evidence / timestamp: uploaded transcript discusses manipulation after the opening reference; exact timestamp was not provided in the prompt.
-* Why it may matter for 6K: it may overlap Turtle Soup only when a true sweep/raid plus reclaim is present.
+* Why it may matter for 6K: it may overlap Raid Reclaim Reversal only when a true sweep/raid plus reclaim is present.
 * Current 6K coverage: partially covered by liquidity sweep/reclaim logic.
 * Watchlist status: research-only context unless current approved gates pass.
 
@@ -62,7 +62,7 @@
 
 * Plain-English meaning: a bullish research case watches price accumulate near the open, run below the open or old low, then expand higher.
 * Transcript evidence / timestamp: uploaded transcript describes bullish accumulation/manipulation/distribution behavior; exact timestamp was not provided in the prompt.
-* Why it may matter for 6K: route through Turtle Soup if the sell-side run is a true sweep plus reclaim.
+* Why it may matter for 6K: route through Raid Reclaim Reversal if the sell-side run is a true sweep plus reclaim.
 * Current 6K coverage: partially covered.
 * Watchlist status: research-only context unless approved gates pass.
 
@@ -70,7 +70,7 @@
 
 * Plain-English meaning: a bearish research case watches price accumulate near the open, run above the open or old high, then expand lower.
 * Transcript evidence / timestamp: uploaded transcript describes bearish accumulation/manipulation/distribution behavior; exact timestamp was not provided in the prompt.
-* Why it may matter for 6K: route through Turtle Soup if the buy-side run is a true sweep plus reclaim.
+* Why it may matter for 6K: route through Raid Reclaim Reversal if the buy-side run is a true sweep plus reclaim.
 * Current 6K coverage: partially covered.
 * Watchlist status: research-only context unless approved gates pass.
 
@@ -102,7 +102,7 @@
 
 * Plain-English meaning: a bullish case may first run below an old low before reversing higher.
 * Transcript evidence / timestamp: uploaded transcript discusses running below old lows; exact timestamp was not provided in the prompt.
-* Why it may matter for 6K: if it creates true sweep + reclaim, evaluate through Turtle Soup.
+* Why it may matter for 6K: if it creates true sweep + reclaim, evaluate through Raid Reclaim Reversal.
 * Current 6K coverage: partially covered.
 * Watchlist status: research-only context unless approved gates pass.
 
@@ -110,7 +110,7 @@
 
 * Plain-English meaning: a bearish case may first run above an old high before reversing lower.
 * Transcript evidence / timestamp: uploaded transcript discusses running above old highs; exact timestamp was not provided in the prompt.
-* Why it may matter for 6K: if it creates true sweep + reclaim, evaluate through Turtle Soup.
+* Why it may matter for 6K: if it creates true sweep + reclaim, evaluate through Raid Reclaim Reversal.
 * Current 6K coverage: partially covered.
 * Watchlist status: research-only context unless approved gates pass.
 
@@ -166,7 +166,7 @@
 
 * Plain-English meaning: the range lens is not enough to define a trade.
 * Transcript evidence / timestamp: task guardrails require this boundary; exact timestamp was not provided in the prompt.
-* Why it may matter for 6K: protects Model 1, Turtle Soup, scanner selection, risk, and target authority.
+* Why it may matter for 6K: protects Model 1, Raid Reclaim Reversal, scanner selection, risk, and target authority.
 * Current 6K coverage: already covered by authority boundaries.
 * Watchlist status: research-only context.
 
@@ -174,9 +174,9 @@
 
 This research note studies open-based range behavior and liquidity engineering. This is not an approved 6K executable model.
 
-In 6K, AMD is treated as research context only. If the setup satisfies current Model 1 gates, classify it through existing Model 1. If the manipulation leg includes true sweep/raid plus reclaim, classify it through existing Turtle Soup.
+In 6K, AMD is treated as research context only. If the setup satisfies current Model 1 gates, classify it through existing Model 1. If the manipulation leg includes true sweep/raid plus reclaim, classify it through existing Raid Reclaim Reversal.
 
-If the setup only has accumulation + manipulation + distribution behavior without approved gates, keep it advisory-only research. Do not create a separate executable AMD model. Do not duplicate Model 1 or Turtle Soup under a new label.
+If the setup only has accumulation + manipulation + distribution behavior without approved gates, keep it advisory-only research. Do not create a separate executable AMD model. Do not duplicate Model 1 or Raid Reclaim Reversal under a new label.
 
 AMD context may support research and review, but it cannot approve trades.
 
@@ -199,7 +199,7 @@ Status:
 * No outcome buttons.
 * No auto-alerts unless separately approved later.
 * If Model 1 qualifies, evaluate through current Model 1.
-* If sweep + reclaim qualifies, evaluate through current Turtle Soup.
+* If sweep + reclaim qualifies, evaluate through current Raid Reclaim Reversal.
 
 ## 5. Candidate Conditions
 
@@ -236,7 +236,7 @@ Caution / invalidation conditions:
 * No clear opening reference.
 * No clear accumulation.
 * No liquidity run/manipulation.
-* No true sweep + reclaim if attempting to map to Turtle Soup.
+* No true sweep + reclaim if attempting to map to Raid Reclaim Reversal.
 * No Model 1 gates if attempting to map to Model 1.
 * Larger-timeframe context conflicts.
 * Price already reached the likely distribution target.
@@ -245,7 +245,7 @@ Caution / invalidation conditions:
 ## 6. Comparison to Existing 6K Rules
 
 * Current Model 1: partially covered. AMD may overlap with Model 1 only when Model 1 gates independently pass.
-* Current Turtle Soup: partially covered. AMD may overlap with Turtle Soup when the manipulation leg creates a true sweep/raid plus reclaim.
+* Current Raid Reclaim Reversal: partially covered. AMD may overlap with Raid Reclaim Reversal when the manipulation leg creates a true sweep/raid plus reclaim.
 * Current Morning Continuation Watchlist: partially covered as advisory-only awareness. It does not create execution authority.
 * Current Bridge Diagnostic Replay categories: partially covered. A future diagnostic can classify AMD-only conditions as advisory research when approved gates do not pass.
 * Current scanner health / selection safety layers: already covered as safety layers only. They do not approve this research idea.
@@ -263,7 +263,7 @@ Future smoke-test plan only. Do not implement as part of this note.
 * Identify accumulation around the opening reference.
 * Identify manipulation through nearby old high/low or equal high/low.
 * Determine whether the manipulation produced a true sweep/raid plus reclaim.
-* If sweep + reclaim exists, classify through Turtle Soup gates.
+* If sweep + reclaim exists, classify through Raid Reclaim Reversal gates.
 * Determine whether Model 1 gates independently passed.
 * If approved gates do not pass, classify as advisory-only AMD research.
 * Track the later distribution direction as after-action context only.
@@ -273,15 +273,15 @@ Future smoke-test plan only. Do not implement as part of this note.
 
 Draft only, not implementation:
 
-“Accumulation-Manipulation-Distribution range behavior forming. Watch only - price may be engineering liquidity around the opening reference. Evaluate only through current 6K Model 1 or Turtle Soup rules. Do not chase.”
+“Accumulation-Manipulation-Distribution range behavior forming. Watch only - price may be engineering liquidity around the opening reference. Evaluate only through current 6K Model 1 or Raid Reclaim Reversal rules. Do not chase.”
 
 ## 9. Guardrails
 
 * This is not an approved executable model.
 * Do not create entries, stops, T1/T2, or outcome buttons.
-* Do not override Model 1 or Turtle Soup.
+* Do not override Model 1 or Raid Reclaim Reversal.
 * Do not allow this to approve trades.
-* Do not duplicate Model 1 or Turtle Soup under an AMD label.
+* Do not duplicate Model 1 or Raid Reclaim Reversal under an AMD label.
 * Do not use later distribution success to retroactively validate an invalid setup.
 * Collect 20-30 examples first.
 
@@ -297,7 +297,7 @@ Keep as research note only. Create a future advisory-only bridge smoke-test prom
   "status": "research_only",
   "candidateName": "Accumulation–Manipulation–Distribution Range Model Watchlist",
   "primaryIdea": "Study open-based accumulation, liquidity manipulation, and later distribution behavior.",
-  "taxonomyNote": "If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.",
+  "taxonomyNote": "If Model 1 or Raid Reclaim Reversal gates pass, classify through existing approved models; otherwise keep as advisory research.",
   "recommendedNextStep": "Collect 20-30 bridge-backed examples before any rule review.",
   "ruleChange": "none",
   "approvalBoundarySummary": "Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.",

@@ -29,7 +29,7 @@ function sample(id: string, concept: string, label: ResearchHumanInspectionLabel
     summary: 'Research-only reviewed sample.',
     whyAdvisoryOnly: 'Research-only. Existing gates did not independently pass.',
     model1Overlap: false,
-    turtleSoupOverlap: false,
+    raidReclaimOverlap: false,
     researchDetectorReason: 'fixture',
     warningFailureReason: 'fixture',
     dataQualityNotes: [],

@@ -68,7 +68,7 @@ const reportFixture = {
     row({ ticketId: 'od-a', setupType: 'OpeningDriveFvgContinuation', proofTime: '2026-07-17T10:00:00', oneMesPl: 100 }),
     row({ ticketId: 'sweep-a', setupType: 'SweepMssFvgRetrace', proofTime: '2026-07-17T10:00:00', oneMesPl: 150 }),
     row({ ticketId: 'od-b', setupType: 'OpeningDriveFvgContinuation', proofTime: '2026-07-17T10:05:00', oneMesPl: 200 }),
-    row({ ticketId: 'htf-b', setupType: 'HtfDisplacementMssContinuation', proofTime: '2026-07-17T10:05:00', oneMesPl: 180 }),
+    row({ ticketId: 'htf-b', setupType: 'IntradayMssMicroContinuation', proofTime: '2026-07-17T10:05:00', oneMesPl: 180 }),
     row({ ticketId: 'short-sweep-ignore', setupType: 'SweepMssFvgRetrace', proofTime: '2026-07-17T10:05:00', oneMesPl: 500, direction: 'SHORT' }),
     row({ ticketId: 'od-no-priority', setupType: 'OpeningDriveFvgContinuation', proofTime: '2026-07-17T10:10:00', oneMesPl: 50 }),
   ],
@@ -92,7 +92,7 @@ assert.equal(report.summary.openingDriveBetterOrEqualRows, 1);
 assert.equal(report.summary.openingDriveOneMesPl, 300);
 assert.equal(report.summary.priorityOneMesPl, 330);
 assert.equal(report.summary.deltaOneMesPl, 30);
-assert.equal(report.rows.find((item) => item.proofTime === '2026-07-17T10:05:00')?.prioritySetupType, 'HtfDisplacementMssContinuation');
+assert.equal(report.rows.find((item) => item.proofTime === '2026-07-17T10:05:00')?.prioritySetupType, 'IntradayMssMicroContinuation');
 assert.match(report.markdown, /OpeningDrive OOS Broader Priority Validation/);
 
 const blocked = buildRawOhlcScannerArtifactOpeningDriveOosBroaderPriorityValidationReport({

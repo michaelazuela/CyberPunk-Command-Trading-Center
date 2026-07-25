@@ -24,39 +24,11 @@ export enum BiasDirection {
 }
 
 export enum SetupType {
-  OrderBlock618 = 'OrderBlock618',
+  RaidReclaimReversal = 'RaidReclaimReversal',
   SweepMssFvgRetrace = 'SweepMssFvgRetrace',
-  LiquiditySweep = 'LiquiditySweep',
-  TurtleSoup = 'TurtleSoup',
-  MomentumRunaway = 'MomentumRunaway',
-  FairValueGap = 'FairValueGap',
-  FvgImbalancePullback = 'FvgImbalancePullback',
-  MarketStructureShift = 'MarketStructureShift',
-  HtfDrawContinuationAfterRaid = 'HtfDrawContinuationAfterRaid',
-  HtfDisplacementMssContinuation = 'HtfDisplacementMssContinuation',
-  HtfDisplacementFvgContinuation = 'HtfDisplacementFvgContinuation',
   OpeningDriveFvgContinuation = 'OpeningDriveFvgContinuation',
   AfterLunchDriveFvgContinuation = 'AfterLunchDriveFvgContinuation',
   IntradayMssMicroContinuation = 'IntradayMssMicroContinuation',
-  FailedPlanReversal = 'FailedPlanReversal',
-  OpeningOrderBlock = 'OpeningOrderBlock',
-  EqualHighsLows = 'EqualHighsLows',
-  InitialBalanceExtension = 'InitialBalanceExtension',
-  PreviousDaySweep = 'PreviousDaySweep',
-  CompressionBreakout = 'CompressionBreakout',
-  OpeningGapFill = 'OpeningGapFill',
-  BreakerBlock = 'BreakerBlock',
-  AlgoKillZone = 'AlgoKillZone',
-  MitigationBlock = 'MitigationBlock',
-  MomentumPullbackBreatherReclaim = 'MomentumPullbackBreatherReclaim',
-  MorningFailedHighLiquidityRejection = 'MorningFailedHighLiquidityRejection',
-  MorningReclaimLong = 'MorningReclaimLong',
-  MorningOpeningRangeContinuation = 'MorningOpeningRangeContinuation',
-  LunchFailedHighReversal = 'LunchFailedHighReversal',
-  LunchFailedLowReversal = 'LunchFailedLowReversal',
-  LunchCompressionBreakout = 'LunchCompressionBreakout',
-  LunchFailedContinuation = 'LunchFailedContinuation',
-  LunchRangeReclaim = 'LunchRangeReclaim',
   NoSetup = 'NoSetup',
 }
 
@@ -766,7 +738,6 @@ export interface ChartContext {
   proposedStop?: number | null;
   riskPoints?: number | null;
   riskStatus?: ExtractedRiskStatus;
-  failedPlanReversal?: FailedPlanReversalContext;
   scannerHistoryCoverage?: ScannerHistoryCoverageFact[];
   entryConfirmed?: boolean;
   stopConfirmed?: boolean;
@@ -794,10 +765,6 @@ export type TradingPlanCandidateState =
   | 'OPENING_OBSERVATION_ARMED'
   | 'AFTER_LUNCH_DRIVE_ARMED'
   | 'HUMAN_REVIEW_READY'
-  | 'FAILED_LONG_TO_BEARISH_DECISION_PENDING'
-  | 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED'
-  | 'FAILED_SHORT_TO_BULLISH_DECISION_PENDING'
-  | 'FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED'
   | 'OPPOSITE_SIDE_RETEST_PENDING'
   | 'OPPOSITE_SIDE_TRIGGER_CONFIRMED'
   | 'NO_FRESH_ENTRY'
@@ -805,58 +772,6 @@ export type TradingPlanCandidateState =
   | 'QUALIFIED_CONDITIONAL'
   | 'EXECUTABLE'
   | 'NO_QUALIFIED_STATE';
-
-export type FailedPlanReversalDecisionState =
-  | 'FAILED_LONG_TO_BEARISH_DECISION_PENDING'
-  | 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED'
-  | 'FAILED_SHORT_TO_BULLISH_DECISION_PENDING'
-  | 'FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED'
-  | 'OPPOSITE_SIDE_RETEST_PENDING'
-  | 'OPPOSITE_SIDE_TRIGGER_CONFIRMED'
-  | 'NO_FRESH_ENTRY';
-
-export type FailedPlanReversalHtfStackStatus =
-  | 'full_confirmation'
-  | 'supported_confirmation'
-  | 'mixed'
-  | 'conflict'
-  | 'data_limited';
-
-export type FailedPlanReversalFiveMinuteTriggerStatus =
-  | 'confirmed'
-  | 'pending_retest'
-  | 'pending_mss'
-  | 'stale'
-  | 'no_fresh_entry'
-  | 'not_confirmed'
-  | 'unknown';
-
-export interface FailedPlanReversalTimeframeConfirmation {
-  timeframe: '5M' | '15M' | '1H' | '2H' | '4H';
-  direction: 'LONG' | 'SHORT' | 'NEUTRAL' | 'UNKNOWN';
-  status: 'aligned' | 'confirmed' | 'neutral' | 'conflicting' | 'data_limited' | 'unknown';
-  evidence: string[];
-}
-
-export interface FailedPlanReversalContext {
-  source: 'app_owned_failed_plan_state' | 'manual_or_replay_context' | 'ninjatrader_ohlc';
-  boundary: 'opposite_side_review_only_not_execution_authority';
-  originalPlanDirection: 'LONG' | 'SHORT';
-  oppositeDirection: 'LONG' | 'SHORT';
-  failedDecisionLevel: number | null;
-  failedDecisionLevelRole: 'short_side_resistance' | 'long_side_support' | 'unknown';
-  failedPlanEvidence: string[];
-  htfStackStatus: FailedPlanReversalHtfStackStatus;
-  timeframeConfirmations: FailedPlanReversalTimeframeConfirmation[];
-  fiveMinuteTriggerStatus: FailedPlanReversalFiveMinuteTriggerStatus;
-  decisionState: FailedPlanReversalDecisionState;
-  freshTriggerRequired: boolean;
-  staleOrNoFreshEntry: boolean;
-  reasons: string[];
-  blockers: string[];
-  createsCandidate: boolean;
-  approvesExecution: false;
-}
 
 export type ActiveCampaignDirection = 'LONG' | 'SHORT' | 'NO TRADE';
 export type ActiveCampaignStatus =
@@ -1217,10 +1132,9 @@ export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
   candidateState?: TradingPlanCandidateState;
-  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation' | 'opening_drive_fvg_continuation' | 'after_lunch_drive_fvg_continuation' | 'intraday_mss_micro_continuation' | 'failed_plan_reversal';
+  pathway?: 'primary_setup_scanner' | 'opening_drive_fvg_continuation' | 'after_lunch_drive_fvg_continuation' | 'intraday_mss_micro_continuation';
   activeCampaign?: ActiveCampaign;
   htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
-  failedPlanReversal?: FailedPlanReversalContext;
   tacticalZone?: TacticalZoneBounds | null;
   humanReview?: {
     status: 'OpeningObservationArmed' | 'AfterLunchDriveArmed' | 'HumanReviewReady';

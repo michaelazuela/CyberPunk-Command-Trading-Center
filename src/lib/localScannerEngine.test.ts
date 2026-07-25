@@ -34,7 +34,7 @@ import type { NinjaBridgeBar } from './ninjaTraderBridge';
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.LiquiditySweep,
+    setupType: SetupType.RaidReclaimReversal,
     scenarioLabel: 'Liquidity Sweep Reversal failed breakdown wick rejection impulse market structure shift imbalance discount',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,
@@ -305,7 +305,7 @@ const staleScore = scoreScannerCandidate(candidate({ blockReason: 'stale setup' 
 assert.equal(staleScore.score, 0);
 
 const wickOnlyScore = scoreScannerCandidate(candidate({
-  setupType: SetupType.LiquiditySweep,
+  setupType: SetupType.RaidReclaimReversal,
   scenarioLabel: 'Wick rejection support at swept liquidity',
   evidence: ['wick rejection support only'],
   requiredTrigger: 'Wick rejection support only.',
@@ -315,9 +315,9 @@ const wickOnlyScore = scoreScannerCandidate(candidate({
 assert.equal(wickOnlyScore.score, 0);
 assert.ok(wickOnlyScore.missingReasons.some((reason) => reason.includes('Wick rejection support is not enough')));
 
-const turtleSoupWickScore = scoreScannerCandidate(candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Bullish Turtle Soup failed breakdown reversal',
+const raidReclaimWickScore = scoreScannerCandidate(candidate({
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Bullish Raid Reclaim Reversal failed breakdown reversal',
   evidence: [
     'sell-side liquidity sweep identified',
     'reclaim after sweep identified',
@@ -325,10 +325,10 @@ const turtleSoupWickScore = scoreScannerCandidate(candidate({
     'expansion impulse confirmed',
     'market structure shift confirmed',
   ],
-  requiredTrigger: 'Turtle Soup reclaim confirmation after sweep.',
+  requiredTrigger: 'Raid Reclaim Reversal reclaim confirmation after sweep.',
 }), morningWindow, 101, true, 10 * 60 + 5);
-assert.ok(turtleSoupWickScore.score >= 75);
-assert.ok(turtleSoupWickScore.qualifiedReasons.some((reason) => reason.includes('Wick rejection support')));
+assert.ok(raidReclaimWickScore.score >= 75);
+assert.ok(raidReclaimWickScore.qualifiedReasons.some((reason) => reason.includes('Wick rejection support')));
 
 const countertrendScore = scoreScannerCandidate(candidate({
   setupType: SetupType.SweepMssFvgRetrace,
@@ -362,7 +362,7 @@ assert.equal(
 );
 
 const july15FailedHighBreakdownShort = candidate({
-  setupType: SetupType.TurtleSoup,
+  setupType: SetupType.RaidReclaimReversal,
   scenarioLabel: 'Bearish failed-high breakdown after 10:20 retest',
   direction: 'SHORT',
   detectedStatus: SetupCandidateStatus.Conditional,
@@ -604,8 +604,8 @@ assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.shortBelow, 7445
 assert.equal(highQualityTriggerPendingDeskState.canExecute, false);
 
 const fullLevelConflictTriggerPendingShort = candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Bearish Turtle Soup Reversal',
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Bearish Raid Reclaim Reversal',
   direction: 'SHORT',
   detectedStatus: SetupCandidateStatus.Conditional,
   executionStatus: ExecutionStatus.Conditional,
@@ -619,7 +619,7 @@ const fullLevelConflictTriggerPendingShort = candidate({
   decisionQualityScore: 85,
   evidence: ['Buy-side sweep and bearish rejection are forming from structured OHLC.'],
   missingEvidence: ['HTF conflict remains; completed 5M trigger/retest proof still required.'],
-  requiredTrigger: 'Bearish Turtle Soup: buy-side sweep above 7580.75, reclaim back below the swept high, then confirm downward rejection or expansion.',
+  requiredTrigger: 'Bearish Raid Reclaim Reversal: buy-side sweep above 7580.75, reclaim back below the swept high, then confirm downward rejection or expansion.',
   invalidation: 'Invalid if price trades above the sweep wick structure stop near 7581.75.',
 });
 const fullLevelConflictTriggerPendingAlert = shouldSendScannerAlert({
@@ -1182,7 +1182,7 @@ assert.equal(scannerStateFromDecision({ decisionStatus: TradeDecisionStatus.Wait
 const dataQualityVisibility = classifyScannerVisibility({
   state: 'Conditional',
   candidate: candidate({
-    setupType: SetupType.HtfDrawContinuationAfterRaid,
+    setupType: SetupType.IntradayMssMicroContinuation,
     htfLiquidityDrawState: {
       source: 'ninjatrader_ohlc',
       authority: 'ohlc_facts_only',
@@ -1233,11 +1233,9 @@ for (const entry of SETUP_REGISTRY) {
   assert.equal(auditedSetupTypes.has(entry.setupType), true, `${entry.setupType} is missing from the Phase 9A audit`);
 }
 const deprecatedAuditEntries = tradeDecisionMapAudit.entries.filter((entry) => entry.role === 'deprecated');
-assert.ok(deprecatedAuditEntries.length > 0);
-assert.equal(deprecatedAuditEntries.every((entry) => !entry.discordEligible && !entry.executionEligible), true);
+assert.equal(deprecatedAuditEntries.length, 0);
 const supportingAuditEntries = tradeDecisionMapAudit.entries.filter((entry) => entry.role === 'supporting_evidence');
-assert.ok(supportingAuditEntries.length > 0);
-assert.equal(supportingAuditEntries.every((entry) => entry.watchEligible && !entry.planEligible && !entry.executionEligible), true);
+assert.equal(supportingAuditEntries.length, 0);
 const openingDriveAudit = tradeDecisionMapAudit.entries.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
 assert.equal(openingDriveAudit?.humanReviewOnly, true);
 assert.equal(openingDriveAudit?.executionEligible, false);
@@ -1251,7 +1249,7 @@ const lifecycleTrace = buildCandidateLifecycleTrace({
   candidates: [
     strongCandidate,
     candidate({
-      setupType: SetupType.TurtleSoup,
+      setupType: SetupType.RaidReclaimReversal,
       scenarioLabel: 'Lower ranked short watch',
       direction: 'SHORT',
       executionStatus: ExecutionStatus.Conditional,
@@ -1618,7 +1616,7 @@ const june12CountertrendLong = candidate({
     'Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M.',
     'No chase: wait for a completed 5M or 15M close above 7410.00.',
   ],
-  requiredTrigger: 'Failed Plan Reversal long requires failed short decision level, then fresh completed 5M bullish trigger/retest.',
+  requiredTrigger: 'Raid Reclaim Reversal long requires failed short decision level, then fresh completed 5M bullish trigger/retest.',
 });
 const june12Lifecycle = buildCandidateLifecycleTrace({
   candidates: [june12UnsupportedShort, june12CountertrendLong],
@@ -1770,16 +1768,16 @@ assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.dire
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.status, 'aligned');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.sourceOfTruth, 'scanner_protected_structure_model_routing');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.primaryDirection, 'LONG');
-assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.IntradayMssMicroContinuation);
-assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.IntradayMssMicroContinuation);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.RaidReclaimReversal);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.RaidReclaimReversal);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.sourceOfTruth, 'scanner_protected_structure_model_fit');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.status, 'best_fit');
-assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.setupType, SetupType.RaidReclaimReversal);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.shortModelFit.status, 'not_aligned');
-assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.modelFit.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.modelFit.setupType, SetupType.RaidReclaimReversal);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof');
-assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.IntradayMssMicroContinuation);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.RaidReclaimReversal);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.canExecuteNow, false);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.tradeReadiness.sourceOfTruth, 'scanner_trade_readiness_routing');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.tradeReadiness.status, 'missed_no_chase');
@@ -1839,8 +1837,8 @@ const protectedBullishLongPlan = candidate({
   nextAction: 'Intraday MSS micro-continuation watch. No chase. Wait for completed 5M proof.',
 });
 const protectedBullishCounterShort = candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Bearish Turtle Soup Reversal',
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Bearish Raid Reclaim Reversal',
   direction: 'SHORT',
   detectedStatus: SetupCandidateStatus.Conditional,
   executionStatus: ExecutionStatus.Conditional,
@@ -1854,7 +1852,7 @@ const protectedBullishCounterShort = candidate({
   decisionQualityScore: 87,
   evidence: ['Buy-side liquidity was swept and reclaimed.'],
   missingEvidence: ['Completed 5M trigger/retest proof still required.'],
-  requiredTrigger: 'Bearish Turtle Soup: buy-side sweep above 7616.75, reclaim back below the swept high.',
+  requiredTrigger: 'Bearish Raid Reclaim Reversal: buy-side sweep above 7616.75, reclaim back below the swept high.',
   nextAction: 'Preferred plan: take only the reclaim-confirmed reversal; do not chase.',
 });
 const protectedBullishCounterShortCompanion = candidate({
@@ -1912,7 +1910,7 @@ assert.notEqual(protectedBullishStackDeskState.deskTicket.t2, protectedBullishCo
 assert.match(protectedBullishStackDeskState.deskTicket.invalidationText, /below protected swing low/i);
 assert.doesNotMatch(protectedBullishStackDeskState.deskTicket.invalidationText, /above.*7619|above.*7620|sweep wick structure stop/i);
 assert.equal(protectedBullishStackDeskState.deskTicket.oppositeScenario?.direction, 'SHORT');
-assert.ok(!protectedBullishStackDeskState.deskTicket.sourceCandidateKey?.includes('TurtleSoup|SHORT'));
+assert.ok(!protectedBullishStackDeskState.deskTicket.sourceCandidateKey?.includes('raidReclaim|SHORT'));
 assert.equal(protectedBullishStackDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
 assert.equal(protectedBullishStackDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
 
@@ -1953,8 +1951,8 @@ const approvedShortWatchWithLegacyLong = candidate({
   nextAction: 'Short MSS forming. Campaign active from app-owned completed 5M close-through. Line is 7438.25. Price is extended; do not chase.',
 });
 const legacyLongWithFullLevels = candidate({
-  setupType: SetupType.TurtleSoup,
-  scenarioLabel: 'Bullish Turtle Soup Reversal',
+  setupType: SetupType.RaidReclaimReversal,
+  scenarioLabel: 'Bullish Raid Reclaim Reversal',
   direction: 'LONG',
   detectedStatus: SetupCandidateStatus.Conditional,
   executionStatus: ExecutionStatus.Executable,
@@ -1965,7 +1963,7 @@ const legacyLongWithFullLevels = candidate({
   riskPoints: 11.5,
   rankScore: 256,
   decisionQualityScore: 44,
-  requiredTrigger: 'Bullish Turtle Soup legacy trigger should not own Unified Desk Output display.',
+  requiredTrigger: 'Bullish Raid Reclaim Reversal legacy trigger should not own Unified Desk Output display.',
   nextAction: 'Legacy long should remain audit-only while approved model watch is present.',
 });
 const approvedShortWatchTrace = buildCandidateLifecycleTrace({
@@ -1990,7 +1988,7 @@ const approvedShortWatchDeskState = buildDeskState({
   currentPrice: 7471,
   canExecute: false,
 });
-assert.equal(approvedShortWatchDeskState.selectedCandidate?.setupType, SetupType.TurtleSoup);
+assert.equal(approvedShortWatchDeskState.selectedCandidate?.setupType, SetupType.RaidReclaimReversal);
 assert.equal(approvedShortWatchDeskState.deskTicket.primaryDirection, 'SHORT');
 assert.equal(approvedShortWatchDeskState.deskTicket.lineInSand, 7438.25);
 assert.equal(approvedShortWatchDeskState.deskTicket.entry, 7438.25);
@@ -1998,7 +1996,7 @@ assert.equal(approvedShortWatchDeskState.deskTicket.stop, null);
 assert.equal(approvedShortWatchDeskState.deskTicket.t1, null);
 assert.equal(approvedShortWatchDeskState.deskTicket.t2, null);
 assert.match(approvedShortWatchDeskState.deskTicket.sourceCandidateKey || '', /^IntradayMssMicroContinuation\|SHORT/);
-assert.ok(!approvedShortWatchDeskState.deskTicket.sourceCandidateKey?.includes('TurtleSoup'));
+assert.ok(!approvedShortWatchDeskState.deskTicket.sourceCandidateKey?.includes('raidReclaim'));
 const approvedShortWatchPublishDecision = buildDeskPublishDecision({
   deskState: approvedShortWatchDeskState,
   currentPrice: 7471,
@@ -3070,9 +3068,9 @@ const journalRecord = buildTradeJournalRecord({
   dateTime: '2026-05-19T10:05:00-04:00',
   instrument: 'MES',
   session: 'morning',
-  candidate: turtleSoupWickScore.score >= 75 ? candidate({
-    setupType: SetupType.TurtleSoup,
-    scenarioLabel: 'Bullish Turtle Soup sweep reclaim displacement market structure shift imbalance discount',
+  candidate: raidReclaimWickScore.score >= 75 ? candidate({
+    setupType: SetupType.RaidReclaimReversal,
+    scenarioLabel: 'Bullish Raid Reclaim Reversal sweep reclaim displacement market structure shift imbalance discount',
     evidence: ['sell-side liquidity sweep identified', 'reclaim after sweep identified', 'wick rejection support', 'higher-timeframe bias aligned'],
   }) : strongCandidate,
   scannerScore: 82,
@@ -3080,14 +3078,14 @@ const journalRecord = buildTradeJournalRecord({
   notes: 'Journal contract test. Outcome pending until trader confirms result.',
   higherTimeframeAligned: true,
 });
-assert.equal(journalRecord.modelType, 'Turtle Soup Reversal');
+assert.equal(journalRecord.modelType, 'Raid Reclaim Reversal');
 assert.equal(journalRecord.direction, 'LONG');
 assert.equal(journalRecord.scannerScore, 82);
 assert.equal(journalRecord.plannedR, 2);
 assert.equal(journalRecord.actualResultR, null);
 assert.equal(journalRecord.outcome, 'pending');
 assert.equal(journalRecord.discordAlertId, 'MORNING-20260519-100500');
-assert.ok(journalRecord.setupTags.includes('Turtle Soup'));
+assert.ok(journalRecord.setupTags.includes('raid/reclaim'));
 assert.ok(journalRecord.setupTags.includes('sweep'));
 assert.ok(journalRecord.setupTags.includes('HTF aligned'));
 
@@ -3105,94 +3103,49 @@ assert.equal(modelOneJournal.modelType, 'Sweep -> MSS -> FVG Retrace');
 assert.ok(modelOneJournal.setupTags.includes('sweep'));
 assert.ok(modelOneJournal.setupTags.includes('breaker/FVG confluence'));
 
-const turtleJournal = buildTradeJournalRecord({
+const raidReclaimJournal = buildTradeJournalRecord({
   dateTime: '2026-05-19T10:15:00-04:00',
   instrument: 'MES',
   session: 'morning',
   candidate: candidate({
-    setupType: SetupType.TurtleSoup,
-    scenarioLabel: 'Bullish Turtle Soup Reversal',
-    evidence: ['Turtle Soup reversal', 'Breaker + FVG overlap confluence'],
+    setupType: SetupType.RaidReclaimReversal,
+    scenarioLabel: 'Bullish Raid Reclaim Reversal',
+    evidence: ['Raid Reclaim Reversal', 'Breaker + FVG overlap confluence'],
   }),
 });
-assert.equal(turtleJournal.modelType, 'Turtle Soup Reversal');
-assert.ok(turtleJournal.setupTags.includes('Turtle Soup'));
-assert.ok(turtleJournal.setupTags.includes('breaker/FVG confluence'));
+assert.equal(raidReclaimJournal.modelType, 'Raid Reclaim Reversal');
+assert.ok(raidReclaimJournal.setupTags.includes('raid/reclaim'));
+assert.ok(raidReclaimJournal.setupTags.includes('breaker/FVG confluence'));
 
-const htfDrawJournal = buildTradeJournalRecord({
+const intradayMssJournal = buildTradeJournalRecord({
   dateTime: '2026-05-19T10:18:00-04:00',
   instrument: 'MES',
   session: 'morning',
   candidate: candidate({
-    setupType: SetupType.HtfDrawContinuationAfterRaid,
-    scenarioLabel: 'HTF Draw Continuation After Raid/Reclaim',
-    evidence: ['HTF liquidity draw detected', '5M MSS trigger confirmed', 'sell-side raid + bullish 5M MSS'],
+    setupType: SetupType.IntradayMssMicroContinuation,
+    scenarioLabel: 'Intraday MSS Micro Continuation',
+    evidence: ['HTF context supports direction', '5M MSS trigger confirmed', 'sell-side raid + bullish 5M MSS'],
   }),
 });
-assert.equal(htfDrawJournal.modelType, 'HTF Draw Continuation After Raid/Reclaim');
+assert.equal(intradayMssJournal.modelType, 'Intraday MSS Micro Continuation');
 
-for (const setupType of [
-  SetupType.LiquiditySweep,
-  SetupType.FairValueGap,
-  SetupType.FvgImbalancePullback,
-  SetupType.MarketStructureShift,
-  SetupType.PreviousDaySweep,
-  SetupType.EqualHighsLows,
-  SetupType.BreakerBlock,
-]) {
-  assert.equal(normalizeIctModelLabel(setupType), 'ICT setup');
-  assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType })), 'ICT setup');
+const activeModelLabels = [
+  [SetupType.RaidReclaimReversal, 'Raid Reclaim Reversal'],
+  [SetupType.SweepMssFvgRetrace, 'Sweep -> MSS -> FVG Retrace'],
+  [SetupType.OpeningDriveFvgContinuation, 'Opening Drive FVG Continuation'],
+  [SetupType.AfterLunchDriveFvgContinuation, 'After-Lunch Drive FVG Continuation'],
+  [SetupType.IntradayMssMicroContinuation, 'Intraday MSS Micro Continuation'],
+] as const;
+
+for (const [setupType, label] of activeModelLabels) {
+  assert.equal(normalizeIctModelLabel(setupType), label);
+  assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType })), label);
 }
 
-for (const setupType of [
-  SetupType.OrderBlock618,
-  SetupType.MomentumRunaway,
-  SetupType.OpeningOrderBlock,
-  SetupType.InitialBalanceExtension,
-  SetupType.OpeningGapFill,
-  SetupType.CompressionBreakout,
-  SetupType.AlgoKillZone,
-  SetupType.MitigationBlock,
-  SetupType.MomentumPullbackBreatherReclaim,
-  SetupType.MorningFailedHighLiquidityRejection,
-  SetupType.MorningReclaimLong,
-  SetupType.MorningOpeningRangeContinuation,
-  SetupType.LunchFailedHighReversal,
-  SetupType.LunchFailedLowReversal,
-  SetupType.LunchCompressionBreakout,
-  SetupType.LunchFailedContinuation,
-  SetupType.LunchRangeReclaim,
-]) {
-  assert.equal(normalizeIctModelLabel(setupType), 'ICT setup');
-  assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType })), 'ICT setup');
-}
+assert.equal(normalizeIctModelLabel(SetupType.NoSetup), 'ICT setup');
+assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType: SetupType.NoSetup })), 'ICT setup');
 
-for (const setupType of [
-  SetupType.LiquiditySweep,
-  SetupType.FairValueGap,
-  SetupType.FvgImbalancePullback,
-  SetupType.MarketStructureShift,
-  SetupType.PreviousDaySweep,
-  SetupType.EqualHighsLows,
-  SetupType.BreakerBlock,
-  SetupType.OrderBlock618,
-  SetupType.MomentumRunaway,
-  SetupType.OpeningOrderBlock,
-  SetupType.InitialBalanceExtension,
-  SetupType.OpeningGapFill,
-  SetupType.CompressionBreakout,
-  SetupType.AlgoKillZone,
-  SetupType.MitigationBlock,
-  SetupType.MomentumPullbackBreatherReclaim,
-  SetupType.MorningFailedHighLiquidityRejection,
-  SetupType.MorningReclaimLong,
-  SetupType.MorningOpeningRangeContinuation,
-  SetupType.LunchFailedHighReversal,
-  SetupType.LunchFailedLowReversal,
-  SetupType.LunchCompressionBreakout,
-  SetupType.LunchFailedContinuation,
-  SetupType.LunchRangeReclaim,
-]) {
+for (const [setupType] of activeModelLabels) {
   const record = buildTradeJournalRecord({
     dateTime: '2026-05-19T10:20:00-04:00',
     instrument: 'MES',
@@ -3203,17 +3156,17 @@ for (const setupType of [
       evidence: ['Liquidity sweep confirmed', 'Fair value gap / imbalance entry model', 'Breaker + FVG overlap confluence'],
     }),
   });
-  assert.equal(record.modelType, 'ICT setup');
+  assert.equal(record.modelType, normalizeIctModelLabel(setupType));
   assert.ok(record.setupTags.includes('sweep'));
   assert.ok(record.setupTags.includes('FVG'));
 }
 
 assert.equal(normalizeIctModelLabel(SetupType.SweepMssFvgRetrace), 'Sweep -> MSS -> FVG Retrace');
-assert.equal(normalizeIctModelLabel(SetupType.TurtleSoup), 'Turtle Soup Reversal');
-assert.equal(normalizeIctModelLabel(SetupType.HtfDrawContinuationAfterRaid), 'HTF Draw Continuation After Raid/Reclaim');
+assert.equal(normalizeIctModelLabel(SetupType.RaidReclaimReversal), 'Raid Reclaim Reversal');
+assert.equal(normalizeIctModelLabel(SetupType.IntradayMssMicroContinuation), 'Intraday MSS Micro Continuation');
 assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType: SetupType.SweepMssFvgRetrace })), 'Sweep -> MSS -> FVG Retrace');
-assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType: SetupType.TurtleSoup })), 'Turtle Soup Reversal');
-assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType: SetupType.HtfDrawContinuationAfterRaid })), 'HTF Draw Continuation After Raid/Reclaim');
+assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType: SetupType.RaidReclaimReversal })), 'Raid Reclaim Reversal');
+assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType: SetupType.IntradayMssMicroContinuation })), 'Intraday MSS Micro Continuation');
 
 assert.equal(
   actualResultRFromExit({ direction: 'LONG', entry: 100, stop: 96, exit: 108 }),

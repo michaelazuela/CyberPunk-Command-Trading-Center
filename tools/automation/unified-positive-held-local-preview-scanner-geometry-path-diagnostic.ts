@@ -427,7 +427,7 @@ export function buildUnifiedPositiveHeldLocalPreviewScannerGeometryPathDiagnosti
     recommendations: blockers.length > 0
       ? ['Do not inspect scanner source paths until saved diagnostics and local tapes join cleanly.']
       : [
-        'Do not remove TurtleSoup, loosen canExecute, or install rank penalties from this diagnostic.',
+        'Do not remove raidReclaim, loosen canExecute, or install rank penalties from this diagnostic.',
         candidateLifecycleRows > 0
           ? 'Inspect the SweepMssFvgRetrace candidate builder/source fields before setupCandidateStatus export; the bad geometry is present before status serialization.'
           : 'Inspect setupCandidateStatus export mapping; bad geometry was not found in lifecycle candidates.',

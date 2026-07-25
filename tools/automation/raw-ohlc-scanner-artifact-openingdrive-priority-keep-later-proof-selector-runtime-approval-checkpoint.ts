@@ -266,7 +266,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
         'Do not read or write Supabase.',
         'Do not read live bridge data.',
         'Do not broaden beyond SweepMssFvgRetrace keep_later_sweep_proof.',
-        'Do not remove or weaken TurtleSoup or any approved model.',
+        'Do not remove or weaken raidReclaim or any approved model.',
       ],
       rollbackPath: [
         'Revert the single future runtime install commit.',

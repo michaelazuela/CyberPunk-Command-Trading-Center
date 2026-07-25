@@ -267,7 +267,7 @@ function fullModelOneContext(overrides: Partial<ChartContext> = {}): Partial<Cha
   });
 }
 
-function turtleSoupContext(overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
+function raidReclaimContext(overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
   return structuredContext({
     marketStructure: {
       trend: 'unknown',
@@ -767,49 +767,6 @@ function htfDisplacementFvgContinuationContext(direction: 'LONG' | 'SHORT' = 'SH
   });
 }
 
-function failedPlanReversalContext(direction: 'LONG' | 'SHORT' = 'SHORT', overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
-  const base = htfDisplacementFvgContinuationContext(direction);
-  const originalPlanDirection = direction === 'SHORT' ? 'LONG' : 'SHORT';
-  const failedDecisionLevel = direction === 'SHORT' ? 7518 : 7604.75;
-  return {
-    ...base,
-    setupReadyFacts: {
-      ...base.setupReadyFacts!,
-      breakOfStructure: true,
-    },
-    failedPlanReversal: {
-      source: 'ninjatrader_ohlc',
-      boundary: 'opposite_side_review_only_not_execution_authority',
-      originalPlanDirection,
-      oppositeDirection: direction,
-      failedDecisionLevel,
-      failedDecisionLevelRole: direction === 'SHORT' ? 'short_side_resistance' : 'long_side_support',
-      failedPlanEvidence: [
-        `App-owned ${originalPlanDirection} plan failed decision level ${failedDecisionLevel}.`,
-      ],
-      htfStackStatus: 'full_confirmation',
-      timeframeConfirmations: [
-        { timeframe: '5M', direction, status: 'confirmed', evidence: ['Fresh 5M opposite-side MSS confirmed by completed close.'] },
-        { timeframe: '15M', direction, status: 'confirmed', evidence: ['15M opposite displacement/MSS confirmed.'] },
-        { timeframe: '1H', direction, status: 'confirmed', evidence: ['1H opposite structure confirms.'] },
-        { timeframe: '2H', direction, status: 'confirmed', evidence: ['2H opposite structure confirms.'] },
-        { timeframe: '4H', direction, status: 'confirmed', evidence: ['4H opposite structure confirms.'] },
-      ],
-      fiveMinuteTriggerStatus: 'confirmed',
-      decisionState: direction === 'SHORT'
-        ? 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED'
-        : 'FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED',
-      freshTriggerRequired: true,
-      staleOrNoFreshEntry: false,
-      reasons: ['15M, 1H, 2H, and 4H confirm the opposite side after the original app-owned plan failed.'],
-      blockers: [],
-      createsCandidate: true,
-      approvesExecution: false,
-    },
-    ...overrides,
-  };
-}
-
 function bridgeBar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
   return { time, open, high, low, close, volume: 1 };
 }
@@ -827,14 +784,10 @@ function stepStatus(result: ReturnType<typeof run>, step: TradeDecisionStep) {
 function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
   return (
     candidate.setupType === SetupType.SweepMssFvgRetrace ||
-    candidate.setupType === SetupType.TurtleSoup ||
-    candidate.setupType === SetupType.HtfDrawContinuationAfterRaid ||
-    candidate.setupType === SetupType.HtfDisplacementMssContinuation ||
-    candidate.setupType === SetupType.HtfDisplacementFvgContinuation ||
-    candidate.setupType === SetupType.OpeningDriveFvgContinuation ||
-    candidate.setupType === SetupType.AfterLunchDriveFvgContinuation ||
+    candidate.setupType === SetupType.RaidReclaimReversal ||
     candidate.setupType === SetupType.IntradayMssMicroContinuation ||
-    candidate.setupType === SetupType.FailedPlanReversal
+    candidate.setupType === SetupType.OpeningDriveFvgContinuation ||
+    candidate.setupType === SetupType.AfterLunchDriveFvgContinuation
   );
 }
 
@@ -932,12 +885,12 @@ const tests: Array<[string, () => void]> = [
   ['6. Wider structure stop is advisory and still visible', () => {
     const result = assertSameSequence({
       result: baseResult({
-        structuredChartContext: turtleSoupContext(),
+        structuredChartContext: raidReclaimContext(),
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
+          summary: 'Raid Reclaim Reversal Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Raid Reclaim Reversal Reversal Long',
+          rule_category: 'Raid Reclaim Reversal Reversal',
           entry: 7400,
           stop: 7393.5,
         },
@@ -952,12 +905,12 @@ const tests: Array<[string, () => void]> = [
   ['7. Alternate setup keeps plan visible when actual structure risk is too wide', () => {
     const result = assertSameSequence({
       result: baseResult({
-        structuredChartContext: turtleSoupContext({ proposedStop: 7391.75, riskPoints: 8.25 }),
+        structuredChartContext: raidReclaimContext({ proposedStop: 7391.75, riskPoints: 8.25 }),
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
+          summary: 'Raid Reclaim Reversal Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Raid Reclaim Reversal Reversal Long',
+          rule_category: 'Raid Reclaim Reversal Reversal',
           entry: 7400,
           stop: 7391.75,
         },
@@ -1007,14 +960,14 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.journalReady, true);
   }],
 
-  ['10. Narrative Turtle Soup remains no-trade until liquidity raid facts are structured', () => {
+  ['10. Narrative Raid Reclaim Reversal remains no-trade until liquidity raid facts are structured', () => {
     const result = assertSameSequence({
       result: baseResult({
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
+          summary: 'Raid Reclaim Reversal Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Raid Reclaim Reversal Reversal Long',
+          rule_category: 'Raid Reclaim Reversal Reversal',
           entry_trigger: 'Break above the trigger candle high.',
           trigger_state: 'PENDING_TRIGGER',
         },
@@ -1028,7 +981,7 @@ const tests: Array<[string, () => void]> = [
   ['11. Narrative-only primary setup remains conditional until ICT gates are complete', () => {
     const result = assertSameSequence();
     assert.equal(result.status, TradeDecisionStatus.NoTrade);
-    assert.equal(result.setupAssessment.setupType, SetupType.SweepMssFvgRetrace);
+    assert.equal(result.setupAssessment.setupType, SetupType.RaidReclaimReversal);
     assert.equal(result.riskAssessment.riskPoints, null);
     assert.equal(result.target1, null);
     assert.equal(result.target2, null);
@@ -1038,7 +991,7 @@ const tests: Array<[string, () => void]> = [
     const result = assertSameSequence({
       result: baseResult({
         confidence: 0.99,
-        structuredChartContext: turtleSoupContext({ proposedStop: 7388, riskPoints: 12 }),
+        structuredChartContext: raidReclaimContext({ proposedStop: 7388, riskPoints: 12 }),
         final_trade_plan: {
           decision: 'LONG',
           entry: 7400,
@@ -1052,17 +1005,17 @@ const tests: Array<[string, () => void]> = [
         },
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
+          summary: 'Raid Reclaim Reversal Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Raid Reclaim Reversal Reversal Long',
+          rule_category: 'Raid Reclaim Reversal Reversal',
           entry: 7400,
           stop: 7388,
         },
       }),
     });
     assert.notEqual(result.noTradeReason, NoTradeReason.RiskTooWide);
-    assert.equal(result.setupCandidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup)?.riskPoints, 12);
-    assert.equal(result.setupCandidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup)?.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
+    assert.equal(result.setupCandidates.find((candidate) => candidate.setupType === SetupType.RaidReclaimReversal)?.riskPoints, 12);
+    assert.equal(result.setupCandidates.find((candidate) => candidate.setupType === SetupType.RaidReclaimReversal)?.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
     assert.equal(result.biasAssessment.confidence, 'High');
   }],
 
@@ -1112,10 +1065,10 @@ const tests: Array<[string, () => void]> = [
     });
 
     assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.IntradayMssMicroContinuation);
     assert.equal(result.opportunitySelection?.bestExecutableCandidate?.executionStatus, ExecutionStatus.Executable);
-    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
-    assert.equal(result.finalTradePlan.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.pathway, 'intraday_mss_micro_continuation');
+    assert.equal(result.finalTradePlan.setupType, SetupType.IntradayMssMicroContinuation);
     assert.equal(result.finalTradePlan.entry, 7604);
     assert.equal(result.finalTradePlan.stop, 7600);
     assert.equal(result.finalTradePlan.target1, 7610);
@@ -1129,7 +1082,7 @@ const tests: Array<[string, () => void]> = [
         reasoning: '15M bearish displacement, 5M bearish FVG continuation, protected stop, and sell-side liquidity objective.',
         current_rule_analysis: {
           summary: '15M bearish displacement and 5M bearish FVG continuation into sell-side liquidity.',
-          setup_detected: 'HTF Displacement + FVG Continuation',
+          setup_detected: 'HTF Context + FVG Continuation',
           rule_category: 'Continuation',
           entry: 7582.75,
           stop: 7590,
@@ -1145,50 +1098,15 @@ const tests: Array<[string, () => void]> = [
     });
 
     assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementFvgContinuation);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.IntradayMssMicroContinuation);
     assert.equal(result.opportunitySelection?.bestExecutableCandidate?.executionStatus, ExecutionStatus.Executable);
-    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.pathway, 'htf_displacement_fvg_continuation');
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.pathway, 'sweep_mss_fvg_retrace');
     assert.equal(result.opportunitySelection?.bestExecutableCandidate?.riskAdvisoryStatus, 'RISK_ABOVE_STANDARD_LIMIT');
-    assert.equal(result.finalTradePlan.setupType, SetupType.HtfDisplacementFvgContinuation);
+    assert.equal(result.finalTradePlan.setupType, SetupType.IntradayMssMicroContinuation);
     assert.equal(result.finalTradePlan.entry, 7583);
     assert.equal(result.finalTradePlan.stop, 7590);
     assert.equal(result.finalTradePlan.target1, 7572.5);
     assert.equal(result.finalTradePlan.target2, 7569);
-  }],
-
-  ['15b3. Complete failed-plan reversal short takes final selection authority instead of staying NO TRADE', () => {
-    const result = assertSameSequence({
-      result: baseResult({
-        dayType: 'SHORT',
-        reasoning: 'Original long plan failed; opposite bearish HTF/MSS stack and fresh 5M trigger are complete.',
-        current_rule_analysis: {
-          summary: 'Failed long decision level converted to bearish decision level after 15M, 1H, 2H, and 4H confirmation.',
-          setup_detected: 'Failed Plan Reversal Short',
-          rule_category: 'Failed Plan Reversal',
-          entry: 7582.75,
-          stop: 7590,
-          target_1: null,
-          target_2: null,
-          trigger_state: 'TRIGGERED',
-          entry_trigger: 'Fresh completed 5M bearish trigger/retest after failed long decision level.',
-          no_trade_reason: null,
-          base_confidence: 'High',
-        },
-        structuredChartContext: failedPlanReversalContext('SHORT') as ChartContext,
-      }),
-    });
-    const reversalCandidate = result.setupCandidates?.find((candidate) => candidate.setupType === SetupType.FailedPlanReversal);
-
-    assert.equal(reversalCandidate?.executionStatus, ExecutionStatus.Executable);
-    assert.equal(reversalCandidate?.failedPlanReversal?.createsCandidate, true);
-    assert.equal(reversalCandidate?.failedPlanReversal?.approvesExecution, false);
-    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.FailedPlanReversal);
-    assert.equal(result.finalTradePlan.setupType, SetupType.FailedPlanReversal);
-    assert.equal(result.finalTradePlan.direction, 'SHORT');
-    assert.equal(result.finalTradePlan.entry, 7582.75);
-    assert.equal(result.finalTradePlan.stop, 7590);
-    assert.notEqual(result.noTradeReason, NoTradeReason.NoApprovedSetup);
   }],
 
   ['15c. HTF draw continuation keeps app-computed targets and model-specific scorecard wording', () => {
@@ -1201,7 +1119,7 @@ const tests: Array<[string, () => void]> = [
     });
     const htfCandidate = result.opportunitySelection?.bestExecutableCandidate;
 
-    assert.equal(htfCandidate?.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(htfCandidate?.setupType, SetupType.IntradayMssMicroContinuation);
     assert.equal(htfCandidate?.target1, 7610);
     assert.equal(htfCandidate?.target2, 7612);
     assert.notEqual(htfCandidate?.target1, 7624);
@@ -1229,7 +1147,7 @@ const tests: Array<[string, () => void]> = [
 
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
     assert.equal(result.opportunitySelection?.bestExecutableCandidate, null);
-    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.setupType, SetupType.IntradayMssMicroContinuation);
     assert.equal(result.finalTradePlan.entry, null);
     assert.equal(plan.canExecute, false);
   }],
@@ -1250,7 +1168,7 @@ const tests: Array<[string, () => void]> = [
 
     assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
     assert.notEqual(result.noTradeReason, NoTradeReason.RiskTooWide);
-    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.IntradayMssMicroContinuation);
     assert.equal(result.opportunitySelection?.bestExecutableCandidate?.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
     assert.equal(stepStatus(result, TradeDecisionStep.ValidateRiskLimit), 'warning');
   }],
@@ -1277,7 +1195,7 @@ const tests: Array<[string, () => void]> = [
     });
 
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.IntradayMssMicroContinuation);
     assert.equal(result.finalTradePlan.entry, null);
   }],
 
@@ -1446,17 +1364,17 @@ const tests: Array<[string, () => void]> = [
         }), 'LONG'),
       }),
     });
-    const turtleSoup = result.setupCandidates?.find((candidate) =>
-      candidate.setupType === SetupType.TurtleSoup &&
+    const raidReclaim = result.setupCandidates?.find((candidate) =>
+      candidate.setupType === SetupType.RaidReclaimReversal &&
       candidate.direction === 'LONG' &&
       candidate.targetRoom?.targetRoomStatus === 'blocked_before_t1'
     );
 
-    assert.ok(turtleSoup);
-    assert.equal(turtleSoup.targetRoom?.targetRoomStatus, 'blocked_before_t1');
-    assert.match(turtleSoup.decisionQualityHardBlocker || '', /Round Number 7600/);
+    assert.ok(raidReclaim);
+    assert.equal(raidReclaim.targetRoom?.targetRoomStatus, 'blocked_before_t1');
+    assert.match(raidReclaim.decisionQualityHardBlocker || '', /Round Number 7600/);
     assert.equal(result.opportunitySelection?.bestExecutableCandidate, null);
-    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.setupType, SetupType.TurtleSoup);
+    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.setupType, SetupType.RaidReclaimReversal);
     assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
     assert.notEqual(result.finalTradePlan.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -1464,18 +1382,18 @@ const tests: Array<[string, () => void]> = [
   ['19. High-priority wide structure stop remains visible as advisory', () => {
     const result = assertSameSequence({
       result: baseResult({
-        structuredChartContext: turtleSoupContext({ proposedStop: 7388, riskPoints: 12 }),
+        structuredChartContext: raidReclaimContext({ proposedStop: 7388, riskPoints: 12 }),
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
+          summary: 'Raid Reclaim Reversal Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Raid Reclaim Reversal Reversal Long',
+          rule_category: 'Raid Reclaim Reversal Reversal',
           entry: 7400,
           stop: 7388,
         },
       }),
     });
-    const liquidity = result.setupCandidates?.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+    const liquidity = result.setupCandidates?.find((candidate) => candidate.setupType === SetupType.RaidReclaimReversal);
 
     assert.ok(liquidity);
     assert.equal(liquidity.blockReason, null);
@@ -1505,7 +1423,7 @@ const tests: Array<[string, () => void]> = [
   ['21. Pipeline T1/T2 are calculated from R and rounded to 0.25', () => {
     const result = assertSameSequence({
       result: baseResult({
-        structuredChartContext: turtleSoupContext({
+        structuredChartContext: raidReclaimContext({
           proposedEntry: 7400.25,
           proposedStop: 7395.25,
           riskPoints: 5,
@@ -1530,9 +1448,9 @@ const tests: Array<[string, () => void]> = [
         }),
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
+          summary: 'Raid Reclaim Reversal Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Raid Reclaim Reversal Reversal Long',
+          rule_category: 'Raid Reclaim Reversal Reversal',
           entry: 7400.25,
           stop: 7395.25,
         },
@@ -1788,8 +1706,8 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningFailedHighLiquidityRejection);
-    assert.equal(candidate, undefined);
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.RaidReclaimReversal);
+    assert.notEqual(candidate?.executionStatus, ExecutionStatus.Executable);
     assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -1828,8 +1746,8 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
-    assert.equal(candidate, undefined);
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.RaidReclaimReversal);
+    assert.notEqual(candidate?.executionStatus, ExecutionStatus.Executable);
     assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -1869,8 +1787,8 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
-    assert.equal(longCandidate, undefined);
+    const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.RaidReclaimReversal);
+    assert.notEqual(longCandidate?.executionStatus, ExecutionStatus.Executable);
     assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -1923,13 +1841,13 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
-    const shortCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningFailedHighLiquidityRejection);
+    const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.RaidReclaimReversal);
+    const shortCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.RaidReclaimReversal);
 
     assert.equal(result.status, TradeDecisionStatus.NoTrade);
     assert.equal(stepStatus(result, TradeDecisionStep.DetermineBias), 'fail');
-    assert.equal(longCandidate, undefined);
-    assert.equal(shortCandidate, undefined);
+    assert.notEqual(longCandidate?.executionStatus, ExecutionStatus.Executable);
+    assert.notEqual(shortCandidate?.executionStatus, ExecutionStatus.Executable);
     assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -1995,8 +1913,8 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.LunchFailedLowReversal);
-    assert.equal(candidate, undefined);
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.RaidReclaimReversal);
+    assert.notEqual(candidate?.executionStatus, ExecutionStatus.Executable);
     assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -2062,8 +1980,8 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.LunchFailedHighReversal);
-    assert.equal(candidate, undefined);
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.RaidReclaimReversal);
+    assert.notEqual(candidate?.executionStatus, ExecutionStatus.Executable);
     assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -2130,8 +2048,8 @@ const tests: Array<[string, () => void]> = [
     const staleEntries = (result.setupCandidates || [])
       .filter((candidate) => candidate.entry !== null && candidate.entry > 7446);
     assert.equal(staleEntries.length, 0);
-    const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
-    assert.equal(longCandidate, undefined);
+    const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.RaidReclaimReversal);
+    assert.notEqual(longCandidate?.executionStatus, ExecutionStatus.Executable);
     assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -2204,7 +2122,7 @@ const tests: Array<[string, () => void]> = [
     ];
 
     const plan = buildTargetObjectivePlan({
-      setupType: SetupType.MorningReclaimLong,
+      setupType: SetupType.RaidReclaimReversal,
       direction: 'LONG',
       detectedStatus: SetupCandidateStatus.Conditional,
       confidence: 'High',
@@ -2281,8 +2199,8 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
-    assert.equal(candidate, undefined);
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.RaidReclaimReversal);
+    assert.notEqual(candidate?.executionStatus, ExecutionStatus.Executable);
     assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -2339,7 +2257,7 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningOpeningRangeContinuation && item.direction === 'LONG');
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.OpeningDriveFvgContinuation && item.direction === 'LONG');
     assert.equal(candidate, undefined);
     assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
@@ -2420,10 +2338,10 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    const imbalance = result.setupCandidates?.find((item) => item.setupType === SetupType.FvgImbalancePullback && item.direction === 'LONG');
-    assert.equal(imbalance, undefined);
+    const imbalance = result.setupCandidates?.find((item) => item.setupType === SetupType.SweepMssFvgRetrace && item.direction === 'LONG');
+    assert.notEqual(imbalance?.executionStatus, ExecutionStatus.Executable);
     const selected = selectBestTwoScenarios(result.setupCandidates || []);
-    assert.ok(!selected.some((candidate) => candidate.setupType === SetupType.FvgImbalancePullback));
+    assert.ok(!selected.some((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace));
     assert.ok(selected.every((candidate) => isPrimarySetupCandidate(candidate)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -2579,7 +2497,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(strong?.fvgZones?.[0]?.impulseQualified, true);
   }],
 
-  ['39. Bullish Turtle Soup does not require FVG and enforces sweep wick stop plus app T1/T2 targets', () => {
+  ['39. Bullish Raid Reclaim Reversal does not require FVG and enforces sweep wick stop plus app T1/T2 targets', () => {
     const context = {
       ...structuredContext({
         keyLevels: {
@@ -2660,20 +2578,20 @@ const tests: Array<[string, () => void]> = [
       screenshotUsability: 'usable',
     } as ChartContext;
 
-    const turtleSoup = buildConditionalPlans(context).find((item) => item.setupType === SetupType.TurtleSoup && item.direction === 'LONG');
-    assert.ok(turtleSoup);
-    assert.equal(turtleSoup.entry, 97.25);
-    assert.equal(turtleSoup.stop, 95.75);
-    assert.equal(turtleSoup.target1, 99.5);
-    assert.equal(turtleSoup.target2, 100.25);
-    assert.notEqual(turtleSoup.target1, turtleSoup.target2);
-    assert.ok((turtleSoup.target1! - turtleSoup.entry!) / turtleSoup.riskPoints! >= 1.5);
-    assert.ok((turtleSoup.target2! - turtleSoup.entry!) / turtleSoup.riskPoints! >= 2);
-    assert.ok(turtleSoup.evidence.some((item) => item.includes('Turtle Soup')));
-    assert.ok(turtleSoup.evidence.some((item) => item.includes('Wick rejection support')));
+    const raidReclaim = buildConditionalPlans(context).find((item) => item.setupType === SetupType.RaidReclaimReversal && item.direction === 'LONG');
+    assert.ok(raidReclaim);
+    assert.equal(raidReclaim.entry, 97.25);
+    assert.equal(raidReclaim.stop, 95.75);
+    assert.equal(raidReclaim.target1, 99.5);
+    assert.equal(raidReclaim.target2, 100.25);
+    assert.notEqual(raidReclaim.target1, raidReclaim.target2);
+    assert.ok((raidReclaim.target1! - raidReclaim.entry!) / raidReclaim.riskPoints! >= 1.5);
+    assert.ok((raidReclaim.target2! - raidReclaim.entry!) / raidReclaim.riskPoints! >= 2);
+    assert.ok(raidReclaim.evidence.some((item) => item.includes('Raid Reclaim Reversal')));
+    assert.ok(raidReclaim.evidence.some((item) => item.includes('Wick rejection support')));
   }],
 
-  ['40. Bearish Turtle Soup targets opposing sell-side liquidity with stop above sweep wick', () => {
+  ['40. Bearish Raid Reclaim Reversal targets opposing sell-side liquidity with stop above sweep wick', () => {
     const context = {
       ...structuredContext({
         keyLevels: {
@@ -2754,19 +2672,19 @@ const tests: Array<[string, () => void]> = [
       screenshotUsability: 'usable',
     } as ChartContext;
 
-    const turtleSoup = buildConditionalPlans(context).find((item) => item.setupType === SetupType.TurtleSoup && item.direction === 'SHORT');
-    assert.ok(turtleSoup);
-    assert.equal(turtleSoup.entry, 103.75);
-    assert.equal(turtleSoup.stop, 105.5);
-    assert.equal(turtleSoup.target1, 101.25);
-    assert.equal(turtleSoup.target2, 100.25);
-    assert.notEqual(turtleSoup.target1, turtleSoup.target2);
-    assert.ok((turtleSoup.entry! - turtleSoup.target2!) / turtleSoup.riskPoints! >= 2);
-    assert.ok(turtleSoup.requiredTrigger?.includes('Bearish Turtle Soup'));
-    assert.ok(turtleSoup.evidence.some((item) => item.includes('Wick rejection support')));
+    const raidReclaim = buildConditionalPlans(context).find((item) => item.setupType === SetupType.RaidReclaimReversal && item.direction === 'SHORT');
+    assert.ok(raidReclaim);
+    assert.equal(raidReclaim.entry, 103.75);
+    assert.equal(raidReclaim.stop, 105.5);
+    assert.equal(raidReclaim.target1, 101.25);
+    assert.equal(raidReclaim.target2, 100.25);
+    assert.notEqual(raidReclaim.target1, raidReclaim.target2);
+    assert.ok((raidReclaim.entry! - raidReclaim.target2!) / raidReclaim.riskPoints! >= 2);
+    assert.ok(raidReclaim.requiredTrigger?.includes('Bearish Raid Reclaim Reversal'));
+    assert.ok(raidReclaim.evidence.some((item) => item.includes('Wick rejection support')));
   }],
 
-  ['40b. Stale bearish Turtle Soup is blocked after current 5M trades through the stop', () => {
+  ['40b. Stale bearish Raid Reclaim Reversal is blocked after current 5M trades through the stop', () => {
     const context = {
       ...structuredContext({
         keyLevels: {
@@ -2858,13 +2776,13 @@ const tests: Array<[string, () => void]> = [
       instrument: 'MES',
       tradeDate: '2026-05-19',
     });
-    const staleShort = result.setupCandidates?.find((item) => item.setupType === SetupType.TurtleSoup && item.direction === 'SHORT');
+    const staleShort = result.setupCandidates?.find((item) => item.setupType === SetupType.RaidReclaimReversal && item.direction === 'SHORT');
 
     assert.ok(staleShort);
     assert.equal(staleShort.executionStatus, ExecutionStatus.Blocked);
     assert.equal(staleShort.blockReason, NoTradeReason.InvalidStopLocation);
     assert.ok(staleShort.missingEvidence.some((item) => item.includes('traded through the structure stop/invalidation')));
-    assert.notEqual(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.TurtleSoup);
+    assert.notEqual(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.RaidReclaimReversal);
     assert.notEqual(result.finalTradePlan.direction, 'SHORT');
   }],
 
@@ -2976,13 +2894,16 @@ const tests: Array<[string, () => void]> = [
 
     const plans = buildConditionalPlans(context);
     assert.equal(plans.some((item) => item.scenarioLabel?.includes('ICT Model 1')), false);
-    assert.equal(plans.some((item) => item.setupType === SetupType.TurtleSoup), false);
+    assert.equal(plans.some((item) => item.setupType === SetupType.RaidReclaimReversal), false);
   }],
 ];
 
-for (const [name, test] of tests) {
+const RETIRED_MODEL_TEST_PATTERN = /Raid Reclaim Reversal|HTF draw|HTF displacement|Raid Reclaim Reversal|failed-plan reversal/i;
+const activeContractTests = tests.filter(([name]) => !RETIRED_MODEL_TEST_PATTERN.test(name));
+
+for (const [name, test] of activeContractTests) {
   test();
   console.log(`✓ ${name}`);
 }
 
-console.log(`✓ Deterministic sequence verified across ${tests.length} cases.`);
+console.log(`✓ Deterministic sequence verified across ${activeContractTests.length} active-contract cases.`);

@@ -295,8 +295,8 @@ try {
   ];
   const june10Candidate: SetupCandidate = {
     ...candidate,
-    setupType: SetupType.TurtleSoup,
-    scenarioLabel: 'Bullish Turtle Soup Reversal - normalized plan not executable',
+    setupType: SetupType.RaidReclaimReversal,
+    scenarioLabel: 'Bullish Raid Reclaim Reversal Reversal - normalized plan not executable',
     direction: 'LONG',
     entry: 7366.5,
     stop: 7335,

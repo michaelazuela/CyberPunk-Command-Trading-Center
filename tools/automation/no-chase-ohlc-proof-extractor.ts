@@ -530,7 +530,7 @@ function buildCase(args: {
 function buildRecommendations(report: Omit<NoChaseOhlcProofExtractorReport, 'recommendations' | 'markdown'>): string[] {
   const lines = [
     'This extractor is research-only. It must not create canExecute, Discord tickets, or scanner promotions.',
-    'Keep TurtleSoup and SweepMssFvgRetrace out of scope for this phase.',
+    'Keep raidReclaim and SweepMssFvgRetrace out of scope for this phase.',
   ];
   if (report.summary.ohlcProofFound > 0) {
     lines.push('Review only proof-found cases classified as reviewable_full_plan before considering scanner artifact rebuild logic.');

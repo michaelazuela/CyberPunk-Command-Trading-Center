@@ -239,9 +239,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -338,9 +338,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -517,9 +517,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -616,9 +616,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -795,9 +795,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -894,9 +894,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -1072,9 +1072,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -1170,9 +1170,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -1340,9 +1340,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -1438,9 +1438,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -1617,9 +1617,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -1716,9 +1716,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -1895,9 +1895,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -1994,9 +1994,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -2174,9 +2174,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -2274,9 +2274,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -2454,9 +2454,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -2554,9 +2554,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -2734,9 +2734,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -2834,7 +2834,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -2848,7 +2848,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -2879,7 +2879,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -2986,9 +2986,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -3084,7 +3084,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -3098,7 +3098,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -3129,7 +3129,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -3236,9 +3236,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -3334,9 +3334,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -3512,9 +3512,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -3610,9 +3610,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -3788,9 +3788,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -3886,9 +3886,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -4064,9 +4064,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -4162,9 +4162,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -4340,9 +4340,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -4438,9 +4438,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -4616,9 +4616,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -4714,9 +4714,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -4892,9 +4892,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -4990,9 +4990,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -5169,9 +5169,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -5268,9 +5268,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -5447,9 +5447,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -5546,7 +5546,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -5560,7 +5560,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -5591,7 +5591,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -5698,9 +5698,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -5797,7 +5797,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -5811,7 +5811,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -5842,7 +5842,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -5949,9 +5949,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -6048,7 +6048,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -6062,7 +6062,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -6093,7 +6093,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -6191,9 +6191,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -6287,7 +6287,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -6301,7 +6301,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -6332,7 +6332,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -6439,9 +6439,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -6689,9 +6689,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -6788,9 +6788,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -6967,9 +6967,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -7066,9 +7066,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -7245,9 +7245,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -7344,9 +7344,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -7522,9 +7522,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -7620,9 +7620,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -7790,9 +7790,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -7888,9 +7888,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -8067,9 +8067,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -8166,9 +8166,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -8345,9 +8345,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -8444,9 +8444,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -8624,9 +8624,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -8724,9 +8724,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -8904,9 +8904,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -9004,9 +9004,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -9184,9 +9184,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -9284,7 +9284,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -9298,7 +9298,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -9329,7 +9329,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -9436,9 +9436,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -9534,7 +9534,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -9548,7 +9548,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -9579,7 +9579,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -9686,9 +9686,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -9784,9 +9784,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -9962,9 +9962,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -10060,9 +10060,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -10238,9 +10238,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -10336,9 +10336,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -10514,9 +10514,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -10612,9 +10612,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -10790,9 +10790,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -10888,9 +10888,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -11066,9 +11066,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -11164,9 +11164,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -11342,9 +11342,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "LONG",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -11440,9 +11440,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -11619,9 +11619,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -11718,9 +11718,9 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -11897,9 +11897,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -11996,7 +11996,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -12010,7 +12010,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -12041,7 +12041,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -12148,9 +12148,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -12247,7 +12247,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -12261,7 +12261,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -12292,7 +12292,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -12399,9 +12399,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -12498,7 +12498,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -12512,7 +12512,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -12543,7 +12543,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -12641,9 +12641,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementFvgContinuation",
-        "scenarioLabel": "HTF Displacement + FVG Continuation",
-        "pathway": "htf_displacement_fvg_continuation",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "HTF Context + FVG Continuation",
+        "pathway": "sweep_mss_fvg_retrace",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
@@ -12737,7 +12737,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "TurtleSoup",
+        "setupType": "RaidReclaimReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -12751,7 +12751,7 @@
         "riskPoints": null,
         "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
         "blockReason": "EntryTriggerMissing",
-        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "requiredTrigger": "Bullish Raid Reclaim Reversal requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
         "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
         "activeTimeframeMssRuleset": {
           "applied": true,
@@ -12782,7 +12782,7 @@
           "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M."
         ],
         "evidence": [
-          "Turtle Soup reversal",
+          "Raid Reclaim Reversal reversal",
           "Liquidity raid confirmed",
           "Sweep below sell-side liquidity confirmed",
           "Established liquidity level confirmed",
@@ -12889,9 +12889,9 @@
         ]
       },
       "pipelineBestConditional": {
-        "setupType": "HtfDisplacementMssContinuation",
-        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
-        "pathway": "htf_displacement_mss_continuation",
+        "setupType": "IntradayMssMicroContinuation",
+        "scenarioLabel": "HTF Context + 5M MSS Continuation",
+        "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",

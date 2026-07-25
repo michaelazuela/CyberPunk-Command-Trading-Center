@@ -32,7 +32,7 @@ const checklist: UnifiedDeskOutputFinalProductionReadinessChecklistInput = {
     date: '2026-07-22',
     session: 'morning',
     state: 'APPROVED_DESK_PLAN',
-    model: 'HtfDisplacementFvgContinuation',
+    model: 'SweepMssFvgRetrace',
     direction: 'LONG',
     proofTime: '2026-07-22T09:10:00.0000000',
     entry: 7519.5,
@@ -86,7 +86,7 @@ assert.equal(active.summary.supabaseWriteRows, 0);
 assert.equal(active.summary.liveBridgeReadRows, 0);
 assert.equal(active.summary.canExecuteTrueRows, 0);
 assert.equal(active.summary.tradingLogicChangedRows, 0);
-assert.equal(active.rows[0]?.headline, 'Approved Desk Plan | MORNING | LONG | HtfDisplacementFvgContinuation');
+assert.equal(active.rows[0]?.headline, 'Approved Desk Plan | MORNING | LONG | SweepMssFvgRetrace');
 assert.equal(active.rows[1]?.headline, 'Approved Desk Plan | LUNCH | LONG | IntradayMssMicroContinuation');
 assert.equal(active.rows.every((row) => row.publishDiscord === false), true);
 assert.equal(active.rows.every((row) => row.canExecute === false), true);
@@ -124,7 +124,7 @@ const eveningActive = buildUnifiedDeskOutputProductionScannerSurfaceActivation({
       date: '2026-07-22',
       session: 'evening',
       state: 'APPROVED_DESK_PLAN',
-      model: 'HtfDisplacementFvgContinuation',
+      model: 'SweepMssFvgRetrace',
       direction: 'SHORT',
       proofTime: '2026-07-22T20:15:00.0000000',
       entry: 7537,
@@ -140,7 +140,7 @@ assert.equal(eveningActive.status, 'active');
 assert.equal(eveningActive.summary.selectedRows, 3);
 assert.equal(eveningActive.summary.eveningRows, 1);
 assert.equal(eveningActive.summary.approvedDeskPlanRows, 3);
-assert.equal(eveningActive.rows[2]?.headline, 'Approved Desk Plan | EVENING | SHORT | HtfDisplacementFvgContinuation');
+assert.equal(eveningActive.rows[2]?.headline, 'Approved Desk Plan | EVENING | SHORT | SweepMssFvgRetrace');
 
 const blocked = buildUnifiedDeskOutputProductionScannerSurfaceActivation({
   finalReadinessChecklistPath: 'final-readiness.json',
@@ -164,7 +164,7 @@ const blockedThirdModel = buildUnifiedDeskOutputProductionScannerSurfaceActivati
     ...checklist,
     selectedCandidates: [{
       ...checklist.selectedCandidates[0],
-      model: 'TurtleSoup',
+      model: 'raidReclaim',
     }, checklist.selectedCandidates[1]],
   },
 });

@@ -102,9 +102,8 @@ const MODEL_PRIORITY: Record<string, number> = {
   OpeningDriveFvgContinuation: 100,
   AfterLunchDriveFvgContinuation: 95,
   IntradayMssMicroContinuation: 90,
-  HtfDisplacementMssContinuation: 84,
   SweepMssFvgRetrace: 78,
-  TurtleSoup: 76,
+  RaidReclaimReversal: 76,
 };
 
 const PROOF_PRIORITY: Record<string, number> = {

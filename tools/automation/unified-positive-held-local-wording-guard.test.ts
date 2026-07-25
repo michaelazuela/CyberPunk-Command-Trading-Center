@@ -44,7 +44,7 @@ const inspectionSurface = {
       ticketId: 'long-ticket',
       sourceSnapshotId: 'scanner-long',
       session: null,
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       status: 'inspectable_held_local_ticket',
       normalDeskOutput: {
@@ -78,7 +78,7 @@ const inspectionSurface = {
         dryRunZeroLivePublishBehaviorChange: true,
       },
       deskText: {
-        what: 'TurtleSoup LONG held-local ACTIVE_REVIEW ticket.',
+        what: 'raidReclaim LONG held-local ACTIVE_REVIEW ticket.',
         where: 'Line 100.00.',
         when: 'Fresh completed 5M proof.',
         why: 'HTF context supports review only.',
@@ -90,7 +90,7 @@ const inspectionSurface = {
       ticketId: 'short-ticket',
       sourceSnapshotId: 'scanner-short',
       session: null,
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       status: 'inspectable_held_local_ticket',
       normalDeskOutput: {
@@ -124,7 +124,7 @@ const inspectionSurface = {
         dryRunZeroLivePublishBehaviorChange: true,
       },
       deskText: {
-        what: 'TurtleSoup SHORT held-local ACTIVE_REVIEW ticket.',
+        what: 'raidReclaim SHORT held-local ACTIVE_REVIEW ticket.',
         where: 'Line 100.00.',
         when: 'Fresh completed 5M proof.',
         why: 'HTF context supports review only.',

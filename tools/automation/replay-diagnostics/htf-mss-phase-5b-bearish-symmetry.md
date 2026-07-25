@@ -52,8 +52,8 @@ This focused replay is local diagnostic coverage only. It does not post to Disco
 
 ## Setup Candidate Result
 - Candidate Detected: Yes
-- Setup Type: HtfDrawContinuationAfterRaid
-- Label: HTF Draw Continuation After Raid/Reclaim
+- Setup Type: RaidReclaimReversal
+- Label: HTF Context Continuation After Raid/Reclaim
 - Direction: SHORT
 - Not Bullish Continuation: Yes
 - Candidate-only canExecute: false

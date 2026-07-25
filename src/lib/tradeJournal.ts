@@ -10,26 +10,22 @@ export type TradeJournalSession =
   | 'replay_lunch';
 
 export type TradeJournalModelType =
+  | 'Raid Reclaim Reversal'
   | 'Sweep -> MSS -> FVG Retrace'
-  | 'Turtle Soup Reversal'
-  | 'HTF Draw Continuation After Raid/Reclaim'
-  | 'HTF Displacement + 5M MSS Continuation'
-  | 'HTF Displacement + FVG Continuation'
   | 'Opening Drive FVG Continuation'
   | 'After-Lunch Drive FVG Continuation'
   | 'Intraday MSS Micro Continuation'
-  | 'Failed Plan Reversal'
   | 'ICT setup';
 
 export type TradeJournalDirection = 'LONG' | 'SHORT' | 'NO TRADE';
 
 export type TradeJournalSetupTag =
+  | 'raid/reclaim'
   | 'sweep'
   | 'reclaim'
   | 'displacement'
   | 'MSS'
   | 'FVG'
-  | 'Turtle Soup'
   | 'wick rejection'
   | 'premium/discount'
   | 'HTF aligned'
@@ -126,7 +122,9 @@ export function extractJournalSetupTags(
   if (text.includes('displacement') || text.includes('impulse') || text.includes('expansion')) tags.push('displacement');
   if (text.includes('market structure shift') || text.includes('mss')) tags.push('MSS');
   if (text.includes('fvg') || text.includes('fair value gap') || text.includes('imbalance')) tags.push('FVG');
-  if (candidate?.setupType === SetupType.TurtleSoup || text.includes('turtle soup')) tags.push('Turtle Soup');
+  if (candidate?.setupType === SetupType.RaidReclaimReversal || text.includes('raid reclaim') || text.includes('failed breakout') || text.includes('failed breakdown')) {
+    tags.push('raid/reclaim');
+  }
   if (text.includes('wick rejection') || text.includes('rejection wick')) tags.push('wick rejection');
   if (text.includes('premium') || text.includes('discount') || text.includes('equilibrium')) tags.push('premium/discount');
   if (higherTimeframeAligned || text.includes('higher-timeframe bias aligned') || text.includes('htf aligned')) tags.push('HTF aligned');

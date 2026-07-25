@@ -20,7 +20,7 @@ The intended architecture must stay separated:
 
 2. **Setup scanner**
    Applies active primary setup definitions:
-   "Does this meet Sweep -> MSS -> FVG Retrace or Turtle Soup Reversal?"
+   "Does this meet Sweep -> MSS -> FVG Retrace or Raid Reclaim Reversal Reversal?"
 
    Liquidity sweeps, FVG/imbalance facts, market structure shifts, resting liquidity, prior-session sweeps, and breaker/FVG overlap are supporting evidence. They do not create a third active executable model.
 
@@ -172,7 +172,7 @@ The current scanner evaluates the active primary setup models for the session be
 Examples:
 
 - Sweep -> MSS -> FVG Retrace
-- Turtle Soup Reversal
+- Raid Reclaim Reversal Reversal
 - No Trade
 
 Setup detection must be separate from execution approval. A detected primary setup can still be blocked, conditional, or invalid for execution.

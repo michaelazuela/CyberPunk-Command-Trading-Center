@@ -16,8 +16,8 @@ assert.equal(report.authority.changesEntryStopTargets, false);
 assert.equal(report.summary.registryEntries, SETUP_REGISTRY.length);
 assert.equal(report.summary.auditedEntries, SETUP_REGISTRY.length);
 assert.ok(report.summary.primaryModels > 0);
-assert.ok(report.summary.supportingEvidence > 0);
-assert.ok(report.summary.deprecatedModels > 0);
+assert.equal(report.summary.supportingEvidence, 0);
+assert.equal(report.summary.deprecatedModels, 0);
 assert.equal(report.findings.length, 0);
 assert.ok(report.markdown.includes('Coverage:'));
 

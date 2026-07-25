@@ -18,8 +18,8 @@ function fixtureReport(): HistoricalResearchBackfillReport {
     totalCandidates: 0,
     datesReviewed: { from: '2026-01-01', to: '2026-05-29' },
     dataGaps: [],
-    classificationCounts: { model1Overlap: 0, turtleSoupOverlap: 0, advisoryOnly: 0 },
-    approvedModelOverlaps: { model1: 0, turtleSoup: 0 },
+    classificationCounts: { model1Overlap: 0, raidReclaimOverlap: 0, advisoryOnly: 0 },
+    approvedModelOverlaps: { model1: 0, raidReclaim: 0 },
     advisoryOnlyCount: 0,
     commonReasons: [],
     sampleEvents: [],
@@ -62,9 +62,9 @@ function fixtureReport(): HistoricalResearchBackfillReport {
         title: 'Time-Window Liquidity Delivery',
         totalCandidates: 5,
         advisoryOnlyCount: 3,
-        classificationCounts: { model1Overlap: 1, turtleSoupOverlap: 1, advisoryOnly: 3 },
-        approvedModelOverlaps: { model1: 1, turtleSoup: 1 },
-        commonReasons: ['Approved Model 1 or Turtle Soup gates were not evaluated by research backfill. (3)'],
+        classificationCounts: { model1Overlap: 1, raidReclaimOverlap: 1, advisoryOnly: 3 },
+        approvedModelOverlaps: { model1: 1, raidReclaim: 1 },
+        commonReasons: ['Approved Model 1 or Raid Reclaim Reversal gates were not evaluated by research backfill. (3)'],
         sampleEvents: [
           {
             date: '2026-01-02',
@@ -87,8 +87,8 @@ function fixtureReport(): HistoricalResearchBackfillReport {
             time: '14:00',
             direction: 'LONG',
             window: '2:00-3:00 NY',
-            summary: 'Turtle Soup overlap marker from historical record.',
-            classification: 'turtle_soup_overlap',
+            summary: 'Raid Reclaim Reversal overlap marker from historical record.',
+            classification: 'RAID_RECLAIM_overlap',
           },
           {
             date: '2026-04-05',
@@ -114,8 +114,8 @@ function fixtureReport(): HistoricalResearchBackfillReport {
         title: 'False-Run Liquidity Fade Near Highs',
         totalCandidates: 2,
         advisoryOnlyCount: 2,
-        classificationCounts: { model1Overlap: 0, turtleSoupOverlap: 0, advisoryOnly: 2 },
-        commonReasons: ['False-run behavior needs sweep/reclaim validation before Turtle Soup mapping. (2)'],
+        classificationCounts: { model1Overlap: 0, raidReclaimOverlap: 0, advisoryOnly: 2 },
+        commonReasons: ['False-run behavior needs sweep/reclaim validation before Raid Reclaim Reversal mapping. (2)'],
         sampleEvents: [
           {
             date: '2026-01-07',
@@ -141,8 +141,8 @@ function fixtureReport(): HistoricalResearchBackfillReport {
         title: 'Accumulation-Manipulation-Distribution Range Model',
         totalCandidates: 1,
         advisoryOnlyCount: 1,
-        classificationCounts: { model1Overlap: 0, turtleSoupOverlap: 0, advisoryOnly: 1 },
-        commonReasons: ['AMD narrative is research-only unless Model 1 or Turtle Soup gates independently pass. (1)'],
+        classificationCounts: { model1Overlap: 0, raidReclaimOverlap: 0, advisoryOnly: 1 },
+        commonReasons: ['AMD narrative is research-only unless Model 1 or Raid Reclaim Reversal gates independently pass. (1)'],
         sampleEvents: [
           {
             date: '2026-05-25',
@@ -160,7 +160,7 @@ function fixtureReport(): HistoricalResearchBackfillReport {
         title: 'Final-Hour Liquidity Draw',
         totalCandidates: 2,
         advisoryOnlyCount: 2,
-        classificationCounts: { model1Overlap: 0, turtleSoupOverlap: 0, advisoryOnly: 2 },
+        classificationCounts: { model1Overlap: 0, raidReclaimOverlap: 0, advisoryOnly: 2 },
         commonReasons: ['Final-hour condition remains advisory-only unless current approved gates pass independently. (2)'],
         sampleEvents: [
           {
@@ -193,11 +193,11 @@ function fixtureReport(): HistoricalResearchBackfillReport {
         classification: 'advisory_only',
         advisoryOnly: true,
         summary: 'Defined window showed liquidity-delivery range expansion.',
-        detectorReason: 'Approved Model 1 or Turtle Soup gates were not evaluated by research backfill.',
-        warningFailureReason: 'Approved Model 1 or Turtle Soup gates were not evaluated by research backfill.',
+        detectorReason: 'Approved Model 1 or Raid Reclaim Reversal gates were not evaluated by research backfill.',
+        warningFailureReason: 'Approved Model 1 or Raid Reclaim Reversal gates were not evaluated by research backfill.',
         dataQualityNotes: ['Full candidate event fixture.'],
         possibleModel1Overlap: false,
-        possibleTurtleSoupOverlap: false,
+        possibleraidReclaimOverlap: false,
         sourceSessionMetadata: { session: '3:00-4:00 NY', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
         researchOnlySignals: { drawIdentified: true, fvgOrInefficiency: true },
       },
@@ -215,7 +215,7 @@ function fixtureReport(): HistoricalResearchBackfillReport {
         warningFailureReason: 'Possible Model 1 overlap remains human-review-only.',
         dataQualityNotes: ['Full candidate event fixture.'],
         possibleModel1Overlap: true,
-        possibleTurtleSoupOverlap: false,
+        possibleraidReclaimOverlap: false,
         sourceSessionMetadata: { session: '10:00-11:00 NY', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
         researchOnlySignals: { drawIdentified: true },
       },
@@ -226,14 +226,14 @@ function fixtureReport(): HistoricalResearchBackfillReport {
         concept: 'time_window_liquidity_delivery',
         direction: 'LONG',
         window: '2:00-3:00 NY',
-        classification: 'turtle_soup_overlap',
+        classification: 'RAID_RECLAIM_overlap',
         advisoryOnly: true,
-        summary: 'Turtle Soup overlap marker from historical record.',
-        detectorReason: 'Possible Turtle Soup overlap remains human-review-only.',
-        warningFailureReason: 'Possible Turtle Soup overlap remains human-review-only.',
+        summary: 'Raid Reclaim Reversal overlap marker from historical record.',
+        detectorReason: 'Possible Raid Reclaim Reversal overlap remains human-review-only.',
+        warningFailureReason: 'Possible Raid Reclaim Reversal overlap remains human-review-only.',
         dataQualityNotes: ['Full candidate event fixture.'],
         possibleModel1Overlap: false,
-        possibleTurtleSoupOverlap: true,
+        possibleraidReclaimOverlap: true,
         sourceSessionMetadata: { session: '2:00-3:00 NY', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
         researchOnlySignals: { trueSweepReclaim: true },
       },
@@ -247,11 +247,11 @@ function fixtureReport(): HistoricalResearchBackfillReport {
         classification: 'advisory_only',
         advisoryOnly: true,
         summary: 'Fourth full candidate advisory sample.',
-        detectorReason: 'Approved Model 1 or Turtle Soup gates were not evaluated by research backfill.',
-        warningFailureReason: 'Approved Model 1 or Turtle Soup gates were not evaluated by research backfill.',
+        detectorReason: 'Approved Model 1 or Raid Reclaim Reversal gates were not evaluated by research backfill.',
+        warningFailureReason: 'Approved Model 1 or Raid Reclaim Reversal gates were not evaluated by research backfill.',
         dataQualityNotes: ['Full candidate event fixture.'],
         possibleModel1Overlap: false,
-        possibleTurtleSoupOverlap: false,
+        possibleraidReclaimOverlap: false,
         sourceSessionMetadata: { session: '10:00-11:00 NY', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
         researchOnlySignals: { drawIdentified: true },
       },
@@ -265,11 +265,11 @@ function fixtureReport(): HistoricalResearchBackfillReport {
         classification: 'advisory_only',
         advisoryOnly: true,
         summary: 'Price pressed a major intraday high and later delivered lower.',
-        detectorReason: 'False-run behavior needs sweep/reclaim validation before Turtle Soup mapping.',
-        warningFailureReason: 'False-run behavior needs sweep/reclaim validation before Turtle Soup mapping.',
+        detectorReason: 'False-run behavior needs sweep/reclaim validation before Raid Reclaim Reversal mapping.',
+        warningFailureReason: 'False-run behavior needs sweep/reclaim validation before Raid Reclaim Reversal mapping.',
         dataQualityNotes: ['Full candidate event fixture.'],
         possibleModel1Overlap: false,
-        possibleTurtleSoupOverlap: false,
+        possibleraidReclaimOverlap: false,
         sourceSessionMetadata: { session: 'regular_session', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
         researchOnlySignals: { reachedDrawAfterFact: true, failedOrReversed: true },
       },
@@ -287,12 +287,12 @@ function fixtureReport(): HistoricalResearchBackfillReport {
         warningFailureReason: 'Final-hour condition remains advisory-only unless current approved gates pass independently.',
         dataQualityNotes: ['Full candidate event fixture.'],
         possibleModel1Overlap: false,
-        possibleTurtleSoupOverlap: false,
+        possibleraidReclaimOverlap: false,
         sourceSessionMetadata: { session: '3:15-3:45 NY', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
         researchOnlySignals: { cleanLiquidityDraw: true, footholdPresent: true },
       },
     ],
-    approvedModelOverlap: { model1: 1, turtleSoup: 1, total: 2 },
+    approvedModelOverlap: { model1: 1, raidReclaim: 1, total: 2 },
     advisoryOnlyFindings: [],
     repeatedFailureNoEntryReasons: [],
     candidateConceptsWorthContinuedTracking: [],
@@ -344,7 +344,7 @@ assert.ok(timeWindowPack.markdown.includes('Sample review used full candidate ev
 assert.equal(timeWindowPack.selectedSampleCount, 3);
 assert.equal(timeWindowPack.samples.length, 3);
 assert.ok(timeWindowPack.samples.some((sample) => sample.agentInspectionLabel === 'possible_model1_mapping_review'));
-assert.ok(timeWindowPack.samples.some((sample) => sample.agentInspectionLabel === 'possible_turtle_soup_mapping_review'));
+assert.ok(timeWindowPack.samples.some((sample) => sample.agentInspectionLabel === 'possible_RAID_RECLAIM_mapping_review'));
 assert.ok(timeWindowPack.samples.some((sample) => sample.agentInspectionLabel === 'keep_advisory'));
 assert.ok(timeWindowPack.conceptSummaries[0].directionCounts.LONG >= 1);
 assert.ok(timeWindowPack.conceptSummaries[0].directionCounts.SHORT >= 1);
@@ -435,7 +435,7 @@ assert.equal(allPack.selectedSampleCount, 6);
 assert.ok(allPack.conceptSummaries.some((summary) => summary.concept === 'false_run_liquidity_fade' && summary.selectedSamples > 0));
 assert.ok(allPack.conceptSummaries.some((summary) => summary.concept === 'final_hour_liquidity_draw' && summary.selectedSamples > 0));
 assert.ok(allPack.samples.every((sample) => sample.agentInspectionLabel !== 'possible_model1_mapping_review' || sample.agentApprovalBoundary.agentApprovesTrade === false));
-assert.ok(allPack.samples.every((sample) => sample.agentInspectionLabel !== 'possible_turtle_soup_mapping_review' || sample.agentApprovalBoundary.agentApprovesTrade === false));
+assert.ok(allPack.samples.every((sample) => sample.agentInspectionLabel !== 'possible_RAID_RECLAIM_mapping_review' || sample.agentApprovalBoundary.agentApprovesTrade === false));
 
 const previewOnlyReport: HistoricalResearchBackfillReport = {
   ...report,

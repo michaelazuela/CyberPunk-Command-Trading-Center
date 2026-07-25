@@ -108,7 +108,7 @@ interface HtfFirstCandidate {
   marketStructureShiftPresent: boolean;
   sweepRaidPlusReclaimPresent: boolean;
   modelOneOverlapPossible: boolean;
-  turtleSoupOverlapPossible: boolean;
+  raidReclaimOverlapPossible: boolean;
   drawReferences: DrawReference[];
   notes: string[];
   researchOnly: true;
@@ -576,7 +576,7 @@ export function buildHtfFirstCandidate(args: {
     marketStructureShiftPresent: mss,
     sweepRaidPlusReclaimPresent: sweep,
     modelOneOverlapPossible: fvg && mss && sweep,
-    turtleSoupOverlapPossible: sweep && !(fvg && mss),
+    raidReclaimOverlapPossible: sweep && !(fvg && mss),
     drawReferences: references,
     notes: [
       'Research-only HTF-first TWLD candidate. 5m is execution-window observation only.',

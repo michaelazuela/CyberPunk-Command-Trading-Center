@@ -11,7 +11,7 @@ import {
 import type { NormalizedTradePlan } from '../lib/tradePlan';
 
 describe('FinalTradePlanCard HTF draw model display', () => {
-  it('shows the HTF Draw Continuation label without implying execution before gates pass', () => {
+  it('shows the HTF Context Continuation label without implying execution before gates pass', () => {
     const plan = {
       decision: 'NO TRADE',
       decisionLabel: 'WAIT',
@@ -30,15 +30,15 @@ describe('FinalTradePlanCard HTF draw model display', () => {
       invalidation: 'Do not execute until app-owned entry, stop, target, risk, and trigger gates are complete.',
       source: 'app_rule_engine',
       canExecute: false,
-      setupName: 'HTF Draw Continuation After Raid/Reclaim',
+      setupName: 'HTF Context Continuation After Raid/Reclaim',
       decisionStatus: TradeDecisionStatus.Wait,
       noTradeReason: NoTradeReason.EntryTriggerPending,
       hasConditionalPlans: true,
       setupCandidates: [{
-        setupType: SetupType.HtfDrawContinuationAfterRaid,
-        scenarioLabel: 'HTF Draw Continuation After Raid/Reclaim',
+        setupType: SetupType.IntradayMssMicroContinuation,
+        scenarioLabel: 'HTF Context Continuation After Raid/Reclaim',
         candidateState: 'REVERSAL_DELIVERY_PLAN_CANDIDATE',
-        pathway: 'htf_liquidity_draw_mss',
+        pathway: 'intraday_mss_micro_continuation',
         direction: 'LONG',
         detectedStatus: SetupCandidateStatus.Conditional,
         confidence: 'Medium',
@@ -76,7 +76,7 @@ describe('FinalTradePlanCard HTF draw model display', () => {
 
     render(<FinalTradePlanCard plan={plan} />);
 
-    expect(document.body.textContent).toContain('HTF Draw Continuation After Raid/Reclaim');
+    expect(document.body.textContent).toContain('HTF Context Continuation After Raid/Reclaim');
     expect(screen.getByText(/Execution stays disabled until the required trigger and risk fields are satisfied/i)).toBeTruthy();
     expect(screen.queryByText(/Trade now/i)).toBeNull();
   });
@@ -99,7 +99,7 @@ describe('FinalTradePlanCard HTF draw model display', () => {
       invalidation: 'Invalid below protected structure.',
       source: 'app_rule_engine',
       canExecute: true,
-      setupName: 'HTF Draw Continuation After Raid/Reclaim',
+      setupName: 'HTF Context Continuation After Raid/Reclaim',
       decisionStatus: TradeDecisionStatus.ConditionalTrade,
       noTradeReason: null,
       hasConditionalPlans: true,

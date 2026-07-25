@@ -58,7 +58,7 @@ fs.writeFileSync(path.join(tmpDir, 'raw-ohlc-scanner-artifacts-sample.json'), `$
           rankScore: 100,
           humanReview: { canExecute: false },
         }, {
-          setupType: 'HtfDisplacementMssContinuation',
+          setupType: 'IntradayMssMicroContinuation',
           direction: 'LONG',
           executionStatus: 'Conditional',
           blockReason: null,
@@ -93,7 +93,7 @@ assert.equal(report.summary.completeReplacementCanExecuteTrueEvents, 0);
 assert.equal(report.summary.runtimeProposalCandidateEvents, 1);
 assert.equal(report.summary.runtimeInstallAllowed, false);
 assert.equal(report.summary.recommendation, 'investigate_complete_replacements');
-assert.equal(report.events[0].replacementSetupType, 'HtfDisplacementMssContinuation');
+assert.equal(report.events[0].replacementSetupType, 'IntradayMssMicroContinuation');
 assert.equal(report.events[0].replacementHasCompletePlan, true);
 
 const missing = buildUnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionCompleteReplacementMinerReport({

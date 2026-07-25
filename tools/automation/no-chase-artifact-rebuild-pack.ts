@@ -169,7 +169,7 @@ function buildRow(caseItem: NoChaseOhlcProofCase): NoChaseArtifactRebuildPackRow
 function buildRecommendations(report: Omit<NoChaseArtifactRebuildPackReport, 'recommendations' | 'markdown'>): string[] {
   const recommendations = [
     'Research-only rebuild pack. Do not post Discord, set canExecute, or wire scanner behavior from this artifact.',
-    'Keep TurtleSoup and SweepMssFvgRetrace excluded; this pack only covers full-plan Intraday MSS and After-Lunch FVG no-chase cases.',
+    'Keep raidReclaim and SweepMssFvgRetrace excluded; this pack only covers full-plan Intraday MSS and After-Lunch FVG no-chase cases.',
   ];
   if (report.summary.includeForRebuildReview > 0) {
     recommendations.push('Use include_for_rebuild_review rows as the only candidates for a later read-only scanner artifact rebuild simulation.');

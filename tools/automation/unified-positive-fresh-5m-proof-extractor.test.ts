@@ -7,8 +7,8 @@ function positiveRow(overrides: Partial<UnifiedPositiveCandidateRebuildAuditRow>
     snapshotId: 'fresh-proof',
     tradeDate: '2026-07-01',
     sessionType: 'morning',
-    candidateKey: 'TurtleSoup|fixture|LONG|100.00|0',
-    setupType: 'TurtleSoup',
+    candidateKey: 'raidReclaim|fixture|LONG|100.00|0',
+    setupType: 'raidReclaim',
     direction: 'LONG',
     unifiedState: 'no_chase',
     tradingModelState: 'ranked_candidate',
@@ -81,7 +81,7 @@ const positiveRebuildAudit: UnifiedPositiveCandidateRebuildAuditReport = {
     positiveRow(),
     positiveRow({
       snapshotId: 'stop-first',
-      candidateKey: 'TurtleSoup|fixture|LONG|101.00|0',
+      candidateKey: 'raidReclaim|fixture|LONG|101.00|0',
       existingPlan: { entry: 101, stop: 97, target1: 107, target2: 109, riskPoints: 4 },
     }),
     positiveRow({

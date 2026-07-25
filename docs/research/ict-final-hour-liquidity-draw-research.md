@@ -154,10 +154,10 @@ Current Model 1:
 - Classification: partially covered.
 - Model 1 already requires approved sweep/reclaim/displacement/MSS/FVG gates. The final-hour liquidity draw idea cannot bypass those gates.
 
-Current Turtle Soup:
+Current Raid Reclaim Reversal:
 
 - Classification: partially covered.
-- Turtle Soup already handles sweep/reclaim reversals. A final-hour liquidity draw remains context only unless approved 5M gates confirm.
+- Raid Reclaim Reversal already handles sweep/reclaim reversals. A final-hour liquidity draw remains context only unless approved 5M gates confirm.
 
 Current Displacement/FVG Pullback Watchlist:
 
@@ -177,7 +177,7 @@ Current Discord advisory behavior:
 Overall classification:
 
 - This candidate should remain research-only.
-- It must not override Model 1, Turtle Soup, Scanner Plan Selection Agent, or approved 6K rules.
+- It must not override Model 1, Raid Reclaim Reversal, Scanner Plan Selection Agent, or approved 6K rules.
 
 ## 6. Bridge Data Research Plan
 
@@ -205,7 +205,7 @@ Draft only. Do not implement as a Discord alert in this phase.
 
 - This is not an approved executable model.
 - Do not create entries, stops, T1/T2, or outcome buttons.
-- Do not override Model 1 or Turtle Soup.
+- Do not override Model 1 or Raid Reclaim Reversal.
 - Do not allow this to approve trades.
 - Do not use later success to retroactively validate an invalid setup.
 - Collect 20-30 examples first.

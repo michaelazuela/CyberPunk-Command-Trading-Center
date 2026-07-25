@@ -20,10 +20,10 @@ const coverageQueue = {
     },
     {
       priority: 2,
-      replayQueueKey: '2026-06-23|evening|TurtleSoup|SHORT|prefer_replacement',
+      replayQueueKey: '2026-06-23|evening|raidReclaim|SHORT|prefer_replacement',
       tradeDate: '2026-06-23',
       sessionType: 'evening',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'SHORT',
       selectorDecision: 'prefer_replacement',
       shadowRows: 37,

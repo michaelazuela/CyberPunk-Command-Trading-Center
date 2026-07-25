@@ -12,8 +12,8 @@ import type {
   UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport,
 } from './unified-positive-held-local-preview-sweep-penalty-installed-score-comparison';
 import type {
-  UnifiedPositiveHeldLocalPreviewTurtleSoupExtremeRiskCompanionFilterReport,
-} from './unified-positive-held-local-preview-turtlesoup-extreme-risk-companion-filter';
+  UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport,
+} from './unified-positive-held-local-preview-raidReclaim-extreme-risk-companion-filter';
 
 const authority = {
   readOnly: true,
@@ -35,7 +35,7 @@ const authority = {
 } as const;
 
 const companion = {
-  reportType: 'unified_positive_held_local_preview_turtlesoup_extreme_risk_companion_filter',
+  reportType: 'unified_positive_held_local_preview_raidReclaim_extreme_risk_companion_filter',
   generatedAt: '2026-07-18T00:00:00.000Z',
   status: 'pass',
   authority,
@@ -68,7 +68,7 @@ const companion = {
       variantId: 'risk_gt_20',
       slateId: '2026-06-10|lunch',
       topBeforeTicketId: 'before',
-      topBeforeSetupType: 'TurtleSoup',
+      topBeforeSetupType: 'raidReclaim',
       topBeforeOutcomeBucket: 'loss_stopped_before_t1',
       topBeforeOneMesPl: -100,
       topAfterTicketId: 'bad-long',
@@ -81,7 +81,7 @@ const companion = {
       variantId: 'risk_gt_15',
       slateId: '2026-06-05|lunch',
       topBeforeTicketId: 'before-winner',
-      topBeforeSetupType: 'TurtleSoup',
+      topBeforeSetupType: 'raidReclaim',
       topBeforeOutcomeBucket: 'winner_t1_t2',
       topBeforeOneMesPl: 150,
       topAfterTicketId: 'clean-short',
@@ -94,7 +94,7 @@ const companion = {
   blockers: [],
   recommendations: [],
   markdown: '',
-} satisfies UnifiedPositiveHeldLocalPreviewTurtleSoupExtremeRiskCompanionFilterReport;
+} satisfies UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport;
 
 const installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport = {
   reportType: 'unified_positive_held_local_preview_sweep_penalty_installed_score_comparison',

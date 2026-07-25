@@ -6,18 +6,18 @@ import { assertNoExecutableLedgerFields } from './model-candidate-ledger';
 type AuditWindowCode = 'LONDON' | 'AM' | 'PM';
 type OverlapClassification =
   | 'model_1_overlap_possible'
-  | 'turtle_soup_overlap_possible'
+  | 'RAID_RECLAIM_overlap_possible'
   | 'advisory_only_time_window_research';
 type CuratedBucket =
   | 'advisory_only_samples'
   | 'best_clean_draw_delivery_achieved_samples'
   | 'clean_draw_failed_delivery_samples'
   | 'model_1_overlap_samples'
-  | 'turtle_soup_overlap_samples';
+  | 'RAID_RECLAIM_overlap_samples';
 type SuggestedReviewLabel =
   | 'strong_advisory_candidate'
   | 'covered_by_model_1'
-  | 'covered_by_turtle_soup'
+  | 'covered_by_RAID_RECLAIM'
   | 'weak_or_noisy'
   | 'needs_chart_review'
   | 'reject_time_window_standalone';
@@ -78,7 +78,7 @@ interface CuratedSample {
   sweepRaidPlusReclaimPresent: boolean;
   deliveryStatus: 'achieved' | 'failed' | 'not_observed';
   modelOneOverlap: boolean;
-  turtleSoupOverlap: boolean;
+  raidReclaimOverlap: boolean;
   advisoryOnly: boolean;
   suggestedReviewLabels: SuggestedReviewLabel[];
   chartPath: string | null;
@@ -115,8 +115,8 @@ interface CuratedReviewPack {
     pmAdvisoryOnly: number;
     amModelOneOverlap: number | null;
     pmModelOneOverlap: number;
-    amTurtleSoupOverlap: number | null;
-    pmTurtleSoupOverlap: number;
+    amraidReclaimOverlap: number | null;
+    pmraidReclaimOverlap: number;
     amRejectionPosture: string;
     comparisonRead: 'pm_more_promising' | 'pm_less_promising' | 'too_early_to_tell';
     note: string;
@@ -149,12 +149,12 @@ const BUCKET_ORDER: CuratedBucket[] = [
   'best_clean_draw_delivery_achieved_samples',
   'clean_draw_failed_delivery_samples',
   'model_1_overlap_samples',
-  'turtle_soup_overlap_samples',
+  'RAID_RECLAIM_overlap_samples',
 ];
 const SUGGESTED_LABELS: SuggestedReviewLabel[] = [
   'strong_advisory_candidate',
   'covered_by_model_1',
-  'covered_by_turtle_soup',
+  'covered_by_RAID_RECLAIM',
   'weak_or_noisy',
   'needs_chart_review',
   'reject_time_window_standalone',
@@ -236,7 +236,7 @@ function sortPreferred(candidates: AuditCandidate[]): AuditCandidate[] {
 
 function labelsFor(bucket: CuratedBucket, candidate: AuditCandidate): SuggestedReviewLabel[] {
   if (bucket === 'model_1_overlap_samples') return ['covered_by_model_1', 'needs_chart_review'];
-  if (bucket === 'turtle_soup_overlap_samples') return ['covered_by_turtle_soup', 'needs_chart_review'];
+  if (bucket === 'RAID_RECLAIM_overlap_samples') return ['covered_by_RAID_RECLAIM', 'needs_chart_review'];
   if (bucket === 'clean_draw_failed_delivery_samples') return ['weak_or_noisy', 'needs_chart_review'];
   if (bucket === 'advisory_only_samples') return ['strong_advisory_candidate', 'needs_chart_review', 'reject_time_window_standalone'];
   if (candidate.cleanDrawObserved && candidate.deliveryAchieved) return ['strong_advisory_candidate', 'needs_chart_review'];
@@ -245,7 +245,7 @@ function labelsFor(bucket: CuratedBucket, candidate: AuditCandidate): SuggestedR
 
 function inclusionReasons(bucket: CuratedBucket, candidate: AuditCandidate): string[] {
   const reasons = [`Selected for ${bucket.replace(/_/g, ' ')}.`];
-  if (candidate.overlapClassification === 'advisory_only_time_window_research') reasons.push('Advisory-only classification may show behavior not already covered by Model 1 or Turtle Soup.');
+  if (candidate.overlapClassification === 'advisory_only_time_window_research') reasons.push('Advisory-only classification may show behavior not already covered by Model 1 or Raid Reclaim Reversal.');
   if (candidate.cleanDrawObserved) reasons.push('Clean draw observed.');
   if (candidate.deliveryAchieved) reasons.push('Delivery achieved.');
   if (candidate.failedDelivery) reasons.push('Failed delivery included to reduce survivorship bias.');
@@ -253,7 +253,7 @@ function inclusionReasons(bucket: CuratedBucket, candidate: AuditCandidate): str
   if (candidate.marketStructureShiftPresent) reasons.push('Market structure shift present.');
   if (candidate.sweepRaidPlusReclaimPresent) reasons.push('Sweep/raid plus reclaim present.');
   if (candidate.overlapClassification === 'model_1_overlap_possible') reasons.push('Model 1 overlap is advisory only and must be reviewed through existing Model 1 rules.');
-  if (candidate.overlapClassification === 'turtle_soup_overlap_possible') reasons.push('Turtle Soup overlap is advisory only and must be reviewed through existing Turtle Soup rules.');
+  if (candidate.overlapClassification === 'RAID_RECLAIM_overlap_possible') reasons.push('Raid Reclaim Reversal overlap is advisory only and must be reviewed through existing Raid Reclaim Reversal rules.');
   return reasons;
 }
 
@@ -274,7 +274,7 @@ function sampleFrom(bucket: CuratedBucket, candidate: AuditCandidate): CuratedSa
     sweepRaidPlusReclaimPresent: candidate.sweepRaidPlusReclaimPresent,
     deliveryStatus: deliveryStatus(candidate),
     modelOneOverlap: candidate.overlapClassification === 'model_1_overlap_possible',
-    turtleSoupOverlap: candidate.overlapClassification === 'turtle_soup_overlap_possible',
+    raidReclaimOverlap: candidate.overlapClassification === 'RAID_RECLAIM_overlap_possible',
     advisoryOnly: candidate.overlapClassification === 'advisory_only_time_window_research',
     suggestedReviewLabels: labelsFor(bucket, candidate),
     chartPath: null,
@@ -324,8 +324,8 @@ function buildAmVsPmComparison(options: CurateOptions, audit: AuditReport): Cura
     pmAdvisoryOnly: audit.summary.advisoryOnlyCount,
     amModelOneOverlap: amAudit?.summary.modelOneOverlapCount ?? null,
     pmModelOneOverlap: audit.summary.modelOneOverlapCount,
-    amTurtleSoupOverlap: amAudit?.summary.turtleSoupOverlapCount ?? null,
-    pmTurtleSoupOverlap: audit.summary.turtleSoupOverlapCount,
+    amraidReclaimOverlap: amAudit?.summary.raidReclaimOverlapCount ?? null,
+    pmraidReclaimOverlap: audit.summary.raidReclaimOverlapCount,
     amRejectionPosture,
     comparisonRead: 'too_early_to_tell',
     note: 'PM has separate research evidence, but no promotion decision is made. PM requires human review before any standalone interpretation.',
@@ -344,7 +344,7 @@ export function buildTimeWindowLiquidityDeliveryCuratedReviewPack(options: Curat
     best_clean_draw_delivery_achieved_samples: sortPreferred(audit.candidates.filter((candidate) => candidate.cleanDrawObserved && candidate.deliveryAchieved)).slice(0, 10),
     clean_draw_failed_delivery_samples: sortPreferred(audit.candidates.filter((candidate) => candidate.cleanDrawObserved && candidate.failedDelivery)).slice(0, 10),
     model_1_overlap_samples: sortPreferred(audit.candidates.filter((candidate) => candidate.overlapClassification === 'model_1_overlap_possible')).slice(0, 10),
-    turtle_soup_overlap_samples: sortPreferred(audit.candidates.filter((candidate) => candidate.overlapClassification === 'turtle_soup_overlap_possible')).slice(0, 10),
+    RAID_RECLAIM_overlap_samples: sortPreferred(audit.candidates.filter((candidate) => candidate.overlapClassification === 'RAID_RECLAIM_overlap_possible')).slice(0, 10),
   };
   const samples = BUCKET_ORDER.flatMap((bucket) => buckets[bucket].map((candidate) => sampleFrom(bucket, candidate)));
   const paths = outputPaths(options);
@@ -367,14 +367,14 @@ export function buildTimeWindowLiquidityDeliveryCuratedReviewPack(options: Curat
       'Select up to 10 clean-draw delivery-achieved samples, preferring FVG/inefficiency, MSS, sweep/reclaim, and larger expected delivery distance.',
       'Select up to 10 clean-draw failed-delivery samples for failure-mode review.',
       'Select up to 10 Model 1 overlap samples, preferring clean draw and delivery achieved.',
-      'Select up to 10 Turtle Soup overlap samples, preferring clean draw and delivery achieved.',
+      'Select up to 10 Raid Reclaim Reversal overlap samples, preferring clean draw and delivery achieved.',
       'Suggested labels are not final labels and do not change readiness, model approval, scanner behavior, or execution authority.',
     ],
     samples,
     humanReviewInstructions: [
       'Review charts before applying any final human label.',
       'Use covered_by_model_1 only if the sample should remain under existing Model 1 review.',
-      'Use covered_by_turtle_soup only if the sample should remain under existing Turtle Soup review.',
+      'Use covered_by_RAID_RECLAIM only if the sample should remain under existing Raid Reclaim Reversal review.',
       'Use strong_advisory_candidate only for research discussion, not execution approval.',
       'Reject time-window standalone behavior when the evidence is noisy or already covered by approved models.',
     ],
@@ -414,7 +414,7 @@ export function renderTimeWindowLiquidityDeliveryCuratedMarkdown(pack: CuratedRe
     '- Clean-draw delivery-achieved samples show the strongest research examples.',
     '- Clean-draw failed-delivery samples protect against survivorship bias.',
     '- Model 1 overlap samples test whether the AM window improves context without creating a new model.',
-    '- Turtle Soup overlap samples test whether the AM window improves sweep/reclaim context without creating a new model.',
+    '- Raid Reclaim Reversal overlap samples test whether the AM window improves sweep/reclaim context without creating a new model.',
     '',
     '## Human Review Instructions',
     ...pack.humanReviewInstructions.map((instruction) => `- ${instruction}`),
@@ -429,8 +429,8 @@ export function renderTimeWindowLiquidityDeliveryCuratedMarkdown(pack: CuratedRe
       `- PM advisory-only count: ${pack.amVsPmComparison.pmAdvisoryOnly}`,
       `- AM Model 1 overlap: ${pack.amVsPmComparison.amModelOneOverlap ?? 'not available'}`,
       `- PM Model 1 overlap: ${pack.amVsPmComparison.pmModelOneOverlap}`,
-      `- AM Turtle Soup overlap: ${pack.amVsPmComparison.amTurtleSoupOverlap ?? 'not available'}`,
-      `- PM Turtle Soup overlap: ${pack.amVsPmComparison.pmTurtleSoupOverlap}`,
+      `- AM Raid Reclaim Reversal overlap: ${pack.amVsPmComparison.amraidReclaimOverlap ?? 'not available'}`,
+      `- PM Raid Reclaim Reversal overlap: ${pack.amVsPmComparison.pmraidReclaimOverlap}`,
       `- AM rejection posture: ${pack.amVsPmComparison.amRejectionPosture}`,
       `- Comparison read: ${pack.amVsPmComparison.comparisonRead}`,
       `- Note: ${pack.amVsPmComparison.note}`,

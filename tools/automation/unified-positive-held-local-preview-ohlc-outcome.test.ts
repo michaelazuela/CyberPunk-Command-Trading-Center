@@ -68,10 +68,10 @@ const queue: UnifiedPositiveHeldLocalPreviewReplayQueueReport = {
   },
   rows: [
     {
-      ticketId: '2026-06-16-morning-TurtleSoup-LONG',
+      ticketId: '2026-06-16-morning-raidReclaim-LONG',
       tradeDate: '2026-06-16',
       session: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       sourceSnapshotId: 'scanner-1',
       replayStatus: 'ready_for_read_only_outcome_replay',
@@ -101,10 +101,10 @@ const queue: UnifiedPositiveHeldLocalPreviewReplayQueueReport = {
       blockers: [],
     },
     {
-      ticketId: '2026-06-17-morning-TurtleSoup-LONG',
+      ticketId: '2026-06-17-morning-raidReclaim-LONG',
       tradeDate: '2026-06-17',
       session: 'morning',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       sourceSnapshotId: 'scanner-2',
       replayStatus: 'ready_for_read_only_outcome_replay',
@@ -177,7 +177,7 @@ function adapterRow(ticketId: string, triggerCondition: string): UnifiedPositive
     ticketId,
     sourceSnapshotId: 'scanner',
     session: ticketId.includes('morning') ? 'morning' : null,
-    setupType: 'TurtleSoup',
+    setupType: 'raidReclaim',
     direction: 'LONG',
     adapterStatus: 'held_local_artifact_created',
     artifact: {
@@ -219,8 +219,8 @@ const adapter: UnifiedPositiveHeldLocalTicketAdapterReport = {
     publishDiscordFalseArtifacts: 3,
   },
   rows: [
-    adapterRow('2026-06-16-morning-TurtleSoup-LONG', 'Fresh completed 5M proof printed at 2026-06-16T10:05:00.'),
-    adapterRow('2026-06-17-morning-TurtleSoup-LONG', 'Fresh completed 5M proof printed at 2026-06-17T10:05:00.'),
+    adapterRow('2026-06-16-morning-raidReclaim-LONG', 'Fresh completed 5M proof printed at 2026-06-16T10:05:00.'),
+    adapterRow('2026-06-17-morning-raidReclaim-LONG', 'Fresh completed 5M proof printed at 2026-06-17T10:05:00.'),
     adapterRow('2026-06-18-morning-SweepMssFvgRetrace-LONG', 'Fresh completed 5M proof printed with missing timestamp.'),
   ],
   recommendations: [],
@@ -246,16 +246,16 @@ assert.equal(report.summary.queuedRows, 3);
 assert.equal(report.summary.resolvedRows, 2);
 assert.equal(report.summary.blockedRows, 1);
 assert.equal(report.summary.grossResolvedOneMesPl, 10);
-assert.equal(report.summary.turtleSoupResolvedOneMesPl, 10);
+assert.equal(report.summary.raidReclaimResolvedOneMesPl, 10);
 assert.equal(report.summary.sweepMssFvgRetraceResolvedOneMesPl, null);
 
-const winner = report.rows.find((row) => row.ticketId === '2026-06-16-morning-TurtleSoup-LONG');
+const winner = report.rows.find((row) => row.ticketId === '2026-06-16-morning-raidReclaim-LONG');
 assert.equal(winner?.outcomeStatus, 'resolved');
 assert.equal(winner?.outcomeLabel, 't1_and_t2_hit');
 assert.equal(winner?.resolvedOneMesPl, 20);
 assert.equal(winner?.resolvedR, 2);
 
-const conservative = report.rows.find((row) => row.ticketId === '2026-06-17-morning-TurtleSoup-LONG');
+const conservative = report.rows.find((row) => row.ticketId === '2026-06-17-morning-raidReclaim-LONG');
 assert.equal(conservative?.outcomeStatus, 'resolved');
 assert.equal(conservative?.outcomeLabel, 'stopped_before_t1');
 assert.equal(conservative?.intrabarAmbiguity, true);

@@ -139,13 +139,6 @@ function buildFindings(): TradeDecisionMapAuditFinding[] {
   if (!audit.entries.some((entry) => entry.role === 'primary_model')) {
     findings.push(finding('role_coverage', 'No primary models found in audit.', []));
   }
-  if (!audit.entries.some((entry) => entry.role === 'supporting_evidence')) {
-    findings.push(finding('role_coverage', 'No supporting evidence entries found in audit.', []));
-  }
-  if (!audit.entries.some((entry) => entry.role === 'deprecated')) {
-    findings.push(finding('role_coverage', 'No deprecated entries found in audit.', []));
-  }
-
   return findings;
 }
 
@@ -200,8 +193,8 @@ export function buildPhase9ATradeDecisionMapAudit(
     checks: [
       'Every SETUP_REGISTRY entry appears in buildTradeDecisionMapAudit output.',
       'Every audit entry includes model name, session windows, required evidence, rank weight, eligibility flags, canExecute relationship, and known suppression paths.',
-      'Deprecated setups are not plan/Discord/execution eligible.',
-      'Supporting evidence can be watch/context only and cannot become plan/Discord/execution eligible.',
+      'Retired/deprecated setups are absent from the active registry.',
+      'Supporting evidence labels are absent from the active registry and remain context-only where generated outside setup approval.',
       'Human-review-only models remain executionEligible=false.',
       'The audit remains metadata only and reports tradingLogicChanged=false.',
     ],

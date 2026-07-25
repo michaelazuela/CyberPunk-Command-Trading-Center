@@ -378,7 +378,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
       ? ['Fix or provide the saved strict replay package before using this drilldown.']
       : rows.length === 0
         ? ['No blocked strict rows remain in this package.']
-        : ['Inspect matching-side level generation before treating blocked rows as TurtleSoup or Sweep model-quality evidence.'],
+        : ['Inspect matching-side level generation before treating blocked rows as raidReclaim or Sweep model-quality evidence.'],
   };
   return { ...base, markdown: buildMarkdown(base) };
 }

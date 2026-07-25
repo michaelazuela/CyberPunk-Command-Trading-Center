@@ -212,7 +212,7 @@ function buildCase(noChaseGroup: CandidateObservation[], allForKey: CandidateObs
 
 function buildRecommendations(report: Omit<NoChaseProofAuditReport, 'recommendations' | 'markdown'>): string[] {
   const recommendations = [
-    'Do not broaden TurtleSoup or SweepMssFvgRetrace from this audit; they are intentionally out of scope.',
+    'Do not broaden raidReclaim or SweepMssFvgRetrace from this audit; they are intentionally out of scope.',
     'Keep no-chase blocked unless a later scanner-owned candidate shows completed 5M retest/rejection, close-through, acceptance, or hold proof.',
   ];
   if (report.summary.afterLunchNoChaseCases === 0) {

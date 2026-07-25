@@ -14,7 +14,7 @@ type SnapshotRow = UnifiedPositiveHeldLocalPreviewStructuredSnapshotMinerReport[
 function snapshot(rowId: string, outcomeBucket: SnapshotRow['outcomeBucket'], protectedStopEvidence: boolean, pl: number): SnapshotRow {
   return {
     rowId,
-    setupType: 'TurtleSoup',
+    setupType: 'raidReclaim',
     session: rowId.includes('lunch') ? 'lunch' : 'morning',
     direction: 'LONG',
     outcomeBucket,
@@ -22,7 +22,7 @@ function snapshot(rowId: string, outcomeBucket: SnapshotRow['outcomeBucket'], pr
     proofTime: '2026-06-17T09:30:00',
     eventTime: '2026-06-17T09:30:00',
     sourceFile: 'tape.json',
-    selectedSetupType: 'TurtleSoup',
+    selectedSetupType: 'raidReclaim',
     selectedDirection: 'LONG',
     selectedRankScore: 100,
     selectedDecisionQualityScore: 80,
@@ -62,12 +62,12 @@ function snapshot(rowId: string, outcomeBucket: SnapshotRow['outcomeBucket'], pr
 }
 
 const rows = [
-  snapshot('2026-06-17-morning-TurtleSoup-LONG-a', 'winner', false, 100),
-  snapshot('2026-06-17-morning-TurtleSoup-LONG-b', 'loss', false, -25),
-  snapshot('2026-06-18-lunch-TurtleSoup-LONG-a', 'winner', false, 80),
-  snapshot('2026-06-19-morning-TurtleSoup-LONG-a', 'loss', true, -60),
-  snapshot('2026-06-20-lunch-TurtleSoup-LONG-a', 'loss', true, -50),
-  snapshot('2026-06-21-morning-TurtleSoup-LONG-a', 'winner', true, 30),
+  snapshot('2026-06-17-morning-raidReclaim-LONG-a', 'winner', false, 100),
+  snapshot('2026-06-17-morning-raidReclaim-LONG-b', 'loss', false, -25),
+  snapshot('2026-06-18-lunch-raidReclaim-LONG-a', 'winner', false, 80),
+  snapshot('2026-06-19-morning-raidReclaim-LONG-a', 'loss', true, -60),
+  snapshot('2026-06-20-lunch-raidReclaim-LONG-a', 'loss', true, -50),
+  snapshot('2026-06-21-morning-raidReclaim-LONG-a', 'winner', true, 30),
 ];
 
 const classifierReport: UnifiedPositiveHeldLocalPreviewStructuredSnapshotClassifierReport = {
@@ -105,12 +105,12 @@ const classifierReport: UnifiedPositiveHeldLocalPreviewStructuredSnapshotClassif
     classifiersEvaluated: 1,
     acceptedClassifiers: 1,
     rejectedClassifiers: 0,
-    topClassifierId: 'TurtleSoup_protectedStopEvidence_false',
+    topClassifierId: 'raidReclaim_protectedStopEvidence_false',
     livePromotionAllowedRows: 0,
   },
   classifiers: [{
-    classifierId: 'TurtleSoup_protectedStopEvidence_false',
-    setupType: 'TurtleSoup',
+    classifierId: 'raidReclaim_protectedStopEvidence_false',
+    setupType: 'raidReclaim',
     featureName: 'protectedStopEvidence',
     featureValue: 'false',
     evaluatedRows: rows.length,

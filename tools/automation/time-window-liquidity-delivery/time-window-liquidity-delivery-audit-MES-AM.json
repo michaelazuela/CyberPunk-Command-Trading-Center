@@ -59,7 +59,7 @@
     "deliveryAchievedCount": 367,
     "failedDeliveryCount": 46,
     "modelOneOverlapCount": 503,
-    "turtleSoupOverlapCount": 196,
+    "raidReclaimOverlapCount": 196,
     "advisoryOnlyCount": 11
   },
   "candidates": [
@@ -534,12 +534,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -1390,12 +1390,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -2139,12 +2139,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -2353,12 +2353,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -2460,12 +2460,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -2781,12 +2781,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -2995,12 +2995,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -4814,12 +4814,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -5135,12 +5135,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -6740,12 +6740,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -7275,12 +7275,12 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -7382,12 +7382,12 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -7596,12 +7596,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -8345,12 +8345,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -9308,12 +9308,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -10271,12 +10271,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -10485,12 +10485,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -10699,12 +10699,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -10806,12 +10806,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -10913,12 +10913,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -11234,12 +11234,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -11448,12 +11448,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -11555,12 +11555,12 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -12304,12 +12304,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -13267,12 +13267,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -13374,12 +13374,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -13909,12 +13909,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -14444,12 +14444,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -14658,12 +14658,12 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -15086,12 +15086,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -16049,12 +16049,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -16156,12 +16156,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -16263,12 +16263,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -16584,12 +16584,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -16798,12 +16798,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -17012,12 +17012,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -17119,12 +17119,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -17547,12 +17547,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -18724,12 +18724,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -19045,12 +19045,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -19366,12 +19366,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -19901,12 +19901,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -20008,12 +20008,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -20436,12 +20436,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -20650,12 +20650,12 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -21185,12 +21185,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -21613,12 +21613,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -21827,12 +21827,12 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -22041,12 +22041,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -22897,12 +22897,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -23432,12 +23432,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -23539,12 +23539,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -23860,12 +23860,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -24930,12 +24930,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -25465,12 +25465,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -25679,12 +25679,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -26321,12 +26321,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -26963,12 +26963,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -27070,12 +27070,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -27284,12 +27284,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -27605,12 +27605,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -27819,12 +27819,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -28354,12 +28354,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -28782,12 +28782,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -29103,12 +29103,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -29959,12 +29959,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -30066,12 +30066,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -30173,12 +30173,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -30601,12 +30601,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -30815,12 +30815,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -31136,12 +31136,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -31350,12 +31350,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -31457,12 +31457,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -31992,12 +31992,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -32313,12 +32313,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -32634,12 +32634,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -32741,12 +32741,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -33276,12 +33276,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -34560,12 +34560,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -34667,12 +34667,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -34881,12 +34881,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -34988,12 +34988,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -35416,12 +35416,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -35844,12 +35844,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -36165,12 +36165,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -37021,12 +37021,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -37556,12 +37556,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -37770,12 +37770,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -37877,12 +37877,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -38091,12 +38091,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -38305,12 +38305,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -38519,12 +38519,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -38626,12 +38626,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -38947,12 +38947,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -39054,12 +39054,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -39268,12 +39268,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -40124,12 +40124,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -40873,12 +40873,12 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -40980,12 +40980,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -41194,12 +41194,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -41408,12 +41408,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -41622,12 +41622,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -41729,12 +41729,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -41836,12 +41836,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -42050,12 +42050,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -42157,12 +42157,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -42585,12 +42585,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -43120,12 +43120,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -43762,12 +43762,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -44297,12 +44297,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -44618,12 +44618,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -44939,12 +44939,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -45260,12 +45260,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -45795,12 +45795,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -46116,12 +46116,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -46223,12 +46223,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -46865,12 +46865,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -46972,12 +46972,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -47293,12 +47293,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -47400,12 +47400,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -47614,12 +47614,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -47721,12 +47721,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -48577,12 +48577,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -49754,12 +49754,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -49861,12 +49861,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -49968,12 +49968,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -50396,12 +50396,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -50610,12 +50610,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -51466,12 +51466,12 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -51894,12 +51894,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -52108,12 +52108,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -52215,12 +52215,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -52964,12 +52964,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -53499,12 +53499,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -53713,12 +53713,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -54034,12 +54034,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -54462,12 +54462,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -54569,12 +54569,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -55104,12 +55104,12 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -55211,12 +55211,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -55639,12 +55639,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -56388,12 +56388,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -56816,12 +56816,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -57351,12 +57351,12 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -57565,12 +57565,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -57779,12 +57779,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -59063,12 +59063,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -59705,12 +59705,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -59919,12 +59919,12 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -60026,12 +60026,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -60240,12 +60240,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -60561,12 +60561,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -60668,12 +60668,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -60989,12 +60989,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -61631,12 +61631,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -61845,12 +61845,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -61952,12 +61952,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -62701,12 +62701,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -62915,12 +62915,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -63022,12 +63022,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -63129,12 +63129,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -63236,12 +63236,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -64520,12 +64520,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -65162,12 +65162,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -65376,12 +65376,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -65590,12 +65590,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -65911,12 +65911,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -66125,12 +66125,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -66660,12 +66660,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -67088,12 +67088,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -67302,12 +67302,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -67623,12 +67623,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -67837,12 +67837,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -68586,12 +68586,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -68693,12 +68693,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -69335,12 +69335,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -70512,12 +70512,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -70726,12 +70726,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -70940,12 +70940,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -71047,12 +71047,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -71154,12 +71154,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -71261,12 +71261,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -71475,12 +71475,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -71689,12 +71689,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -71903,12 +71903,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -72010,12 +72010,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -72438,12 +72438,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -73187,12 +73187,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -73508,12 +73508,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -74471,12 +74471,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -74578,12 +74578,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -75006,12 +75006,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -75220,12 +75220,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -75327,12 +75327,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -75434,12 +75434,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -75862,12 +75862,12 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "turtle_soup_overlap_possible",
+      "overlapClassification": "RAID_RECLAIM_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
         "Research-only time-window observation. No executable setup is created.",
-        "Turtle Soup overlap is advisory classification only; use current approved Turtle Soup rules for any separate review."
+        "Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review."
       ]
     },
     {
@@ -75980,7 +75980,7 @@
   ],
   "requiredNextActions": [
     "Review sample evidence cards manually before any rule-review discussion.",
-    "Keep Model 1 and Turtle Soup overlap as advisory classification only.",
+    "Keep Model 1 and Raid Reclaim Reversal overlap as advisory classification only.",
     "Do not create entries, stops, T1/T2, outcome buttons, live alerts, or execution authority from this audit.",
     "Collect 20-30 examples per window before discussing any rules."
   ],

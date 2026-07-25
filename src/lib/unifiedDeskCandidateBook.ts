@@ -20,11 +20,9 @@ export type UnifiedTradingModelCandidateState =
 
 export type UnifiedDeskCandidateFamily =
   | 'strict_primary'
-  | 'htf_displacement_continuation'
   | 'opening_drive_continuation'
   | 'after_lunch_drive_continuation'
   | 'intraday_continuation'
-  | 'failed_plan_reversal'
   | 'other';
 
 export interface UnifiedDeskCandidateBookInput {
@@ -157,16 +155,10 @@ export function buildUnifiedDeskCandidateKey(candidate: SetupCandidate, index: n
 }
 
 function familyForSetup(setupType: SetupType): UnifiedDeskCandidateFamily {
-  if (setupType === SetupType.SweepMssFvgRetrace || setupType === SetupType.TurtleSoup) return 'strict_primary';
-  if (
-    setupType === SetupType.HtfDrawContinuationAfterRaid ||
-    setupType === SetupType.HtfDisplacementMssContinuation ||
-    setupType === SetupType.HtfDisplacementFvgContinuation
-  ) return 'htf_displacement_continuation';
+  if (setupType === SetupType.RaidReclaimReversal || setupType === SetupType.SweepMssFvgRetrace) return 'strict_primary';
   if (setupType === SetupType.OpeningDriveFvgContinuation) return 'opening_drive_continuation';
   if (setupType === SetupType.AfterLunchDriveFvgContinuation) return 'after_lunch_drive_continuation';
   if (setupType === SetupType.IntradayMssMicroContinuation) return 'intraday_continuation';
-  if (setupType === SetupType.FailedPlanReversal) return 'failed_plan_reversal';
   return 'other';
 }
 
@@ -305,8 +297,7 @@ function invalidStopSweepRankPenalty(candidate: SetupCandidate): number {
 }
 
 function isOpeningDriveSameEventPriorityModel(setupType: SetupType): boolean {
-  return setupType === SetupType.SweepMssFvgRetrace ||
-    setupType === SetupType.HtfDisplacementMssContinuation;
+  return setupType === SetupType.SweepMssFvgRetrace;
 }
 
 function hasInvalidStopBlocker(candidate: SetupCandidate): boolean {

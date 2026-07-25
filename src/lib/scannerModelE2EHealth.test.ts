@@ -48,8 +48,8 @@ assert.equal(report.phases.bravoStaleDataCoverage, 'ready');
 assert.equal(report.phases.charliePortfolioE2EContract, 'ready');
 assert.equal(report.findings.length, 0);
 assert.equal(report.primaryModelCount, primaryRegistry.length);
-assert.ok(report.supportingEvidenceCount > 0);
-assert.ok(report.deprecatedCount > 0);
+assert.equal(report.supportingEvidenceCount, 0);
+assert.equal(report.deprecatedCount, 0);
 assert.equal(report.boundaries.changesTradingLogic, false);
 assert.equal(report.boundaries.changesScannerApprovals, false);
 assert.equal(report.boundaries.changesCanExecute, false);
@@ -127,7 +127,7 @@ for (const registryEntry of primaryRegistry) {
   assert.equal(deskState.canExecute, false);
 }
 
-const dataLimitedHtfCandidate = candidate(SetupType.HtfDrawContinuationAfterRaid, {
+const dataLimitedHtfCandidate = candidate(SetupType.IntradayMssMicroContinuation, {
   htfLiquidityDrawState: {
     source: 'ninjatrader_ohlc',
     authority: 'ohlc_facts_only',

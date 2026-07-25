@@ -156,12 +156,12 @@ const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
 const KNOWN_MODELS = [
   'IntradayMssMicroContinuation',
-  'HtfDisplacementMssContinuation',
-  'HtfDisplacementFvgContinuation',
+  'IntradayMssMicroContinuation',
+  'SweepMssFvgRetrace',
   'SweepMssFvgRetrace',
   'OpeningDriveFvgContinuation',
   'AfterLunchDriveFvgContinuation',
-  'TurtleSoup',
+  'raidReclaim',
 ];
 
 function readFlag(args: string[], flag: string): string | null {

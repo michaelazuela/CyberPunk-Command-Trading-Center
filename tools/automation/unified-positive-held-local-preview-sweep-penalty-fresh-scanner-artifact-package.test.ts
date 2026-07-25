@@ -92,10 +92,10 @@ const installedScore: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreC
       riskPreserved: true,
     },
     {
-      ticketId: '2026-07-09-evening-TurtleSoup-LONG',
+      ticketId: '2026-07-09-evening-raidReclaim-LONG',
       tradeDate: '2026-07-09',
       session: 'evening',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -141,7 +141,7 @@ assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesCanExecute, false);
-assert.equal(report.rows.some((row) => row.setupType === 'TurtleSoup'), false);
+assert.equal(report.rows.some((row) => row.setupType === 'raidReclaim'), false);
 assert.equal(report.rows.find((row) => row.validSweepLead)?.scannerArtifact.deskTicketState, 'ACTIVE_REVIEW');
 assert.equal(report.rows.find((row) => row.invalidStopSweepPenaltyCandidate)?.scannerArtifact.deskTicketState, 'BLOCKED_REVIEW');
 

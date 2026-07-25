@@ -103,7 +103,7 @@ const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
     tradeDate: '2026-06-14',
     sessionType: 'morning',
     completedBarTime: '2026-06-14T10:00:00',
-    candidates: [candidate({ setupType: SetupType.TurtleSoup })],
+    candidates: [candidate({ setupType: SetupType.RaidReclaimReversal })],
     currentCanExecute: false,
   },
 ];
@@ -155,7 +155,7 @@ assert.equal(report.summary.replayLosses, 0);
 assert.equal(report.summary.replayNoFill, 0);
 assert.equal(report.summary.replayAmbiguous, 0);
 assert.equal(report.summary.replayGrossOneMes, 80);
-assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.TurtleSoup), false);
+assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.RaidReclaimReversal), false);
 
 const intradayProof = report.cases.find((item) => item.caseId === '2026-06-10|morning|IntradayMssMicroContinuation|LONG');
 const intradayBlocked = report.cases.find((item) => item.caseId === '2026-06-11|morning|IntradayMssMicroContinuation|SHORT');

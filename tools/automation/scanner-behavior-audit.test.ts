@@ -60,7 +60,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-19-MES-morni
       setupCandidateStatus: {
         selected: {
           direction: 'SHORT',
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           executionStatus: 'Watching',
         },
       },
@@ -99,7 +99,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-19-MES-morni
       setupCandidateStatus: {
         selected: {
           direction: 'LONG',
-          setupType: 'TurtleSoup',
+          setupType: 'raidReclaim',
           executionStatus: 'Conditional',
         },
       },

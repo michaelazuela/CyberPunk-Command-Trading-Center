@@ -4,9 +4,7 @@ type SessionName = 'morning' | 'lunch' | 'evening';
 type Direction = 'LONG' | 'SHORT';
 type DeskState = 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ';
 
-export const UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS = [
-  'HtfDisplacementFvgContinuation',
-  'IntradayMssMicroContinuation',
+export const UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS = [  'IntradayMssMicroContinuation',
 ] as const;
 
 export type UnifiedDeskOutputApprovedProductionModel = typeof UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS[number];

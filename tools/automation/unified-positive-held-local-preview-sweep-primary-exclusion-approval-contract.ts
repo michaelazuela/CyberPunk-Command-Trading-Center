@@ -225,7 +225,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionApprova
       preservedEffects: [
         'Blocked candidate remains available for audit and diagnostics.',
         'Valid SweepMssFvgRetrace candidates remain rankable.',
-        'TurtleSoup, AfterLunch, OpeningDrive, Intraday, and HTF families are not removed.',
+        'raidReclaim, AfterLunch, OpeningDrive, Intraday, and HTF families are not removed.',
         'canExecute, entry, stop, target, risk, Discord, Supabase, and bridge behavior remain unchanged.',
       ],
       implementationAllowedNow: false,

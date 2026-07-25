@@ -752,15 +752,15 @@ fs.writeFileSync(sentAuditPath, JSON.stringify({ ok: true }), 'utf8');
 fs.writeFileSync(decisionTapePath, JSON.stringify([{ state: 'Watching' }]), 'utf8');
 fs.writeFileSync(statePath, JSON.stringify({
   sent: {
-    '2026-06-04|MES|morning|LONG|TurtleSoup|7556.5|Approved': {
+    '2026-06-04|MES|morning|LONG|raidReclaim|7556.5|Approved': {
       state: 'Approved',
       confidence: 96,
       sentAt: '2026-06-04T14:05:05.019Z',
     },
   },
   alertDeliveries: {
-    '2026-06-04|MES|morning|LONG|TurtleSoup|7556.5|Approved': {
-      alertKey: '2026-06-04|MES|morning|LONG|TurtleSoup|7556.5|Approved',
+    '2026-06-04|MES|morning|LONG|raidReclaim|7556.5|Approved': {
+      alertKey: '2026-06-04|MES|morning|LONG|raidReclaim|7556.5|Approved',
       planVersionId: 'MORNING-1',
       instrument: 'MES',
       tradeDate: '2026-06-04',
@@ -819,15 +819,15 @@ assert.equal(JSON.stringify(deliveryReport).includes('"canExecute":true'), false
 const dryRunStatePath = path.join(deliveryFixtureDir, '.nt-scanner-dry-run-state.json');
 fs.writeFileSync(dryRunStatePath, JSON.stringify({
   sent: {
-    '2026-06-04|MES|morning|LONG|TurtleSoup|7556.5|Approved': {
+    '2026-06-04|MES|morning|LONG|raidReclaim|7556.5|Approved': {
       state: 'Approved',
       confidence: 96,
       sentAt: '2026-06-04T14:05:05.019Z',
     },
   },
   alertDeliveries: {
-    '2026-06-04|MES|morning|LONG|TurtleSoup|7556.5|Approved': {
-      alertKey: '2026-06-04|MES|morning|LONG|TurtleSoup|7556.5|Approved',
+    '2026-06-04|MES|morning|LONG|raidReclaim|7556.5|Approved': {
+      alertKey: '2026-06-04|MES|morning|LONG|raidReclaim|7556.5|Approved',
       planVersionId: 'MORNING-1',
       instrument: 'MES',
       tradeDate: '2026-06-04',
@@ -844,8 +844,8 @@ fs.writeFileSync(dryRunStatePath, JSON.stringify({
       stale: false,
       retryEligible: false,
     },
-    '2026-06-04|MES|morning|LONG|TurtleSoup|dry-run|Missed': {
-      alertKey: '2026-06-04|MES|morning|LONG|TurtleSoup|dry-run|Missed',
+    '2026-06-04|MES|morning|LONG|raidReclaim|dry-run|Missed': {
+      alertKey: '2026-06-04|MES|morning|LONG|raidReclaim|dry-run|Missed',
       planVersionId: 'MORNING-DRY-RUN',
       instrument: 'MES',
       tradeDate: '2026-06-04',
@@ -890,8 +890,8 @@ fs.writeFileSync(staleHistoricalDeliveryStatePath, JSON.stringify({
     },
   },
   alertDeliveries: {
-    '2026-06-18|MES|evening|SHORT|TurtleSoup|7575|Missed': {
-      alertKey: '2026-06-18|MES|evening|SHORT|TurtleSoup|7575|Missed',
+    '2026-06-18|MES|evening|SHORT|raidReclaim|7575|Missed': {
+      alertKey: '2026-06-18|MES|evening|SHORT|raidReclaim|7575|Missed',
       planVersionId: 'EVENING-20260618-000759',
       instrument: 'MES',
       tradeDate: '2026-06-18',
@@ -925,7 +925,7 @@ const staleHistoricalDeliveryReport = buildDeliveryVisibilityReport({
 assert.equal(staleHistoricalDeliveryReport.activeTradeDate, '2026-06-23');
 assert.equal(staleHistoricalDeliveryReport.lastDelivery, null);
 assert.equal(staleHistoricalDeliveryReport.lastDiscordSend, null);
-assert.equal(staleHistoricalDeliveryReport.lastHistoricalDelivery?.alertKey, '2026-06-18|MES|evening|SHORT|TurtleSoup|7575|Missed');
+assert.equal(staleHistoricalDeliveryReport.lastHistoricalDelivery?.alertKey, '2026-06-18|MES|evening|SHORT|raidReclaim|7575|Missed');
 assert.equal(staleHistoricalDeliveryReport.lastHistoricalDiscordSend?.discordMessageId, 'discord-old');
 
 const preFixHistoricalStatePath = path.join(deliveryFixtureDir, '.nt-scanner-prefix-historical-state.json');

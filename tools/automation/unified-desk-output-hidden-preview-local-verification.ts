@@ -200,7 +200,7 @@ export async function buildUnifiedDeskOutputHiddenPreviewLocalVerificationReport
     await page.getByLabel('Import scanner surface smoke JSON').setInputFiles(args.renderProofPath);
     await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 });
     await page.getByText('Import ready: 2 scanner surface rows.', { exact: true }).waitFor({ timeout: 15000 });
-    await page.getByText('HtfDisplacementFvgContinuation').waitFor({ timeout: 15000 });
+    await page.getByText('SweepMssFvgRetrace').waitFor({ timeout: 15000 });
     await page.getByText('IntradayMssMicroContinuation').waitFor({ timeout: 15000 });
     await page.getByText('Completed 5M proof: 09:10 ET.', { exact: true }).waitFor({ timeout: 15000 });
     await page.getByText('Completed 5M proof: 15:45 ET.', { exact: true }).waitFor({ timeout: 15000 });
@@ -220,7 +220,7 @@ export async function buildUnifiedDeskOutputHiddenPreviewLocalVerificationReport
     importReady,
     renderedRows: countText(pageText, /^Approved Desk Plan$/gm),
     approvedDeskPlanRows: countText(pageText, /^Approved Desk Plan$/gm),
-    morningModelVisible: pageText.includes('HtfDisplacementFvgContinuation'),
+    morningModelVisible: pageText.includes('SweepMssFvgRetrace'),
     lunchModelVisible: pageText.includes('IntradayMssMicroContinuation'),
     morningProofVisible: pageText.includes('Completed 5M proof: 09:10 ET.'),
     lunchProofVisible: pageText.includes('Completed 5M proof: 15:45 ET.'),

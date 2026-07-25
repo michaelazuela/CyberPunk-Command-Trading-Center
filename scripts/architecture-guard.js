@@ -457,13 +457,13 @@ function checkScannerVisibilityMetadataBoundary() {
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.trendConfirmation.direction, 'LONG')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.trendConfirmation.status, 'aligned')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.sourceOfTruth, 'scanner_protected_structure_model_routing')") ||
-    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.IntradayMssMicroContinuation)') ||
-    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.IntradayMssMicroContinuation)') ||
+    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.RaidReclaimReversal)') ||
+    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.RaidReclaimReversal)') ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.longModelFit.status, 'best_fit')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.shortModelFit.status, 'not_aligned')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof')") ||
-    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.IntradayMssMicroContinuation)') ||
+    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.RaidReclaimReversal)') ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.sourceOfTruth, 'scanner_trade_readiness_routing')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.status, 'missed_no_chase')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.shortBias.tradeReadiness.status, 'not_aligned')") ||

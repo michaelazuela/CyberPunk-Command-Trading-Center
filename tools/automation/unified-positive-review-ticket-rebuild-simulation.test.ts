@@ -10,8 +10,8 @@ function row(overrides: Partial<UnifiedPositiveFresh5mProofRow> = {}): UnifiedPo
     snapshotId: 'fresh-a',
     tradeDate: '2026-07-01',
     sessionType: 'morning',
-    candidateKey: 'TurtleSoup|fixture|LONG|100.00|0',
-    setupType: 'TurtleSoup',
+    candidateKey: 'raidReclaim|fixture|LONG|100.00|0',
+    setupType: 'raidReclaim',
     direction: 'LONG',
     completedBarTime: '2026-07-01T10:00:00',
     entry: 100,
@@ -131,7 +131,7 @@ assert.equal(report.summary.canExecuteFalseTickets, 2);
 assert.equal(report.summary.publishDiscordFalseTickets, 2);
 assert.equal(report.summary.reviewOnlyTickets, 2);
 
-const turtleTicket = report.tickets.find((ticket) => ticket.setupType === 'TurtleSoup');
+const turtleTicket = report.tickets.find((ticket) => ticket.setupType === 'raidReclaim');
 assert.equal(turtleTicket?.sourceSnapshotId, 'fresh-b');
 assert.deepEqual(turtleTicket?.suppressedDuplicateSnapshotIds, ['fresh-a']);
 assert.equal(turtleTicket?.duplicateRowsCollapsed, 1);

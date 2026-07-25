@@ -116,7 +116,7 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
       ticketId: 'unresolved',
       tradeDate: '2026-06-18',
       session: 'lunch',
-      setupType: 'TurtleSoup',
+      setupType: 'raidReclaim',
       direction: 'LONG',
       proofTime: '2026-06-18T12:00:00',
       outcomeStatus: 'unresolved',
