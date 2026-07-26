@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model guarded production rehearsal manifest.
+Files changed: tools/automation/five-model-guarded-production-rehearsal-manifest.ts, tools/automation/five-model-guarded-production-rehearsal-manifest.test.ts, docs/PROJECT_STATUS.md.
+Reason: Build the guarded production rehearsal manifest from the local scanner surface preview, including manifest id, idempotency seed, rollback plan, required next approval, and explicit no-side-effect boundaries before any rehearsal execution is considered.
+Tests run: npx tsx tools/automation/five-model-guarded-production-rehearsal-manifest.test.ts; npx tsc --noEmit --pretty false; real manifest generation against `tools/automation/diagnostic-reports/five-model-local-scanner-visibility-surface-preview-1785051086390.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-guarded-production-rehearsal-manifest-1785051378641.json`. Manifest id: `five-model-rehearsal-e1d4e355a9a3d4ec`. Summary: sourceSurfaceRows=18, manifestRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, productionScannerVisibleNowRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, canExecuteChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact rehearsal manifest only. It does not wire scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This still does not execute a production rehearsal or install scanner visibility. The next phase requires explicit approval for guarded production rehearsal execution dry run.
+Next recommended action: Add/run a guarded production rehearsal execution dry run from the manifest, still with Discord/Supabase/bridge/execution effects off.
+
+Date: 2026-07-26
 Task: Add five-model local scanner visibility surface preview.
 Files changed: tools/automation/five-model-local-scanner-visibility-surface-preview.ts, tools/automation/five-model-local-scanner-visibility-surface-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: Convert the saved scanner visibility wiring preview rows into the exact local scanner surface shape while keeping production scanner-visible-now rows, runtime wiring, Discord, Supabase, bridge reads, canExecute, trading logic changes, and automated orders off.
