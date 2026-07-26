@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add isolated Raid Failure Displacement Reversal detector.
+Files changed: src/lib/forensicModels/raidFailureDisplacementReversal.ts, src/lib/forensicModels/raidFailureDisplacementReversal.test.ts, docs/PROJECT_STATUS.md.
+Reason: Install the second approved forensic model as a pure detector before any replay package, scanner wiring, promotion, Discord card, or production behavior is touched.
+Tests run: npx tsx src/lib/forensicModels/raidFailureDisplacementReversal.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against the new detector files.
+Result: Passed. The detector identifies LONG and SHORT raid-failure-displacement reversal proof from synthetic OHLC-derived facts, rejects missing displacement proof, keeps all scanner/promotion/Discord/execution installation flags false, and the blank-slate setup registry still returns no scanner candidates.
+Trading logic changed: No. This is an isolated detector module only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The detector is not outcome-proven yet. It needs the same replay/PDF-window proof path used for Liquidity Raid Reclaim Reversal before any scanner-facing install.
+Next recommended action: Add replay-only proof for Raid Failure Displacement Reversal against June 8-28 morning/lunch stored OHLC, then run the PDF-window attribution filter.
+
+Date: 2026-07-25
 Task: Add replay-only tight-match selector for Liquidity Raid Reclaim Reversal.
 Files changed: tools/automation/liquidity-raid-reclaim-reversal-tight-match-selector.ts, tools/automation/liquidity-raid-reclaim-reversal-tight-match-selector.test.ts, docs/PROJECT_STATUS.md.
 Reason: Classify the 12 PDF-window matches into tight/usable/loose/reject buckets before considering whether the first detector can ever become scanner-visible.
