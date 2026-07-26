@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add replay-only proof for Failed Breakout Reversal.
+Files changed: tools/automation/failed-breakout-reversal-replay-proof.ts, tools/automation/failed-breakout-reversal-replay-proof.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove the fifth forensic model can be rediscovered from stored OHLC before PDF attribution, selector ranking, scanner wiring, promotion, Discord publishing, or production behavior is touched.
+Tests run: npx tsx tools/automation/failed-breakout-reversal-replay-proof.test.ts; npx tsx src/config/setupRegistry.test.ts; exact legacy/supporting-label drift search against the new replay files; real local replay against June 8-28 morning/lunch stored OHLC.
+Result: Passed. The replay remains local-artifact-only and derives failed breakout/reclaim facts from completed 5M OHLC. Real replay loaded 5M=12119, 15M=4052, 60M=1025, 120M=527, 240M=266; evaluated 1119 bars/contexts; produced 237 unique detections, 134 LONG and 103 SHORT, with 68 HTF-support rows and 155 HTF-conflict rows. Report path: `tools/automation/diagnostic-reports/failed-breakout-reversal-replay-proof-MES-2026-06-08-to-2026-06-28-1785043187316.json`.
+Trading logic changed: No. This is a local replay proof only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The replay proves broad failed-breakout discovery, not quality. The high detection count needs PDF-window attribution and tight selector filtering before any scanner-facing install.
+Next recommended action: Add the Failed Breakout Reversal PDF-window attribution filter against the profitable June 8-28 PDF trades.
+
+Date: 2026-07-25
 Task: Add isolated Failed Breakout Reversal detector.
 Files changed: src/lib/forensicModels/failedBreakoutReversal.ts, src/lib/forensicModels/failedBreakoutReversal.test.ts, docs/PROJECT_STATUS.md.
 Reason: Install the fifth approved forensic model as a pure detector before replay proof, PDF attribution, scanner wiring, promotion, Discord card, or production behavior is touched.
