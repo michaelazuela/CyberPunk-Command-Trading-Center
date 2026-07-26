@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add replay-only proof for Structure Shift Continuation.
+Files changed: tools/automation/structure-shift-continuation-replay-proof.ts, tools/automation/structure-shift-continuation-replay-proof.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove the fourth approved forensic model against stored OHLC before PDF attribution, scanner wiring, promotion, Discord card, or production behavior is touched.
+Tests run: npx tsx tools/automation/structure-shift-continuation-replay-proof.test.ts; exact legacy/supporting-label drift search against the replay proof files; real local replay against the saved June OHLC pack.
+Result: Passed. The synthetic replay proof requires completed 5M entry proof after the structure-shift candle and preserves all scanner/promotion/Discord/Supabase/bridge/execution authority flags as false. Real June 8-28 morning/lunch replay loaded 5M=12119, 15M=4052, 60M=1025, 120M=527, 240M=266, evaluated 1089 contexts, and found detections=228, uniqueDetections=228, longDetections=101, shortDetections=127, supportHtfRows=190, conflictHtfRows=33. Report path: `tools/automation/diagnostic-reports/structure-shift-continuation-replay-proof-MES-2026-06-08-to-2026-06-28-1785041602570.json`.
+Trading logic changed: No. This is a replay-only proof harness. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None. The replay used a local saved OHLC JSON file only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The replay proves detection volume, not outcome quality. The model is broad and needs PDF-window attribution plus a tight selector before any scanner-facing install.
+Next recommended action: Add PDF-window attribution for Structure Shift Continuation.
+
+Date: 2026-07-25
 Task: Add isolated Structure Shift Continuation detector.
 Files changed: src/lib/forensicModels/structureShiftContinuation.ts, src/lib/forensicModels/structureShiftContinuation.test.ts, docs/PROJECT_STATUS.md.
 Reason: Install the fourth approved forensic model as a pure detector before replay proof, PDF attribution, scanner wiring, promotion, Discord card, or production behavior is touched.
