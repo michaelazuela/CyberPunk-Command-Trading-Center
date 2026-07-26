@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model guarded production rehearsal execution dry run.
+Files changed: tools/automation/five-model-guarded-production-rehearsal-execution-dry-run.ts, tools/automation/five-model-guarded-production-rehearsal-execution-dry-run.test.ts, docs/PROJECT_STATUS.md.
+Reason: Execute the saved rehearsal manifest as a local dry run only, producing an execution receipt and proving the manifest rows can pass the guarded contract without scanner runtime wiring, production scanner visibility, Discord, Supabase, live bridge reads, canExecute changes, trading-logic changes, or automated orders.
+Tests run: npx tsx tools/automation/five-model-guarded-production-rehearsal-execution-dry-run.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; real dry run against `tools/automation/diagnostic-reports/five-model-guarded-production-rehearsal-manifest-1785051378641.json`; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-guarded-production-rehearsal-execution-dry-run-1785051843268.json`. Execution id: `five-model-rehearsal-execution-d95cd1894a2f4597`. Idempotency key: `five-model-rehearsal-execution-e1d4e355a9a3d4ec`. Summary: manifestRows=18, executionDryRunRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, scannerRuntimeWiredRows=0, productionScannerVisibleNowRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, canExecuteChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact execution dry run only. It does not wire scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This still does not install production scanner visibility or make Discord/Supabase/bridge changes. It only proves the saved manifest can pass a local execution dry run with all side-effect counters at zero.
+Next recommended action: Add a scanner visibility install preread that identifies the smallest runtime path for exposing only the five-model surface rows, still behind the explicit visibility gate and with Discord/Supabase/bridge/execution effects off.
+
+Date: 2026-07-26
 Task: Add five-model guarded production rehearsal manifest.
 Files changed: tools/automation/five-model-guarded-production-rehearsal-manifest.ts, tools/automation/five-model-guarded-production-rehearsal-manifest.test.ts, docs/PROJECT_STATUS.md.
 Reason: Build the guarded production rehearsal manifest from the local scanner surface preview, including manifest id, idempotency seed, rollback plan, required next approval, and explicit no-side-effect boundaries before any rehearsal execution is considered.
