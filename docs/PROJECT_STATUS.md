@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add replay-only tight-match selector for Liquidity Raid Reclaim Reversal.
+Files changed: tools/automation/liquidity-raid-reclaim-reversal-tight-match-selector.ts, tools/automation/liquidity-raid-reclaim-reversal-tight-match-selector.test.ts, docs/PROJECT_STATUS.md.
+Reason: Classify the 12 PDF-window matches into tight/usable/loose/reject buckets before considering whether the first detector can ever become scanner-visible.
+Tests run: npx tsx tools/automation/liquidity-raid-reclaim-reversal-tight-match-selector.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against selector files; real local selector run against the latest PDF-window filter report; selector import isolation search; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run build; npm run lint.
+Result: Passed. Focused selector test passed. TypeScript passed. Exact legacy/supporting-label search returned no hits in selector files. Import isolation confirmed the selector is referenced only by itself and its test, and the blank-slate setup registry still returns no scanner candidates. Real local selector produced sourceProfitablePdfTrades=40, sourceMatchedTrades=12, tightRows=2, usableRows=1, looseRows=9, rejectRows=28, selectedRows=3, selectedDollars=$155.00, looseDollars=$700.00, rejectedDollars=$1363.75, scannerInstallEligibleRows=0, promotionEligibleRows=0, discordEligibleRows=0, executionApprovalEligibleRows=0. Report path: `tools/automation/diagnostic-reports/liquidity-raid-reclaim-reversal-tight-match-selector-1785035746985.json`. Guards, production build, and lint passed.
+Trading logic changed: No. This is a replay-only selector diagnostic. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Tight signal is currently concentrated in June 25 lunch shorts. This is not enough for broad scanner installation and should be treated as a source-filter clue for the first model.
+Next recommended action: Continue the five-model install by adding detector 2 in isolation, while preserving the first model's replay-only short-side lunch clue for later selector design.
+
+Date: 2026-07-25
 Task: Add replay-only PDF-window filter for Liquidity Raid Reclaim Reversal.
 Files changed: tools/automation/liquidity-raid-reclaim-reversal-pdf-window-filter.ts, tools/automation/liquidity-raid-reclaim-reversal-pdf-window-filter.test.ts, docs/PROJECT_STATUS.md.
 Reason: Narrow the 237 raw Liquidity Raid Reclaim Reversal detector hits against the actual profitable PDF trade windows before any scanner wiring.
