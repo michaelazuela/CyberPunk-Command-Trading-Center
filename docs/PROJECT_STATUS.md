@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Update selector comparison to four forensic lanes.
+Files changed: tools/automation/five-model-selector-comparison-report.ts, tools/automation/five-model-selector-comparison-report.test.ts, docs/PROJECT_STATUS.md.
+Reason: Compare Liquidity Raid Reclaim, Raid Failure Displacement, Drive Pullback Continuation, and Structure Shift Continuation selected PDF-window rows before any scanner-facing install decision.
+Tests run: npx tsx tools/automation/five-model-selector-comparison-report.test.ts; exact legacy/supporting-label drift search against the comparison files; real local comparison against all four selector reports.
+Result: Passed. The comparison remains local-artifact-only, keeps scanner/promotion/Discord/Supabase/bridge/execution eligibility false, and now reports per-model unique rows plus overlap across all supplied models. Real comparison produced modelsCompared=4, sourceProfitablePdfTrades=40, selectedRowsTotal=30, selectedDollarsTotal=$1651.25, selectedOverlapRows=7, liquidityRaidReclaimOnlyRows=1, raidFailureDisplacementOnlyRows=12, drivePullbackContinuationOnlyRows=0, structureShiftContinuationOnlyRows=3, leadingModelId=raid_failure_displacement_reversal, leadingModelSelectedRows=17, leadingModelSelectedDollars=$1090.00. Report path: `tools/automation/diagnostic-reports/five-model-selector-comparison-report-1785042440378.json`.
+Trading logic changed: No. This is a local selector-comparison report only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Raid Failure Displacement remains the leader, while Structure Shift adds three unique selected rows. Drive Pullback still adds no unique selected winners in this PDF set.
+Next recommended action: Install the fifth forensic detector, Failed Breakout Reversal, in isolation.
+
+Date: 2026-07-25
 Task: Add tight selector for Structure Shift Continuation.
 Files changed: tools/automation/structure-shift-continuation-tight-match-selector.ts, tools/automation/structure-shift-continuation-tight-match-selector.test.ts, docs/PROJECT_STATUS.md.
 Reason: Classify Structure Shift PDF-window matches into tight/usable/loose/reject before comparing the model lane against the other installed forensic lanes.

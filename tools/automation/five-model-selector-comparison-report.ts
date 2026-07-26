@@ -7,6 +7,7 @@ interface Args {
   liquidityRaidReclaimSelectorJson: string;
   raidFailureDisplacementSelectorJson: string;
   drivePullbackContinuationSelectorJson: string | null;
+  structureShiftContinuationSelectorJson: string | null;
   json: boolean;
 }
 
@@ -50,7 +51,11 @@ interface SelectorReport {
 }
 
 interface ModelInput {
-  modelId: 'liquidity_raid_reclaim_reversal' | 'raid_failure_displacement_reversal' | 'drive_pullback_continuation';
+  modelId:
+    | 'liquidity_raid_reclaim_reversal'
+    | 'raid_failure_displacement_reversal'
+    | 'drive_pullback_continuation'
+    | 'structure_shift_continuation';
   displayName: string;
   filePath: string;
 }
@@ -65,12 +70,14 @@ function parseArgs(argv = process.argv.slice(2)): Args {
   const liquidityRaidReclaimSelectorJson = readFlag(argv, '--liquidity-raid-reclaim-selector-json');
   const raidFailureDisplacementSelectorJson = readFlag(argv, '--raid-failure-displacement-selector-json');
   const drivePullbackContinuationSelectorJson = readFlag(argv, '--drive-pullback-continuation-selector-json');
+  const structureShiftContinuationSelectorJson = readFlag(argv, '--structure-shift-continuation-selector-json');
   if (!liquidityRaidReclaimSelectorJson) throw new Error('--liquidity-raid-reclaim-selector-json is required');
   if (!raidFailureDisplacementSelectorJson) throw new Error('--raid-failure-displacement-selector-json is required');
   return {
     liquidityRaidReclaimSelectorJson,
     raidFailureDisplacementSelectorJson,
     drivePullbackContinuationSelectorJson,
+    structureShiftContinuationSelectorJson,
     json: argv.includes('--json'),
   };
 }
@@ -148,6 +155,13 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
           filePath: args.drivePullbackContinuationSelectorJson,
         }]
       : []),
+    ...(args.structureShiftContinuationSelectorJson
+      ? [{
+          modelId: 'structure_shift_continuation' as const,
+          displayName: 'Structure Shift Continuation',
+          filePath: args.structureShiftContinuationSelectorJson,
+        }]
+      : []),
   ];
   const reports = inputs.map((input) => ({ input, report: readSelector(input.filePath) }));
   const summaries = reports.map(({ input, report }) => modelSummary(input, report));
@@ -174,6 +188,7 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
   const firstOnly = selectedByModel[0]?.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1) || [];
   const secondOnly = selectedByModel[1]?.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1) || [];
   const thirdOnly = selectedByModel[2]?.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1) || [];
+  const fourthOnly = selectedByModel[3]?.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1) || [];
   const winner = [...summaries].sort((a, b) =>
     b.selectedDollars - a.selectedDollars ||
     b.selectedRows - a.selectedRows ||
@@ -196,6 +211,7 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
       liquidityRaidReclaimSelectorJson: args.liquidityRaidReclaimSelectorJson,
       raidFailureDisplacementSelectorJson: args.raidFailureDisplacementSelectorJson,
       drivePullbackContinuationSelectorJson: args.drivePullbackContinuationSelectorJson,
+      structureShiftContinuationSelectorJson: args.structureShiftContinuationSelectorJson,
     },
     summary: {
       modelsCompared: summaries.length,
@@ -206,6 +222,7 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
       liquidityRaidReclaimOnlyRows: firstOnly.length,
       raidFailureDisplacementOnlyRows: secondOnly.length,
       drivePullbackContinuationOnlyRows: thirdOnly.length,
+      structureShiftContinuationOnlyRows: fourthOnly.length,
       selectedOnlyCounts,
       scannerInstallEligibleRows: 0,
       promotionEligibleRows: 0,
@@ -220,6 +237,7 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
     onlyLiquidityRaidReclaim: firstOnly.map((row) => row.trade),
     onlyRaidFailureDisplacement: secondOnly.map((row) => row.trade),
     onlyDrivePullbackContinuation: thirdOnly.map((row) => row.trade),
+    onlyStructureShiftContinuation: fourthOnly.map((row) => row.trade),
     recommendation: winner?.modelId === 'raid_failure_displacement_reversal'
       ? 'prepare_replay_only_source_clause_miner_for_raid_failure_displacement_before_scanner_preview'
       : 'continue_replay_only_comparison_before_scanner_preview',
