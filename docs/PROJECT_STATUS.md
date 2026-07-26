@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add five-model scanner visibility gate proof.
+Files changed: tools/automation/five-model-scanner-visibility-gate-proof.ts, tools/automation/five-model-scanner-visibility-gate-proof.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove the default-off five-model scanner visibility gate consumes the real guarded scanner visibility contract artifact, remains disabled without explicit approval, and only returns candidates when explicit approval is supplied.
+Tests run: npx tsx tools/automation/five-model-scanner-visibility-gate-proof.test.ts; npx tsc --noEmit --pretty false; real gate proof against `tools/automation/diagnostic-reports/five-model-guarded-scanner-visibility-contract-1785049867638.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-scanner-visibility-gate-proof-1785050434376.json`. Summary: defaultGateStatus=disabled, defaultScannerVisibilityAllowed=false, explicitGateStatus=allowed, explicitScannerVisibilityAllowed=true, explicitCandidateRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact gate proof only. It does not wire scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The gate is still not wired into scanner output. The next phase should add a scanner visibility wiring preview that proves exactly what rows would become scanner-visible under explicit approval, with Discord/Supabase/bridge/execution still off.
+Next recommended action: Add a scanner visibility wiring preview using the real gate proof and contract.
+
+Date: 2026-07-25
 Task: Add default-off five-model scanner visibility gate.
 Files changed: src/lib/fiveModelScannerVisibilityGate.ts, src/lib/fiveModelScannerVisibilityGate.test.ts, docs/PROJECT_STATUS.md.
 Reason: Install the smallest code-level gate for five-model scanner visibility after the guarded contract, while keeping default behavior disabled and requiring explicit production approval before any candidates can be returned.
