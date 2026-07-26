@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add isolated Drive Pullback Continuation detector.
+Files changed: src/lib/forensicModels/drivePullbackContinuation.ts, src/lib/forensicModels/drivePullbackContinuation.test.ts, docs/PROJECT_STATUS.md.
+Reason: Install the third approved forensic model as a pure detector before any replay package, scanner wiring, promotion, Discord card, or production behavior is touched.
+Tests run: npx tsx src/lib/forensicModels/drivePullbackContinuation.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against the new detector files.
+Result: Passed. The detector identifies LONG and SHORT drive-pullback-continuation proof from synthetic OHLC-derived displacement, FVG/pullback-zone, setup-ready, and completed 5M rejection facts. It rejects missing drive proof, keeps all scanner/promotion/Discord/execution installation flags false, and the blank-slate setup registry still returns no scanner candidates.
+Trading logic changed: No. This is an isolated detector module only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The detector is not outcome-proven yet. It needs replay proof and PDF-window attribution before any scanner-facing install.
+Next recommended action: Add replay-only proof for Drive Pullback Continuation against June 8-28 morning/lunch stored OHLC, then run PDF-window attribution.
+
+Date: 2026-07-25
 Task: Add replay-only retest-entry validation for Raid Failure Displacement Reversal.
 Files changed: tools/automation/raid-failure-displacement-retest-entry-validation.ts, tools/automation/raid-failure-displacement-retest-entry-validation.test.ts, docs/PROJECT_STATUS.md.
 Reason: Verify whether the risk-clean retest entries from the geometry miner actually traded after completed 5M proof and before the profitable PDF exit window.
