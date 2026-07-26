@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model scanner surface smoke.
+Files changed: tools/automation/five-model-scanner-surface-smoke.ts, tools/automation/five-model-scanner-surface-smoke.test.ts, docs/PROJECT_STATUS.md.
+Reason: Render the real five-model adapter output into the shared scanner-facing surface shape using saved artifacts only, proving the visible row shape before any runtime scanner visibility decision.
+Tests run: npx tsx tools/automation/five-model-scanner-surface-smoke.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; real surface smoke against `tools/automation/diagnostic-reports/five-model-scanner-visibility-adapter-proof-1785090208141.json` and `tools/automation/diagnostic-reports/five-model-guarded-scanner-visibility-contract-1785049867638.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-scanner-surface-smoke-1785090633804.json`. Summary: renderedRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, scannerRuntimeWiredRows=0, productionScannerVisibleNowRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, canExecuteChangedRows=0, automatedOrderRows=0, wordingViolationRows=0, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact scanner surface smoke only. It does not wire scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This still does not wire the surface into live scanner runtime or production scanner visibility.
+Next recommended action: Prepare the explicit runtime visibility decision gate. If approved, the next code phase should wire the default-off adapter into a local scanner-visible consumer path with the gate disabled by default and Discord/Supabase/bridge/execution effects still off.
+
+Date: 2026-07-26
 Task: Add five-model scanner visibility adapter proof.
 Files changed: tools/automation/five-model-scanner-visibility-adapter-proof.ts, tools/automation/five-model-scanner-visibility-adapter-proof.test.ts, docs/PROJECT_STATUS.md.
 Reason: Run the default-off five-model scanner visibility adapter against the real saved visibility contract artifact and prove the disabled path exposes zero rows while the explicitly allowed path produces the expected scanner surface rows without Discord, Supabase, live bridge reads, canExecute changes, trading-logic changes, or automated orders.
