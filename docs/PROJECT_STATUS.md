@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model launch checklist.
+Files changed: tools/automation/five-model-launch-checklist.ts, tools/automation/five-model-launch-checklist.test.ts, docs/PROJECT_STATUS.md.
+Reason: Tie together the five-model activation, scanner readback, and Discord dry-run preview into one no-network launch checklist before any live webhook rehearsal decision.
+Tests run: npx tsx tools/automation/five-model-launch-checklist.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; real checklist against activation/readback/preview artifacts.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-launch-checklist-1785092947259.json`. Summary: activationRows=18, scannerReadbackRows=18, discordPreviewPayloads=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, discordPostRows=0, webhookCallRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0, recommendation=ready_for_explicit_discord_rehearsal_decision.
+Trading logic changed: No. This is a no-network launch checklist only. It does not install runtime behavior, send Discord, write Supabase, read live bridge data, change scanner detection, setupRegistry, ranking, promotion rules, entry/stop/target math, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call. The checklist requires separate explicit approval before any real Discord rehearsal.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The five-model path is locally activated, scanner-readable, and dry-run previewed, but no real Discord message has been sent for this five-model surface.
+Next recommended action: Stop for explicit approval before exactly one five-model Discord production rehearsal, including a fixed candidate row and idempotency key.
+
+Date: 2026-07-26
 Task: Add five-model Discord dry-run preview.
 Files changed: tools/automation/five-model-discord-dry-run-preview.ts, tools/automation/five-model-discord-dry-run-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: Render scanner-readable five-model rows into Discord-shaped preview payloads while forcing webhook delivery off and preserving all scanner/trading side-effect boundaries.
