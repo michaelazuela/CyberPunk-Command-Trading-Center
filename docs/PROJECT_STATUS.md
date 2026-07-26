@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Install typed five-model registry without scanner behavior.
+Files changed: src/config/approvedDeskModels.ts, src/config/approvedDeskModels.test.ts, docs/PROJECT_STATUS.md.
+Reason: Continue the micro-phase rebuild by giving code a typed source for exactly the five forensic playbook models while keeping scanner detection, promotion, Discord, Supabase, bridge, and execution behavior disabled.
+Tests run: npx tsx src/config/approvedDeskModels.test.ts; exact legacy/supporting-label drift search against the new registry/test/playbook files; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run build; npm run lint.
+Result: Passed. Focused registry test verified exactly five approved definitions, long/short symmetry, morning/lunch replay-only sessions, empty production sessions, behavior flags false, rejection of old model ids without storing exact old strings, and scanner output still blank. Exact legacy/supporting-label search returned no hits in the new registry/test/playbook files. TypeScript, guards, production build, and lint passed.
+Trading logic changed: No. This registry is not wired into setup scanning, ranking, promotion, Discord publishing, Supabase, bridge reads, entry/stop/target logic, risk logic, or automated execution. The registry explicitly sets scanner detection, promotion, Discord publishing, and execution approval flags to false.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The registry is intentionally inert. The next detector phase must still prove each model against replay before scanner candidate wiring.
+Next recommended action: Install the first isolated detector for Liquidity Raid Reclaim Reversal with local replay proof only.
+
+Date: 2026-07-25
 Task: Install five-model forensic playbook definitions.
 Files changed: docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Start the clean rebuild from a blank slate with a source-of-truth playbook before any scanner, registry, detector, promotion, Discord, Supabase, or bridge behavior is reintroduced.
