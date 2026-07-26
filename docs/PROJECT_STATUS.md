@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model Discord dry-run preview.
+Files changed: tools/automation/five-model-discord-dry-run-preview.ts, tools/automation/five-model-discord-dry-run-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: Render scanner-readable five-model rows into Discord-shaped preview payloads while forcing webhook delivery off and preserving all scanner/trading side-effect boundaries.
+Tests run: npx tsx tools/automation/five-model-discord-dry-run-preview.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; real dry-run preview against `tools/automation/.five-model-production-scanner-surface.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-discord-dry-run-preview-1785092575493.json`. Summary: sourceRows=18, previewPayloads=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, discordPostRows=0, webhookCallRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This is a text-preview adapter only. It does not send Discord, write Supabase, read live bridge data, change scanner detection, setupRegistry, ranking, promotion rules, entry/stop/target math, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call. Preview payloads were written to ignored diagnostic artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Payloads are text-only dry-run previews; no visual card QA or live Discord delivery has been approved for this five-model surface yet.
+Next recommended action: Add a final five-model launch checklist that links activation, scanner readback, dry-run Discord preview, and rollback path before any live webhook rehearsal decision.
+
+Date: 2026-07-26
 Task: Wire five-model production scanner surface readback into scanner tooling.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: Let the local scanner tooling read the tracked five-model production scanner surface, validate it against the approved five-model registry, and write a scanner readback receipt during scanner cycles without changing trade logic or side-effect policy.
