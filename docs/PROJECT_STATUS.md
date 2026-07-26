@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add disabled scanner-surface adapter preview for five-model geometry.
+Files changed: tools/automation/five-model-scanner-surface-adapter-preview.ts, tools/automation/five-model-scanner-surface-adapter-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: Convert protected-entry geometry rows into the existing Unified Desk Output scanner-surface model while preserving default-off behavior and keeping immediate risk-clean rows separate from retest-required forming rows.
+Tests run: npx tsx tools/automation/five-model-scanner-surface-adapter-preview.test.ts; npx tsx src/config/setupRegistry.test.ts; exact retired-label drift search against the new adapter files and rendered markdown; blocked-wording search against the rendered markdown; real default-off adapter preview; real explicit local-preview adapter preview.
+Result: Passed. Default-off produced sourceGeometryRows=23, visibilityCandidates=0, renderedRows=0, approvedDeskPlanRows=0, formingDeskReadRows=0, canExecuteTrueRows=0. Explicit local-preview produced sourceGeometryRows=23, visibilityCandidates=18 after dedupe, renderedRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, immediateRiskCleanRows=7, retestOnlyRows=16, discordPostRows=0, supabaseWriteRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, wordingViolationRows=0, blockedRows=0. Report paths: `tools/automation/diagnostic-reports/five-model-scanner-surface-adapter-preview-1785045776287.json` and `tools/automation/diagnostic-reports/five-model-scanner-surface-adapter-preview-1785045776257.json`.
+Trading logic changed: No. This is a disabled local scanner-surface adapter preview only. It does not change setup registry entries, scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The surface is still local-preview-only. It needs a hidden local preview import payload/render proof before scanner-facing runtime wiring is considered.
+Next recommended action: Build the hidden local preview import payload/render proof for the five-model scanner-surface adapter output.
+
+Date: 2026-07-25
 Task: Add protected-entry geometry miner for five-model preview rows.
 Files changed: tools/automation/five-model-protected-entry-geometry-miner.ts, tools/automation/five-model-protected-entry-geometry-miner.test.ts, docs/PROJECT_STATUS.md.
 Reason: Diagnose the 23 disabled scanner-candidate preview rows held by the 5-point risk cap and test whether deterministic protected 5M geometry can produce risk-clean immediate or retest variants without loosening risk.
