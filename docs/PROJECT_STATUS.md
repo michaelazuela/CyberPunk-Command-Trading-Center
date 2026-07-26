@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add five-model disabled scanner runtime wiring preview.
+Files changed: tools/automation/five-model-disabled-scanner-runtime-wiring-preview.ts, tools/automation/five-model-disabled-scanner-runtime-wiring-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: Preview how the five-model scanner surface would be handed to scanner runtime while keeping default runtime behavior disabled and requiring explicit local preview for rows.
+Tests run: npx tsx tools/automation/five-model-disabled-scanner-runtime-wiring-preview.test.ts; npx tsc --noEmit --pretty false; real disabled scanner runtime wiring preview against the latest five-model readiness/import artifacts.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-disabled-scanner-runtime-wiring-preview-1785048045219.json`. Summary: readinessPassed=true, defaultStatus=disabled, localPreviewStatus=ready, defaultScannerPreviewRows=0, localScannerPreviewRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, runtimeGateEnabled=false, scannerRuntimeChangedRows=0, discordPostRows=0, supabaseWriteRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This is a disabled local scanner-runtime wiring preview only. It does not change setup registry entries, scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This still does not connect rows to the active scanner consumer. The next phase should run a local scanner consumer probe from the disabled runtime preview.
+Next recommended action: Add a local scanner consumer probe for the five-model disabled runtime preview, still with production/runtime behavior disabled.
+
+Date: 2026-07-25
 Task: Add five-model final local readiness checklist.
 Files changed: tools/automation/five-model-final-local-readiness-checklist.ts, tools/automation/five-model-final-local-readiness-checklist.test.ts, docs/PROJECT_STATUS.md.
 Reason: Add a five-model-specific readiness checkpoint that consumes the latest hidden import proof and hidden browser verification without reusing the older two-row production checklist assumptions.
