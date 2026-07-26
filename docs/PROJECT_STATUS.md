@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add tight selector for Failed Breakout Reversal.
+Files changed: tools/automation/failed-breakout-reversal-tight-match-selector.ts, tools/automation/failed-breakout-reversal-tight-match-selector.test.ts, docs/PROJECT_STATUS.md.
+Reason: Reduce broad Failed Breakout PDF-window matches into tight/usable/loose/reject rows before the five-model lane comparison and before any scanner-facing install.
+Tests run: npx tsx tools/automation/failed-breakout-reversal-tight-match-selector.test.ts; npx tsx src/config/setupRegistry.test.ts; exact legacy/supporting-label drift search against the new selector files; real local selector against the Failed Breakout PDF-window attribution report.
+Result: Passed. The selector keeps scanner/promotion/Discord/Supabase/bridge/execution eligibility false. Real selector produced sourceProfitablePdfTrades=40, sourceMatchedTrades=12, rows=40, tightRows=2, usableRows=1, looseRows=9, rejectRows=28, selectedRows=3, selectedDollars=$155.00, looseDollars=$700.00, rejectedDollars=$1363.75, selectedShortRows=3, selectedLongRows=0, selectedSupportHtfRows=2. Report path: `tools/automation/diagnostic-reports/failed-breakout-reversal-tight-match-selector-1785044010924.json`.
+Trading logic changed: No. This is a local selector over replay/PDF artifacts. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Failed Breakout contributes selected short rows, but most broad matches remain loose/rejected. Compare across all five lanes before scanner-facing work.
+Next recommended action: Rerun the model-lane comparison with all five forensic lanes.
+
+Date: 2026-07-25
 Task: Add PDF-window attribution for Failed Breakout Reversal.
 Files changed: tools/automation/failed-breakout-reversal-pdf-window-filter.ts, tools/automation/failed-breakout-reversal-pdf-window-filter.test.ts, docs/PROJECT_STATUS.md.
 Reason: Compare Failed Breakout Reversal replay detections against profitable June 8-28 PDF trades before any selector, scanner, promotion, Discord, Supabase, or bridge behavior is touched.
