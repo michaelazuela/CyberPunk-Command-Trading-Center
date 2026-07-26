@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model local scanner visibility surface preview.
+Files changed: tools/automation/five-model-local-scanner-visibility-surface-preview.ts, tools/automation/five-model-local-scanner-visibility-surface-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: Convert the saved scanner visibility wiring preview rows into the exact local scanner surface shape while keeping production scanner-visible-now rows, runtime wiring, Discord, Supabase, bridge reads, canExecute, trading logic changes, and automated orders off.
+Tests run: npx tsx tools/automation/five-model-local-scanner-visibility-surface-preview.test.ts; npx tsc --noEmit --pretty false; real local scanner visibility surface preview against `tools/automation/diagnostic-reports/five-model-scanner-visibility-wiring-preview-1785050791651.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-local-scanner-visibility-surface-preview-1785051086390.json`. Summary: wiringPreviewRows=18, surfaceRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, localScannerSurfaceRows=18, productionScannerVisibleNowRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, canExecuteChangedRows=0, automatedOrderRows=0, wordingViolationRows=0, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact local scanner surface preview only. It does not wire scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This still does not install production scanner visibility. The next phase should build a guarded production rehearsal manifest from the local surface preview before any real production switch is considered.
+Next recommended action: Add a guarded production rehearsal manifest for the five-model scanner surface.
+
+Date: 2026-07-26
 Task: Add five-model scanner visibility wiring preview.
 Files changed: tools/automation/five-model-scanner-visibility-wiring-preview.ts, tools/automation/five-model-scanner-visibility-wiring-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove exactly which five-model rows the explicit-approval visibility gate would hand to scanner visibility, while keeping runtime wiring, production scanner-visible-now rows, Discord, Supabase, bridge reads, canExecute, trading logic changes, and automated orders off.
