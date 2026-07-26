@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add five-model disabled scanner UI refresh preview.
+Files changed: tools/automation/five-model-disabled-scanner-ui-refresh-preview.ts, tools/automation/five-model-disabled-scanner-ui-refresh-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove the five-model consumer output can be shaped for a scanner UI refresh surface while keeping default behavior disabled and all live side effects off.
+Tests run: npx tsx tools/automation/five-model-disabled-scanner-ui-refresh-preview.test.ts; npx tsc --noEmit --pretty false; real disabled scanner UI refresh preview against the latest five-model consumer probe artifact.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-disabled-scanner-ui-refresh-preview-1785048695097.json`. Summary: scannerUiRefreshAllowed=true, defaultDisabled=true, localPreviewStatus=ready, uiRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, runtimeGateEnabled=false, scannerRuntimeChangedRows=0, discordPostRows=0, supabaseWriteRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact disabled scanner UI refresh preview only. It does not change setup registry entries, scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This still does not adapt the preview rows into a final scanner UI adapter contract or production surface. The next phase should add a disabled scanner UI adapter preview from this refresh artifact.
+Next recommended action: Add a disabled scanner UI adapter preview for the five-model refresh output, still with production/runtime behavior disabled.
+
+Date: 2026-07-25
 Task: Add five-model local scanner consumer probe.
 Files changed: tools/automation/five-model-local-scanner-consumer-probe.ts, tools/automation/five-model-local-scanner-consumer-probe.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove a local scanner consumer can read the five-model disabled runtime preview rows only from the explicit local preview path while default runtime behavior remains disabled.
