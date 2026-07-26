@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add default-off five-model scanner visibility adapter contract.
+Files changed: src/lib/fiveModelScannerVisibilityAdapter.ts, src/lib/fiveModelScannerVisibilityAdapter.test.ts, docs/PROJECT_STATUS.md.
+Reason: Add the local adapter contract that converts explicitly approved five-model gate candidates into the shared scanner surface row shape while remaining unwired from runtime scanner behavior and keeping Discord, Supabase, live bridge reads, canExecute changes, trading-logic changes, and automated orders off.
+Tests run: npx tsx src/lib/fiveModelScannerVisibilityAdapter.test.ts; npx tsx src/lib/fiveModelScannerVisibilityGate.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false.
+Result: Passed. The adapter is disabled without explicit production approval, exposes zero rows by default, and only converts approved gate candidates into scanner surface rows when the gate is explicitly allowed. Summary under explicit approval: surfaceRows=2 in the focused fixture, approvedDeskPlans=1, formingDeskReads=1, discordPostRows=0, supabaseWriteRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, wordingViolationRows=0.
+Trading logic changed: No. This adds a default-off adapter function only. It does not wire scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is still not wired into the live scanner runtime, so production scanner visibility remains off until a separate install phase.
+Next recommended action: Add a saved-artifact adapter proof that runs this contract against the real five-model scanner visibility contract report and confirms the real 18-row surface remains default-off until explicit approval.
+
+Date: 2026-07-26
 Task: Add five-model scanner visibility install preread.
 Files changed: tools/automation/five-model-scanner-visibility-install-preread.ts, tools/automation/five-model-scanner-visibility-install-preread.test.ts, docs/PROJECT_STATUS.md.
 Reason: Inventory the exact local runtime path required for a future five-model scanner visibility adapter after the execution dry run passed, while keeping this phase preread-only with scanner runtime wiring, production scanner visibility, Discord, Supabase, live bridge reads, canExecute changes, trading-logic changes, and automated orders off.
