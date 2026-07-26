@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add replay-only Raid Failure Displacement Reversal proof package.
+Files changed: tools/automation/raid-failure-displacement-reversal-replay-proof.ts, tools/automation/raid-failure-displacement-reversal-replay-proof.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove the second isolated detector against stored June OHLC before any scanner candidate wiring or promotion work.
+Tests run: npx tsx tools/automation/raid-failure-displacement-reversal-replay-proof.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against the replay proof files; real local replay command against `tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-06-01-to-2026-07-02-1784594514789.json`.
+Result: Passed. Replay proof tool test passed, TypeScript passed, and exact legacy/supporting-label search returned no hits in the new replay files. Real local replay for MES June 8-28 morning/lunch loaded 5M=12119, 15M=4052, 60M=1025, 120M=527, 240M=266 bars, evaluated 1119 contexts, and produced 368 unique raw detector hits: 177 LONG and 191 SHORT. Report path: `tools/automation/diagnostic-reports/raid-failure-displacement-reversal-replay-proof-MES-2026-06-08-to-2026-06-28-1785036518107.json`.
+Trading logic changed: No. This is a replay-only diagnostic package. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, or automated execution.
+Bridge impact: None. The replay used a local saved OHLC JSON file only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Raw detector coverage is broad. It proves the pattern is visible, but it is not scanner-ready until PDF-window/outcome filtering shows which subset actually matches profitable trades.
+Next recommended action: Add the PDF-window attribution filter for Raid Failure Displacement Reversal using the same profitable-trade PDF extraction contract as detector 1.
+
+Date: 2026-07-25
 Task: Add isolated Raid Failure Displacement Reversal detector.
 Files changed: src/lib/forensicModels/raidFailureDisplacementReversal.ts, src/lib/forensicModels/raidFailureDisplacementReversal.test.ts, docs/PROJECT_STATUS.md.
 Reason: Install the second approved forensic model as a pure detector before any replay package, scanner wiring, promotion, Discord card, or production behavior is touched.
