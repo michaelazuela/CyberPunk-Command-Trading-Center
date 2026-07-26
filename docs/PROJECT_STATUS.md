@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add replay-only tight-entry geometry miner for Raid Failure Displacement Reversal.
+Files changed: tools/automation/raid-failure-displacement-tight-entry-geometry-miner.ts, tools/automation/raid-failure-displacement-tight-entry-geometry-miner.test.ts, docs/PROJECT_STATUS.md.
+Reason: Determine whether the leading model can satisfy the current 5-point risk cap with no-lookahead 5M proof-bar geometry instead of weakening risk or scanner rules.
+Tests run: npx tsx tools/automation/raid-failure-displacement-tight-entry-geometry-miner.test.ts; npx tsx tools/automation/raid-failure-displacement-local-preview-dry-run.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against the geometry miner files; real local geometry miner against the latest Raid Failure Displacement selector report and saved June OHLC pack.
+Result: Passed. Focused geometry test passed, local preview dry-run test passed, TypeScript passed, exact legacy/supporting-label search returned no hits in the geometry files, and the blank-slate setup registry still returns no scanner candidates. Real local geometry miner loaded 5M=12119 bars and produced sourceRows=40, clauseQualifiedRows=13, geometryRows=13, immediateRiskCleanRows=1, immediateRiskCleanDollars=$25.00, retestRiskCleanRows=13, retestRiskCleanDollars=$811.25, maxRiskPoints=5, scannerInstallEligibleRows=0, promotionEligibleRows=0, discordEligibleRows=0, executionApprovalEligibleRows=0, canExecuteTrueRows=0. Report path: `tools/automation/diagnostic-reports/raid-failure-displacement-tight-entry-geometry-miner-1785038584960.json`.
+Trading logic changed: No. This is a replay-only geometry miner. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None. The miner used a local saved OHLC JSON file only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Only one immediate proof-close geometry is risk-clean. The stronger path is a retest-entry geometry, which must be proven in a no-lookahead replay before any scanner preview is considered.
+Next recommended action: Add a replay-only retest-entry validation for Raid Failure Displacement Reversal that checks whether the required retest entry occurred after proof and before the profitable PDF entry/exit window.
+
+Date: 2026-07-25
 Task: Add local-only preview dry run for Raid Failure Displacement Reversal.
 Files changed: tools/automation/raid-failure-displacement-local-preview-dry-run.ts, tools/automation/raid-failure-displacement-local-preview-dry-run.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove whether the disabled preview contract can shape scanner-preview rows without enabling scanner wiring, promotion, Discord, Supabase, bridge, canExecute, or execution behavior.
