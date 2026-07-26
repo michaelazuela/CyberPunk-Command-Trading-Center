@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add five-model final local readiness checklist.
+Files changed: tools/automation/five-model-final-local-readiness-checklist.ts, tools/automation/five-model-final-local-readiness-checklist.test.ts, docs/PROJECT_STATUS.md.
+Reason: Add a five-model-specific readiness checkpoint that consumes the latest hidden import proof and hidden browser verification without reusing the older two-row production checklist assumptions.
+Tests run: npx tsx tools/automation/five-model-final-local-readiness-checklist.test.ts; npx tsc --noEmit --pretty false; real five-model final local readiness checklist against the latest hidden import/browser proof artifacts.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-final-local-readiness-checklist-1785047690161.json`. Summary: hiddenImportProofPassed=true, hiddenBrowserVerificationPassed=true, importReady=true, previewReady=true, renderedRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, browserRenderedRows=18, browserApprovedDeskPlanRows=5, discordPostRows=0, supabaseWriteRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, runtimeGateEnabled=false, productionGoLiveApproved=false, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact readiness checklist only. It does not change setup registry entries, scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Runtime scanner wiring remains disabled. The next phase should preview disabled scanner runtime wiring for the five-model surface before any production/live visibility gate.
+Next recommended action: Add a disabled scanner runtime wiring preview for the five-model surface, still with scanner visibility and Discord/Supabase/bridge side effects off.
+
+Date: 2026-07-25
 Task: Add hidden local browser preview verification for five-model scanner surface.
 Files changed: tools/automation/unified-desk-output-hidden-preview-local-verification.ts, docs/PROJECT_STATUS.md.
 Reason: Reuse the existing hidden Unified Desk Output browser verifier for the five-model scanner-surface payload by deriving expected row counts, model names, and proof lines from the imported render proof instead of the older two-row rehearsal assumptions. Also shut down the local Vite process tree cleanly after verification on Windows.
