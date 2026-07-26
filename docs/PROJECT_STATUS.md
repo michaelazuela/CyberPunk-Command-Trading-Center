@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add replay-only PDF-window filter for Liquidity Raid Reclaim Reversal.
+Files changed: tools/automation/liquidity-raid-reclaim-reversal-pdf-window-filter.ts, tools/automation/liquidity-raid-reclaim-reversal-pdf-window-filter.test.ts, docs/PROJECT_STATUS.md.
+Reason: Narrow the 237 raw Liquidity Raid Reclaim Reversal detector hits against the actual profitable PDF trade windows before any scanner wiring.
+Tests run: npx tsx tools/automation/liquidity-raid-reclaim-reversal-pdf-window-filter.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; real local PDF-window filter against `C:\Users\Mike\Downloads\206257_Monthly_20260630.pdf` and the latest replay proof report; filter import isolation search; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run build; npm run lint.
+Result: Passed. Focused test passed. TypeScript passed. Import isolation confirmed the filter is referenced only by itself and its test, and the blank-slate setup registry still returns no scanner candidates. Real local filter read the PDF with local pypdf extraction and matched morning/lunch profitable PDF trades only: profitablePdfTrades=40, replayDetections=237, matchedTrades=12, unmatchedTrades=28, matchedLongTrades=2, matchedShortTrades=10, matchedDollars=$855.00, totalProfitableDollars=$2218.75. Report path: `tools/automation/diagnostic-reports/liquidity-raid-reclaim-reversal-pdf-window-filter-2026-06-08-to-2026-06-28-1785035394083.json`. Guards, production build, and lint passed.
+Trading logic changed: No. This is a replay-only PDF/artifact filter. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The matched subset is promising but still broad. The next phase should separate tight in-time/near-entry matches from loose matches before any scanner candidate install.
+Next recommended action: Add a replay-only tight-match selector for this model using the matched PDF-window rows, then decide whether the detector needs stricter source-level filters before installing detector 2.
+
+Date: 2026-07-25
 Task: Add replay-only Liquidity Raid Reclaim Reversal proof package.
 Files changed: tools/automation/liquidity-raid-reclaim-reversal-replay-proof.ts, tools/automation/liquidity-raid-reclaim-reversal-replay-proof.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove the first isolated detector against stored June OHLC before any scanner candidate wiring.
