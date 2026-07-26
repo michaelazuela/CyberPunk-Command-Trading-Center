@@ -6,6 +6,7 @@ type Quality = 'tight' | 'usable' | 'loose' | 'reject';
 interface Args {
   liquidityRaidReclaimSelectorJson: string;
   raidFailureDisplacementSelectorJson: string;
+  drivePullbackContinuationSelectorJson: string | null;
   json: boolean;
 }
 
@@ -49,7 +50,7 @@ interface SelectorReport {
 }
 
 interface ModelInput {
-  modelId: 'liquidity_raid_reclaim_reversal' | 'raid_failure_displacement_reversal';
+  modelId: 'liquidity_raid_reclaim_reversal' | 'raid_failure_displacement_reversal' | 'drive_pullback_continuation';
   displayName: string;
   filePath: string;
 }
@@ -63,11 +64,13 @@ function readFlag(args: string[], flag: string): string | null {
 function parseArgs(argv = process.argv.slice(2)): Args {
   const liquidityRaidReclaimSelectorJson = readFlag(argv, '--liquidity-raid-reclaim-selector-json');
   const raidFailureDisplacementSelectorJson = readFlag(argv, '--raid-failure-displacement-selector-json');
+  const drivePullbackContinuationSelectorJson = readFlag(argv, '--drive-pullback-continuation-selector-json');
   if (!liquidityRaidReclaimSelectorJson) throw new Error('--liquidity-raid-reclaim-selector-json is required');
   if (!raidFailureDisplacementSelectorJson) throw new Error('--raid-failure-displacement-selector-json is required');
   return {
     liquidityRaidReclaimSelectorJson,
     raidFailureDisplacementSelectorJson,
+    drivePullbackContinuationSelectorJson,
     json: argv.includes('--json'),
   };
 }
@@ -138,16 +141,39 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
       displayName: 'Raid Failure Displacement Reversal',
       filePath: args.raidFailureDisplacementSelectorJson,
     },
+    ...(args.drivePullbackContinuationSelectorJson
+      ? [{
+          modelId: 'drive_pullback_continuation' as const,
+          displayName: 'Drive Pullback Continuation',
+          filePath: args.drivePullbackContinuationSelectorJson,
+        }]
+      : []),
   ];
   const reports = inputs.map((input) => ({ input, report: readSelector(input.filePath) }));
   const summaries = reports.map(({ input, report }) => modelSummary(input, report));
-  const firstSelected = selectedRows(reports[0].report);
-  const secondSelected = selectedRows(reports[1].report);
-  const firstKeys = new Set(firstSelected.map((row) => tradeKey(row.trade)));
-  const secondKeys = new Set(secondSelected.map((row) => tradeKey(row.trade)));
-  const overlapKeys = [...firstKeys].filter((key) => secondKeys.has(key));
-  const firstOnly = firstSelected.filter((row) => !secondKeys.has(tradeKey(row.trade)));
-  const secondOnly = secondSelected.filter((row) => !firstKeys.has(tradeKey(row.trade)));
+  const selectedByModel = reports.map(({ input, report }) => ({
+    modelId: input.modelId,
+    rows: selectedRows(report),
+  }));
+  const keyToModels = new Map<string, Set<ModelInput['modelId']>>();
+  selectedByModel.forEach(({ modelId, rows }) => {
+    rows.forEach((row) => {
+      const key = tradeKey(row.trade);
+      const models = keyToModels.get(key) || new Set<ModelInput['modelId']>();
+      models.add(modelId);
+      keyToModels.set(key, models);
+    });
+  });
+  const overlapKeys = [...keyToModels.entries()]
+    .filter(([, modelIds]) => modelIds.size > 1)
+    .map(([key]) => key);
+  const selectedOnlyCounts = selectedByModel.reduce<Record<string, number>>((acc, item) => {
+    acc[item.modelId] = item.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1).length;
+    return acc;
+  }, {});
+  const firstOnly = selectedByModel[0]?.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1) || [];
+  const secondOnly = selectedByModel[1]?.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1) || [];
+  const thirdOnly = selectedByModel[2]?.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1) || [];
   const winner = [...summaries].sort((a, b) =>
     b.selectedDollars - a.selectedDollars ||
     b.selectedRows - a.selectedRows ||
@@ -169,6 +195,7 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
     source: {
       liquidityRaidReclaimSelectorJson: args.liquidityRaidReclaimSelectorJson,
       raidFailureDisplacementSelectorJson: args.raidFailureDisplacementSelectorJson,
+      drivePullbackContinuationSelectorJson: args.drivePullbackContinuationSelectorJson,
     },
     summary: {
       modelsCompared: summaries.length,
@@ -178,6 +205,8 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
       selectedOverlapRows: overlapKeys.length,
       liquidityRaidReclaimOnlyRows: firstOnly.length,
       raidFailureDisplacementOnlyRows: secondOnly.length,
+      drivePullbackContinuationOnlyRows: thirdOnly.length,
+      selectedOnlyCounts,
       scannerInstallEligibleRows: 0,
       promotionEligibleRows: 0,
       discordEligibleRows: 0,
@@ -190,6 +219,7 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
     overlap: overlapKeys,
     onlyLiquidityRaidReclaim: firstOnly.map((row) => row.trade),
     onlyRaidFailureDisplacement: secondOnly.map((row) => row.trade),
+    onlyDrivePullbackContinuation: thirdOnly.map((row) => row.trade),
     recommendation: winner?.modelId === 'raid_failure_displacement_reversal'
       ? 'prepare_replay_only_source_clause_miner_for_raid_failure_displacement_before_scanner_preview'
       : 'continue_replay_only_comparison_before_scanner_preview',

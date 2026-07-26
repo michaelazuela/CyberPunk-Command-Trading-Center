@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Update selector comparison to three forensic lanes.
+Files changed: tools/automation/five-model-selector-comparison-report.ts, tools/automation/five-model-selector-comparison-report.test.ts, docs/PROJECT_STATUS.md.
+Reason: Compare Liquidity Raid Reclaim, Raid Failure Displacement, and Drive Pullback Continuation selected PDF-window rows before any scanner-facing install decision.
+Tests run: npx tsx tools/automation/five-model-selector-comparison-report.test.ts; npx tsx src/config/setupRegistry.test.ts; exact legacy/supporting-label drift search against the comparison files; real local comparison against all three selector reports.
+Result: Passed. The comparison remains local-artifact-only, keeps scanner/promotion/Discord/Supabase/bridge/execution eligibility false, and now reports per-model unique rows plus overlap across all supplied models. Real comparison produced modelsCompared=3, sourceProfitablePdfTrades=40, selectedRowsTotal=24, selectedDollarsTotal=$1516.25, selectedOverlapRows=4, liquidityRaidReclaimOnlyRows=1, raidFailureDisplacementOnlyRows=15, drivePullbackContinuationOnlyRows=0, leadingModelId=raid_failure_displacement_reversal, leadingModelSelectedRows=17, leadingModelSelectedDollars=$1090.00. Report path: `tools/automation/diagnostic-reports/five-model-selector-comparison-report-1785040971259.json`.
+Trading logic changed: No. This is a local selector-comparison report only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Drive Pullback currently supports existing selected trades but adds no unique selected winner in this PDF set. The leading lane remains Raid Failure Displacement, but earlier risk/retest work showed it still needs careful source/geometry constraints before scanner preview.
+Next recommended action: Install the fourth forensic detector in isolation rather than forcing scanner behavior from the first three lanes.
+
+Date: 2026-07-25
 Task: Add tight selector for Drive Pullback Continuation.
 Files changed: tools/automation/drive-pullback-continuation-tight-match-selector.ts, tools/automation/drive-pullback-continuation-tight-match-selector.test.ts, docs/PROJECT_STATUS.md.
 Reason: Classify Drive Pullback PDF-window matches into tight/usable/loose/reject before comparing the model lane against prior installed forensic lanes.
