@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model production scanner surface readback.
+Files changed: tools/automation/five-model-production-scanner-surface-readback.ts, tools/automation/five-model-production-scanner-surface-readback.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove the tracked five-model runtime scanner surface can be read back locally and that it exposes exactly the expected row counts while preserving zero side-effect counters.
+Tests run: npx tsx tools/automation/five-model-production-scanner-surface-readback.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; real readback against `tools/automation/.five-model-production-scanner-surface.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-production-scanner-surface-readback-1785091789223.json`. Summary: selectedRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This is a local runtime surface readback only. It does not wire scanner detection, setupRegistry, ranking, promotion rules, Discord posting, Supabase reads/writes, bridge reads, entry/stop/target math, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The scanner consumer still has not been modified to load the five-model runtime surface during a normal scanner cycle.
+Next recommended action: Add the smallest scanner consumer file-wiring proof so the scanner can load `tools/automation/.five-model-production-scanner-surface.json` and report the same 18 rows without posting Discord or changing trading logic.
+
+Date: 2026-07-26
 Task: Add five-model production scanner surface activation.
 Files changed: src/lib/fiveModelProductionScannerSurface.ts, tools/automation/five-model-production-scanner-surface-activation.ts, tools/automation/five-model-production-scanner-surface-activation.test.ts, tools/automation/.five-model-production-scanner-surface.json, docs/PROJECT_STATUS.md.
 Reason: Activate the proven five-model scanner surface into a tracked local runtime JSON file behind an explicit five-model production approval flag, while preserving all side-effect boundaries.
