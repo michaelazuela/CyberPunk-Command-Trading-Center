@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { chromium, type Browser } from 'playwright';
+import { chromium, type Browser, type Page } from 'playwright';
 
 interface HiddenPreviewLocalVerificationReport {
   reportType: 'unified_desk_output_hidden_preview_local_verification';
@@ -152,15 +152,46 @@ function waitForServer(url: string, timeoutMs = 45000): Promise<void> {
 }
 
 function startVite(port: number): ChildProcessWithoutNullStreams {
-  return spawn('npx', ['vite', '--host', '127.0.0.1', '--port', String(port)], {
+  const viteBin = path.resolve(__dirname, '../../node_modules/vite/bin/vite.js');
+  return spawn(process.execPath, [viteBin, '--host', '127.0.0.1', '--port', String(port)], {
     cwd: path.resolve(__dirname, '../..'),
-    shell: process.platform === 'win32',
     stdio: 'pipe',
+  });
+}
+
+function stopProcessTree(processToStop: ChildProcessWithoutNullStreams): Promise<void> {
+  if (!processToStop.pid || processToStop.killed) return Promise.resolve();
+  if (process.platform !== 'win32') {
+    processToStop.kill();
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const killer = spawn('taskkill', ['/PID', String(processToStop.pid), '/T', '/F'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    killer.once('exit', () => resolve());
+    killer.once('error', () => {
+      processToStop.kill();
+      resolve();
+    });
   });
 }
 
 function countText(text: string, pattern: RegExp): number {
   return (text.match(pattern) || []).length;
+}
+
+function numberValue(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function uniqueStrings(values: unknown[]): string[] {
+  return [...new Set(values.filter((value): value is string => typeof value === 'string' && value.length > 0))];
+}
+
+async function waitForBodyText(page: Page, text: string): Promise<void> {
+  await page.waitForFunction((expected: string) => document.body.innerText.includes(expected), text, { timeout: 15000 });
 }
 
 export async function buildUnifiedDeskOutputHiddenPreviewLocalVerificationReport(args: {
@@ -176,22 +207,42 @@ export async function buildUnifiedDeskOutputHiddenPreviewLocalVerificationReport
   let pageText = '';
   let previewReady = false;
   let importReady = false;
+  let expectedRenderedRows = 0;
+  let expectedApprovedRows = 0;
+  let expectedFormingRows = 0;
+  let expectedMorningModelVisible = false;
+  let expectedLunchModelVisible = false;
+  let expectedMorningProofVisible = false;
+  let expectedLunchProofVisible = false;
 
   try {
     const renderProof = readJson<any>(args.renderProofPath);
+    const importPayload = renderProof.scannerSurfaceSmokeImportPayload;
+    const previewRows = Array.isArray(importPayload?.surface?.rows) ? importPayload.surface.rows : [];
+    const modelNames = uniqueStrings(previewRows.map((row: any) => row.model));
+    const proofLines = uniqueStrings(previewRows.map((row: any) => row.proofLine));
+    const morningRows = previewRows.filter((row: any) => row.session === 'morning');
+    const lunchRows = previewRows.filter((row: any) => row.session === 'lunch');
+    expectedRenderedRows = Number(importPayload?.summary?.renderedRows || previewRows.length || 0);
+    expectedApprovedRows = Number(importPayload?.summary?.approvedDeskPlanRows || 0);
+    expectedFormingRows = Number(importPayload?.summary?.formingDeskReadRows || 0);
     if (renderProof.reportType !== 'unified_desk_output_disabled_local_scanner_preview_render_install_proof') {
       blockers.push('Source file is not a disabled local scanner preview render proof.');
     }
     if (renderProof.status !== 'pass') {
       blockers.push(`Render proof status is ${renderProof.status || '<missing>'}.`);
     }
-    if (renderProof.summary?.discordPostRows !== 0) blockers.push('Render proof has Discord-post rows.');
-    if (renderProof.summary?.supabaseWriteRows !== 0) blockers.push('Render proof has Supabase-write rows.');
-    if (renderProof.summary?.liveBridgeReadRows !== 0) blockers.push('Render proof has live-bridge-read rows.');
-    if (renderProof.summary?.canExecuteTrueRows !== 0) blockers.push('Render proof has canExecute=true rows.');
-    if (renderProof.summary?.tradingLogicChangedRows !== 0) blockers.push('Render proof changed trading logic.');
-    if (renderProof.summary?.automatedOrderRows !== 0) blockers.push('Render proof has automated-order rows.');
+    if (numberValue(renderProof.summary?.discordPostRows) !== 0) blockers.push('Render proof has Discord-post rows.');
+    if (numberValue(renderProof.summary?.supabaseWriteRows) !== 0) blockers.push('Render proof has Supabase-write rows.');
+    if (numberValue(renderProof.summary?.liveBridgeReadRows) !== 0) blockers.push('Render proof has live-bridge-read rows.');
+    if (numberValue(renderProof.summary?.canExecuteTrueRows) !== 0) blockers.push('Render proof has canExecute=true rows.');
+    if (numberValue(renderProof.summary?.tradingLogicChangedRows) !== 0) blockers.push('Render proof changed trading logic.');
+    if (numberValue(renderProof.summary?.automatedOrderRows) !== 0) blockers.push('Render proof has automated-order rows.');
     if (renderProof.summary?.hiddenPreviewImportReady !== true) blockers.push('Render proof is not hidden-preview import ready.');
+    if (importPayload?.reportType !== 'unified_desk_output_scanner_surface_smoke') {
+      blockers.push('Render proof does not contain a scanner surface smoke import payload.');
+    }
+    if (expectedRenderedRows <= 0) blockers.push('Render proof has no expected scanner surface rows.');
 
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -199,16 +250,22 @@ export async function buildUnifiedDeskOutputHiddenPreviewLocalVerificationReport
     await page.getByRole('button', { name: 'Unified Desk Output' }).click();
     await page.getByLabel('Import scanner surface smoke JSON').setInputFiles(args.renderProofPath);
     await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 });
-    await page.getByText('Import ready: 2 scanner surface rows.', { exact: true }).waitFor({ timeout: 15000 });
-    await page.getByText('NoInstalledSetup').waitFor({ timeout: 15000 });
-    await page.getByText('NoInstalledSetup').waitFor({ timeout: 15000 });
-    await page.getByText('Completed 5M proof: 09:10 ET.', { exact: true }).waitFor({ timeout: 15000 });
-    await page.getByText('Completed 5M proof: 15:45 ET.', { exact: true }).waitFor({ timeout: 15000 });
+    await page.getByText(`Import ready: ${expectedRenderedRows} scanner surface rows.`, { exact: true }).waitFor({ timeout: 15000 });
+    for (const model of modelNames) {
+      await waitForBodyText(page, model);
+    }
+    for (const proofLine of proofLines) {
+      await waitForBodyText(page, proofLine);
+    }
     screenshotPath = path.join(args.outDir, `unified-desk-output-hidden-preview-local-verification-${Date.now()}.png`);
     await page.screenshot({ path: screenshotPath, fullPage: true });
     pageText = await page.locator('body').innerText();
     previewReady = pageText.includes('READY');
-    importReady = pageText.includes('Import ready: 2 scanner surface rows.');
+    importReady = pageText.includes(`Import ready: ${expectedRenderedRows} scanner surface rows.`);
+    expectedMorningModelVisible = morningRows.length === 0 || morningRows.some((row: any) => pageText.includes(row.model));
+    expectedLunchModelVisible = lunchRows.length === 0 || lunchRows.some((row: any) => pageText.includes(row.model));
+    expectedMorningProofVisible = morningRows.length === 0 || morningRows.some((row: any) => pageText.includes(row.proofLine));
+    expectedLunchProofVisible = lunchRows.length === 0 || lunchRows.some((row: any) => pageText.includes(row.proofLine));
   } catch (error) {
     blockers.push(error instanceof Error ? error.message : String(error));
   } finally {
@@ -218,12 +275,12 @@ export async function buildUnifiedDeskOutputHiddenPreviewLocalVerificationReport
   const summary = {
     previewReady,
     importReady,
-    renderedRows: countText(pageText, /^Approved Desk Plan$/gm),
+    renderedRows: countText(pageText, /^Approved Desk Plan$/gm) + countText(pageText, /^Forming Desk Read$/gm),
     approvedDeskPlanRows: countText(pageText, /^Approved Desk Plan$/gm),
-    morningModelVisible: pageText.includes('NoInstalledSetup'),
-    lunchModelVisible: pageText.includes('NoInstalledSetup'),
-    morningProofVisible: pageText.includes('Completed 5M proof: 09:10 ET.'),
-    lunchProofVisible: pageText.includes('Completed 5M proof: 15:45 ET.'),
+    morningModelVisible: expectedMorningModelVisible,
+    lunchModelVisible: expectedLunchModelVisible,
+    morningProofVisible: expectedMorningProofVisible,
+    lunchProofVisible: expectedLunchProofVisible,
     discordPostRows: 0,
     supabaseWriteRows: 0,
     liveBridgeReadRows: 0,
@@ -237,6 +294,9 @@ export async function buildUnifiedDeskOutputHiddenPreviewLocalVerificationReport
     ...blockers,
     summary.previewReady ? null : 'Hidden preview did not reach READY state.',
     summary.importReady ? null : 'Hidden preview did not confirm import readiness.',
+    summary.renderedRows === expectedRenderedRows ? null : `Hidden preview rendered ${summary.renderedRows} rows; expected ${expectedRenderedRows}.`,
+    summary.approvedDeskPlanRows === expectedApprovedRows ? null : `Hidden preview rendered ${summary.approvedDeskPlanRows} Approved Desk Plan rows; expected ${expectedApprovedRows}.`,
+    countText(pageText, /^Forming Desk Read$/gm) === expectedFormingRows ? null : `Hidden preview rendered ${countText(pageText, /^Forming Desk Read$/gm)} Forming Desk Read rows; expected ${expectedFormingRows}.`,
     summary.morningModelVisible ? null : 'Morning model was not visible.',
     summary.lunchModelVisible ? null : 'Lunch model was not visible.',
     summary.morningProofVisible ? null : 'Morning proof time was not visible.',
@@ -329,7 +389,7 @@ async function main(): Promise<void> {
     process.exitCode = report.status === 'pass' ? 0 : 1;
   } finally {
     if (server) {
-      server.kill();
+      await stopProcessTree(server);
     }
   }
 }

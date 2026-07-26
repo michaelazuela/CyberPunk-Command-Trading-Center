@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add hidden local browser preview verification for five-model scanner surface.
+Files changed: tools/automation/unified-desk-output-hidden-preview-local-verification.ts, docs/PROJECT_STATUS.md.
+Reason: Reuse the existing hidden Unified Desk Output browser verifier for the five-model scanner-surface payload by deriving expected row counts, model names, and proof lines from the imported render proof instead of the older two-row rehearsal assumptions. Also shut down the local Vite process tree cleanly after verification on Windows.
+Tests run: npx tsc --noEmit --pretty false; real hidden browser verification against `tools/automation/diagnostic-reports/five-model-hidden-preview-import-render-proof-1785046123857.json`; screenshot visual check.
+Result: Passed. Browser verification produced previewReady=true, importReady=true, renderedRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13 by difference, morningModelVisible=true, lunchModelVisible=true, morningProofVisible=true, lunchProofVisible=true, discordPostRows=0, supabaseWriteRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0. Report path: `tools/automation/diagnostic-reports/unified-desk-output-hidden-preview-local-verification-1785047365741.json`. Screenshot path: `tools/automation/diagnostic-reports/unified-desk-output-hidden-preview-local-verification-1785047365619.png`.
+Trading logic changed: No. This is hidden local browser verification only. It does not change setup registry entries, scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The current final production readiness checklist still has older two-row assumptions and should not be reused for this five-model surface until it is made dynamic.
+Next recommended action: Add a five-model final local readiness checklist that consumes the latest hidden import proof and browser verification reports, still with production/runtime behavior disabled.
+
+Date: 2026-07-25
 Task: Add hidden local preview import/render proof for five-model scanner surface.
 Files changed: tools/automation/five-model-hidden-preview-import-render-proof.ts, tools/automation/five-model-hidden-preview-import-render-proof.test.ts, docs/PROJECT_STATUS.md.
 Reason: Wrap the passing five-model scanner-surface adapter output in the existing hidden Unified Desk Output import payload shape so local preview can render it without new UI or scanner runtime wiring.
