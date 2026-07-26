@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add five-model scanner-candidate preview contract report.
+Files changed: tools/automation/five-model-scanner-candidate-preview-contract.ts, tools/automation/five-model-scanner-candidate-preview-contract.test.ts, docs/PROJECT_STATUS.md.
+Reason: Convert the five-lane selector comparison into a disabled local scanner-candidate preview contract before any scanner runtime wiring, promotion, Discord publishing, Supabase, bridge, canExecute, or execution behavior is touched.
+Tests run: npx tsx tools/automation/five-model-scanner-candidate-preview-contract.test.ts; npx tsx src/config/setupRegistry.test.ts; exact legacy/supporting-label drift search against the new preview-contract files; real local preview-contract report against the five-model selector comparison.
+Result: Passed. The contract report keeps setup registry, scanner wiring, promotion, Discord, Supabase, bridge, execution approval, and canExecute unchanged/false. Real report produced lanes=5, primaryCandidateLanes=1, secondaryCandidateLanes=1, contextOnlyLanes=3, notSelectedLanes=0, primaryModelIds=[raid_failure_displacement_reversal], secondaryModelIds=[structure_shift_continuation], contextOnlyModelIds=[liquidity_raid_reclaim_reversal, drive_pullback_continuation, failed_breakout_reversal]. Report path: `tools/automation/diagnostic-reports/five-model-scanner-candidate-preview-contract-1785044564743.json`.
+Trading logic changed: No. This is a local comparison-artifact contract only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is a contract artifact, not scanner behavior. The next phase must prove disabled local scanner-candidate preview rows without changing the blank-slate setup registry.
+Next recommended action: Build the disabled local scanner-candidate preview dry run from primary/secondary lanes only, with context-only lanes rendered as notes and all runtime eligibility flags false.
+
+Date: 2026-07-25
 Task: Update selector comparison to all five forensic lanes.
 Files changed: tools/automation/five-model-selector-comparison-report.ts, tools/automation/five-model-selector-comparison-report.test.ts, docs/PROJECT_STATUS.md.
 Reason: Compare Liquidity Raid Reclaim, Raid Failure Displacement, Drive Pullback Continuation, Structure Shift Continuation, and Failed Breakout Reversal selected PDF-window rows before scanner-facing work.
