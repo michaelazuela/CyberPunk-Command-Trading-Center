@@ -9,6 +9,7 @@ const liquidityPath = path.join(tempDir, 'liquidity.json');
 const raidFailurePath = path.join(tempDir, 'raid-failure.json');
 const drivePullbackPath = path.join(tempDir, 'drive-pullback.json');
 const structureShiftPath = path.join(tempDir, 'structure-shift.json');
+const failedBreakoutPath = path.join(tempDir, 'failed-breakout.json');
 
 function row(args: {
   date: string;
@@ -102,11 +103,24 @@ fs.writeFileSync(structureShiftPath, JSON.stringify({
   ],
 }, null, 2));
 
+fs.writeFileSync(failedBreakoutPath, JSON.stringify({
+  reportType: 'failed_breakout_reversal_tight_match_selector',
+  summary: {
+    sourceProfitablePdfTrades: 4,
+    sourceMatchedTrades: 2,
+  },
+  rows: [
+    row({ date: '2026-06-12', session: 'morning', direction: 'SHORT', entryTimeEt: '2026-06-12T10:15:00', entry: 7360, exit: 7348, dollars: 60, quality: 'usable' }),
+    row({ date: '2026-06-16', session: 'morning', direction: 'SHORT', entryTimeEt: '2026-06-16T10:30:00', entry: 7400, exit: 7388, dollars: 60, quality: 'tight' }),
+  ],
+}, null, 2));
+
 const report = buildFiveModelSelectorComparisonReport({
   liquidityRaidReclaimSelectorJson: liquidityPath,
   raidFailureDisplacementSelectorJson: raidFailurePath,
   drivePullbackContinuationSelectorJson: drivePullbackPath,
   structureShiftContinuationSelectorJson: structureShiftPath,
+  failedBreakoutReversalSelectorJson: failedBreakoutPath,
   json: true,
 });
 
@@ -116,12 +130,13 @@ assert.equal(report.authority.noSupabaseRead, true);
 assert.equal(report.authority.noSupabaseWrite, true);
 assert.equal(report.authority.noBridgeRead, true);
 assert.equal(report.authority.noExecutionApproval, true);
-assert.equal(report.summary.modelsCompared, 4);
+assert.equal(report.summary.modelsCompared, 5);
 assert.equal(report.summary.selectedOverlapRows, 3);
 assert.equal(report.summary.liquidityRaidReclaimOnlyRows, 0);
 assert.equal(report.summary.raidFailureDisplacementOnlyRows, 0);
 assert.equal(report.summary.drivePullbackContinuationOnlyRows, 0);
 assert.equal(report.summary.structureShiftContinuationOnlyRows, 1);
+assert.equal(report.summary.failedBreakoutReversalOnlyRows, 1);
 assert.equal(report.summary.leadingModelId, 'raid_failure_displacement_reversal');
 assert.equal(report.summary.leadingModelSelectedRows, 2);
 assert.equal(report.summary.leadingModelSelectedDollars, 243.75);

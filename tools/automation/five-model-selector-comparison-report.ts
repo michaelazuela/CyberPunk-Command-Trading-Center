@@ -8,6 +8,7 @@ interface Args {
   raidFailureDisplacementSelectorJson: string;
   drivePullbackContinuationSelectorJson: string | null;
   structureShiftContinuationSelectorJson: string | null;
+  failedBreakoutReversalSelectorJson: string | null;
   json: boolean;
 }
 
@@ -55,7 +56,8 @@ interface ModelInput {
     | 'liquidity_raid_reclaim_reversal'
     | 'raid_failure_displacement_reversal'
     | 'drive_pullback_continuation'
-    | 'structure_shift_continuation';
+    | 'structure_shift_continuation'
+    | 'failed_breakout_reversal';
   displayName: string;
   filePath: string;
 }
@@ -71,6 +73,7 @@ function parseArgs(argv = process.argv.slice(2)): Args {
   const raidFailureDisplacementSelectorJson = readFlag(argv, '--raid-failure-displacement-selector-json');
   const drivePullbackContinuationSelectorJson = readFlag(argv, '--drive-pullback-continuation-selector-json');
   const structureShiftContinuationSelectorJson = readFlag(argv, '--structure-shift-continuation-selector-json');
+  const failedBreakoutReversalSelectorJson = readFlag(argv, '--failed-breakout-reversal-selector-json');
   if (!liquidityRaidReclaimSelectorJson) throw new Error('--liquidity-raid-reclaim-selector-json is required');
   if (!raidFailureDisplacementSelectorJson) throw new Error('--raid-failure-displacement-selector-json is required');
   return {
@@ -78,6 +81,7 @@ function parseArgs(argv = process.argv.slice(2)): Args {
     raidFailureDisplacementSelectorJson,
     drivePullbackContinuationSelectorJson,
     structureShiftContinuationSelectorJson,
+    failedBreakoutReversalSelectorJson,
     json: argv.includes('--json'),
   };
 }
@@ -162,6 +166,13 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
           filePath: args.structureShiftContinuationSelectorJson,
         }]
       : []),
+    ...(args.failedBreakoutReversalSelectorJson
+      ? [{
+          modelId: 'failed_breakout_reversal' as const,
+          displayName: 'Failed Breakout Reversal',
+          filePath: args.failedBreakoutReversalSelectorJson,
+        }]
+      : []),
   ];
   const reports = inputs.map((input) => ({ input, report: readSelector(input.filePath) }));
   const summaries = reports.map(({ input, report }) => modelSummary(input, report));
@@ -189,6 +200,7 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
   const secondOnly = selectedByModel[1]?.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1) || [];
   const thirdOnly = selectedByModel[2]?.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1) || [];
   const fourthOnly = selectedByModel[3]?.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1) || [];
+  const fifthOnly = selectedByModel[4]?.rows.filter((row) => keyToModels.get(tradeKey(row.trade))?.size === 1) || [];
   const winner = [...summaries].sort((a, b) =>
     b.selectedDollars - a.selectedDollars ||
     b.selectedRows - a.selectedRows ||
@@ -212,6 +224,7 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
       raidFailureDisplacementSelectorJson: args.raidFailureDisplacementSelectorJson,
       drivePullbackContinuationSelectorJson: args.drivePullbackContinuationSelectorJson,
       structureShiftContinuationSelectorJson: args.structureShiftContinuationSelectorJson,
+      failedBreakoutReversalSelectorJson: args.failedBreakoutReversalSelectorJson,
     },
     summary: {
       modelsCompared: summaries.length,
@@ -223,6 +236,7 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
       raidFailureDisplacementOnlyRows: secondOnly.length,
       drivePullbackContinuationOnlyRows: thirdOnly.length,
       structureShiftContinuationOnlyRows: fourthOnly.length,
+      failedBreakoutReversalOnlyRows: fifthOnly.length,
       selectedOnlyCounts,
       scannerInstallEligibleRows: 0,
       promotionEligibleRows: 0,
@@ -238,6 +252,7 @@ export function buildFiveModelSelectorComparisonReport(args: Args) {
     onlyRaidFailureDisplacement: secondOnly.map((row) => row.trade),
     onlyDrivePullbackContinuation: thirdOnly.map((row) => row.trade),
     onlyStructureShiftContinuation: fourthOnly.map((row) => row.trade),
+    onlyFailedBreakoutReversal: fifthOnly.map((row) => row.trade),
     recommendation: winner?.modelId === 'raid_failure_displacement_reversal'
       ? 'prepare_replay_only_source_clause_miner_for_raid_failure_displacement_before_scanner_preview'
       : 'continue_replay_only_comparison_before_scanner_preview',

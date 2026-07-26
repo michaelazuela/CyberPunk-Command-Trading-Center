@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Update selector comparison to all five forensic lanes.
+Files changed: tools/automation/five-model-selector-comparison-report.ts, tools/automation/five-model-selector-comparison-report.test.ts, docs/PROJECT_STATUS.md.
+Reason: Compare Liquidity Raid Reclaim, Raid Failure Displacement, Drive Pullback Continuation, Structure Shift Continuation, and Failed Breakout Reversal selected PDF-window rows before scanner-facing work.
+Tests run: npx tsx tools/automation/five-model-selector-comparison-report.test.ts; npx tsx src/config/setupRegistry.test.ts; exact legacy/supporting-label drift search against the comparison files; real local comparison against all five selector reports.
+Result: Passed. The comparison remains local-artifact-only, keeps scanner/promotion/Discord/Supabase/bridge/execution eligibility false, and now reports per-model unique rows plus overlap across all five supplied models. Real comparison produced modelsCompared=5, sourceProfitablePdfTrades=40, selectedRowsTotal=33, selectedDollarsTotal=$1806.25, selectedOverlapRows=8, liquidityRaidReclaimOnlyRows=0, raidFailureDisplacementOnlyRows=12, drivePullbackContinuationOnlyRows=0, structureShiftContinuationOnlyRows=3, failedBreakoutReversalOnlyRows=0, leadingModelId=raid_failure_displacement_reversal, leadingModelSelectedRows=17, leadingModelSelectedDollars=$1090.00. Report path: `tools/automation/diagnostic-reports/five-model-selector-comparison-report-1785044266242.json`.
+Trading logic changed: No. This is a local selector-comparison report only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Raid Failure Displacement remains the lead lane. Structure Shift contributes unique rows. Failed Breakout overlaps selected winners but adds no unique selected rows in this June PDF set.
+Next recommended action: Build the scanner-candidate preview contract around the leading lane plus defined secondary/context lanes, still disabled from scanner visibility until local preview proves clean.
+
+Date: 2026-07-25
 Task: Add tight selector for Failed Breakout Reversal.
 Files changed: tools/automation/failed-breakout-reversal-tight-match-selector.ts, tools/automation/failed-breakout-reversal-tight-match-selector.test.ts, docs/PROJECT_STATUS.md.
 Reason: Reduce broad Failed Breakout PDF-window matches into tight/usable/loose/reject rows before the five-model lane comparison and before any scanner-facing install.
