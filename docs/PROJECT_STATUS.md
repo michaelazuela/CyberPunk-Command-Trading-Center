@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model production scanner surface activation.
+Files changed: src/lib/fiveModelProductionScannerSurface.ts, tools/automation/five-model-production-scanner-surface-activation.ts, tools/automation/five-model-production-scanner-surface-activation.test.ts, tools/automation/.five-model-production-scanner-surface.json, docs/PROJECT_STATUS.md.
+Reason: Activate the proven five-model scanner surface into a tracked local runtime JSON file behind an explicit five-model production approval flag, while preserving all side-effect boundaries.
+Tests run: npx tsx tools/automation/five-model-production-scanner-surface-activation.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; real activation against `tools/automation/diagnostic-reports/five-model-scanner-surface-smoke-1785090633804.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-production-scanner-surface-activation-1785091346496.json`. Runtime surface path: `tools/automation/.five-model-production-scanner-surface.json`. Summary: selectedRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This writes the local five-model scanner surface activation file only. It does not change scanner detection, setupRegistry, ranking, promotion rules, Discord posting, Supabase reads/writes, bridge reads, entry/stop/target math, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The runtime surface file exists, but the running scanner consumer has not yet been wired to read this five-model file.
+Next recommended action: Add five-model local scanner consumer readback for `tools/automation/.five-model-production-scanner-surface.json`, then prove the scanner sees the same 18 rows and still emits zero side effects.
+
+Date: 2026-07-26
 Task: Add five-model scanner surface smoke.
 Files changed: tools/automation/five-model-scanner-surface-smoke.ts, tools/automation/five-model-scanner-surface-smoke.test.ts, docs/PROJECT_STATUS.md.
 Reason: Render the real five-model adapter output into the shared scanner-facing surface shape using saved artifacts only, proving the visible row shape before any runtime scanner visibility decision.
