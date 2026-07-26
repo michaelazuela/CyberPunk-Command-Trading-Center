@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add hidden local preview import/render proof for five-model scanner surface.
+Files changed: tools/automation/five-model-hidden-preview-import-render-proof.ts, tools/automation/five-model-hidden-preview-import-render-proof.test.ts, docs/PROJECT_STATUS.md.
+Reason: Wrap the passing five-model scanner-surface adapter output in the existing hidden Unified Desk Output import payload shape so local preview can render it without new UI or scanner runtime wiring.
+Tests run: npx tsx tools/automation/five-model-hidden-preview-import-render-proof.test.ts; npx tsc --noEmit --pretty false; npx tsx src/config/setupRegistry.test.ts; exact retired-label drift search against the new wrapper files and rendered markdown; blocked-wording search against the rendered markdown; real hidden import/render proof against the latest five-model scanner-surface adapter report.
+Result: Passed. Real hidden import proof produced hiddenPreviewImportReady=true, renderedRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, discordPostRows=0, supabaseWriteRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, wordingViolationRows=0, blockedRows=0. Report path: `tools/automation/diagnostic-reports/five-model-hidden-preview-import-render-proof-1785046123857.json`.
+Trading logic changed: No. This is a hidden local preview import payload only. It does not change setup registry entries, scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Browser-level hidden preview verification has not run yet. The next phase should import this payload into the hidden local app preview and verify rendered rows visually/behaviorally.
+Next recommended action: Run hidden local browser preview verification for the five-model import payload.
+
+Date: 2026-07-25
 Task: Add disabled scanner-surface adapter preview for five-model geometry.
 Files changed: tools/automation/five-model-scanner-surface-adapter-preview.ts, tools/automation/five-model-scanner-surface-adapter-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: Convert protected-entry geometry rows into the existing Unified Desk Output scanner-surface model while preserving default-off behavior and keeping immediate risk-clean rows separate from retest-required forming rows.
