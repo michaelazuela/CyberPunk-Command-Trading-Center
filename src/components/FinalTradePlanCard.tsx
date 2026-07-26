@@ -75,11 +75,6 @@ function formatDecisionStatus(status?: TradeDecisionStatus, effectiveCanExecute 
 
 function formatSetupType(setupType?: SetupType | string): string {
   const labels: Record<string, string> = {
-    [SetupType.RaidReclaimReversal]: 'Raid Reclaim Reversal',
-    [SetupType.SweepMssFvgRetrace]: 'Sweep MSS FVG Retrace',
-    [SetupType.OpeningDriveFvgContinuation]: 'Opening Drive FVG Continuation',
-    [SetupType.AfterLunchDriveFvgContinuation]: 'After-Lunch Drive FVG Continuation',
-    [SetupType.IntradayMssMicroContinuation]: 'Intraday MSS Micro Continuation',
     [SetupType.NoSetup]: 'No Setup',
   };
   const raw = setupType || 'Unknown';
@@ -461,7 +456,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
   const candidates = plan.setupCandidates || [];
   if (candidates.length === 0) return null;
   const effectiveCanExecute = getEffectiveCanExecute(plan);
-  const hasLunchSubtype = candidates.some(candidate => candidate.setupType === SetupType.AfterLunchDriveFvgContinuation);
+  const hasLunchSubtype = candidates.some(candidate => candidate.setupType === SetupType.NoSetup);
 
   const executableCount = candidates.filter(candidate => candidate.executionStatus === ExecutionStatus.Executable).length;
   const conditionalCount = candidates.filter(candidate => candidate.executionStatus === ExecutionStatus.Conditional).length;

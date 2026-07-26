@@ -120,8 +120,8 @@ function recommendationFor(label: string | null | undefined): string {
   const text: Record<string, string> = {
     keep_advisory: 'Recommended: Keep Advisory',
     reject: 'Recommended: Reject',
-    possible_model1_mapping_review: 'Recommended: Queue for Model 1 Review',
-    possible_RAID_RECLAIM_mapping_review: 'Recommended: Queue for Raid Reclaim Reversal Review',
+    historical_mapping_review: 'Recommended: Queue for no installed model path Review',
+    historical_reversal_mapping_review: 'Recommended: Queue for no installed model path Review',
     human_rule_review_queue: 'Recommended: Human Rule Review Queue',
     new_model_candidate_review: 'Recommended: New Model Candidate Review',
     insufficient_context: 'Recommended: Insufficient Context',

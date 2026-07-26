@@ -86,7 +86,7 @@ interface CloseoutRow extends CorrectedOutcome {
   ticketId: string;
   tradeDate: string;
   session: 'morning';
-  setupType: 'OpeningDriveFvgContinuation';
+  setupType: 'NoInstalledSetup';
   direction: Direction;
   riskBand: string;
   proofTime: string;
@@ -108,7 +108,7 @@ interface CloseoutRow extends CorrectedOutcome {
   storyVerdict: string;
   tactical15m60mContextVerdict: string;
   htfSufficiency: string;
-  htfSupportCount: number;
+  htfContextCount: number;
   htfCautionCount: number;
   openingDriveDirection: string | null;
   sweptNyPremarketHigh: boolean;
@@ -160,8 +160,8 @@ export interface OpeningDriveCorrectedOutcomeCloseoutReport {
   };
   assumptions: {
     dateRange: '2026-06-01_to_2026-07-02';
-    model: 'OpeningDriveFvgContinuation';
-    overlapRequired: 'SweepMssFvgRetrace_collision';
+    model: 'NoInstalledSetup';
+    overlapRequired: 'NoInstalledSetup_collision';
     usesCompletedFiveMinuteBarsOnly: true;
     entryFillEligibleFromProofBar: true;
     outcomeEvaluationEndsAtMorningWindowClose: true;
@@ -349,7 +349,7 @@ function htfSufficiency(row: SlateStory): string {
   return 'sufficient';
 }
 
-function htfSupportCount(row: SlateStory): number {
+function htfContextCount(row: SlateStory): number {
   return row.timeframeStories.filter((story) => story.shortContext === 'support').length;
 }
 
@@ -370,7 +370,7 @@ function buildCloseoutRow(row: SlateStory, bars5m: Bar[]): CloseoutRow {
     ticketId: row.selectedTicketId,
     tradeDate: row.tradeDate,
     session: 'morning',
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: row.direction,
     riskBand: row.riskBand,
     proofTime: normalizeTime(row.proofTime),
@@ -392,7 +392,7 @@ function buildCloseoutRow(row: SlateStory, bars5m: Bar[]): CloseoutRow {
     storyVerdict: row.storyVerdict,
     tactical15m60mContextVerdict: row.tactical15m60mContextVerdict,
     htfSufficiency: htfSufficiency(row),
-    htfSupportCount: htfSupportCount(row),
+    htfContextCount: htfContextCount(row),
     htfCautionCount: htfCautionCount(row),
     openingDriveDirection: row.session.openingDriveDirection || null,
     sweptNyPremarketHigh: Boolean(row.session.sweptNyPremarketHigh),
@@ -519,8 +519,8 @@ export function buildOpeningDriveCorrectedOutcomeCloseoutReport(args: {
     },
     assumptions: {
       dateRange: '2026-06-01_to_2026-07-02',
-      model: 'OpeningDriveFvgContinuation',
-      overlapRequired: 'SweepMssFvgRetrace_collision',
+      model: 'NoInstalledSetup',
+      overlapRequired: 'NoInstalledSetup_collision',
       usesCompletedFiveMinuteBarsOnly: true,
       entryFillEligibleFromProofBar: true,
       outcomeEvaluationEndsAtMorningWindowClose: true,

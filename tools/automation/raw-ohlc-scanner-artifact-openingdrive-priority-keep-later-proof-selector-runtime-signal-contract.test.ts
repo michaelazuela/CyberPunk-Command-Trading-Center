@@ -46,7 +46,7 @@ assert.equal(report.assumptions.noRuntimeChangeInstalled, true);
 assert.equal(report.proposedContract.contractName, 'scanner_owned_same_completed_5m_proof_selector_signal');
 assert.equal(report.proposedContract.owner, 'setupScanner');
 assert.equal(report.proposedContract.candidateField, 'proofSelectionSignal');
-assert.deepEqual(report.proposedContract.allowedSetupScope, ['SweepMssFvgRetrace']);
+assert.deepEqual(report.proposedContract.allowedSetupScope, ['NoInstalledSetup']);
 assert.deepEqual(report.proposedContract.allowedSelectorDecision, ['keep_later_sweep_proof']);
 assert.ok(report.proposedContract.requiredFields.some((field) => field.field === 'proofSelectionSignal.selectorDecision'));
 assert.ok(report.proposedContract.requiredFields.every((field) => field.requiredForRuntimeSelector));

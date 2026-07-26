@@ -28,7 +28,7 @@ const report = buildYtdIntradayMssMicroHtfBiasAuditReport({
         },
         completeCandidateCount: 4,
         selected: {
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           eventTime: '2026-06-09T10:25:00',
           entry: 7441,
@@ -52,7 +52,7 @@ const report = buildYtdIntradayMssMicroHtfBiasAuditReport({
         raids: { overnightLowRaid: true },
         completeCandidateCount: 2,
         selected: {
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           eventTime: '2026-06-10T12:55:00',
           entry: 7322.75,
@@ -76,7 +76,7 @@ const report = buildYtdIntradayMssMicroHtfBiasAuditReport({
         raids: {},
         completeCandidateCount: 1,
         selected: {
-          setupType: 'OpeningDriveFvgContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           eventTime: '2026-06-11T10:10:00',
           entry: 7400,

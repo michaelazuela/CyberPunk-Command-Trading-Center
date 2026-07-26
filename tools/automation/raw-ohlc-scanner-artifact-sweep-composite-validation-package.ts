@@ -99,7 +99,7 @@ export interface RawOhlcScannerArtifactSweepCompositeValidationPackageReport ext
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_OUT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SETUP_TYPE = 'SweepMssFvgRetrace';
+const SETUP_TYPE = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);

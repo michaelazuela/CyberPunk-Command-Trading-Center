@@ -40,7 +40,7 @@ const report = buildDeskPlaybookSelectorPreviewReport({
         },
         completeCandidateCount: 6,
         selected: {
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           eventTime: '2026-06-09T10:25:00',
           executionStatus: 'Conditional',
@@ -77,7 +77,7 @@ const report = buildDeskPlaybookSelectorPreviewReport({
         },
         completeCandidateCount: 1,
         selected: {
-          setupType: 'OpeningDriveFvgContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           eventTime: '2026-06-10T13:00:00',
           entry: 7400,
@@ -101,7 +101,7 @@ const report = buildDeskPlaybookSelectorPreviewReport({
         },
         completeCandidateCount: 1,
         selected: {
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           eventTime: '2026-06-11T10:00:00',
           entry: 7410,
@@ -127,7 +127,7 @@ assert.equal(report.summary.staleArtifacts, 0);
 const ticket = report.tickets[0];
 assert.equal(ticket.decision, 'watch');
 assert.equal(ticket.direction, 'SHORT');
-assert.equal(ticket.primaryModel, 'IntradayMssMicroContinuation');
+assert.equal(ticket.primaryModel, 'NoInstalledSetup');
 assert.equal(ticket.primaryPlan?.entry, 7441);
 assert.match(ticket.marketStory, /high_raid_reversal_down/);
 assert.match(ticket.continuationPlan, /Continuation/);

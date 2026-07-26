@@ -82,17 +82,17 @@ const samebarReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
   modelSummaries: [],
   timeBuckets: [],
   rows: [
-    row({ id: 'sweep-win-1', setupType: 'SweepMssFvgRetrace', session: 'lunch', direction: 'LONG', riskPoints: 6, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
-    row({ id: 'sweep-win-2', setupType: 'SweepMssFvgRetrace', session: 'lunch', direction: 'LONG', riskPoints: 7, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
-    row({ id: 'sweep-win-3', setupType: 'SweepMssFvgRetrace', session: 'lunch', direction: 'LONG', riskPoints: 8, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
-    row({ id: 'sweep-win-4', setupType: 'SweepMssFvgRetrace', session: 'lunch', direction: 'LONG', riskPoints: 7, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
-    row({ id: 'sweep-win-5', setupType: 'SweepMssFvgRetrace', session: 'lunch', direction: 'LONG', riskPoints: 8, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
-    row({ id: 'sweep-loss-1', setupType: 'SweepMssFvgRetrace', session: 'lunch', direction: 'LONG', riskPoints: 7, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -35 }),
-    row({ id: 'open-loss-1', setupType: 'OpeningDriveFvgContinuation', session: 'morning', direction: 'SHORT', riskPoints: 14, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -70 }),
-    row({ id: 'open-loss-2', setupType: 'OpeningDriveFvgContinuation', session: 'morning', direction: 'SHORT', riskPoints: 14, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -70 }),
-    row({ id: 'open-loss-3', setupType: 'OpeningDriveFvgContinuation', session: 'morning', direction: 'SHORT', riskPoints: 14, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -70 }),
-    row({ id: 'open-loss-4', setupType: 'OpeningDriveFvgContinuation', session: 'morning', direction: 'SHORT', riskPoints: 14, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -70 }),
-    row({ id: 'open-open-1', setupType: 'OpeningDriveFvgContinuation', session: 'morning', direction: 'SHORT', riskPoints: 14, outcomeLabel: 'no_target_or_stop_hit', resolvedOneMesPl: null }),
+    row({ id: 'sweep-win-1', setupType: 'NoInstalledSetup', session: 'lunch', direction: 'LONG', riskPoints: 6, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
+    row({ id: 'sweep-win-2', setupType: 'NoInstalledSetup', session: 'lunch', direction: 'LONG', riskPoints: 7, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
+    row({ id: 'sweep-win-3', setupType: 'NoInstalledSetup', session: 'lunch', direction: 'LONG', riskPoints: 8, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
+    row({ id: 'sweep-win-4', setupType: 'NoInstalledSetup', session: 'lunch', direction: 'LONG', riskPoints: 7, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
+    row({ id: 'sweep-win-5', setupType: 'NoInstalledSetup', session: 'lunch', direction: 'LONG', riskPoints: 8, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
+    row({ id: 'sweep-loss-1', setupType: 'NoInstalledSetup', session: 'lunch', direction: 'LONG', riskPoints: 7, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -35 }),
+    row({ id: 'open-loss-1', setupType: 'NoInstalledSetup', session: 'morning', direction: 'SHORT', riskPoints: 14, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -70 }),
+    row({ id: 'open-loss-2', setupType: 'NoInstalledSetup', session: 'morning', direction: 'SHORT', riskPoints: 14, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -70 }),
+    row({ id: 'open-loss-3', setupType: 'NoInstalledSetup', session: 'morning', direction: 'SHORT', riskPoints: 14, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -70 }),
+    row({ id: 'open-loss-4', setupType: 'NoInstalledSetup', session: 'morning', direction: 'SHORT', riskPoints: 14, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -70 }),
+    row({ id: 'open-open-1', setupType: 'NoInstalledSetup', session: 'morning', direction: 'SHORT', riskPoints: 14, outcomeLabel: 'no_target_or_stop_hit', resolvedOneMesPl: null }),
   ],
   blockers: [],
   recommendations: [],
@@ -118,7 +118,7 @@ assert.equal(report.summary.cautionResearchBuckets > 0, true);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'build_research_rank_simulation');
 assert.equal(report.topPositiveBuckets[0].recommendation, 'positive_research_selector');
-assert.match(report.topPositiveBuckets[0].key, /SweepMssFvgRetrace/);
+assert.match(report.topPositiveBuckets[0].key, /NoInstalledSetup/);
 assert.equal(report.topCautionBuckets[0].recommendation, 'caution_research_filter');
 assert.match(report.markdown, /July Raw-OHLC Unified Separator/);
 

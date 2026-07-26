@@ -430,7 +430,7 @@ export function buildUnifiedPositiveHeldLocalPreviewModelFamilyGeometrySourceTra
       ? ['Repair local saved-report or tape inputs before using source-trace output.']
       : badGeometryPresentInSetupStatusRows
         ? [
-          'Inspect the SweepMssFvgRetrace candidate builder path that emits InvalidStopLocation with wrong-side stops.',
+          'Inspect the NoInstalledSetup candidate builder path that emits InvalidStopLocation with wrong-side stops.',
           'Do not treat these source-quality rows as evidence to remove Sweep or loosen canExecute.',
           'Keep any candidate-builder repair separate from rank/boost decisions and verify with same-slate replay.',
         ]

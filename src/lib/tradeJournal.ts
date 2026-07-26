@@ -10,26 +10,11 @@ export type TradeJournalSession =
   | 'replay_lunch';
 
 export type TradeJournalModelType =
-  | 'Raid Reclaim Reversal'
-  | 'Sweep -> MSS -> FVG Retrace'
-  | 'Opening Drive FVG Continuation'
-  | 'After-Lunch Drive FVG Continuation'
-  | 'Intraday MSS Micro Continuation'
-  | 'ICT setup';
+  | 'No model installed';
 
 export type TradeJournalDirection = 'LONG' | 'SHORT' | 'NO TRADE';
 
-export type TradeJournalSetupTag =
-  | 'raid/reclaim'
-  | 'sweep'
-  | 'reclaim'
-  | 'displacement'
-  | 'MSS'
-  | 'FVG'
-  | 'wick rejection'
-  | 'premium/discount'
-  | 'HTF aligned'
-  | 'breaker/FVG confluence';
+export type TradeJournalSetupTag = string;
 
 export type TradeJournalOutcome =
   | 'pending'
@@ -91,16 +76,8 @@ function finiteNumber(value: unknown): number | null {
 }
 
 function candidateText(candidate?: SetupCandidate | null): string {
-  if (!candidate) return '';
-  return [
-    candidate.setupType,
-    candidate.scenarioLabel,
-    candidate.requiredTrigger,
-    candidate.nextAction,
-    candidate.blockReason,
-    ...(candidate.evidence || []),
-    ...(candidate.missingEvidence || []),
-  ].filter(Boolean).join(' ').toLowerCase();
+  void candidate;
+  return '';
 }
 
 function uniqueTags(tags: TradeJournalSetupTag[]): TradeJournalSetupTag[] {
@@ -115,21 +92,9 @@ export function extractJournalSetupTags(
   candidate?: SetupCandidate | null,
   higherTimeframeAligned = false
 ): TradeJournalSetupTag[] {
-  const text = candidateText(candidate);
-  const tags: TradeJournalSetupTag[] = [];
-  if (text.includes('sweep') || text.includes('buy-side') || text.includes('sell-side')) tags.push('sweep');
-  if (text.includes('reclaim')) tags.push('reclaim');
-  if (text.includes('displacement') || text.includes('impulse') || text.includes('expansion')) tags.push('displacement');
-  if (text.includes('market structure shift') || text.includes('mss')) tags.push('MSS');
-  if (text.includes('fvg') || text.includes('fair value gap') || text.includes('imbalance')) tags.push('FVG');
-  if (candidate?.setupType === SetupType.RaidReclaimReversal || text.includes('raid reclaim') || text.includes('failed breakout') || text.includes('failed breakdown')) {
-    tags.push('raid/reclaim');
-  }
-  if (text.includes('wick rejection') || text.includes('rejection wick')) tags.push('wick rejection');
-  if (text.includes('premium') || text.includes('discount') || text.includes('equilibrium')) tags.push('premium/discount');
-  if (higherTimeframeAligned || text.includes('higher-timeframe bias aligned') || text.includes('htf aligned')) tags.push('HTF aligned');
-  if (text.includes('breaker/fvg') || text.includes('breaker + fvg')) tags.push('breaker/FVG confluence');
-  return uniqueTags(tags);
+  void candidate;
+  void higherTimeframeAligned;
+  return [];
 }
 
 export function plannedRFromLevels(args: {

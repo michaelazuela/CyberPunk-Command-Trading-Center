@@ -132,9 +132,9 @@ describe('App route shell', () => {
         htmlPath: 'preview.html',
       },
       items: [{
-        ticketId: '2026-06-16-morning-raidReclaim-LONG',
+        ticketId: '2026-06-16-morning-historicalReview-LONG',
         sourceSnapshotId: 'scanner-local-preview',
-        setupType: 'raidReclaim',
+        setupType: 'historicalReview',
         direction: 'LONG',
         pngPath: 'C:/preview/card.png',
         imageSrc: 'file:///C:/preview/card.png',
@@ -157,7 +157,7 @@ describe('App route shell', () => {
     fireEvent.click(previewTab);
     expect(screen.getByRole('heading', { name: 'Held-Local Preview' })).toBeTruthy();
     expect(screen.getByText('READY')).toBeTruthy();
-    expect(screen.getByAltText('2026-06-16-morning-raidReclaim-LONG held-local preview')).toBeTruthy();
+    expect(screen.getByAltText('2026-06-16-morning-historicalReview-LONG held-local preview')).toBeTruthy();
     expect(screen.getByText(/No Discord post/)).toBeTruthy();
     expect(screen.getByText(/No Supabase write/)).toBeTruthy();
   });
@@ -206,9 +206,9 @@ describe('App route shell', () => {
         htmlPath: 'preview.html',
       },
       items: [{
-        ticketId: '2026-06-24-evening-raidReclaim-SHORT',
+        ticketId: '2026-06-24-evening-historicalReview-SHORT',
         sourceSnapshotId: 'scanner-local-preview',
-        setupType: 'raidReclaim',
+        setupType: 'historicalReview',
         direction: 'SHORT',
         pngPath: 'C:/preview/card-short.png',
         imageSrc: 'file:///C:/preview/card-short.png',
@@ -230,8 +230,8 @@ describe('App route shell', () => {
 
     await waitFor(() => expect(screen.getByText('READY')).toBeTruthy());
     expect(screen.getByText('Import ready: 1 local preview cards.')).toBeTruthy();
-    expect(screen.getByAltText('2026-06-24-evening-raidReclaim-SHORT held-local preview')).toBeTruthy();
-    expect(localStorage.getItem(HELD_LOCAL_PREVIEW_STORAGE_KEY)).toContain('2026-06-24-evening-raidReclaim-SHORT');
+    expect(screen.getByAltText('2026-06-24-evening-historicalReview-SHORT held-local preview')).toBeTruthy();
+    expect(localStorage.getItem(HELD_LOCAL_PREVIEW_STORAGE_KEY)).toContain('2026-06-24-evening-historicalReview-SHORT');
   });
 
   it('imports and renders the unified desk output scanner surface behind the hidden local flag', async () => {
@@ -283,9 +283,9 @@ describe('App route shell', () => {
             session: 'morning',
             state: 'APPROVED_DESK_PLAN',
             stateLabel: 'Approved Desk Plan',
-            model: 'OpeningDriveFvgContinuation',
+            model: 'NoInstalledSetup',
             direction: 'SHORT',
-            headline: 'Approved Desk Plan | MORNING | SHORT | OpeningDriveFvgContinuation',
+            headline: 'Approved Desk Plan | MORNING | SHORT | NoInstalledSetup',
             bodyLines: ['Opening drive short.', 'Selected scanner-owned lane.'],
             levelLine: 'Entry 100 | Stop 104 | T1 94 | T2 92',
             riskLine: 'Risk 4 points.',
@@ -304,9 +304,9 @@ describe('App route shell', () => {
             session: 'lunch',
             state: 'FORMING_DESK_READ',
             stateLabel: 'Forming Desk Read',
-            model: 'AfterLunchDriveFvgContinuation',
+            model: 'NoInstalledSetup',
             direction: 'LONG',
-            headline: 'Forming Desk Read | LUNCH | LONG | AfterLunchDriveFvgContinuation',
+            headline: 'Forming Desk Read | LUNCH | LONG | NoInstalledSetup',
             bodyLines: ['After lunch long.', 'Selected scanner-owned lane.'],
             levelLine: 'Entry 100 | Stop 96 | T1 106 | T2 108',
             riskLine: 'Risk 4 points.',
@@ -344,8 +344,7 @@ describe('App route shell', () => {
     expect(screen.getByText('Import ready: 2 scanner surface rows.')).toBeTruthy();
     expect(screen.getByText('Approved Desk Plan')).toBeTruthy();
     expect(screen.getByText('Forming Desk Read')).toBeTruthy();
-    expect(screen.getByText('OpeningDriveFvgContinuation')).toBeTruthy();
-    expect(screen.getByText('AfterLunchDriveFvgContinuation')).toBeTruthy();
+    expect(screen.getAllByText('NoInstalledSetup').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText(/Discord\/Supabase\/bridge\/canExecute remain off/).length).toBeGreaterThan(0);
     expect(localStorage.getItem(UNIFIED_DESK_OUTPUT_SCANNER_SURFACE_STORAGE_KEY)).toContain('unified-preview-approved');
   });
@@ -397,9 +396,9 @@ describe('App route shell', () => {
               session: 'morning',
               state: 'APPROVED_DESK_PLAN',
               stateLabel: 'Approved Desk Plan',
-              model: 'SweepMssFvgRetrace',
+              model: 'NoInstalledSetup',
               direction: 'LONG',
-              headline: 'Approved Desk Plan | MORNING | LONG | SweepMssFvgRetrace',
+              headline: 'Approved Desk Plan | MORNING | LONG | NoInstalledSetup',
               bodyLines: ['morning long desk plan from the validated disabled runtime gate.'],
               levelLine: 'Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528',
               riskLine: 'Risk 4.25 points from scanner-owned entry/stop.',
@@ -418,9 +417,9 @@ describe('App route shell', () => {
               session: 'lunch',
               state: 'APPROVED_DESK_PLAN',
               stateLabel: 'Approved Desk Plan',
-              model: 'IntradayMssMicroContinuation',
+              model: 'NoInstalledSetup',
               direction: 'LONG',
-              headline: 'Approved Desk Plan | LUNCH | LONG | IntradayMssMicroContinuation',
+              headline: 'Approved Desk Plan | LUNCH | LONG | NoInstalledSetup',
               bodyLines: ['lunch long desk plan from the validated disabled runtime gate.'],
               levelLine: 'Entry 7540 | Stop 7535.75 | T1 7546.5 | T2 7548.5',
               riskLine: 'Risk 4.25 points from scanner-owned entry/stop.',
@@ -457,11 +456,10 @@ describe('App route shell', () => {
 
     await waitFor(() => expect(screen.getByText('READY')).toBeTruthy());
     expect(screen.getByText('Import ready: 2 scanner surface rows.')).toBeTruthy();
-    expect(screen.getByText('SweepMssFvgRetrace')).toBeTruthy();
-    expect(screen.getByText('IntradayMssMicroContinuation')).toBeTruthy();
+    expect(screen.getAllByText('NoInstalledSetup').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('Completed 5M proof: 09:10 ET.')).toBeTruthy();
     expect(screen.getByText('Completed 5M proof: 15:45 ET.')).toBeTruthy();
     expect(screen.getAllByText('Approved Desk Plan').length).toBeGreaterThanOrEqual(2);
-    expect(localStorage.getItem(UNIFIED_DESK_OUTPUT_SCANNER_SURFACE_STORAGE_KEY)).toContain('IntradayMssMicroContinuation');
+    expect(localStorage.getItem(UNIFIED_DESK_OUTPUT_SCANNER_SURFACE_STORAGE_KEY)).toContain('NoInstalledSetup');
   });
 });

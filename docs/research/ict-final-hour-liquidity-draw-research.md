@@ -39,8 +39,8 @@
 
 - Plain-English meaning: downside continuation stalls before the late-day move attempts to draw higher.
 - Transcript evidence / timestamp: transcript/task notes identify price stopping lower as part of the setup read; exact timestamp was not available in the provided prompt.
-- Why it may matter for 6K: it may overlap with reversal context, but 6K still requires approved 5M gates for execution.
-- Current rule coverage: partially covered by reversal and sweep/reclaim context.
+- Why it may matter for 6K: it may overlap with reversal context, but 6K still requires future approved 5M gates for execution.
+- Current rule coverage: partially covered by reversal and historical reversal pattern context.
 - Classification: watchlist idea only.
 
 ### PD array foothold
@@ -55,7 +55,7 @@
 
 - Plain-English meaning: an inverse FVG, FVG, or order block acts as the proposed foothold for the move.
 - Transcript evidence / timestamp: transcript/task notes identify IFVG/FVG/order block support; exact timestamp was not available in the provided prompt.
-- Why it may matter for 6K: FVG and breaker/order-block facts exist as supporting context, but not as standalone approval.
+- Why it may matter for 6K: FVG and breaker/order-block facts exist as context only, but not as standalone approval.
 - Current rule coverage: partially covered.
 - Classification: watchlist idea only.
 
@@ -80,7 +80,7 @@
 - Plain-English meaning: a quick expansion higher after the foothold suggests the draw may be underway.
 - Transcript evidence / timestamp: transcript/task notes identify a spring or displacement higher; exact timestamp was not available in the provided prompt.
 - Why it may matter for 6K: displacement exists in current context/ranking, but does not approve a trade alone.
-- Current rule coverage: already covered as supporting evidence, not standalone approval.
+- Current rule coverage: already covered as historical context, not standalone approval.
 - Classification: watchlist idea only.
 
 ### Risk reduction after movement
@@ -149,15 +149,15 @@ Invalidation / caution conditions:
 
 ## 5. Comparison to Existing 6K Rules
 
-Current Model 1:
+Current no installed model path:
 
 - Classification: partially covered.
-- Model 1 already requires approved sweep/reclaim/displacement/MSS/FVG gates. The final-hour liquidity draw idea cannot bypass those gates.
+- no installed model path already requires future approved model gates. The final-hour liquidity draw idea cannot bypass those gates.
 
-Current Raid Reclaim Reversal:
+Current no installed model path:
 
 - Classification: partially covered.
-- Raid Reclaim Reversal already handles sweep/reclaim reversals. A final-hour liquidity draw remains context only unless approved 5M gates confirm.
+- no installed model path already handles historical reversal pattern reversals. A final-hour liquidity draw remains context only unless future approved 5M gates confirm.
 
 Current Displacement/FVG Pullback Watchlist:
 
@@ -177,7 +177,7 @@ Current Discord advisory behavior:
 Overall classification:
 
 - This candidate should remain research-only.
-- It must not override Model 1, Raid Reclaim Reversal, Scanner Plan Selection Agent, or approved 6K rules.
+- It must not override no installed model path, no installed model path, Scanner Plan Selection Agent, or approved 6K rules.
 
 ## 6. Bridge Data Research Plan
 
@@ -205,7 +205,7 @@ Draft only. Do not implement as a Discord alert in this phase.
 
 - This is not an approved executable model.
 - Do not create entries, stops, T1/T2, or outcome buttons.
-- Do not override Model 1 or Raid Reclaim Reversal.
+- Do not override no installed model path.
 - Do not allow this to approve trades.
 - Do not use later success to retroactively validate an invalid setup.
 - Collect 20-30 examples first.

@@ -47,14 +47,14 @@ const outcomeComparison = {
   rows: [
     {
       slateId: 'slate-1',
-      negativeTopSetupType: 'IntradayMssMicroContinuation',
+      negativeTopSetupType: 'NoInstalledSetup',
       replacementOutcomeLabel: 't1_and_t2_hit',
       replacementOutcomeStatus: 'resolved',
       replacementResolvedOneMesPl: 125,
     },
     {
       slateId: 'slate-2',
-      negativeTopSetupType: 'IntradayMssMicroContinuation',
+      negativeTopSetupType: 'NoInstalledSetup',
       replacementOutcomeLabel: 'stopped_before_t1',
       replacementOutcomeStatus: 'resolved',
       replacementResolvedOneMesPl: -25,

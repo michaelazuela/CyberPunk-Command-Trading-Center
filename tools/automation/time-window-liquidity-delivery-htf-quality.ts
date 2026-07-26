@@ -88,7 +88,7 @@ interface HtfFirstCandidate {
   marketStructureShiftPresent: boolean;
   sweepRaidPlusReclaimPresent: boolean;
   modelOneOverlapPossible: boolean;
-  raidReclaimOverlapPossible: boolean;
+  historicalReversalOverlapPossible: boolean;
   drawReferences: DrawReference[];
   notes: string[];
   researchOnly: true;

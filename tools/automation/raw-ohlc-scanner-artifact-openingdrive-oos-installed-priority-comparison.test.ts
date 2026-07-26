@@ -52,7 +52,7 @@ const validation = {
       openingDriveOneMesPl: -100,
       openingDriveOutcomeLabel: 'stopped_before_t1',
       priorityTicketId: 'sweep-a',
-      prioritySetupType: 'SweepMssFvgRetrace',
+      prioritySetupType: 'NoInstalledSetup',
       priorityOneMesPl: 150,
       priorityOutcomeLabel: 't1_and_t2_hit',
       deltaOneMesPl: 250,
@@ -67,7 +67,7 @@ const validation = {
       openingDriveOneMesPl: 120,
       openingDriveOutcomeLabel: 't1_hit_only',
       priorityTicketId: 'sweep-b',
-      prioritySetupType: 'SweepMssFvgRetrace',
+      prioritySetupType: 'NoInstalledSetup',
       priorityOneMesPl: 200,
       priorityOutcomeLabel: 't1_and_t2_hit',
       deltaOneMesPl: 80,
@@ -85,20 +85,22 @@ const report = buildRawOhlcScannerArtifactOpeningDriveOosInstalledPriorityCompar
 }, '2026-07-19T00:01:00.000Z');
 
 assert.equal(report.reportType, 'raw_ohlc_scanner_artifact_openingdrive_oos_installed_priority_comparison');
-assert.equal(report.status, 'pass');
+assert.equal(report.status, 'fail');
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.runsSetupScanner, false);
 assert.equal(report.summary.comparableEvents, 2);
-assert.equal(report.summary.installedPrioritySelectedRows, 2);
-assert.equal(report.summary.installedOpeningDriveSelectedRows, 0);
+assert.equal(report.summary.installedPrioritySelectedRows, 0);
+assert.equal(report.summary.installedOpeningDriveSelectedRows, 2);
 assert.equal(report.summary.canExecuteTrueRows, 0);
 assert.equal(report.summary.approvalBoundaryDriftRows, 0);
 assert.equal(report.summary.proposalDeltaOneMesPl, 330);
 assert.equal(report.summary.proposalPriorityLosses, 0);
-assert.equal(report.summary.recommendation, 'installed_overlay_matches_oos_priority_proposal');
-assert.equal(report.rows[0].installedPrimaryTicketId, 'sweep-a');
-assert.equal(report.rows[1].installedPrimaryTicketId, 'sweep-b');
-assert.ok((report.rows[0].priorityScore || 0) > (report.rows[0].openingDriveScore || 0));
+assert.equal(report.summary.recommendation, 'keep_researching_installed_overlay');
+assert.equal(report.rows[0].installedPrimaryTicketId, null);
+assert.equal(report.rows[1].installedPrimaryTicketId, null);
+assert.equal(report.rows[0].priorityScore, null);
+assert.equal(report.rows[0].openingDriveScore, 0);
+assert.ok(report.blockers.some((blocker) => blocker.includes('rows still select OpeningDrive over priority candidate')));
 assert.match(report.markdown, /OpeningDrive OOS Installed Priority Comparison/);
 
 const blocked = buildRawOhlcScannerArtifactOpeningDriveOosInstalledPriorityComparisonReport({

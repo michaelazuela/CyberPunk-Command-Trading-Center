@@ -5,12 +5,12 @@ import {
 } from './desk-playbook-selector-afterlunch-local-scanner-snapshot-preview';
 
 const baseTicket = {
-  contractId: '2026-06-01-lunch-AfterLunchDriveFvgContinuation-SHORT-20260601T122000-dry-run',
-  sourceTicketId: '2026-06-01-lunch-AfterLunchDriveFvgContinuation-SHORT-20260601T122000',
+  contractId: '2026-06-01-lunch-NoInstalledSetup-SHORT-20260601T122000-dry-run',
+  sourceTicketId: '2026-06-01-lunch-NoInstalledSetup-SHORT-20260601T122000',
   slateId: '2026-06-01|lunch',
   tradeDate: '2026-06-01',
   session: 'lunch' as const,
-  model: 'AfterLunchDriveFvgContinuation' as const,
+  model: 'NoInstalledSetup' as const,
   direction: 'SHORT' as const,
   proofTime: '2026-06-01T12:20:00',
   entry: 7594.75,
@@ -31,7 +31,7 @@ const baseTicket = {
   livePromotionAllowed: false as const,
   blockers: [],
   ticketText: {
-    what: 'AfterLunchDriveFvgContinuation short dry-run review ticket from the first completed 5M proof in the lunch window.',
+    what: 'NoInstalledSetup short dry-run review ticket from the first completed 5M proof in the lunch window.',
     where: 'Entry 7594.75, stop 7600.75, T1 7585.75, T2 7582.75, risk 6 points.',
     when: 'Proof time 2026-06-01T12:20:00 ET. One scanner-owned ticket is allowed for this lunch slate.',
     why: 'Saved context: HTF=supports, raids=overnightHighRaid, priorHighRaid, movement=balanced_range.',
@@ -59,7 +59,7 @@ const report = buildDeskPlaybookAfterLunchLocalScannerSnapshotPreviewReport({
       baseTicket,
       {
         ...baseTicket,
-        contractId: '2026-06-01-lunch-AfterLunchDriveFvgContinuation-SHORT-duplicate-dry-run',
+        contractId: '2026-06-01-lunch-NoInstalledSetup-SHORT-duplicate-dry-run',
         sourceTicketId: 'duplicate',
         status: 'suppressed_duplicate_slate',
       },

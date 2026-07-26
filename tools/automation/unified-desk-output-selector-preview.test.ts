@@ -23,13 +23,13 @@ const report = buildUnifiedDeskOutputSelectorPreviewReport({
     sessionRecommendations: [
       {
         session: 'morning',
-        primaryLane: 'OpeningDriveFvgContinuation',
-        supportingLanes: ['IntradayMssMicroContinuation', 'SweepMssFvgRetrace'],
+        primaryLane: 'NoInstalledSetup',
+        contextLanes: ['NoInstalledSetup', 'NoInstalledSetup'],
       },
       {
         session: 'lunch',
-        primaryLane: 'AfterLunchDriveFvgContinuation',
-        supportingLanes: ['IntradayMssMicroContinuation'],
+        primaryLane: 'NoInstalledSetup',
+        contextLanes: ['NoInstalledSetup'],
       },
     ],
   },
@@ -42,18 +42,18 @@ const report = buildUnifiedDeskOutputSelectorPreviewReport({
         session: 'morning',
         movement: 'bullish_drive',
         completeCandidateCount: 4,
-        selected: candidate('OpeningDriveFvgContinuation', 'LONG', '2026-01-02T09:35:00'),
-        bestMovementMatch: candidate('OpeningDriveFvgContinuation', 'LONG', '2026-01-02T09:35:00'),
-        bestOverall: candidate('IntradayMssMicroContinuation', 'LONG', '2026-01-02T09:40:00'),
+        selected: candidate('NoInstalledSetup', 'LONG', '2026-01-02T09:35:00'),
+        bestMovementMatch: candidate('NoInstalledSetup', 'LONG', '2026-01-02T09:35:00'),
+        bestOverall: candidate('NoInstalledSetup', 'LONG', '2026-01-02T09:40:00'),
       },
       {
         date: '2026-01-03',
         session: 'morning',
         movement: 'high_raid_reversal_down',
         completeCandidateCount: 3,
-        selected: candidate('IntradayMssMicroContinuation', 'SHORT', '2026-01-03T10:05:00'),
-        bestMovementMatch: candidate('IntradayMssMicroContinuation', 'SHORT', '2026-01-03T10:05:00'),
-        bestOverall: candidate('SweepMssFvgRetrace', 'SHORT', '2026-01-03T10:10:00'),
+        selected: candidate('NoInstalledSetup', 'SHORT', '2026-01-03T10:05:00'),
+        bestMovementMatch: candidate('NoInstalledSetup', 'SHORT', '2026-01-03T10:05:00'),
+        bestOverall: candidate('NoInstalledSetup', 'SHORT', '2026-01-03T10:10:00'),
       },
       {
         date: '2026-01-04',
@@ -87,12 +87,12 @@ assert.equal(report.summary.formingDeskReadRows, 1);
 assert.equal(report.summary.silentRows, 1);
 assert.equal(report.summary.canExecuteChangedRows, 0);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
-assert.equal(approved?.model, 'OpeningDriveFvgContinuation');
+assert.equal(approved?.model, 'NoInstalledSetup');
 assert.equal(approved?.sourceCandidateRole, 'primary_lane');
-assert.equal(approved?.deskLanguage.headline, 'Approved Desk Plan: OpeningDriveFvgContinuation LONG');
+assert.equal(approved?.deskLanguage.headline, 'Approved Desk Plan: NoInstalledSetup LONG');
 assert.equal(approved?.canExecuteVisible, false);
-assert.equal(forming?.model, 'IntradayMssMicroContinuation');
-assert.equal(forming?.sourceCandidateRole, 'supporting_lane');
+assert.equal(forming?.model, 'NoInstalledSetup');
+assert.equal(forming?.sourceCandidateRole, 'context_lane');
 assert.match(forming?.deskLanguage.headline || '', /Forming Desk Read/);
 assert.doesNotMatch(report.markdown, /human-review/i);
 

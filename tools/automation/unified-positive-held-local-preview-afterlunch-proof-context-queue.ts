@@ -12,7 +12,7 @@ interface QueueRow {
   slateId: string;
   tradeDate: string;
   session: string;
-  setupType: 'AfterLunchDriveFvgContinuation';
+  setupType: 'NoInstalledSetup';
   direction: string;
   proofTime: string;
   proofRankInSlate: number;
@@ -81,7 +81,7 @@ export interface UnifiedPositiveHeldLocalPreviewAfterLunchProofContextQueueRepor
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SETUP = 'AfterLunchDriveFvgContinuation';
+const SETUP = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -216,7 +216,7 @@ export function buildUnifiedPositiveHeldLocalPreviewAfterLunchProofContextQueueR
     !sourceProofTimingPath && !args.sourceProofTimingReport ? 'missing source/proof timing path' : null,
     !sourceProofTimingReport ? 'missing source/proof timing report' : null,
     sourceProofTimingReport && sourceProofTimingReport.status !== 'pass' ? `source/proof timing status ${sourceProofTimingReport.status}` : null,
-    sourceRows.length === 0 ? 'no AfterLunchDriveFvgContinuation source/proof timing rows found' : null,
+    sourceRows.length === 0 ? 'no NoInstalledSetup source/proof timing rows found' : null,
   ].filter((item): item is string => Boolean(item));
   const base: Omit<UnifiedPositiveHeldLocalPreviewAfterLunchProofContextQueueReport, 'markdown'> = {
     reportType: 'unified_positive_held_local_preview_afterlunch_proof_context_queue',

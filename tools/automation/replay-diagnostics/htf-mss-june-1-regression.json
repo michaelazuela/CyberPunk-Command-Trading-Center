@@ -150,11 +150,11 @@
   },
   "setupDetection": {
     "candidateDetected": true,
-    "setupType": "RaidReclaimReversal",
+    "setupType": "HistoricalReviewReversal",
     "label": "HTF Context Continuation After Raid/Reclaim",
     "direction": "LONG",
     "candidate": {
-      "setupType": "RaidReclaimReversal",
+      "setupType": "HistoricalReviewReversal",
       "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
       "pathway": "intraday_mss_micro_continuation",
       "direction": "LONG",
@@ -206,7 +206,7 @@
     },
     "fullDeterministicGatesPass": {
       "scannerCandidate": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
         "pathway": "intraday_mss_micro_continuation",
         "direction": "LONG",

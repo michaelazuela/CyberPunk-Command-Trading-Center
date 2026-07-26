@@ -104,7 +104,7 @@ assert.equal(corrected.entryHitTime, '2026-06-03T10:05:00');
 assert.equal(corrected.t2HitTime, '2026-06-03T10:10:00');
 assert.equal(corrected.correctionReason, 'Original no_fill corrected because completed 5M OHLC touched entry at or after proof.');
 assert.equal(corrected.htfSufficiency, 'sufficient');
-assert.equal(corrected.htfSupportCount, 3);
+assert.equal(corrected.htfContextCount, 3);
 assert.equal(corrected.htfCautionCount, 1);
 
 const missing = buildOpeningDriveCorrectedOutcomeCloseoutReport({

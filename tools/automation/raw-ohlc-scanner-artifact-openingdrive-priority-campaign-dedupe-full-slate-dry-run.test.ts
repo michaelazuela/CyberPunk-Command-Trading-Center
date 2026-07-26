@@ -15,7 +15,7 @@ const artifact: BuilderInput['scannerArtifact'] = {
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: SetupType.SweepMssFvgRetrace,
+            setupType: SetupType.NoSetup,
             direction: 'LONG',
             detectedStatus: SetupCandidateStatus.Conditional,
             executionStatus: ExecutionStatus.Conditional,
@@ -46,7 +46,7 @@ const artifact: BuilderInput['scannerArtifact'] = {
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: SetupType.SweepMssFvgRetrace,
+            setupType: SetupType.NoSetup,
             direction: 'LONG',
             detectedStatus: SetupCandidateStatus.Conditional,
             executionStatus: ExecutionStatus.Conditional,
@@ -67,7 +67,7 @@ const artifact: BuilderInput['scannerArtifact'] = {
             reducedRiskPlan: null,
           },
           {
-            setupType: SetupType.IntradayMssMicroContinuation,
+            setupType: SetupType.NoSetup,
             direction: 'LONG',
             detectedStatus: SetupCandidateStatus.Conditional,
             executionStatus: ExecutionStatus.Conditional,
@@ -81,7 +81,7 @@ const artifact: BuilderInput['scannerArtifact'] = {
             modelConfidenceScore: 60,
             decisionQualityScore: 60,
             confidence: 'High',
-            evidence: ['Completed 5M proof and HTF support.'],
+            evidence: ['Completed 5M proof and HTF context.'],
             missingEvidence: [],
             requiredTrigger: 'Completed 5M proof.',
             nextAction: 'Review only.',
@@ -98,10 +98,10 @@ const outcome = {
   summary: { livePromotionAllowedRows: 0 },
   rows: [
     {
-      ticketId: '2026-07-10-morning-SweepMssFvgRetrace-LONG-20260710T093500',
+      ticketId: '2026-07-10-morning-NoInstalledSetup-LONG-20260710T093500',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-10T09:35:00',
       outcomeStatus: 'resolved',
@@ -114,10 +114,10 @@ const outcome = {
       resolvedOneMesPl: 40,
     },
     {
-      ticketId: '2026-07-10-morning-SweepMssFvgRetrace-LONG-20260710T094000',
+      ticketId: '2026-07-10-morning-NoInstalledSetup-LONG-20260710T094000',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-10T09:40:00',
       outcomeStatus: 'resolved',
@@ -130,10 +130,10 @@ const outcome = {
       resolvedOneMesPl: -20,
     },
     {
-      ticketId: '2026-07-10-morning-IntradayMssMicroContinuation-LONG-20260710T094000',
+      ticketId: '2026-07-10-morning-NoInstalledSetup-LONG-20260710T094000',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-10T09:40:00',
       outcomeStatus: 'resolved',
@@ -153,7 +153,7 @@ const report = buildRawOhlcScannerArtifactOpeningDrivePriorityCampaignDedupeFull
   scannerArtifact: artifact,
   replayPackageOutcomePath: 'outcome.json',
   replayPackageOutcome: outcome,
-  setupType: 'SweepMssFvgRetrace',
+  setupType: 'NoInstalledSetup',
 });
 
 assert.equal(report.status, 'pass');

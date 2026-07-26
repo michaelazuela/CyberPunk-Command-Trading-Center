@@ -56,7 +56,7 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
       ticketId: 'same-bar-win',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofTime: '2026-06-10T12:50:00',
       outcomeStatus: 'resolved',
@@ -85,7 +85,7 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
       ticketId: 'delayed-loss',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-06-10T13:00:00',
       outcomeStatus: 'resolved',
@@ -131,15 +131,15 @@ assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
-assert.equal(report.summary.modelVariantsEvaluated, 3);
+assert.equal(report.summary.modelVariantsEvaluated, 2);
 assert.equal(report.summary.baselineGrossSelectedOneMesPl, -20);
-assert.equal(report.summary.bestVariantName, 'allow_AfterLunchDriveFvgContinuation');
+assert.equal(report.summary.bestVariantName, 'allow_NoInstalledSetup');
 assert.equal(report.summary.bestVariantGrossSelectedOneMesPl, 20);
 assert.equal(report.summary.variantsPositive, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.match(report.markdown, /Same-Bar Allowlist Probe/);
 
-const bestVariant = report.variants.find((variant) => variant.variantName === 'allow_AfterLunchDriveFvgContinuation');
+const bestVariant = report.variants.find((variant) => variant.variantName === 'allow_NoInstalledSetup');
 assert.equal(bestVariant?.selectedWinners, 1);
 assert.match(bestVariant?.recommendation || '', /Research only|Candidate for more research/);
 

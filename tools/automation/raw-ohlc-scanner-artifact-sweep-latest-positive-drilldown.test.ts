@@ -39,7 +39,7 @@ function row(args: {
     ticketId: args.id,
     tradeDate: '2026-07-16',
     session: args.session,
-    setupType: args.setupType || 'SweepMssFvgRetrace',
+    setupType: args.setupType || 'NoInstalledSetup',
     direction: args.direction,
     outcomeLabel: args.outcomeLabel,
     outcomeStatus: resolved ? 'resolved' as const : 'unresolved' as const,
@@ -126,7 +126,7 @@ const trainReport = report([
   ...lossBearingTrain,
   row({
     id: 'ignored-htf',
-    setupType: 'IntradayMssMicroContinuation',
+    setupType: 'NoInstalledSetup',
     session: 'lunch',
     direction: 'SHORT',
     riskPoints: 18,
@@ -166,7 +166,7 @@ assert.equal(drilldown.authority.changesTradingLogic, false);
 assert.equal(drilldown.authority.changesCanExecute, false);
 assert.equal(drilldown.assumptions.htfMssExcluded, true);
 assert.equal(drilldown.summary.livePromotionAllowedRows, 0);
-assert.equal(drilldown.summary.trainRows, 15);
+assert.equal(drilldown.summary.trainRows, 16);
 assert.equal(drilldown.summary.testRows, 11);
 assert.equal(drilldown.zeroLossTransferSegments.some((segment) => segment.key === 'LONG'), true);
 assert.equal(drilldown.latestPositiveTrainLossBearingSegments.some((segment) => segment.key === 'lunch|SHORT|14:00-14:59|risk_16_to_24'), true);

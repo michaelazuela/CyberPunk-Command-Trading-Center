@@ -5,8 +5,8 @@ import {
 } from './desk-playbook-selector-morning-local-scanner-snapshot-preview';
 
 const baseSlate = {
-  slateKey: '2026-06-09|morning|SweepMssFvgRetrace|SHORT|7450.75|7464|7431|7424.25',
-  selectedTicketId: '2026-06-09-morning-SweepMssFvgRetrace-SHORT-20260609T102000',
+  slateKey: '2026-06-09|morning|NoInstalledSetup|SHORT|7450.75|7464|7431|7424.25',
+  selectedTicketId: '2026-06-09-morning-NoInstalledSetup-SHORT-20260609T102000',
   tradeDate: '2026-06-09',
   session: 'morning' as const,
   direction: 'SHORT' as const,
@@ -27,8 +27,8 @@ const baseSlate = {
   collisionRows: 4,
   collisionWinningRows: 4,
   collisionMethodKeys: [
-    'IntradayMssMicroContinuation|morning|SHORT|risk_gte_32',
-    'OpeningDriveFvgContinuation|morning|SHORT|risk_16_to_24',
+    'NoInstalledSetup|morning|SHORT|risk_gte_32',
+    'NoInstalledSetup|morning|SHORT|risk_16_to_24',
   ],
   mfeR: 9.42,
   maeR: 0,
@@ -40,7 +40,7 @@ const report = buildDeskPlaybookMorningLocalScannerSnapshotPreviewReport({
     reportType: 'unified_positive_held_local_preview_scanner_owned_selector_dry_run_contract',
     status: 'pass',
     contract: {
-      selectorMethodKey: 'SweepMssFvgRetrace|morning|SHORT|risk_8_to_16',
+      selectorMethodKey: 'NoInstalledSetup|morning|SHORT|risk_8_to_16',
       staleMinutes: 20,
       collisionWindowMinutes: 10,
       oneTicketPerSlate: true,
@@ -93,8 +93,8 @@ assert.equal(report.authority.runsSetupScanner, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.authority.livePromotionAllowed, false);
-assert.equal(report.source.selectorMethodKey, 'SweepMssFvgRetrace|morning|SHORT|risk_8_to_16');
-assert.equal(report.rows[0].setupType, 'SweepMssFvgRetrace');
+assert.equal(report.source.selectorMethodKey, 'NoInstalledSetup|morning|SHORT|risk_8_to_16');
+assert.equal(report.rows[0].setupType, 'NoInstalledSetup');
 assert.equal(report.rows[0].selectedCandidateSourceOfTruth, 'scanner_candidate_lifecycle_trace');
 assert.equal(report.rows[0].deskStateSourceOfTruth, 'scanner_desk_state');
 assert.equal(report.rows[0].deskTicketSourceOfTruth, 'scanner_single_active_desk_ticket');

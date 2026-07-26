@@ -57,15 +57,15 @@ export const TIME_WINDOWS = {
 } as const;
 
 export const MODEL_SPECIFIC_TIME_WINDOWS = {
-  intradayMssMicroContinuationLateDayReview: {
-    label: "Intraday MSS Micro Continuation Late-Day Review",
+  lateDayReview: {
+    label: "Late-Day Review",
     startHour: 15,
     startMinute: 0,
     endHour: 16,
     endMinute: 40,
     timezone: "America/New_York",
-    authority: "model_specific_human_review_only",
-    note: "15M/5M MSS plus 5M FVG retest/rejection late-day review. Human review only; canExecute remains false.",
+    authority: "blank_slate_review_only",
+    note: "Blank-slate review coverage. No trading model is installed and this window cannot approve execution.",
   },
 } as const;
 
@@ -102,12 +102,12 @@ const EVENING_SETUP_SCAN_START = 18 * 60 + 45;
 const EVENING_SETUP_SCAN_END = 22 * 60 + 15;
 const EVENING_MARKET_MAPPING_WINDOW_START = EVENING_MARKET_MAPPING_WINDOW.startHour * 60 + EVENING_MARKET_MAPPING_WINDOW.startMinute;
 const EVENING_MARKET_MAPPING_WINDOW_END = EVENING_MARKET_MAPPING_WINDOW.endHour * 60 + EVENING_MARKET_MAPPING_WINDOW.endMinute;
-const INTRADAY_MSS_MICRO_LATE_DAY_START =
-  MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.startHour * 60 +
-  MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.startMinute;
-const INTRADAY_MSS_MICRO_LATE_DAY_END =
-  MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.endHour * 60 +
-  MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.endMinute;
+const LATE_DAY_REVIEW_START =
+  MODEL_SPECIFIC_TIME_WINDOWS.lateDayReview.startHour * 60 +
+  MODEL_SPECIFIC_TIME_WINDOWS.lateDayReview.startMinute;
+const LATE_DAY_REVIEW_END =
+  MODEL_SPECIFIC_TIME_WINDOWS.lateDayReview.endHour * 60 +
+  MODEL_SPECIFIC_TIME_WINDOWS.lateDayReview.endMinute;
 
 /** Get NY time details */
 function getNYTime() {
@@ -161,8 +161,8 @@ export function isMarketMappingWindowByEtMinutes(minutes: number): boolean {
     (minutes >= EVENING_MARKET_MAPPING_WINDOW_START && minutes < EVENING_MARKET_MAPPING_WINDOW_END);
 }
 
-export function isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes: number): boolean {
-  return minutes >= INTRADAY_MSS_MICRO_LATE_DAY_START && minutes <= INTRADAY_MSS_MICRO_LATE_DAY_END;
+export function isLateDayReviewByEtMinutes(minutes: number): boolean {
+  return minutes >= LATE_DAY_REVIEW_START && minutes <= LATE_DAY_REVIEW_END;
 }
 
 export function getActiveSetupScanWindow(date = new Date()): ActiveSetupScanWindow {

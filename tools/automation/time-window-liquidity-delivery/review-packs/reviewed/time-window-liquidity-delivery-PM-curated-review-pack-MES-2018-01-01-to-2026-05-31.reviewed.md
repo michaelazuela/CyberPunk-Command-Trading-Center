@@ -17,7 +17,7 @@ Boundary: research_only_not_execution_authority
 ## Label Counts
 - strong_advisory_candidate: 0
 - covered_by_model_1: 0
-- covered_by_RAID_RECLAIM: 0
+- covered_by_uninstalled_context: 0
 - weak_or_noisy: 0
 - needs_chart_review: 2
 - reject_time_window_standalone: 0
@@ -26,9 +26,9 @@ Boundary: research_only_not_execution_authority
 ## Samples Grouped By Final Human Label
 ### Strong Advisory Candidate
 _No samples reviewed with this label._
-### Covered By Model 1
+### Covered By no installed model path
 _No samples reviewed with this label._
-### Covered By Raid Reclaim Reversal
+### Covered By no installed model path
 _No samples reviewed with this label._
 ### Weak Or Noisy
 _No samples reviewed with this label._
@@ -113,14 +113,14 @@ _No samples reviewed with this label._
 | model_1_overlap_samples-pm_liquidity_delivery_window-2024-11-14 | 2024-11-14 2:00-3:00 | model_1_overlap_samples | covered_by_model_1 | unreviewed | n/a |  |
 | model_1_overlap_samples-pm_liquidity_delivery_window-2025-03-04 | 2025-03-04 2:00-3:00 | model_1_overlap_samples | covered_by_model_1 | unreviewed | n/a |  |
 | model_1_overlap_samples-pm_liquidity_delivery_window-2025-11-25 | 2025-11-25 2:00-3:00 | model_1_overlap_samples | covered_by_model_1 | unreviewed | n/a |  |
-| RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2024-02-08 | 2024-02-08 2:00-3:00 | RAID_RECLAIM_overlap_samples | covered_by_RAID_RECLAIM | unreviewed | n/a |  |
-| RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2023-12-28 | 2023-12-28 2:00-3:00 | RAID_RECLAIM_overlap_samples | covered_by_RAID_RECLAIM | unreviewed | n/a |  |
-| RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2024-12-05 | 2024-12-05 2:00-3:00 | RAID_RECLAIM_overlap_samples | covered_by_RAID_RECLAIM | unreviewed | n/a |  |
-| RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-03-06 | 2025-03-06 2:00-3:00 | RAID_RECLAIM_overlap_samples | covered_by_RAID_RECLAIM | unreviewed | n/a |  |
-| RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-20 | 2025-11-20 2:00-3:00 | RAID_RECLAIM_overlap_samples | covered_by_RAID_RECLAIM | unreviewed | n/a |  |
-| RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-21 | 2025-11-21 2:00-3:00 | RAID_RECLAIM_overlap_samples | covered_by_RAID_RECLAIM | unreviewed | n/a |  |
-| RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-03-05 | 2025-03-05 2:00-3:00 | RAID_RECLAIM_overlap_samples | covered_by_RAID_RECLAIM | unreviewed | n/a |  |
-| RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-12-04 | 2025-12-04 2:00-3:00 | RAID_RECLAIM_overlap_samples | covered_by_RAID_RECLAIM | unreviewed | n/a |  |
-| RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-18 | 2025-11-18 2:00-3:00 | RAID_RECLAIM_overlap_samples | covered_by_RAID_RECLAIM | unreviewed | n/a |  |
-| RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2026-02-05 | 2026-02-05 2:00-3:00 | RAID_RECLAIM_overlap_samples | covered_by_RAID_RECLAIM | unreviewed | n/a |  |
+| HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2024-02-08 | 2024-02-08 2:00-3:00 | HISTORICAL_REVERSAL_overlap_samples | covered_by_uninstalled_context | unreviewed | n/a |  |
+| HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2023-12-28 | 2023-12-28 2:00-3:00 | HISTORICAL_REVERSAL_overlap_samples | covered_by_uninstalled_context | unreviewed | n/a |  |
+| HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2024-12-05 | 2024-12-05 2:00-3:00 | HISTORICAL_REVERSAL_overlap_samples | covered_by_uninstalled_context | unreviewed | n/a |  |
+| HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-03-06 | 2025-03-06 2:00-3:00 | HISTORICAL_REVERSAL_overlap_samples | covered_by_uninstalled_context | unreviewed | n/a |  |
+| HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-11-20 | 2025-11-20 2:00-3:00 | HISTORICAL_REVERSAL_overlap_samples | covered_by_uninstalled_context | unreviewed | n/a |  |
+| HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-11-21 | 2025-11-21 2:00-3:00 | HISTORICAL_REVERSAL_overlap_samples | covered_by_uninstalled_context | unreviewed | n/a |  |
+| HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-03-05 | 2025-03-05 2:00-3:00 | HISTORICAL_REVERSAL_overlap_samples | covered_by_uninstalled_context | unreviewed | n/a |  |
+| HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-12-04 | 2025-12-04 2:00-3:00 | HISTORICAL_REVERSAL_overlap_samples | covered_by_uninstalled_context | unreviewed | n/a |  |
+| HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-11-18 | 2025-11-18 2:00-3:00 | HISTORICAL_REVERSAL_overlap_samples | covered_by_uninstalled_context | unreviewed | n/a |  |
+| HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2026-02-05 | 2026-02-05 2:00-3:00 | HISTORICAL_REVERSAL_overlap_samples | covered_by_uninstalled_context | unreviewed | n/a |  |
 Research-only. Human labels do not approve trades, models, or execution.

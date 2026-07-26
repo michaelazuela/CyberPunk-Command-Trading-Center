@@ -16,7 +16,7 @@ const shadowComparison = {
       groupSize: 2,
       baselinePrimaryKey: 'OpeningDrive|x',
       shadowSelectedKey: 'Sweep|x',
-      shadowSelectedSetupType: 'SweepMssFvgRetrace',
+      shadowSelectedSetupType: 'NoInstalledSetup',
       selectorDecision: 'keep_later_sweep_proof',
       wouldChangePrimary: true,
       selectedCanExecute: false,
@@ -37,7 +37,7 @@ const shadowComparison = {
       groupSize: 2,
       baselinePrimaryKey: 'OpeningDrive|y',
       shadowSelectedKey: 'Sweep|y',
-      shadowSelectedSetupType: 'SweepMssFvgRetrace',
+      shadowSelectedSetupType: 'NoInstalledSetup',
       selectorDecision: 'keep_later_sweep_proof',
       wouldChangePrimary: true,
       selectedCanExecute: false,
@@ -58,7 +58,7 @@ const shadowComparison = {
       groupSize: 2,
       baselinePrimaryKey: 'Sweep|z',
       shadowSelectedKey: 'AfterLunch|z',
-      shadowSelectedSetupType: 'AfterLunchDriveFvgContinuation',
+      shadowSelectedSetupType: 'NoInstalledSetup',
       selectorDecision: 'prefer_replacement',
       wouldChangePrimary: true,
       selectedCanExecute: false,
@@ -79,7 +79,7 @@ const shadowComparison = {
       groupSize: 2,
       baselinePrimaryKey: 'Sweep|missing',
       shadowSelectedKey: 'OpeningDrive|missing',
-      shadowSelectedSetupType: 'OpeningDriveFvgContinuation',
+      shadowSelectedSetupType: 'NoInstalledSetup',
       selectorDecision: 'prefer_replacement',
       wouldChangePrimary: false,
       selectedCanExecute: false,
@@ -97,7 +97,7 @@ const outcomeRecords = [
   {
     tradeDate: '2026-06-17',
     sessionType: 'morning',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'SHORT',
     outcome: 't1_and_t2_hit',
     oneMesGross: 150,
@@ -107,7 +107,7 @@ const outcomeRecords = [
   {
     tradeDate: '2026-06-18',
     sessionType: 'lunch',
-    setupType: 'AfterLunchDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     outcome: 'stopped_before_t1',
     oneMesGross: -50,
@@ -140,8 +140,8 @@ assert.equal(report.summary.negativeGroups, 1);
 assert.equal(report.summary.grossJoinedOneMesPl, 100);
 assert.equal(report.summary.recommendation, 'expand_outcome_coverage');
 
-const sweep = report.rows.find((row) => row.setupType === 'SweepMssFvgRetrace');
-const missing = report.rows.find((row) => row.setupType === 'OpeningDriveFvgContinuation');
+const sweep = report.rows.find((row) => row.setupType === 'NoInstalledSetup');
+const missing = report.rows.find((row) => row.setupType === 'NoInstalledSetup');
 
 assert.equal(sweep?.shadowRows, 2);
 assert.equal(sweep?.grossOneMesPl, 150);

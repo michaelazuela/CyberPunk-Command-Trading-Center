@@ -8,7 +8,7 @@
     "riskTooWide": {
       "description": "HTF/MSS-valid candidate with RiskTooWide remains non-executable.",
       "scanCandidate": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
         "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
@@ -157,7 +157,7 @@
     "missingEntry": {
       "description": "HTF/MSS-valid candidate with missing entry remains non-executable.",
       "scanCandidate": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
         "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
@@ -200,7 +200,7 @@
         "noTradeReason": null,
         "finalPlan": {
           "direction": "SHORT",
-          "setupType": "RaidReclaimReversal",
+          "setupType": "HistoricalReviewReversal",
           "entry": null,
           "stop": 7592,
           "target1": null,
@@ -301,7 +301,7 @@
         ],
         "bestExecutableCandidate": null,
         "bestConditionalCandidate": {
-          "setupType": "RaidReclaimReversal",
+          "setupType": "HistoricalReviewReversal",
           "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
           "pathway": "intraday_mss_micro_continuation",
           "direction": "SHORT",
@@ -344,7 +344,7 @@
     "missingStop": {
       "description": "HTF/MSS-valid candidate with missing stop remains non-executable.",
       "scanCandidate": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
         "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
@@ -387,7 +387,7 @@
         "noTradeReason": "NoApprovedSetup",
         "finalPlan": {
           "direction": "NO TRADE",
-          "setupType": "RaidReclaimReversal",
+          "setupType": "HistoricalReviewReversal",
           "entry": null,
           "stop": null,
           "target1": null,
@@ -494,7 +494,7 @@
     "missingTarget": {
       "description": "HTF/MSS-valid state without external target does not create the HTF reversal-delivery candidate.",
       "scanCandidate": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
         "pathway": "intraday_mss_micro_continuation",
         "direction": "NO TRADE",
@@ -631,7 +631,7 @@
     "missingTrigger": {
       "description": "5M pending MSS cannot create a reversal-delivery candidate.",
       "scanCandidate": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
         "pathway": "intraday_mss_micro_continuation",
         "direction": "NO TRADE",
@@ -768,7 +768,7 @@
     "outsideWindow": {
       "description": "Outside active setup scan window remains non-executable.",
       "scanCandidate": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
         "pathway": "intraday_mss_micro_continuation",
         "direction": "NO TRADE",
@@ -905,7 +905,7 @@
     "scannerReady": {
       "description": "All scanner candidate fields are present; final replay shell still reports whether deterministic final pipeline approved.",
       "scanCandidate": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
         "pathway": "intraday_mss_micro_continuation",
         "direction": "SHORT",
@@ -945,7 +945,7 @@
         "noTradeReason": "NoApprovedSetup",
         "finalPlan": {
           "direction": "NO TRADE",
-          "setupType": "RaidReclaimReversal",
+          "setupType": "HistoricalReviewReversal",
           "entry": null,
           "stop": null,
           "target1": null,

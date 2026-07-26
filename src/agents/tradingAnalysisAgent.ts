@@ -322,7 +322,7 @@ function summarizeResearchBackfills(reports: Array<Partial<HistoricalResearchBac
       for (const concept of report.conceptReports) {
         researchCandidates += numberValue(concept.totalCandidates);
         advisoryOnlyEvents += numberValue(concept.advisoryOnlyCount);
-        approvedModelOverlaps += numberValue(concept.approvedModelOverlaps?.model1) + numberValue(concept.approvedModelOverlaps?.raidReclaim);
+        approvedModelOverlaps += numberValue(concept.approvedModelOverlaps?.model1) + numberValue(concept.approvedModelOverlaps?.historicalReview);
       }
     } else {
       researchCandidates += numberValue((report as { totalCandidates?: unknown }).totalCandidates);

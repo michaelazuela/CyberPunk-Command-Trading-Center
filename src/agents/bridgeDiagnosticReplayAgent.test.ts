@@ -44,7 +44,7 @@ const bullish240m = [
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.SweepMssFvgRetrace,
+    setupType: SetupType.NoSetup,
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,
     confidence: 'High',
@@ -308,8 +308,8 @@ assert.equal(replayFromMixedTape.deskStateReplayValidation.watchToPlanPromotionP
 assert.equal(replayFromMixedTape.phase9FReplayValidation.authority.replayChangesScannerBehavior, false);
 
 const june11LongBias = candidate({
-  setupType: SetupType.SweepMssFvgRetrace,
-  scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
+  setupType: SetupType.NoSetup,
+  scenarioLabel: 'ICT no installed model path Long: Sweep Reclaim Imbalance Retrace',
   direction: 'LONG',
   entry: 7312,
   stop: 7271.75,
@@ -325,8 +325,8 @@ const june11LongBias = candidate({
   decisionQualityScore: 87,
 });
 const june11CounterShort = candidate({
-  setupType: SetupType.RaidReclaimReversal,
-  scenarioLabel: 'Bearish Raid Reclaim Reversal Reversal',
+  setupType: SetupType.NoSetup,
+  scenarioLabel: 'Bearish no installed model path',
   direction: 'SHORT',
   entry: 7298,
   stop: 7314.5,
@@ -335,7 +335,7 @@ const june11CounterShort = candidate({
   riskPoints: 16.5,
   executionStatus: ExecutionStatus.Conditional,
   blockReason: NoTradeReason.EntryTriggerPending,
-  requiredTrigger: 'Bearish Raid Reclaim Reversal requires completed 5M acceptance below 7303.50.',
+  requiredTrigger: 'Bearish no installed model path requires completed 5M acceptance below 7303.50.',
   missingEvidence: [
     'Active timeframe MSS ruleset found opposing completed 5M bullish MSS.',
     'Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.',

@@ -40,7 +40,7 @@ const drilldownReport: NoChaseIntradayRemainingBlockerDrilldownReport = {
     recommendation: 'inspect_fvg_and_retest_stop_separately',
   },
   rows: [{
-    caseId: '2026-06-18|lunch|IntradayMssMicroContinuation|SHORT',
+    caseId: '2026-06-18|lunch|NoInstalledSetup|SHORT',
     tradeDate: '2026-06-18',
     sessionType: 'lunch',
     direction: 'SHORT',

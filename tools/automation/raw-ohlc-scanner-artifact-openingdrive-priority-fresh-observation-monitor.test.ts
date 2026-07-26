@@ -96,8 +96,8 @@ const samebar = {
   modelSummaries: [],
   timeBuckets: [],
   rows: [
-    row({ ticketId: 'od-fresh', setupType: 'OpeningDriveFvgContinuation', proofTime: '2026-07-20T10:00:00', oneMesPl: 50 }),
-    row({ ticketId: 'sweep-fresh', setupType: 'SweepMssFvgRetrace', proofTime: '2026-07-20T10:00:00', oneMesPl: 125 }),
+    row({ ticketId: 'od-fresh', setupType: 'NoInstalledSetup', proofTime: '2026-07-20T10:00:00', oneMesPl: 50 }),
+    row({ ticketId: 'sweep-fresh', setupType: 'NoInstalledSetup', proofTime: '2026-07-20T10:00:00', oneMesPl: 125 }),
   ],
   blockers: [],
   recommendations: [],

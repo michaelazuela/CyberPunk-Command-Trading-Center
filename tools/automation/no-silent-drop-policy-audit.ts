@@ -91,7 +91,7 @@ function authority(): NoSilentDropPolicyAuditReport['authority'] {
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.RaidReclaimReversal,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'No silent drop fixture',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,
@@ -104,7 +104,7 @@ function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
     riskPoints: 4,
     invalidation: 'Invalid below protected swing.',
     rankScore: 92,
-    evidence: ['completed 5M sweep/reclaim', 'structured displacement evidence'],
+    evidence: ['completed 5M historical reversal pattern', 'structured displacement evidence'],
     missingEvidence: [],
     executionStatus: ExecutionStatus.Conditional,
     blockReason: null,

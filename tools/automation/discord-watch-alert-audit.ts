@@ -105,7 +105,7 @@ function formatLevel(value: number | null): string {
 
 function buildWatchCandidate(): SetupCandidate {
   return {
-    setupType: SetupType.SweepMssFvgRetrace,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Phase 9D SHORT watch from HTF rejection and 5M structure shift',
     activeRuleset: {
       htfLineInSand: {

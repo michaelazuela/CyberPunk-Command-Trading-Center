@@ -21,18 +21,18 @@ fs.writeFileSync(tapePath, `${JSON.stringify({
       scannerState: 'Conditional',
       setupCandidateStatus: {
         selected: {
-          setupType: 'OpeningDriveFvgContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           executionStatus: 'Executable',
         },
         statuses: [
           {
-            setupType: 'OpeningDriveFvgContinuation',
+            setupType: 'NoInstalledSetup',
             direction: 'LONG',
             executionStatus: 'Executable',
           },
           {
-            setupType: 'IntradayMssMicroContinuation',
+            setupType: 'NoInstalledSetup',
             direction: 'LONG',
             executionStatus: 'Conditional',
           },
@@ -52,7 +52,7 @@ fs.writeFileSync(tapePath, `${JSON.stringify({
         discordAction: 'post_review',
         shouldPost: true,
         direction: 'LONG',
-        setupType: 'OpeningDriveFvgContinuation',
+        setupType: 'NoInstalledSetup',
         entry: 7518,
         stop: 7510.25,
         t1: 7529.75,
@@ -120,12 +120,12 @@ assert.equal(report.summary.canExecuteChangedRows, 0);
 assert.equal(report.summary.tradingLogicChangedRows, 0);
 assert.equal(report.summary.runtimeInstallAllowed, false);
 assert.equal(report.summary.recommendation, 'ready_for_fresh_guarded_scanner_output');
-assert.equal(report.rows[0]?.model, 'OpeningDriveFvgContinuation');
+assert.equal(report.rows[0]?.model, 'NoInstalledSetup');
 assert.equal(report.rows[0]?.visibleState, 'APPROVED_DESK_PLAN');
 assert.equal(report.rows[0]?.direction, 'LONG');
 assert.equal(report.rows[0]?.entry, 7518);
 assert.equal(report.rows[0]?.stop, 7510.25);
-assert.deepEqual(report.rows[0]?.supportingModels, ['IntradayMssMicroContinuation']);
+assert.deepEqual(report.rows[0]?.contextLabels, ['NoInstalledSetup']);
 
 const written = writeUnifiedDeskOutputCurrentScannerFeedAdapterReport(report, tempDir);
 assert.ok(written.selectorPreviewJsonPath);

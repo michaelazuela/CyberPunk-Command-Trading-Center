@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { SetupCandidate } from '../../src/types';
+import { SetupType, type SetupCandidate } from '../../src/types';
 import type { NoChaseIntradayGeometryBlockerClassifierReport } from './no-chase-intraday-geometry-blocker-classifier';
 
 interface OhlcBar {
@@ -166,7 +166,7 @@ function sourceCandidate(snapshotId: string, auditDir: string, direction: string
   const candidates = asRecord(asRecord(raw).normalizedPlan).setupCandidates;
   if (!Array.isArray(candidates)) return null;
   return (candidates as SetupCandidate[]).find((candidate) =>
-    candidate.setupType === 'IntradayMssMicroContinuation' &&
+    candidate.setupType === SetupType.NoSetup &&
     candidate.direction === direction &&
     (candidate.missingEvidence || []).join(' ').includes('timestamp does not align')
   ) || null;

@@ -20,7 +20,7 @@ Candidates may stack when they share:
 The stack assigns deterministic roles:
 
 - `lead_tactical_plan`: best fresh complete tactical plan by decision quality, model confidence, lower risk, rank, then key;
-- `entry_evidence`: same-side defended FVG, sweep/reclaim, or opening-drive entry evidence;
+- `entry_evidence`: same-side defended FVG, historical reversal pattern, or opening-drive entry evidence;
 - `continuation_confirmation`: same-side MSS or continuation evidence;
 - `htf_context`: higher-timeframe support or reaction context;
 - `management_target_context`: target/runner context after entry is no longer fresh;
@@ -33,7 +33,7 @@ Discord must show:
 
 - one same-side campaign stack section;
 - lead entry, stop, T1, and T2 from the lead tactical plan;
-- supporting models as evidence, not competing fresh entries;
+- context labels as evidence, not competing fresh entries;
 - fresh-entry, no-chase, or management-only status;
 - stand-down condition;
 - `Review only. Not execution approval. canExecute remains unchanged.`
@@ -44,9 +44,9 @@ When a stack is active, Discord level lines must use the same lead tactical leve
 
 For the June 30 morning LONG sequence:
 
-- `SweepMssFvgRetrace LONG` is the lead tactical plan when fresh.
-- `OpeningDriveFvgContinuation LONG` is entry evidence.
-- `IntradayMssMicroContinuation LONG` is continuation thesis.
+- `NoInstalledSetup LONG` is the lead tactical plan when fresh.
+- `NoInstalledSetup LONG` is entry evidence.
+- `NoInstalledSetup LONG` is continuation thesis.
 - After price leaves the shared zone, Discord must show no-chase or management-only context instead of staying silent or presenting a stale fresh entry.
 
 The mirrored SHORT path follows the same rules.

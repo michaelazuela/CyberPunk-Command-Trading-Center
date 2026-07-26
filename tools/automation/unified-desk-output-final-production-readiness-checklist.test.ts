@@ -28,13 +28,13 @@ const source = (reportType: string, summary: Record<string, unknown> = {}) => ({
   selectedCandidates: [
     {
       session: 'morning',
-      model: 'SweepMssFvgRetrace',
+      model: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-22T09:10:00',
     },
     {
       session: 'lunch',
-      model: 'IntradayMssMicroContinuation',
+      model: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-22T15:45:00',
     },

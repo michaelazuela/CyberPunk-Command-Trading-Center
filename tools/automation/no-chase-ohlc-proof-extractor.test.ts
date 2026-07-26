@@ -11,7 +11,7 @@ import type { UnifiedDeskCandidateDiagnosticSnapshot } from './unified-desk-cand
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'fixture',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Conditional,
@@ -71,7 +71,7 @@ const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
     completedBarTime: '2026-06-12T12:40:00',
     candidates: [
       candidate({
-        setupType: SetupType.AfterLunchDriveFvgContinuation,
+        setupType: SetupType.NoSetup,
         direction: 'SHORT',
         entry: 100,
         stop: 104,
@@ -103,7 +103,7 @@ const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
     tradeDate: '2026-06-14',
     sessionType: 'morning',
     completedBarTime: '2026-06-14T10:00:00',
-    candidates: [candidate({ setupType: SetupType.RaidReclaimReversal })],
+    candidates: [candidate({ setupType: SetupType.NoSetup })],
     currentCanExecute: false,
   },
 ];
@@ -155,12 +155,12 @@ assert.equal(report.summary.replayLosses, 0);
 assert.equal(report.summary.replayNoFill, 0);
 assert.equal(report.summary.replayAmbiguous, 0);
 assert.equal(report.summary.replayGrossOneMes, 80);
-assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.RaidReclaimReversal), false);
+assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.NoSetup), false);
 
-const intradayProof = report.cases.find((item) => item.caseId === '2026-06-10|morning|IntradayMssMicroContinuation|LONG');
-const intradayBlocked = report.cases.find((item) => item.caseId === '2026-06-11|morning|IntradayMssMicroContinuation|SHORT');
-const afterLunchProof = report.cases.find((item) => item.caseId === '2026-06-12|lunch|AfterLunchDriveFvgContinuation|SHORT');
-const proofOnly = report.cases.find((item) => item.caseId === '2026-06-13|morning|IntradayMssMicroContinuation|LONG');
+const intradayProof = report.cases.find((item) => item.caseId === '2026-06-10|morning|NoInstalledSetup|LONG');
+const intradayBlocked = report.cases.find((item) => item.caseId === '2026-06-11|morning|NoInstalledSetup|SHORT');
+const afterLunchProof = report.cases.find((item) => item.caseId === '2026-06-12|lunch|NoInstalledSetup|SHORT');
+const proofOnly = report.cases.find((item) => item.caseId === '2026-06-13|morning|NoInstalledSetup|LONG');
 
 assert.equal(intradayProof?.referenceSource, 'htf_line_in_sand');
 assert.equal(intradayProof?.referenceLevel, 101);

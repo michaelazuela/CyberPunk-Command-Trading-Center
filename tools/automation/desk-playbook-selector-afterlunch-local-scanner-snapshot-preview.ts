@@ -34,7 +34,7 @@ interface DryRunContractTicket {
   slateId: string;
   tradeDate: string;
   session: 'lunch';
-  model: 'AfterLunchDriveFvgContinuation';
+  model: 'NoInstalledSetup';
   direction: Direction;
   proofTime: string;
   entry: number | null;
@@ -86,7 +86,7 @@ interface LocalScannerSnapshotRow {
   slateId: string;
   tradeDate: string;
   session: 'lunch';
-  model: 'AfterLunchDriveFvgContinuation';
+  model: 'NoInstalledSetup';
   direction: Direction;
   proofTime: string;
   sourceHtfContextStatus: DryRunContractTicket['htfContextStatus'];
@@ -240,7 +240,7 @@ function snapshotCandidate(ticket: DryRunContractTicket): SetupCandidate {
   const directionText = ticket.direction === 'LONG' ? 'long' : 'short';
   const raids = ticket.activeRaids.length ? ticket.activeRaids.join(', ') : 'no saved raid context';
   return {
-    setupType: SetupType.AfterLunchDriveFvgContinuation,
+    setupType: SetupType.NoSetup,
     pathway: 'after_lunch_drive_fvg_continuation',
     scenarioLabel: `AfterLunch scanner-owned local snapshot ${directionText} ${ticket.tradeDate}`,
     direction: ticket.direction,

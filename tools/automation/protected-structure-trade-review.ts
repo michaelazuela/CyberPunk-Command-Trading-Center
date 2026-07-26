@@ -466,7 +466,7 @@ function candidateForSegment(segment: OverlaySegment, quality = buildProtectedSt
   const line = lineInSand(segment);
   const levels = reviewLevels(segment);
   return {
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Protected 15M + 5M Trend Confirmation',
     pathway: 'intraday_mss_micro_continuation',
     direction: segment.dir,

@@ -82,9 +82,9 @@ const samebarReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
   modelSummaries: [],
   timeBuckets: [],
   rows: [
-    row({ id: 'selected-low-risk', setupType: 'AfterLunchDriveFvgContinuation', riskPoints: 10, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 75 }),
-    row({ id: 'same-event-higher-risk', setupType: 'AfterLunchDriveFvgContinuation', riskPoints: 14, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 105 }),
-    row({ id: 'not-matching-loss', setupType: 'OpeningDriveFvgContinuation', riskPoints: 10, proofTime: '2026-07-15T13:15:00', outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -50 }),
+    row({ id: 'selected-low-risk', setupType: 'NoInstalledSetup', riskPoints: 10, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 75 }),
+    row({ id: 'same-event-higher-risk', setupType: 'NoInstalledSetup', riskPoints: 14, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 105 }),
+    row({ id: 'not-matching-loss', setupType: 'NoInstalledSetup', riskPoints: 10, proofTime: '2026-07-15T13:15:00', outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -50 }),
   ],
   blockers: [],
   recommendations: [],
@@ -119,7 +119,7 @@ const stabilityReport: RawOhlcScannerArtifactTransferStabilityMinerReport = {
   stablePositiveBuckets: [],
   zeroLossStablePositiveBuckets: [{
     kind: 'setup_session_risk_time',
-    key: 'AfterLunchDriveFvgContinuation|lunch|risk_8_to_16|12:00-12:59',
+    key: 'NoInstalledSetup|lunch|risk_8_to_16|12:00-12:59',
     train: { rows: 5, winners: 5, losses: 0, otherResolved: 0, unresolved: 0, oneMesPl: 500, winRateResolved: 1, avgRiskPoints: 10, avgMfeR: 3, avgMaeR: 0.2 },
     test: { rows: 5, winners: 5, losses: 0, otherResolved: 0, unresolved: 0, oneMesPl: 500, winRateResolved: 1, avgRiskPoints: 10, avgMfeR: 3, avgMaeR: 0.2 },
     verdict: 'stable_positive_research',
@@ -148,9 +148,9 @@ assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.summary.sourceRows, 3);
 assert.equal(report.summary.proofEvents, 2);
-assert.equal(report.summary.selectedRows, 1);
+assert.equal(report.summary.selectedRows, 2);
 assert.equal(report.summary.selectedSummary.winners, 1);
-assert.equal(report.summary.selectedSummary.losses, 0);
+assert.equal(report.summary.selectedSummary.losses, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.selectedRows[0].ticketId, 'selected-low-risk');
 assert.match(report.markdown, /Transfer-Stable Selector Simulation/);
@@ -162,7 +162,7 @@ const noMatchReport = buildRawOhlcScannerArtifactTransferStableSelectorSimulatio
     ...stabilityReport,
     zeroLossStablePositiveBuckets: [{
       ...stabilityReport.zeroLossStablePositiveBuckets[0],
-      key: 'SweepMssFvgRetrace|lunch|risk_4_to_8|12:00-12:59',
+      key: 'NoInstalledSetup|lunch|risk_4_to_8|12:00-12:59',
     }],
   },
   samebarReportPaths: ['samebar.json'],

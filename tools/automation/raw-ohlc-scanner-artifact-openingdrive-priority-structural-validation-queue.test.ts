@@ -63,9 +63,9 @@ function sourceSelectionReport(tradeDate: string): RawOhlcScannerArtifactOpening
       direction: 'LONG',
       openingDriveTicketId: `od-${tradeDate}`,
       priorityTicketId: `priority-${tradeDate}`,
-      prioritySetupType: 'SweepMssFvgRetrace',
+      prioritySetupType: 'NoInstalledSetup',
       installedPrimaryTicketId: `priority-${tradeDate}`,
-      installedPrimarySetupType: 'SweepMssFvgRetrace',
+      installedPrimarySetupType: 'NoInstalledSetup',
       installedSelectedPriority: true,
       openingDriveOneMesPl: 0,
       priorityOneMesPl: 0,
@@ -169,7 +169,7 @@ const report = buildRawOhlcScannerArtifactOpeningDrivePriorityStructuralValidati
     { path: unseenSourcePath, report: sourceSelectionReport('2026-07-18') },
   ],
   rawOhlcSources: [path.join(tmp, 'raw-ohlc-source-MES-2026-07-01-to-2026-07-20-1.json')],
-  featureTag: 'best_conditional_IntradayMssMicroContinuation',
+  featureTag: 'best_conditional_NoInstalledSetup',
 }, '2026-07-19T05:00:00.000Z');
 
 assert.equal(report.status, 'pass');

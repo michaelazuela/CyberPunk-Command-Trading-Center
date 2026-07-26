@@ -44,7 +44,7 @@ const report = {
     date: '2026-07-22',
     session: 'morning',
     state: 'APPROVED_DESK_PLAN',
-    model: 'SweepMssFvgRetrace',
+    model: 'NoInstalledSetup',
     direction: 'LONG',
     proofTime: '2026-07-22T09:10:00.0000000',
     entry: 7519.5,
@@ -61,7 +61,7 @@ const report = {
     date: '2026-07-22',
     session: 'lunch',
     state: 'APPROVED_DESK_PLAN',
-    model: 'IntradayMssMicroContinuation',
+    model: 'NoInstalledSetup',
     direction: 'LONG',
     proofTime: '2026-07-22T15:45:00.0000000',
     entry: 7540,
@@ -103,8 +103,8 @@ assert.equal(ready.summary.lunchRows, 1);
 assert.equal(ready.summary.discordPostRows, 0);
 assert.equal(ready.summary.supabaseWriteRows, 0);
 assert.equal(ready.summary.canExecuteTrueRows, 0);
-assert.equal(ready.rows[0].headline, 'Approved Desk Plan | MORNING | LONG | SweepMssFvgRetrace');
-assert.equal(ready.rows[1].model, 'IntradayMssMicroContinuation');
+assert.equal(ready.rows[0].headline, 'Approved Desk Plan | MORNING | LONG | NoInstalledSetup');
+assert.equal(ready.rows[1].model, 'NoInstalledSetup');
 
 const remote = buildUnifiedDeskOutputDisabledScannerRuntimePreview({
   explicitLocalPreviewFlag: true,

@@ -27,8 +27,8 @@ const formalReplay = {
   reportType: 'formal_replay_research',
   gapAnalysis: {
     bySetup: {
-      raidReclaim: { count: 7, grossOneMes: -217.5 },
-      SweepMssFvgRetrace: { count: 2, grossOneMes: -232.5 },
+      historicalReview: { count: 7, grossOneMes: -217.5 },
+      NoInstalledSetup: { count: 2, grossOneMes: -232.5 },
     },
   },
 };
@@ -57,15 +57,15 @@ const ohlcOutcome: UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport = {
     unresolvedRows: 0,
     blockedRows: 0,
     grossResolvedOneMesPl: 505,
-    raidReclaimResolvedOneMesPl: 193.75,
-    sweepMssFvgRetraceResolvedOneMesPl: 311.25,
+    historicalReviewResolvedOneMesPl: 193.75,
+    NoInstalledSetupResolvedOneMesPl: 311.25,
     livePromotionAllowedRows: 0,
   },
   rows: [
-    { setupType: 'raidReclaim', resolvedOneMesPl: 43.75 },
-    { setupType: 'raidReclaim', resolvedOneMesPl: 65 },
-    { setupType: 'raidReclaim', resolvedOneMesPl: 85 },
-    { setupType: 'SweepMssFvgRetrace', resolvedOneMesPl: 311.25 },
+    { setupType: 'historicalReview', resolvedOneMesPl: 43.75 },
+    { setupType: 'historicalReview', resolvedOneMesPl: 65 },
+    { setupType: 'historicalReview', resolvedOneMesPl: 85 },
+    { setupType: 'NoInstalledSetup', resolvedOneMesPl: 311.25 },
   ] as UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport['rows'],
   blockers: [],
   recommendations: [],
@@ -90,9 +90,9 @@ assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.ok(report.rows.every((row) => row.removeModel === false));
 assert.ok(report.rows.every((row) => row.broadenLiveBehavior === false));
 assert.ok(report.rows.every((row) => row.changeCanExecute === false));
-assert.equal(report.rows.find((row) => row.setupType === 'raidReclaim')?.priorNonStrict.grossOneMes, -217.5);
-assert.equal(report.rows.find((row) => row.setupType === 'raidReclaim')?.reviewedHeldLocal.grossOneMes, 193.75);
-assert.equal(report.rows.find((row) => row.setupType === 'SweepMssFvgRetrace')?.reviewedHeldLocal.grossOneMes, 311.25);
+assert.equal(report.rows.find((row) => row.setupType === 'historicalReview')?.priorNonStrict.grossOneMes, -217.5);
+assert.equal(report.rows.find((row) => row.setupType === 'historicalReview')?.reviewedHeldLocal.grossOneMes, 193.75);
+assert.equal(report.rows.find((row) => row.setupType === 'NoInstalledSetup')?.reviewedHeldLocal.grossOneMes, 311.25);
 assert.match(report.markdown, /does not post Discord/);
 
 const missing = buildUnifiedPositiveHeldLocalPreviewModelDecisionReport({

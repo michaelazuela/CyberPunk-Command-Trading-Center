@@ -173,16 +173,16 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
   generatedAt = new Date().toISOString()
 ): RawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSelectorRuntimeSignalShadowDryRunReport {
   const candidates: Record<string, SetupCandidate> = {
-    'sweep-long': candidate({ setupType: SetupType.SweepMssFvgRetrace, direction: 'LONG', priority: 82, riskPoints: 4.5 }),
-    'opening-long': candidate({ setupType: SetupType.OpeningDriveFvgContinuation, direction: 'LONG', priority: 78, riskPoints: 4.25 }),
-    'sweep-short-lunch': candidate({ setupType: SetupType.SweepMssFvgRetrace, direction: 'SHORT', priority: 80, riskPoints: 4.75 }),
-    'after-lunch-short': candidate({ setupType: SetupType.AfterLunchDriveFvgContinuation, direction: 'SHORT', priority: 79, riskPoints: 4.5 }),
+    'sweep-long': candidate({ setupType: SetupType.NoSetup, direction: 'LONG', priority: 82, riskPoints: 4.5 }),
+    'opening-long': candidate({ setupType: SetupType.NoSetup, direction: 'LONG', priority: 78, riskPoints: 4.25 }),
+    'sweep-short-lunch': candidate({ setupType: SetupType.NoSetup, direction: 'SHORT', priority: 80, riskPoints: 4.75 }),
+    'after-lunch-short': candidate({ setupType: SetupType.NoSetup, direction: 'SHORT', priority: 79, riskPoints: 4.5 }),
   };
   const refs: CompletedFiveMinuteProofSelectionSignalRef[] = [
-    { candidateKey: 'sweep-long', setupType: SetupType.SweepMssFvgRetrace, direction: 'LONG', sessionType: 'morning', completedBarTime: '2026-07-01T14:05:00.000Z' },
-    { candidateKey: 'opening-long', setupType: SetupType.OpeningDriveFvgContinuation, direction: 'LONG', sessionType: 'morning', completedBarTime: '2026-07-01T14:05:00.000Z' },
-    { candidateKey: 'sweep-short-lunch', setupType: SetupType.SweepMssFvgRetrace, direction: 'SHORT', sessionType: 'lunch', completedBarTime: '2026-07-01T17:05:00.000Z' },
-    { candidateKey: 'after-lunch-short', setupType: SetupType.AfterLunchDriveFvgContinuation, direction: 'SHORT', sessionType: 'lunch', completedBarTime: '2026-07-01T17:05:00.000Z' },
+    { candidateKey: 'sweep-long', setupType: SetupType.NoSetup, direction: 'LONG', sessionType: 'morning', completedBarTime: '2026-07-01T14:05:00.000Z' },
+    { candidateKey: 'opening-long', setupType: SetupType.NoSetup, direction: 'LONG', sessionType: 'morning', completedBarTime: '2026-07-01T14:05:00.000Z' },
+    { candidateKey: 'sweep-short-lunch', setupType: SetupType.NoSetup, direction: 'SHORT', sessionType: 'lunch', completedBarTime: '2026-07-01T17:05:00.000Z' },
+    { candidateKey: 'after-lunch-short', setupType: SetupType.NoSetup, direction: 'SHORT', sessionType: 'lunch', completedBarTime: '2026-07-01T17:05:00.000Z' },
   ];
   const signals = buildCompletedFiveMinuteProofSelectionSignals(refs);
   const beforeRanks = Object.fromEntries(Object.entries(candidates).map(([candidateKey, value]) => [

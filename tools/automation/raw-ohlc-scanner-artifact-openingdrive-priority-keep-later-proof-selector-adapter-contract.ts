@@ -37,7 +37,7 @@ export interface RawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSelecto
   };
   adapterContract: {
     name: 'openingdrive_sweep_keep_later_proof_selector_adapter_contract';
-    modelScope: 'SweepMssFvgRetrace';
+    modelScope: 'NoInstalledSetup';
     selectorScope: 'keep_later_sweep_proof_only';
     approvalRequiredBeforeRuntimeImplementation: true;
     implementationAllowedNow: false;
@@ -274,7 +274,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
     },
     adapterContract: {
       name: 'openingdrive_sweep_keep_later_proof_selector_adapter_contract',
-      modelScope: 'SweepMssFvgRetrace',
+      modelScope: 'NoInstalledSetup',
       selectorScope: 'keep_later_sweep_proof_only',
       approvalRequiredBeforeRuntimeImplementation: true,
       implementationAllowedNow: false,
@@ -283,7 +283,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
       allowedInputs: [
         'Saved strict-ready replay rows only.',
         'Saved dry-run/preflight summary fields only.',
-        'Candidate setupType must be SweepMssFvgRetrace.',
+        'Candidate setupType must be NoInstalledSetup.',
         'Candidate selector decision must be keep_later_sweep_proof.',
         'Candidate bars source must already be completed 5M scanner-decision tape evidence.',
         'Candidate must already have deterministic app-owned entry, protected stop, T1, T2, and outcome evidence in saved reports.',
@@ -295,7 +295,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
         'No setupScanner runtime execution or scanner-visible ranking.',
         'No canExecute changes or trader-facing executable instruction changes.',
         'No entry, stop, target, risk, invalidation, target-room, or session-window math changes.',
-        'No broadening to raidReclaim, RaidReclaimReversal, HTF displacement, OpeningDriveFvgContinuation, AfterLunchDriveFvgContinuation, IntradayMssMicroContinuation, or any other model family.',
+        'No broadening to archived model families or any other model family.',
       ],
       requiredRegressionCommands: [
         'npx tsx tools/automation/raw-ohlc-scanner-artifact-openingdrive-priority-keep-later-proof-selector-implementation-preflight.test.ts',
@@ -311,7 +311,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
       ],
       implementationInvariants: [
         'The adapter contract is research-only and cannot be imported by app runtime or scanner runtime in this phase.',
-        'SweepMssFvgRetrace is the only model in scope.',
+        'NoInstalledSetup is the only model in scope.',
         'The adapter may prefer keep_later_sweep_proof only inside saved-artifact dry-run selection, not live scanner selection.',
         '5M completed proof remains execution authority; HTF remains context/support/caution only.',
         'canExecute remains internal/audit-only and must not be loosened or replaced by confidence ranking.',

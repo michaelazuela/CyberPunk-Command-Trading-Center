@@ -123,8 +123,8 @@ const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
 const DEFAULT_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const POINT_VALUE = 5;
 const TARGET_CAPS = [
-  { setupType: 'IntradayMssMicroContinuation', riskCapPoints: 7 },
-  { setupType: 'raidReclaim', riskCapPoints: 10 },
+  { setupType: 'NoInstalledSetup', riskCapPoints: 7 },
+  { setupType: 'historicalReview', riskCapPoints: 10 },
 ];
 
 function readFlag(args: string[], flag: string): string | null {
@@ -381,7 +381,7 @@ export function buildUnifiedPositiveHeldLocalPreviewBroadRiskCapValidationReport
   const blockers = [
     !args.intakeTriagePath ? 'missing intake triage path' : null,
     !args.intakeTriageReport ? 'missing intake triage report' : null,
-    targetRows.length === 0 ? 'no IntradayMssMicroContinuation or raidReclaim target rows found' : null,
+    targetRows.length === 0 ? 'no NoInstalledSetup or historicalReview target rows found' : null,
     rows.filter((row) => row.outcomeBucket === 'blocked').length > 0 ? 'one or more target rows could not be replayed from local tape' : null,
   ].filter((item): item is string => Boolean(item));
   const base: Omit<UnifiedPositiveHeldLocalPreviewBroadRiskCapValidationReport, 'markdown'> = {

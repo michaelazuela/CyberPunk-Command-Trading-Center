@@ -95,7 +95,7 @@ function sourceFiles(rootDir: string): string[] {
 
 function baseCandidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.SweepMssFvgRetrace,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Phase 9E watch-to-plan promotion fixture',
     activeRuleset: {
       htfLineInSand: {

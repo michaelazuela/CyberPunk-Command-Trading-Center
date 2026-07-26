@@ -82,10 +82,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
 const TARGET_SETUPS = new Set<string>([
-  SetupType.OpeningDriveFvgContinuation,
-  SetupType.AfterLunchDriveFvgContinuation,
-  SetupType.IntradayMssMicroContinuation,
-  SetupType.SweepMssFvgRetrace,
+  SetupType.NoSetup,
+  SetupType.NoSetup,
+  SetupType.NoSetup,
+  SetupType.NoSetup,
 ]);
 
 function readFlag(args: string[], flag: string): string | null {

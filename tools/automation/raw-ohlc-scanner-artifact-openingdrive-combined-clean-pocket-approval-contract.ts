@@ -72,7 +72,7 @@ export interface RawOhlcScannerArtifactOpeningDriveCombinedCleanPocketApprovalCo
   };
   gates: Gate[];
   proposedScannerVisibleBehavior: {
-    model: 'OpeningDriveFvgContinuation';
+    model: 'NoInstalledSetup';
     proposedPackage: 'fine_risk_plus_all_live_zero_loss_tight_buckets';
     implementationAllowedNow: false;
     requiredFutureApproval: true;
@@ -236,11 +236,11 @@ export function buildRawOhlcScannerArtifactOpeningDriveCombinedCleanPocketApprov
     },
     gates,
     proposedScannerVisibleBehavior: {
-      model: 'OpeningDriveFvgContinuation',
+      model: 'NoInstalledSetup',
       proposedPackage: TARGET_SCENARIO,
       implementationAllowedNow: false,
       requiredFutureApproval: true,
-      description: 'Future proposal would prefer OpeningDriveFvgContinuation candidates that match fine_risk_24_to_32 or the validated live-usable tight-long zero-loss buckets; it would not use date buckets, loosen canExecute, or change entry/stop/target/risk math.',
+      description: 'Future proposal would prefer NoInstalledSetup candidates that match fine_risk_24_to_32 or the validated live-usable tight-long zero-loss buckets; it would not use date buckets, loosen canExecute, or change entry/stop/target/risk math.',
     },
     blockers,
     recommendations: decision === 'approved_for_research_proposal_only'

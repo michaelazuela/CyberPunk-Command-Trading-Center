@@ -202,8 +202,8 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewSweepInvalidS
     `- Current source computes directional stop: ${report.summary.currentSourceComputesDirectionalStop}.`,
     `- Current source requires app targets: ${report.summary.currentSourceRequiresTargets}.`,
     `- Current source has makeCandidate directional guard: ${report.summary.currentSourceHasMakeCandidateDirectionalGuard}.`,
-    `- Current source can return missing-stop ICT Model 1: ${report.summary.currentSourceCanReturnMissingStopIctModelOne}.`,
-    `- Current source can return wrong-side-stop ICT Model 1: ${report.summary.currentSourceCanReturnWrongSideStopIctModelOne}.`,
+    `- Current source can return missing-stop ICT no installed model path: ${report.summary.currentSourceCanReturnMissingStopIctModelOne}.`,
+    `- Current source can return wrong-side-stop ICT no installed model path: ${report.summary.currentSourceCanReturnWrongSideStopIctModelOne}.`,
     `- Runtime fix justified: ${report.summary.runtimeFixJustified}.`,
     `- Recommendation: ${report.summary.recommendation}.`,
     '',
@@ -294,7 +294,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepInvalidStopProvenanceAu
     blockers,
     recommendations: [
       currentBuilderLooksGuarded
-        ? 'Do not change conditionalPlanBuilder from this evidence alone; current ICT Model 1 source requires sweep extreme, directional stop, and app targets before returning a candidate.'
+        ? 'Do not change conditionalPlanBuilder from this evidence alone; current ICT no installed model path source requires sweep extreme, directional stop, and app targets before returning a candidate.'
         : 'Current source guard signatures are incomplete; reproduce through current buildConditionalPlans before any fix.',
       'Treat saved invalid-stop Sweep rows as package/provenance evidence until a current-code reproduction proves otherwise.',
       'Refresh replay/raw scanner packages before any runtime filter, rank change, or source-geometry code change is proposed.',

@@ -4,7 +4,7 @@ This document records the setup scan workflow for the MES/MNQ trading decision-s
 
 ## Purpose
 
-The app must evaluate the current active primary setup models on every analysis run. Supporting evidence can strengthen or weaken those candidates, but it does not create a separate executable setup.
+The app must evaluate the current active primary setup models on every analysis run. historical context can strengthen or weaken those candidates, but it does not create a separate executable setup.
 
 AI may extract visible chart context. The app must own setup scanning, execution approval, ranking, and final trade selection.
 
@@ -13,9 +13,9 @@ AI may extract visible chart context. The app must own setup scanning, execution
 The setup scanner creates active candidates only for the current primary models:
 
 - Sweep -> MSS -> FVG Retrace
-- Raid Reclaim Reversal Reversal
+- no installed model path
 
-Supporting evidence may contribute facts, reasons, missing evidence, tags, notes, and scoring signals:
+historical context may contribute facts, reasons, missing evidence, tags, notes, and scoring signals:
 
 - Liquidity Sweep
 - Fair Value Gap / Imbalance
@@ -58,7 +58,7 @@ Every active primary setup candidate should produce a structured `SetupCandidate
 - `nextAction`
 - `reducedRiskPlan`
 
-Supporting evidence should be attached to the relevant primary candidate rather than emitted as a third executable model.
+historical context should be attached to the relevant primary candidate rather than emitted as a third executable model.
 
 ## Execution Status
 
@@ -144,7 +144,7 @@ Confidence: High
 Execution: Conditional
 Reason: Waiting for retrace into imbalance
 
-2. Raid Reclaim Reversal Reversal
+2. no installed model path
 Status: Possible
 Direction: Short
 Confidence: Medium
@@ -152,7 +152,7 @@ Execution: NotDetected
 Reason: Sweep/reclaim sequence not complete
 
 3. Liquidity Sweep
-Status: Supporting evidence only
+Status: historical context only
 
 Best Trade Opportunity:
 Conditional Sweep -> MSS -> FVG Retrace Long
@@ -161,7 +161,7 @@ Conditional Sweep -> MSS -> FVG Retrace Long
 ## Non-Negotiables
 
 - The app evaluates active primary setup models every time.
-- Supporting evidence is not a standalone executable setup.
+- historical context is not a standalone executable setup.
 - Deprecated setup families must not create active candidates.
 - Setup detection is separate from execution approval.
 - `RiskTooWide` blocks execution only.

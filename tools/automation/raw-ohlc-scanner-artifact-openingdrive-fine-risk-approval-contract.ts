@@ -58,7 +58,7 @@ export interface RawOhlcScannerArtifactOpeningDriveFineRiskApprovalContractRepor
     promotionDisabled: true;
   };
   proposedResearchBoundary: {
-    setupType: 'OpeningDriveFvgContinuation';
+    setupType: 'NoInstalledSetup';
     selector: 'fine_risk_24_to_32';
     scannerVisibleNow: false;
     requiresFutureApprovalGate: true;
@@ -268,7 +268,7 @@ export function buildRawOhlcScannerArtifactOpeningDriveFineRiskApprovalContractR
       promotionDisabled: true,
     },
     proposedResearchBoundary: {
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       selector: 'fine_risk_24_to_32',
       scannerVisibleNow: false,
       requiresFutureApprovalGate: true,

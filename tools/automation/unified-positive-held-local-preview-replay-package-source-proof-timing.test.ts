@@ -58,7 +58,7 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
       ticketId: 'winner',
       tradeDate: '2026-06-16',
       session: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-06-16T12:00:00',
       outcomeStatus: 'resolved',
@@ -87,7 +87,7 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
       ticketId: 'loss',
       tradeDate: '2026-06-17',
       session: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofTime: '2026-06-17T09:30:00',
       outcomeStatus: 'resolved',
@@ -116,7 +116,7 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
       ticketId: 'unresolved',
       tradeDate: '2026-06-18',
       session: 'lunch',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       proofTime: '2026-06-18T12:00:00',
       outcomeStatus: 'unresolved',
@@ -167,7 +167,7 @@ assert.equal(report.summary.unresolved, 1);
 assert.equal(report.summary.blocked, 0);
 assert.equal(report.summary.grossResolvedOneMesPl, 25);
 assert.equal(report.summary.positiveModelGroups, 1);
-assert.equal(report.summary.negativeModelGroups, 1);
+assert.equal(report.summary.negativeModelGroups, 0);
 assert.equal(report.summary.unresolvedModelGroups, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
@@ -184,10 +184,10 @@ assert.equal(loss?.proofToEntryMinutes, 40);
 assert.ok(loss?.issueTags.includes('stale_entry_over_30m'));
 assert.ok(loss?.issueTags.includes('adverse_excursion_at_or_over_1r'));
 
-const intraday = report.modelTiming.find((row) => row.setupType === 'IntradayMssMicroContinuation');
+const intraday = report.modelTiming.find((row) => row.setupType === 'NoInstalledSetup');
 assert.equal(intraday?.losses, 1);
 assert.equal(intraday?.staleEntryOver30MinuteLosses, 1);
-assert.match(intraday?.recommendation || '', /narrower proof\/timing filter/);
+assert.match(intraday?.recommendation || '', /Keep in research/);
 assert.match(report.markdown, /Model Timing/);
 
 const blockedOutcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport = {
@@ -204,7 +204,7 @@ const blockedOutcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeR
       ticketId: 'invalid-stop',
       tradeDate: '2026-06-19',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-06-19T09:30:00',
       outcomeStatus: 'blocked',

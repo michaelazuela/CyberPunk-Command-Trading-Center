@@ -7,9 +7,9 @@ import { buildUnifiedPositiveHeldLocalInspectionSurfaceReport } from './unified-
 
 const artifact = buildHeldLocalReviewTicketArtifact({
   ticketId: 'fixture-ticket',
-  setupType: SetupType.SweepMssFvgRetrace,
+  setupType: SetupType.NoSetup,
   direction: 'SHORT',
-  sourceCandidateKey: 'SweepMssFvgRetrace|fixture|SHORT|100.00|0',
+  sourceCandidateKey: 'NoInstalledSetup|fixture|SHORT|100.00|0',
   entry: 100,
   stop: 104,
   target1: 94,
@@ -55,7 +55,7 @@ const adapterReport = {
       ticketId: 'fixture-ticket',
       sourceSnapshotId: 'scanner-fixture',
       session: null,
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       adapterStatus: 'held_local_artifact_created',
       artifact,
@@ -107,7 +107,7 @@ const dryRunReplay = {
       ticketId: 'fixture-ticket',
       sourceSnapshotId: 'scanner-fixture',
       session: null,
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       normalDeskOutput: {
         sourceOfTruth: 'scanner_desk_state_normal_output_preserved',
@@ -172,7 +172,7 @@ assert.equal(report.rows[0].heldLocalTicket?.t1, 94);
 assert.equal(report.rows[0].heldLocalTicket?.t2, 92);
 assert.equal(report.rows[0].heldLocalTicket?.invalidationText, 'Invalid if price trades above the protected 5M stop line at 104.00. No automated order authority is granted.');
 assert.equal(report.rows[0].boundaries.dryRunZeroLivePublishBehaviorChange, true);
-assert.equal(report.rows[0].deskText?.what, 'SweepMssFvgRetrace SHORT held-local ACTIVE_REVIEW ticket.');
+assert.equal(report.rows[0].deskText?.what, 'NoInstalledSetup SHORT held-local ACTIVE_REVIEW ticket.');
 assert.equal(report.rows[0].deskText?.invalidation, 'Invalid if price trades above the protected 5M stop line at 104.00. No automated order authority is granted.');
 assert.match(report.markdown, /Inspectable tickets: 1/);
 assert.match(report.markdown, /Invalid if price trades above the protected 5M stop line at 104.00/);

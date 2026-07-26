@@ -43,7 +43,7 @@ interface DayByDayReport {
 interface SessionRecommendation {
   session: SessionName;
   primaryLane: string | null;
-  supportingLanes: string[];
+  contextLanes: string[];
 }
 
 interface LaneComparisonReport {
@@ -66,8 +66,8 @@ interface DeskOutputRow {
   riskPoints: number | null;
   movement: string;
   primaryLane: string;
-  supportingModels: string[];
-  sourceCandidateRole: 'primary_lane' | 'supporting_lane';
+  contextLabels: string[];
+  sourceCandidateRole: 'primary_lane' | 'context_lane';
   deskLanguage: {
     headline: string;
     what: string;
@@ -109,7 +109,7 @@ interface UnifiedDeskOutputSelectorPreviewReport {
     morningMaxVisibleOutputs: 1;
     lunchMaxVisibleOutputs: 1;
     approvedPlanRequiresPrimaryLane: true;
-    formingReadAllowsSupportingLane: true;
+    formingReadAllowsContextLane: true;
     silentWhenNoUsefulCandidate: true;
     noHumanReviewWording: true;
   };
@@ -173,7 +173,7 @@ function sessionRecommendation(report: LaneComparisonReport, session: SessionNam
   return report.sessionRecommendations.find((item) => item.session === session) || {
     session,
     primaryLane: null,
-    supportingLanes: [],
+    contextLanes: [],
   };
 }
 
@@ -197,11 +197,11 @@ function candidateForOutput(row: DayByDayRow, recommendation: SessionRecommendat
   if (primaryCandidate) {
     return { candidate: primaryCandidate, visibleState: 'APPROVED_DESK_PLAN', role: 'primary_lane' };
   }
-  const supportingCandidate = candidates.find((candidate) => (
-    recommendation.supportingLanes.includes(candidate.setupType) || candidate.setupType !== primaryLane
+  const contextCandidate = candidates.find((candidate) => (
+    recommendation.contextLanes.includes(candidate.setupType) || candidate.setupType !== primaryLane
   )) || null;
-  if (supportingCandidate) {
-    return { candidate: supportingCandidate, visibleState: 'FORMING_DESK_READ', role: 'supporting_lane' };
+  if (contextCandidate) {
+    return { candidate: contextCandidate, visibleState: 'FORMING_DESK_READ', role: 'context_lane' };
   }
   return { candidate: null, visibleState: null, role: null };
 }
@@ -211,7 +211,7 @@ function buildLanguage(args: {
   row: DayByDayRow;
   candidate: SelectedCandidate;
   primaryLane: string;
-  supportingModels: string[];
+  contextLabels: string[];
 }): DeskOutputRow['deskLanguage'] {
   const proof = args.candidate.eventTime.slice(11, 16);
   if (args.state === 'APPROVED_DESK_PLAN') {
@@ -220,18 +220,18 @@ function buildLanguage(args: {
       what: `${args.row.session} primary lane is complete: ${args.candidate.setupType} ${args.candidate.direction}.`,
       where: `Entry ${args.candidate.entry}, stop ${args.candidate.stop}, T1 ${args.candidate.target1}, T2 ${args.candidate.target2}.`,
       when: `Completed 5M proof time ${proof} ET.`,
-      why: `Session movement=${args.row.movement}; primary lane=${args.primaryLane}; supporting models=${args.supportingModels.join(', ') || 'none'}.`,
+      why: `Session movement=${args.row.movement}; primary lane=${args.primaryLane}; context labels=${args.contextLabels.join(', ') || 'none'}.`,
       invalidation: `Invalid if price violates the protected 5M stop line at ${args.candidate.stop}.`,
       authority: 'Decision-support desk plan only. No automated orders. canExecute remains internal/audit-only and unchanged.',
     };
   }
   return {
     headline: `Forming Desk Read: ${args.candidate.setupType} ${args.candidate.direction}`,
-    what: `${args.row.session} has a valid supporting setup forming, but the primary approved lane is not complete in this saved window.`,
-    where: `Reference geometry from supporting setup: entry ${args.candidate.entry}, stop ${args.candidate.stop}, T1 ${args.candidate.target1}, T2 ${args.candidate.target2}.`,
-    when: `Supporting completed 5M proof time ${proof} ET.`,
+    what: `${args.row.session} has a valid context setup forming, but the primary approved lane is not complete in this saved window.`,
+    where: `Reference geometry from context setup: entry ${args.candidate.entry}, stop ${args.candidate.stop}, T1 ${args.candidate.target1}, T2 ${args.candidate.target2}.`,
+    when: `Context completed 5M proof time ${proof} ET.`,
     why: `Session movement=${args.row.movement}; waiting for primary lane=${args.primaryLane} to become the approved desk plan.`,
-    invalidation: `Supporting read is invalid if price violates the protected 5M stop line at ${args.candidate.stop}.`,
+    invalidation: `Context read is invalid if price violates the protected 5M stop line at ${args.candidate.stop}.`,
     authority: 'Anticipation layer only. It prepares the trader for a possible plan; it does not approve execution or place orders.',
   };
 }
@@ -243,9 +243,9 @@ function buildRows(dayByDayReport: DayByDayReport, laneReport: LaneComparisonRep
     if (!recommendation.primaryLane) continue;
     const selected = candidateForOutput(row, recommendation);
     if (!selected.candidate || !selected.visibleState || !selected.role) continue;
-    const supportingModels = [
+    const contextLabels = [
       ...new Set([
-        ...recommendation.supportingLanes,
+        ...recommendation.contextLanes,
         row.selected?.setupType,
         row.bestMovementMatch?.setupType,
         row.bestOverall?.setupType,
@@ -265,14 +265,14 @@ function buildRows(dayByDayReport: DayByDayReport, laneReport: LaneComparisonRep
       riskPoints: selected.candidate.riskPoints,
       movement: row.movement,
       primaryLane: recommendation.primaryLane,
-      supportingModels,
+      contextLabels,
       sourceCandidateRole: selected.role,
       deskLanguage: buildLanguage({
         state: selected.visibleState,
         row,
         candidate: selected.candidate,
         primaryLane: recommendation.primaryLane,
-        supportingModels,
+        contextLabels,
       }),
       canExecuteVisible: false,
       canExecuteChanged: false,
@@ -353,7 +353,7 @@ export function buildUnifiedDeskOutputSelectorPreviewReport(args: {
       morningMaxVisibleOutputs: 1,
       lunchMaxVisibleOutputs: 1,
       approvedPlanRequiresPrimaryLane: true,
-      formingReadAllowsSupportingLane: true,
+      formingReadAllowsContextLane: true,
       silentWhenNoUsefulCandidate: true,
       noHumanReviewWording: true,
     },

@@ -10,7 +10,7 @@ function row(overrides: Record<string, unknown>) {
     ticketId: 'ticket',
     tradeDate: '2026-06-03',
     session: 'morning',
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'SHORT',
     riskBand: 'risk_8_to_16',
     proofTime: '2026-06-03T09:40:00',

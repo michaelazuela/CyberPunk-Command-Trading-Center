@@ -328,7 +328,7 @@ function analyzeSnapshot(
   const currentItem = currentSelectedKey
     ? book.candidates.find((candidate) => candidate.candidateKey === currentSelectedKey) || null
     : null;
-  const comparison: SelectionComparison = !snapshot.candidates.length
+  const comparison: SelectionComparison = !snapshot.candidates.length || !primary
     ? 'no_candidates'
     : !currentSelectedKey
       ? 'current_missing'

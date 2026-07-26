@@ -81,7 +81,7 @@ const oosPackage = {
       ticketId: 'selected-best',
       tradeDate: '2026-07-17',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-17T10:00:00',
       riskPoints: 26.25,
@@ -95,7 +95,7 @@ const oosPackage = {
       ticketId: 'selected-no-competitor',
       tradeDate: '2026-07-17',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-17T10:40:00',
       riskPoints: 4.25,
@@ -123,10 +123,10 @@ const samebarReport = {
   modelSummaries: [],
   timeBuckets: [],
   rows: [
-    samebarRow({ ticketId: 'selected-best', proofTime: '2026-07-17T10:00:00', setupType: 'OpeningDriveFvgContinuation', oneMesPl: 198.13, outcomeLabel: 't1_hit_only', riskPoints: 26.25 }),
-    samebarRow({ ticketId: 'competitor-loss', proofTime: '2026-07-17T10:00:00', setupType: 'raidReclaim', oneMesPl: -30, outcomeLabel: 'stopped_before_t1' }),
-    samebarRow({ ticketId: 'competitor-smaller-win', proofTime: '2026-07-17T10:00:00', setupType: 'IntradayMssMicroContinuation', oneMesPl: 80 }),
-    samebarRow({ ticketId: 'selected-no-competitor', proofTime: '2026-07-17T10:40:00', setupType: 'OpeningDriveFvgContinuation', oneMesPl: 42.5 }),
+    samebarRow({ ticketId: 'selected-best', proofTime: '2026-07-17T10:00:00', setupType: 'NoInstalledSetup', oneMesPl: 198.13, outcomeLabel: 't1_hit_only', riskPoints: 26.25 }),
+    samebarRow({ ticketId: 'competitor-loss', proofTime: '2026-07-17T10:00:00', setupType: 'historicalReview', oneMesPl: -30, outcomeLabel: 'stopped_before_t1' }),
+    samebarRow({ ticketId: 'competitor-smaller-win', proofTime: '2026-07-17T10:00:00', setupType: 'NoInstalledSetup', oneMesPl: 80 }),
+    samebarRow({ ticketId: 'selected-no-competitor', proofTime: '2026-07-17T10:40:00', setupType: 'NoInstalledSetup', oneMesPl: 42.5 }),
   ],
   blockers: [],
   recommendations: [],
@@ -155,7 +155,7 @@ assert.equal(report.summary.selectedOneMesPl, 240.63);
 assert.equal(report.summary.bestCompetingOneMesPl, 80);
 assert.equal(report.summary.deltaVsBestCompetingOneMesPl, 160.63);
 assert.equal(report.summary.recommendation, 'keep_installed_overlay_and_continue_live_observation');
-assert.equal(report.rows.find((row) => row.selectedTicketId === 'selected-best')?.bestCompetingSetupType, 'IntradayMssMicroContinuation');
+assert.equal(report.rows.find((row) => row.selectedTicketId === 'selected-best')?.bestCompetingSetupType, 'NoInstalledSetup');
 assert.equal(report.rows.find((row) => row.selectedTicketId === 'selected-no-competitor')?.collisionVerdict, 'selected_clean_no_competitor');
 assert.match(report.markdown, /OpeningDrive OOS Collision Comparison/);
 
@@ -166,9 +166,9 @@ const lagging = buildRawOhlcScannerArtifactOpeningDriveOosCollisionComparisonRep
   samebarReportPayloads: [{
     ...samebarReport,
     rows: [
-      samebarRow({ ticketId: 'selected-best', proofTime: '2026-07-17T10:00:00', setupType: 'OpeningDriveFvgContinuation', oneMesPl: 198.13, outcomeLabel: 't1_hit_only', riskPoints: 26.25 }),
-      samebarRow({ ticketId: 'competitor-bigger', proofTime: '2026-07-17T10:00:00', setupType: 'raidReclaim', oneMesPl: 250 }),
-      samebarRow({ ticketId: 'selected-no-competitor', proofTime: '2026-07-17T10:40:00', setupType: 'OpeningDriveFvgContinuation', oneMesPl: 42.5 }),
+      samebarRow({ ticketId: 'selected-best', proofTime: '2026-07-17T10:00:00', setupType: 'NoInstalledSetup', oneMesPl: 198.13, outcomeLabel: 't1_hit_only', riskPoints: 26.25 }),
+      samebarRow({ ticketId: 'competitor-bigger', proofTime: '2026-07-17T10:00:00', setupType: 'historicalReview', oneMesPl: 250 }),
+      samebarRow({ ticketId: 'selected-no-competitor', proofTime: '2026-07-17T10:40:00', setupType: 'NoInstalledSetup', oneMesPl: 42.5 }),
     ],
   }],
 }, '2026-07-19T00:03:00.000Z');

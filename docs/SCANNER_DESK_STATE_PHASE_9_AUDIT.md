@@ -20,7 +20,7 @@ The audit is generated from `SETUP_REGISTRY` and reports each registered model's
 - `canExecute` relationship
 - known suppression paths
 
-Deprecated entries remain inventoried but are marked non-Discord and non-execution eligible. Supporting-evidence entries remain watch/context metadata only. Human-review-only primary models remain non-execution eligible unless an existing app-owned deterministic path separately allows `canExecute`.
+Deprecated entries remain inventoried but are marked non-Discord and non-execution eligible. Context-evidence entries remain watch/context metadata only. Human-review-only primary models remain non-execution eligible unless an existing app-owned deterministic path separately allows `canExecute`.
 
 ## Phase 9B: Candidate Lifecycle Trace
 

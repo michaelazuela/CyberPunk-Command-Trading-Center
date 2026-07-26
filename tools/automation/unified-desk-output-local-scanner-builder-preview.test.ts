@@ -14,9 +14,9 @@ const row = (visibleState: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ', model: st
   target2: 108,
   riskPoints: 4,
   movement: 'bullish_drive',
-  primaryLane: session === 'morning' ? 'OpeningDriveFvgContinuation' : 'AfterLunchDriveFvgContinuation',
-  supportingModels: ['IntradayMssMicroContinuation'],
-  sourceCandidateRole: visibleState === 'APPROVED_DESK_PLAN' ? 'primary_lane' as const : 'supporting_lane' as const,
+  primaryLane: session === 'morning' ? 'NoInstalledSetup' : 'NoInstalledSetup',
+  contextLabels: ['NoInstalledSetup'],
+  sourceCandidateRole: visibleState === 'APPROVED_DESK_PLAN' ? 'primary_lane' as const : 'context_lane' as const,
   deskLanguage: {
     headline: visibleState === 'APPROVED_DESK_PLAN'
       ? `Approved Desk Plan: ${model} LONG`
@@ -36,8 +36,8 @@ const report = buildUnifiedDeskOutputLocalScannerBuilderPreviewReport({
     reportType: 'unified_desk_output_selector_preview',
     generatedAt: '2026-07-22T00:00:00.000Z',
     rows: [
-      row('APPROVED_DESK_PLAN', 'OpeningDriveFvgContinuation', 'morning'),
-      row('FORMING_DESK_READ', 'IntradayMssMicroContinuation', 'lunch'),
+      row('APPROVED_DESK_PLAN', 'NoInstalledSetup', 'morning'),
+      row('FORMING_DESK_READ', 'NoInstalledSetup', 'lunch'),
     ],
   },
 }, '2026-07-22T01:00:00.000Z');

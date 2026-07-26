@@ -251,7 +251,7 @@ export function buildNoChaseRebuiltReviewLiveProposalReport(args: {
       requiresFutureApprovalGate: true,
       rollbackPath: 'No runtime rollback is required because this package does not install scanner-visible behavior. A future approved implementation must be removable by deleting only its adapter/wiring while preserving deterministic gates.',
       criteria: [
-        { name: 'source model family', required: true, value: 'IntradayMssMicroContinuation or AfterLunchDriveFvgContinuation only' },
+        { name: 'source model family', required: true, value: 'NoInstalledSetup or NoInstalledSetup only' },
         { name: '5M proof', required: true, value: 'completed OHLC proof found after the original no-chase state' },
         { name: 'plan fields', required: true, value: 'deterministic entry, stop, T1, and T2 are complete' },
         { name: 'HTF context', required: true, value: '30-day structured 5M/15M/60M/120M/240M context sufficient' },
@@ -263,7 +263,7 @@ export function buildNoChaseRebuiltReviewLiveProposalReport(args: {
         'Do not write Supabase or journal/RAG records from this package.',
         'Do not change entry, stop, T1, T2, risk, invalidation, or target-room math.',
         'Do not make HTF context execution authority.',
-        'Do not broaden to raidReclaim, SweepMssFvgRetrace, OpeningDriveFvgContinuation, or other model families without separate replay evidence.',
+        'Do not broaden to historicalReview, NoInstalledSetup, NoInstalledSetup, or other model families without separate replay evidence.',
       ],
       requiredFutureProof: [
         'A separate approval checkpoint before any scanner-visible implementation.',

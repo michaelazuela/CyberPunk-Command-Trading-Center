@@ -13,7 +13,7 @@ const artifact = {
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'OpeningDriveFvgContinuation',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             candidateState: 'HUMAN_REVIEW_READY',
             humanReview: { status: 'HumanReviewReady' },
@@ -25,7 +25,7 @@ const artifact = {
             riskPoints: 8,
           },
           {
-            setupType: 'SweepMssFvgRetrace',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             modelConfidenceScore: 74,
             entry: 7539,
@@ -35,7 +35,7 @@ const artifact = {
             riskPoints: 8,
           },
           {
-            setupType: 'raidReclaim',
+            setupType: 'historicalReview',
             direction: 'SHORT',
           },
         ],
@@ -48,8 +48,8 @@ const artifact = {
       completed5m: { time: '2026-07-03T12:10:00' },
       setupCandidateStatus: {
         statuses: [
-          { setupType: 'AfterLunchDriveFvgContinuation', direction: 'LONG' },
-          { setupType: 'SweepMssFvgRetrace', direction: 'LONG' },
+          { setupType: 'NoInstalledSetup', direction: 'LONG' },
+          { setupType: 'NoInstalledSetup', direction: 'LONG' },
         ],
       },
     },
@@ -76,7 +76,7 @@ assert.equal(report.summary.groupsWithValidLevels, 1);
 assert.equal(report.summary.readyForPopulationMetadataInstallEvidence, true);
 assert.equal(report.summary.scannerVisiblePopulationAllowedByThisReport, false);
 assert.equal(report.summary.recommendation, 'real_artifact_collision_coverage_supports_population_metadata_checkpoint');
-assert.ok(report.pairSummary.some((row) => row.pair === 'OpeningDriveFvgContinuation+SweepMssFvgRetrace' && row.groups === 1));
+assert.ok(report.pairSummary.some((row) => row.pair === 'NoInstalledSetup+NoInstalledSetup' && row.groups === 1));
 assert.match(report.markdown, /Real-Artifact Collision Miner/);
 
 const blocked = buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSelectorRealArtifactCollisionMinerReport({

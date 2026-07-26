@@ -10,8 +10,8 @@ function row(overrides: Partial<UnifiedPositiveFresh5mProofRow> = {}): UnifiedPo
     snapshotId: 'fresh-a',
     tradeDate: '2026-07-01',
     sessionType: 'morning',
-    candidateKey: 'raidReclaim|fixture|LONG|100.00|0',
-    setupType: 'raidReclaim',
+    candidateKey: 'historicalReview|fixture|LONG|100.00|0',
+    setupType: 'historicalReview',
     direction: 'LONG',
     completedBarTime: '2026-07-01T10:00:00',
     entry: 100,
@@ -86,8 +86,8 @@ const freshProofReport: UnifiedPositiveFresh5mProofReport = {
     row({
       snapshotId: 'sweep',
       tradeDate: '2026-07-02',
-      setupType: 'SweepMssFvgRetrace',
-      candidateKey: 'SweepMssFvgRetrace|fixture|SHORT|200.00|0',
+      setupType: 'NoInstalledSetup',
+      candidateKey: 'NoInstalledSetup|fixture|SHORT|200.00|0',
       direction: 'SHORT',
       entry: 200,
       stop: 204,
@@ -131,7 +131,7 @@ assert.equal(report.summary.canExecuteFalseTickets, 2);
 assert.equal(report.summary.publishDiscordFalseTickets, 2);
 assert.equal(report.summary.reviewOnlyTickets, 2);
 
-const turtleTicket = report.tickets.find((ticket) => ticket.setupType === 'raidReclaim');
+const turtleTicket = report.tickets.find((ticket) => ticket.setupType === 'historicalReview');
 assert.equal(turtleTicket?.sourceSnapshotId, 'fresh-b');
 assert.deepEqual(turtleTicket?.suppressedDuplicateSnapshotIds, ['fresh-a']);
 assert.equal(turtleTicket?.duplicateRowsCollapsed, 1);

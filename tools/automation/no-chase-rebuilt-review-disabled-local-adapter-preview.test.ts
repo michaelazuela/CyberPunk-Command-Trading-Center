@@ -37,7 +37,7 @@ const proposal = {
     {
       tradeDate: '2026-06-17',
       sessionType: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       entry: 7580.25,
       stop: 7591.5,
@@ -52,7 +52,7 @@ const proposal = {
     {
       tradeDate: '2026-06-25',
       sessionType: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       entry: 7476.75,
       stop: 7487.5,
@@ -67,7 +67,7 @@ const proposal = {
     {
       tradeDate: '2026-06-26',
       sessionType: 'lunch',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       entry: 7433.75,
       stop: 7440.5,

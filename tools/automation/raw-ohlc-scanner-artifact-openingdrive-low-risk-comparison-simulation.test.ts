@@ -56,7 +56,7 @@ const lowRiskContract = {
     promotionDisabled: true,
   },
   proposedResearchBoundary: {
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     selector: 'low_risk_lt_4',
     scannerVisibleNow: false,
     requiresFutureApprovalGate: true,
@@ -98,7 +98,7 @@ const freshReplayPackage = {
   generatedAt: '2026-07-20T14:01:00.000Z',
   status: 'pass',
   authority,
-  source: { reportDir: 'reports', setupType: 'OpeningDriveFvgContinuation', samebarReportPaths: [] },
+  source: { reportDir: 'reports', setupType: 'NoInstalledSetup', samebarReportPaths: [] },
   assumptions: {
     savedReportsOnly: true,
     openingDriveOnly: true,

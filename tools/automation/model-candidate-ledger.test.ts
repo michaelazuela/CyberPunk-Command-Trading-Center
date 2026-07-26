@@ -29,7 +29,7 @@ function sample(id: string, concept: string, label: ResearchHumanInspectionLabel
     summary: 'Research-only reviewed sample.',
     whyAdvisoryOnly: 'Research-only. Existing gates did not independently pass.',
     model1Overlap: false,
-    raidReclaimOverlap: false,
+    historicalReversalOverlap: false,
     researchDetectorReason: 'fixture',
     warningFailureReason: 'fixture',
     dataQualityNotes: [],
@@ -394,7 +394,7 @@ assert.ok(markdown.includes('Reviewed files read: 1'));
 assert.ok(markdown.includes('unsupported_model_candidate_label: 2'));
 assert.ok(markdown.includes('Range-stamped JSON:'));
 assert.ok(markdown.includes('Boundary: research_only_not_execution_authority'));
-assert.ok(markdown.includes('supporting research/audit evidence only'));
+assert.ok(markdown.includes('context research/audit evidence only'));
 assert.ok(!/\b(approved model|live model|trade approved|profitable system|activate model|deploy|actual P\/L|net P\/L)\b/i.test(markdown));
 assert.ok(geminiPromptSource.includes('## Model-Candidate Recommendation Rule'));
 assert.ok(geminiPromptSource.includes('candidate_review_recommended means only'));
@@ -434,7 +434,7 @@ assert.equal(handoffJson.concepts.find((concept: { concept: string }) => concept
 assert.equal(handoffJson.concepts.find((concept: { concept: string }) => concept.concept === 'false_run_liquidity_fade').backtestReadiness.status, 'blocked_by_missing_evidence');
 assert.equal(handoffJson.concepts.every((concept: { backtestReadiness: { requiredBacktestDefinitions: Record<string, string> } }) =>
   Object.values(concept.backtestReadiness.requiredBacktestDefinitions).every((status) => status === 'missing')), true);
-assert.ok(handoffJson.concepts.find((concept: { concept: string }) => concept.concept === 'time_window_liquidity_delivery').supportingSamples.length === 4);
+assert.ok(handoffJson.concepts.find((concept: { concept: string }) => concept.concept === 'time_window_liquidity_delivery').contextSamples.length === 4);
 assert.ok(handoffMarkdown.includes('# Model-Candidate Backtest Handoff'));
 assert.ok(handoffMarkdown.includes('This report is a research-only handoff package'));
 assert.ok(handoffMarkdown.includes('Entry Model | missing'));
@@ -537,7 +537,7 @@ const watchlistOnlyHandoff = buildModelCandidateBacktestHandoff({
   }],
 });
 assert.equal(watchlistOnlyHandoff.concepts[0].backtestReadiness.status, 'watchlist_only');
-assert.equal(watchlistOnlyHandoff.concepts[0].supportingSamples.length, 0);
+assert.equal(watchlistOnlyHandoff.concepts[0].contextSamples.length, 0);
 assert.notEqual(watchlistOnlyHandoff.concepts[0].researchRecommendation.status, 'candidate_review_recommended');
 
 const lowApprovalInterpretation = interpretModelCandidateAdvisoryEvidence({

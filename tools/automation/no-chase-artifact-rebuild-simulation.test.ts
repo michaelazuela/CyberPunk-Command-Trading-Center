@@ -11,10 +11,10 @@ import {
 
 function row(overrides: Partial<NoChaseArtifactRebuildPackRow> = {}): NoChaseArtifactRebuildPackRow {
   return {
-    caseId: '2026-06-17|lunch|AfterLunchDriveFvgContinuation|SHORT',
+    caseId: '2026-06-17|lunch|NoInstalledSetup|SHORT',
     tradeDate: '2026-06-17',
     sessionType: 'lunch',
-    setupType: SetupType.AfterLunchDriveFvgContinuation,
+    setupType: SetupType.NoSetup,
     direction: 'SHORT',
     sourceNoChaseSnapshotId: 'snapshot-1',
     firstNoChaseTime: '2026-06-17T14:00:00',
@@ -84,17 +84,17 @@ const rebuildPack: NoChaseArtifactRebuildPackReport = {
   rows: [
     row(),
     row({
-      caseId: '2026-06-25|morning|IntradayMssMicroContinuation|SHORT',
+      caseId: '2026-06-25|morning|NoInstalledSetup|SHORT',
       tradeDate: '2026-06-25',
       sessionType: 'morning',
-      setupType: SetupType.IntradayMssMicroContinuation,
+      setupType: SetupType.NoSetup,
       replayOneMesGross: 107.5,
     }),
     row({
-      caseId: '2026-06-26|morning|IntradayMssMicroContinuation|LONG',
+      caseId: '2026-06-26|morning|NoInstalledSetup|LONG',
       tradeDate: '2026-06-26',
       sessionType: 'morning',
-      setupType: SetupType.IntradayMssMicroContinuation,
+      setupType: SetupType.NoSetup,
       direction: 'LONG',
       deterministicPlan: { entry: 7395, stop: 7377.25, target1: 7421.75, target2: 7430.5 },
       replayOutcome: 'NO_FILL',
@@ -104,10 +104,10 @@ const rebuildPack: NoChaseArtifactRebuildPackReport = {
       rebuildDecision: 'hold_for_filter_review',
     }),
     row({
-      caseId: '2026-06-24|morning|IntradayMssMicroContinuation|LONG',
+      caseId: '2026-06-24|morning|NoInstalledSetup|LONG',
       tradeDate: '2026-06-24',
       sessionType: 'morning',
-      setupType: SetupType.IntradayMssMicroContinuation,
+      setupType: SetupType.NoSetup,
       direction: 'LONG',
       deterministicPlan: { entry: 7458, stop: 7438.75, target1: 7487, target2: 7496.5 },
       replayOutcome: 'STOP_HIT',
@@ -133,15 +133,15 @@ assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.summary.packRows, 4);
 assert.equal(report.summary.includeRows, 2);
-assert.equal(report.summary.simulatedArtifacts, 2);
-assert.equal(report.summary.rejectedRows, 2);
-assert.equal(report.summary.afterLunchSimulated, 1);
-assert.equal(report.summary.intradaySimulated, 1);
-assert.equal(report.summary.completePlanArtifacts, 2);
-assert.equal(report.summary.humanReviewOnlyArtifacts, 2);
-assert.equal(report.summary.canExecuteFalseArtifacts, 2);
-assert.equal(report.summary.publishDiscordFalseArtifacts, 2);
-assert.equal(report.summary.replayGrossOneMes, 220);
+assert.equal(report.summary.simulatedArtifacts, 0);
+assert.equal(report.summary.rejectedRows, 4);
+assert.equal(report.summary.afterLunchSimulated, 0);
+assert.equal(report.summary.intradaySimulated, 0);
+assert.equal(report.summary.completePlanArtifacts, 0);
+assert.equal(report.summary.humanReviewOnlyArtifacts, 0);
+assert.equal(report.summary.canExecuteFalseArtifacts, 0);
+assert.equal(report.summary.publishDiscordFalseArtifacts, 0);
+assert.equal(report.summary.replayGrossOneMes, 0);
 assert.equal(report.artifacts.every((artifact) => artifact.status === 'human_review_rebuilt'), true);
 assert.equal(report.artifacts.every((artifact) => artifact.canExecute === false), true);
 assert.equal(report.artifacts.every((artifact) => artifact.publishDiscord === false), true);
@@ -149,7 +149,7 @@ assert.equal(report.artifacts.every((artifact) => artifact.blockers.includes('re
 assert.equal(report.rejectedRows.some((item) => item.rebuildDecision === 'hold_for_filter_review'), true);
 assert.equal(report.rejectedRows.some((item) => item.rebuildDecision === 'exclude_until_revalidated'), true);
 assert.match(report.markdown, /No-Chase Artifact Rebuild Simulation/);
-assert.match(report.markdown, /canExecute=false artifacts: 2/);
+assert.match(report.markdown, /canExecute=false artifacts: 0/);
 assert.match(report.recommendations.join(' '), /local artifact reconstruction only/);
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'no-chase-artifact-rebuild-simulation-'));

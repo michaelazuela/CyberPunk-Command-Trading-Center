@@ -7,8 +7,8 @@ const sourceProof = {
   status: 'pass',
   rows: [
     {
-      rowId: '2026-06-16-morning-raidReclaim-LONG',
-      setupType: 'raidReclaim',
+      rowId: '2026-06-16-morning-historicalReview-LONG',
+      setupType: 'historicalReview',
       direction: 'LONG',
       decision: 'accepted_for_research_validation',
     },
@@ -25,7 +25,7 @@ const historicalTape = {
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'raidReclaim',
+            setupType: 'historicalReview',
             direction: 'LONG',
             detectedStatus: 'Conditional',
             executionStatus: 'Conditional',
@@ -38,7 +38,7 @@ const historicalTape = {
             candidateState: 'HUMAN_REVIEW_READY',
           },
           {
-            setupType: 'OpeningDriveFvgContinuation',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             detectedStatus: 'Possible',
             executionStatus: 'Conditional',
@@ -51,7 +51,7 @@ const historicalTape = {
             candidateState: 'OPENING_OBSERVATION_ARMED',
           },
           {
-            setupType: 'SweepMssFvgRetrace',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             detectedStatus: 'Conditional',
             executionStatus: 'Executable',
@@ -64,7 +64,7 @@ const historicalTape = {
             candidateState: null,
           },
           {
-            setupType: 'IntradayMssMicroContinuation',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             detectedStatus: 'Possible',
             executionStatus: 'Conditional',
@@ -83,7 +83,7 @@ const historicalTape = {
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'OpeningDriveFvgContinuation',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             detectedStatus: 'Possible',
             executionStatus: 'Conditional',
@@ -111,7 +111,7 @@ const currentDayTape = {
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'raidReclaim',
+            setupType: 'historicalReview',
             direction: 'SHORT',
             detectedStatus: 'Conditional',
             executionStatus: 'Conditional',
@@ -161,12 +161,12 @@ assert.equal(report.summary.executableCandidatesIgnored, 1);
 assert.equal(report.summary.incompletePlanCandidatesIgnored, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
-const newCandidate = report.rows.find((row) => row.intakeId === '2026-06-16-morning-OpeningDriveFvgContinuation-SHORT');
+const newCandidate = report.rows.find((row) => row.intakeId === '2026-06-16-morning-NoInstalledSetup-SHORT');
 assert.equal(newCandidate?.intakeDecision, 'candidate_for_review_intake');
 assert.equal(newCandidate?.occurrences, 2);
 assert.match(newCandidate?.nextAction || '', /reviewed preview\/replay row/);
 
-const knownCandidate = report.rows.find((row) => row.intakeId === '2026-06-16-morning-raidReclaim-LONG');
+const knownCandidate = report.rows.find((row) => row.intakeId === '2026-06-16-morning-historicalReview-LONG');
 assert.equal(knownCandidate?.intakeDecision, 'already_processed');
 assert.match(report.markdown, /New review intake candidates: 1/);
 

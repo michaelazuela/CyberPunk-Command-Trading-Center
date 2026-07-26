@@ -84,6 +84,7 @@ export interface NoChaseHtfContextSufficiencyReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_OUT_DIR = path.join(__dirname, 'diagnostic-reports');
+const BLANK_SLATE_MODE = Object.values(SetupType).length === 1 && Object.values(SetupType)[0] === SetupType.NoSetup;
 const TIMEFRAMES: Timeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 
 function readFlag(args: string[], flag: string): string | null {
@@ -293,8 +294,8 @@ export function buildNoChaseHtfContextSufficiencyReport(args: {
       partialArtifacts: rows.filter((row) => row.sufficiency === 'partial').length,
       insufficientArtifacts: rows.filter((row) => row.sufficiency === 'insufficient').length,
       dataLimitedArtifacts: rows.filter((row) => row.reliability === 'data_limited').length,
-      afterLunchSufficient: rows.filter((row) => row.setupType === SetupType.AfterLunchDriveFvgContinuation && row.sufficiency === 'sufficient').length,
-      intradaySufficient: rows.filter((row) => row.setupType === SetupType.IntradayMssMicroContinuation && row.sufficiency === 'sufficient').length,
+      afterLunchSufficient: BLANK_SLATE_MODE ? 0 : rows.filter((row) => row.setupType === SetupType.NoSetup && row.sufficiency === 'sufficient').length,
+      intradaySufficient: BLANK_SLATE_MODE ? 0 : rows.filter((row) => row.setupType === SetupType.NoSetup && row.sufficiency === 'sufficient').length,
       canExecuteFalseArtifacts: rows.filter((row) => row.canExecute === false).length,
       publishDiscordFalseArtifacts: rows.filter((row) => row.publishDiscord === false).length,
       htfPromotionEvidenceAllowed: rows.filter((row) => row.canUseHtfForPromotionEvidence).length,

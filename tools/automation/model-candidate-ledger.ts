@@ -403,7 +403,7 @@ export interface ModelCandidateBacktestHandoff {
       adverseFirstContradictionCount: number;
       missingDataWarningCount: number;
     };
-    supportingSamples: Array<{
+    contextSamples: Array<{
       sampleId: string;
       reviewedFile?: string;
       humanLabel: string;
@@ -1250,7 +1250,7 @@ function renderAdvisoryEvidenceMarkdown(evidence: ModelCandidateAdvisoryEvidence
   const review = evidence.reviewEvidenceSummary;
   const pnl = evidence.estimatedGrossContractPnlSummary;
   const pnlSummary = pnl
-    ? `${pnl.rootSymbol}; samples with P/L ${pnl.sampleCountWithPnl}; missing ${pnl.sampleCountMissingPnl}; avg hypothetical ${formatLedgerDollars(pnl.avgHypotheticalOutcomeDollars)}; avg MFE ${formatLedgerDollars(pnl.avgMfeDollars)}; avg MAE ${formatLedgerDollars(pnl.avgMaeDollars)}; status ${pnl.status}; supporting research/audit evidence only`
+    ? `${pnl.rootSymbol}; samples with P/L ${pnl.sampleCountWithPnl}; missing ${pnl.sampleCountMissingPnl}; avg hypothetical ${formatLedgerDollars(pnl.avgHypotheticalOutcomeDollars)}; avg MFE ${formatLedgerDollars(pnl.avgMfeDollars)}; avg MAE ${formatLedgerDollars(pnl.avgMaeDollars)}; status ${pnl.status}; context research/audit evidence only`
     : 'Not recorded';
   return [
     'Model-Candidate Advisory Evidence:',
@@ -1951,7 +1951,7 @@ function buildBacktestHandoffConceptFromSummary(
       adverseFirstContradictionCount: evidence.adverseFirstContradictionCount,
       missingDataWarningCount: evidence.missingDataWarningCount,
     },
-    supportingSamples: entries.map((entry) => ({
+    contextSamples: entries.map((entry) => ({
       sampleId: entry.sampleId,
       reviewedFile: entry.reviewedOutputPath,
       humanLabel: entry.humanApprovalState,
@@ -2023,7 +2023,7 @@ function buildBacktestHandoffConceptFromWatchlist(
       adverseFirstContradictionCount: 0,
       missingDataWarningCount: 0,
     },
-    supportingSamples: [],
+    contextSamples: [],
     watchlistSamples: concept.samples.map((sample) => ({
       sampleId: sample.sampleId,
       label: sample.label,
@@ -2175,11 +2175,11 @@ export function renderModelCandidateBacktestHandoffMarkdown(report: ModelCandida
       '### Required Backtest Definitions',
       ...renderBacktestDefinitions(concept.backtestReadiness.requiredBacktestDefinitions),
       '',
-      '### Supporting Samples',
+      '### Context Samples',
       '| Sample ID | Human Label | Agent Assessment | Chart Report | Estimated Gross P/L |',
       '|---|---|---|---|---|',
-      ...(concept.supportingSamples.length
-        ? concept.supportingSamples.map((sample) => `| ${sample.sampleId} | ${sample.humanLabel} | ${sample.agentAssessmentStatus || 'Not recorded'} | ${sample.chartReportPath || 'Not recorded'} | ${samplePnlCell(sample.estimatedGrossContractPnl)} |`)
+      ...(concept.contextSamples.length
+        ? concept.contextSamples.map((sample) => `| ${sample.sampleId} | ${sample.humanLabel} | ${sample.agentAssessmentStatus || 'Not recorded'} | ${sample.chartReportPath || 'Not recorded'} | ${samplePnlCell(sample.estimatedGrossContractPnl)} |`)
         : ['| Not recorded | Not recorded | Not recorded | Not recorded | Not recorded |']),
       ...(concept.watchlistSamples?.length ? [
         '',

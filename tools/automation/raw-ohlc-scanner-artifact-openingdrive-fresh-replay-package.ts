@@ -109,7 +109,7 @@ export interface RawOhlcScannerArtifactOpeningDriveFreshReplayPackageReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const DEFAULT_SETUP_TYPE = 'OpeningDriveFvgContinuation';
+const DEFAULT_SETUP_TYPE = 'NoInstalledSetup';
 const MIN_READY_SELECTED_ROWS = 5;
 
 function readFlag(args: string[], flag: string): string | null {

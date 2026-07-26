@@ -164,7 +164,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
   const totalCarveoutEligibleRows = firstPassCarveouts + newlyCarveoutEligible;
   const adjustedBlockedRowsExcluded = Math.max(0, originalBlockedRowsExcluded - totalCarveoutEligibleRows);
   const manualInspectionRows = args.unresolvedDrilldown?.summary.manualInspectionRows || 0;
-  const sweep = args.readinessSummary?.modelRows.find((row) => row.setupType === 'SweepMssFvgRetrace');
+  const sweep = args.readinessSummary?.modelRows.find((row) => row.setupType === 'NoInstalledSetup');
   const recommendation = blockers.length ? 'fix_inputs'
     : adjustedBlockedRowsExcluded === 0 && manualInspectionRows === 0 && sweep?.evidenceState === 'positive_strict_ready_subset'
       ? 'prepare_sweep_only_guarded_proposal'
@@ -206,7 +206,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
     modelRows: args.readinessSummary?.modelRows || [],
     conclusions: [
       'All excluded rows are now accounted for as research-accounting carveouts, not wins, losses, or selector-promotion evidence.',
-      'SweepMssFvgRetrace remains the only model family with positive strict-ready evidence in this package.',
+      'NoInstalledSetup remains the only model family with positive strict-ready evidence in this package.',
       'This report supports preparing a separate guarded Sweep-only proposal, but does not install one.',
     ],
     blockers,

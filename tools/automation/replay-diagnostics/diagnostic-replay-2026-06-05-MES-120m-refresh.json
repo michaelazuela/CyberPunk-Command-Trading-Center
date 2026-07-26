@@ -1806,7 +1806,7 @@
         "instrument": "MES",
         "session": "morning",
         "alertType": "trade",
-        "candidateSetupType": "RaidReclaimReversal",
+        "candidateSetupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "scannerState": "Approved",
         "selectedCandidateDirection": "LONG",

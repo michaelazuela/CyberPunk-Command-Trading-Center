@@ -47,7 +47,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
   },
   rows: [{
     ticketId: 'preview-ticket',
-    setupType: 'raidReclaim',
+    setupType: 'historicalReview',
     direction: 'LONG',
     visibleInHiddenTab: true,
     reviewOnly: true,
@@ -58,7 +58,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
     shouldDispatch: false,
     writesSupabase: false,
     reviewOnlyReasons: ['canExecute remains false.'],
-    systemReviewNotes: ['raidReclaim long remains review-only: this cluster lacks full plan-level proof.'],
+    systemReviewNotes: ['historicalReview long remains review-only: this cluster lacks full plan-level proof.'],
   }],
   blockers: [],
   recommendations: [],
@@ -82,7 +82,7 @@ const noteValidation: UnifiedPositiveHeldLocalPreviewNoteIngestValidatorReport =
   },
   rows: [{
     ticketId: 'preview-ticket',
-    setupType: 'raidReclaim',
+    setupType: 'historicalReview',
     direction: 'LONG',
     suggestedDisposition: 'unreviewed',
     reviewerNotePresent: false,
@@ -118,7 +118,7 @@ assert.equal(report.summary.reviewOnlyRows, 1);
 assert.equal(report.summary.systemReviewNoteRows, 1);
 assert.equal(report.summary.missingPlanCautionRows, 1);
 assert.equal(report.summary.systemNoteDrivenDispositionRows, 0);
-assert.deepEqual(report.rows[0].systemReviewNotes, ['raidReclaim long remains review-only: this cluster lacks full plan-level proof.']);
+assert.deepEqual(report.rows[0].systemReviewNotes, ['historicalReview long remains review-only: this cluster lacks full plan-level proof.']);
 assert.equal(report.rows[0].systemNotesAffectDisposition, false);
 assert.equal(report.rows[0].livePromotionAllowed, false);
 assert.match(report.rows[0].boundary, /No live promotion/);

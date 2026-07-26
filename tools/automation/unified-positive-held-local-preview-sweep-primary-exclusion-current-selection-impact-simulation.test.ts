@@ -46,7 +46,7 @@ fs.writeFileSync(path.join(tmpDir, 'raw-ohlc-scanner-artifacts-sample.json'), `$
       eventTime: '2026-07-20T09:35:00',
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           executionStatus: 'Conditional',
           blockReason: 'InvalidStopLocation',
@@ -58,7 +58,7 @@ fs.writeFileSync(path.join(tmpDir, 'raw-ohlc-scanner-artifacts-sample.json'), `$
           rankScore: 100,
           humanReview: { canExecute: false },
         }, {
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           executionStatus: 'Conditional',
           blockReason: 'EntryTriggerPending',
@@ -78,7 +78,7 @@ fs.writeFileSync(path.join(tmpDir, 'raw-ohlc-scanner-artifacts-sample.json'), `$
       eventTime: '2026-07-20T09:40:00',
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           executionStatus: 'Conditional',
           blockReason: 'EntryTriggerPending',
@@ -107,8 +107,8 @@ assert.equal(report.summary.changedTopEventsWithoutReplacement, 0);
 assert.equal(report.summary.canExecuteChangedEvents, 0);
 assert.equal(report.summary.tradeMathChangedEvents, 1);
 assert.equal(report.summary.runtimeInstallAllowed, false);
-assert.equal(report.changedEvents[0].baselineTopSetupType, 'SweepMssFvgRetrace');
-assert.equal(report.changedEvents[0].simulatedTopSetupType, 'IntradayMssMicroContinuation');
+assert.equal(report.changedEvents[0].baselineTopSetupType, 'NoInstalledSetup');
+assert.equal(report.changedEvents[0].simulatedTopSetupType, 'NoInstalledSetup');
 
 const missing = buildUnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionCurrentSelectionImpactSimulationReport({
   exactProofPackagePath: null,

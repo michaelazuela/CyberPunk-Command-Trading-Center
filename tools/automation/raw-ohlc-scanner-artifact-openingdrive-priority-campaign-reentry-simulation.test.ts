@@ -8,7 +8,7 @@ const replayPackageOutcome = {
       ticketId: 'lead-loss',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofTime: '2026-07-10T10:45:00',
       outcomeStatus: 'resolved',
@@ -28,7 +28,7 @@ const replayPackageOutcome = {
       ticketId: 'post-stop-reentry',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofTime: '2026-07-10T11:35:00',
       outcomeStatus: 'resolved',
@@ -48,7 +48,7 @@ const replayPackageOutcome = {
       ticketId: 'other-model',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofTime: '2026-07-10T10:45:00',
       outcomeStatus: 'resolved',
@@ -69,7 +69,7 @@ const replayPackageOutcome = {
 
 const report = buildRawOhlcScannerArtifactOpeningDrivePriorityCampaignReentrySimulationReport({
   replayPackageOutcomePath: 'outcome.json',
-  setupType: 'SweepMssFvgRetrace',
+  setupType: 'NoInstalledSetup',
   replayPackageOutcome,
 });
 

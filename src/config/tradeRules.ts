@@ -67,34 +67,20 @@ export const TRADE_RULES = {
     morning: {
       label: 'Morning Setup Scan',
       requiredScreenshotRange: '9:15 AM through 12:00 PM ET',
-      allowedSetups: [
-        SetupType.RaidReclaimReversal,
-        SetupType.SweepMssFvgRetrace,
-        SetupType.OpeningDriveFvgContinuation,
-        SetupType.IntradayMssMicroContinuation,
-      ],
-      supportingEvidence: [],
+      allowedSetups: [],
+      contextNotes: [],
     },
     lunch: {
       label: 'Lunch/PM Setup Scan',
       requiredScreenshotRange: '12:00 PM through 4:00 PM ET',
-      allowedSetups: [
-        SetupType.RaidReclaimReversal,
-        SetupType.SweepMssFvgRetrace,
-        SetupType.AfterLunchDriveFvgContinuation,
-        SetupType.IntradayMssMicroContinuation,
-      ],
-      supportingEvidence: [],
+      allowedSetups: [],
+      contextNotes: [],
     },
     evening: {
       label: 'Evening Setup Scan',
       requiredScreenshotRange: '6:45 PM through 10:15 PM ET',
-      allowedSetups: [
-        SetupType.RaidReclaimReversal,
-        SetupType.SweepMssFvgRetrace,
-        SetupType.IntradayMssMicroContinuation,
-      ],
-      supportingEvidence: [],
+      allowedSetups: [],
+      contextNotes: [],
     },
   },
   noTradeSeverity: {

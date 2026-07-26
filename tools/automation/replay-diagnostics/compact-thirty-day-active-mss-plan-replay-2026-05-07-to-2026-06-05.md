@@ -11,10 +11,10 @@ Conditional candidates: 326
 - ConditionalTrade: 216
 
 ## Conditional By Setup
-- RaidReclaimReversal: 120
-- SweepMssFvgRetrace: 68
-- SweepMssFvgRetrace: 76
-- IntradayMssMicroContinuation: 62
+- ArchivedSetupPath: 120
+- ArchivedSetupPath: 68
+- ArchivedSetupPath: 76
+- ArchivedSetupPath: 62
 
 ## Coverage
 - 5m: 12013 bars, 2026-04-07T00:00:00 to 2026-06-05T16:00:00, failures=0

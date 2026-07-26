@@ -384,7 +384,7 @@ export interface ScannerDeskPlayDiscordSuppressionDecision {
 export interface ScannerTacticalCampaignMap {
   eligible: boolean;
   direction: 'LONG' | 'SHORT' | null;
-  supportingTimeframes: string[];
+  contextTimeframes: string[];
   executionTimeframeAligned: boolean;
   readiness: string | null;
   lineInSand: number | null;
@@ -1577,8 +1577,9 @@ export async function readUnifiedDeskOutputProductionScannerSurface(
 }
 
 export function unifiedDeskOutputProductionScannerSummaryLine(
-  surface: UnifiedDeskOutputProductionScannerSurfaceActivation,
+  surface: UnifiedDeskOutputProductionScannerSurfaceActivation | null,
 ): string {
+  if (!surface) return 'unified-desk-output=unavailable';
   const rows = surface.rows
     .map((row) => `${row.session}:${row.model}:${row.direction}:${row.proofLine.replace('Completed 5M proof: ', '').replace(' ET.', '')}`)
     .join(' | ');
@@ -1590,7 +1591,7 @@ export async function writeUnifiedDeskOutputProductionScannerReadback(args: {
   instrument: Instrument;
   session: LiveSession;
   completed5mTime: string | null;
-  surface: UnifiedDeskOutputProductionScannerSurfaceActivation;
+  surface: UnifiedDeskOutputProductionScannerSurfaceActivation | null;
   filePath?: string;
 }): Promise<string> {
   const filePath = args.filePath || UNIFIED_DESK_OUTPUT_PRODUCTION_READBACK_FILE;
@@ -1614,11 +1615,11 @@ export async function writeUnifiedDeskOutputProductionScannerReadback(args: {
       automatedOrders: false,
     },
     summary: {
-      selectedRows: blockers.length ? 0 : args.surface.summary.selectedRows,
-      morningRows: blockers.length ? 0 : args.surface.summary.morningRows,
-      lunchRows: blockers.length ? 0 : args.surface.summary.lunchRows,
-      eveningRows: blockers.length ? 0 : (args.surface.summary.eveningRows ?? 0),
-      approvedDeskPlanRows: blockers.length ? 0 : args.surface.summary.approvedDeskPlanRows,
+      selectedRows: blockers.length || !args.surface ? 0 : args.surface.summary.selectedRows,
+      morningRows: blockers.length || !args.surface ? 0 : args.surface.summary.morningRows,
+      lunchRows: blockers.length || !args.surface ? 0 : args.surface.summary.lunchRows,
+      eveningRows: blockers.length || !args.surface ? 0 : (args.surface.summary.eveningRows ?? 0),
+      approvedDeskPlanRows: blockers.length || !args.surface ? 0 : args.surface.summary.approvedDeskPlanRows,
       discordPostRows: 0,
       supabaseWriteRows: 0,
       liveBridgeReadRows: 0,
@@ -1627,7 +1628,7 @@ export async function writeUnifiedDeskOutputProductionScannerReadback(args: {
       automatedOrderRows: 0,
       blockedRows: blockers.length,
     },
-    rows: blockers.length ? [] : args.surface.rows,
+    rows: blockers.length || !args.surface ? [] : args.surface.rows,
     blockers,
   };
   await writeRuntimeJsonAtomic(filePath, payload);
@@ -4710,8 +4711,8 @@ function lifecycleItemShowsFiveMinuteTacticalShift(
 ): boolean {
   if (!item || item.direction !== direction) return false;
   const setupTypes = new Set<SetupType>([
-    SetupType.IntradayMssMicroContinuation,
-    SetupType.RaidReclaimReversal,
+    SetupType.NoSetup,
+    SetupType.NoSetup,
   ]);
   if (!setupTypes.has(item.setupType)) return false;
   const proofText = [
@@ -4725,7 +4726,7 @@ function lifecycleItemShowsFiveMinuteTacticalShift(
 }
 
 function tacticalCampaignHtfFvgTimeframes(item: ScannerCandidateLifecycleTraceItem | null): string[] {
-  if (!item || item.direction === 'NO TRADE' || item.setupType !== SetupType.IntradayMssMicroContinuation) return [];
+  if (!item || item.direction === 'NO TRADE' || item.setupType !== SetupType.NoSetup) return [];
   const text = [
     item.scenarioLabel,
     item.candidateState,
@@ -4759,7 +4760,7 @@ export function scannerTacticalCampaignMapFromDeskState(args: {
   const base = {
     eligible: false,
     direction,
-    supportingTimeframes: [] as string[],
+    contextTimeframes: [] as string[],
     executionTimeframeAligned: false,
     readiness: primaryBias?.tradeReadiness?.status || null,
     lineInSand: play.lineInSand,
@@ -4790,7 +4791,7 @@ export function scannerTacticalCampaignMapFromDeskState(args: {
   }
 
   const rows = play.htfProtectedStructureMap?.rows || [];
-  const supportingTimeframes = rows
+  const contextTimeframes = rows
     .filter((row) => (row.timeframe === '4H' || row.timeframe === '2H' || row.timeframe === '1H') && htfRowSupportsDirection(row, direction))
     .map((row) => row.timeframe);
   const protectedFiveMinuteAligned = rows.some((row) => row.timeframe === '5M' && htfRowSupportsDirection(row, direction));
@@ -4799,7 +4800,7 @@ export function scannerTacticalCampaignMapFromDeskState(args: {
   const executionTimeframeAligned = protectedFiveMinuteAligned || lifecycleFiveMinuteAligned;
   const campaignMap = {
     ...base,
-    supportingTimeframes: Array.from(new Set([...supportingTimeframes, ...htfFvgTimeframes])),
+    contextTimeframes: Array.from(new Set([...contextTimeframes, ...htfFvgTimeframes])),
     executionTimeframeAligned,
     executionEvidenceSource: protectedFiveMinuteAligned
       ? 'protected_structure_5m' as const
@@ -4807,7 +4808,7 @@ export function scannerTacticalCampaignMapFromDeskState(args: {
         ? 'candidate_lifecycle_5m' as const
         : null,
   };
-  if (!campaignMap.supportingTimeframes.length) {
+  if (!campaignMap.contextTimeframes.length) {
     return { ...campaignMap, reason: `${direction} tactical campaign watch blocked because no aligned 1H/2H/4H protected-structure row is present.` };
   }
   if (!executionTimeframeAligned) {
@@ -4817,7 +4818,7 @@ export function scannerTacticalCampaignMapFromDeskState(args: {
   return {
     ...campaignMap,
     eligible: true,
-    reason: `${direction} tactical campaign watch eligible from ${campaignMap.supportingTimeframes.join('/')} support plus ${campaignMap.executionEvidenceSource === 'candidate_lifecycle_5m' ? 'app-owned 5M candidate lifecycle evidence' : 'aligned completed 5M structure'}. Execution remains blocked until app-owned canExecute is true.`,
+    reason: `${direction} tactical campaign watch eligible from ${campaignMap.contextTimeframes.join('/')} support plus ${campaignMap.executionEvidenceSource === 'candidate_lifecycle_5m' ? 'app-owned 5M candidate lifecycle evidence' : 'aligned completed 5M structure'}. Execution remains blocked until app-owned canExecute is true.`,
   };
 }
 
@@ -5713,7 +5714,7 @@ function scannerDeskPlayMaterialCadenceFingerprint(args: {
     `standDown=${normalizeDeskPlayInstructionText(scannerDeskPlayStandDownInstruction(deskState)) || 'none'}`,
     `tacticalEligible=${args.tacticalCampaignMap.eligible ? 'yes' : 'no'}`,
     `tacticalSide=${args.tacticalCampaignMap.direction || 'none'}`,
-    `tacticalHtf=${args.tacticalCampaignMap.supportingTimeframes.slice().sort().join(',') || 'none'}`,
+    `tacticalHtf=${args.tacticalCampaignMap.contextTimeframes.slice().sort().join(',') || 'none'}`,
     `tacticalM5=${args.tacticalCampaignMap.executionTimeframeAligned ? 'aligned' : 'not_aligned'}`,
     `tacticalM5Source=${args.tacticalCampaignMap.executionEvidenceSource || 'none'}`,
     `protectedRows=${protectedRows || 'none'}`,
@@ -5725,7 +5726,7 @@ function scannerTacticalCampaignFingerprint(map: ScannerTacticalCampaignMap): st
   return [
     `eligible=${map.eligible ? 'yes' : 'no'}`,
     `side=${map.direction}`,
-    `htf=${map.supportingTimeframes.join(',') || 'none'}`,
+    `htf=${map.contextTimeframes.join(',') || 'none'}`,
     `m5=${map.executionTimeframeAligned ? 'aligned' : 'not_aligned'}`,
     `m5source=${map.executionEvidenceSource || 'none'}`,
     `readiness=${normalizeDeskPlayInstructionText(map.readiness) || 'none'}`,
@@ -6993,7 +6994,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   if (previousRecord && scannerDeskPlanRefreshMateriallyMatches(previousRecord, currentRecord)) {
     return scannerDeskPlaySuppressionBlocked(
       'duplicate_refresh',
-      'Desk Play suppressed because primary side, readiness, HTF support/conflict, action state, and protected-structure map are unchanged from the latest posted Desk Play.',
+      'Desk Play suppressed because primary side, readiness, HTF context/conflict, action state, and protected-structure map are unchanged from the latest posted Desk Play.',
       previousRecord.materialCadenceFingerprint || previousRecord.fingerprint,
     );
   }

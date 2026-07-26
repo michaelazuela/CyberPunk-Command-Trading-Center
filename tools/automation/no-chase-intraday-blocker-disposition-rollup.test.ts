@@ -49,7 +49,7 @@ const classifierReport: NoChaseIntradayGeometryBlockerClassifierReport = {
   },
   rows: [
     {
-      caseId: '2026-06-17|morning|IntradayMssMicroContinuation|SHORT',
+      caseId: '2026-06-17|morning|NoInstalledSetup|SHORT',
       tradeDate: '2026-06-17',
       sessionType: 'morning',
       direction: 'SHORT',
@@ -68,7 +68,7 @@ const classifierReport: NoChaseIntradayGeometryBlockerClassifierReport = {
       livePromotionAllowed: false,
     },
     {
-      caseId: '2026-07-01|morning|IntradayMssMicroContinuation|LONG',
+      caseId: '2026-07-01|morning|NoInstalledSetup|LONG',
       tradeDate: '2026-07-01',
       sessionType: 'morning',
       direction: 'LONG',
@@ -94,7 +94,7 @@ const classifierReport: NoChaseIntradayGeometryBlockerClassifierReport = {
 
 const fullWindowReplayReport = {
   rows: [{
-    caseId: '2026-06-17|morning|IntradayMssMicroContinuation|SHORT',
+    caseId: '2026-06-17|morning|NoInstalledSetup|SHORT',
     firstHumanReviewTime: '2026-06-17T11:55:00',
     replayOutcome: 'T2_HIT',
     oneMesGross: 235,

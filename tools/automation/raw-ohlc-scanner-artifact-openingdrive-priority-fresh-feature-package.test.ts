@@ -93,7 +93,7 @@ const minerReport: RawOhlcScannerArtifactOpeningDrivePriorityNoLookaheadFeatureM
       session: 'morning',
       proofTime: '2026-07-09T09:20:00',
       direction: 'LONG',
-      prioritySetupType: 'SweepMssFvgRetrace',
+      prioritySetupType: 'NoInstalledSetup',
       openingDriveTicketId: 'od-loss',
       priorityTicketId: 'priority-loss',
       openingDriveOneMesPl: -25,

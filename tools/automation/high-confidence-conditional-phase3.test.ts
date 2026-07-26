@@ -48,8 +48,8 @@ const phase3Cases: Phase3Case[] = [
   {
     label: 'Morning short high-confidence conditional supervisor card',
     session: 'morning',
-    setupType: SetupType.RaidReclaimReversal,
-    scenarioLabel: 'Bearish Raid Reclaim Reversal Reversal',
+    setupType: SetupType.NoSetup,
+    scenarioLabel: 'Bearish no installed model path',
     direction: 'SHORT',
     executionStatus: ExecutionStatus.Executable,
     canExecute: false,
@@ -64,8 +64,8 @@ const phase3Cases: Phase3Case[] = [
   {
     label: 'Lunch short high-confidence conditional supervisor card',
     session: 'lunch',
-    setupType: SetupType.SweepMssFvgRetrace,
-    scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
+    setupType: SetupType.NoSetup,
+    scenarioLabel: 'ICT no installed model path Short: Sweep Reclaim Imbalance Retrace',
     direction: 'SHORT',
     executionStatus: ExecutionStatus.Conditional,
     canExecute: false,
@@ -80,7 +80,7 @@ const phase3Cases: Phase3Case[] = [
   {
     label: 'Lunch long execution-approved supervisor card',
     session: 'lunch',
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'HTF Context FVG Continuation',
     direction: 'LONG',
     executionStatus: ExecutionStatus.Executable,

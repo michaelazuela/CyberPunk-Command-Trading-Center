@@ -9,11 +9,11 @@ type CuratedBucket =
   | 'best_clean_draw_delivery_achieved_samples'
   | 'clean_draw_failed_delivery_samples'
   | 'model_1_overlap_samples'
-  | 'RAID_RECLAIM_overlap_samples';
+  | 'HISTORICAL_REVERSAL_overlap_samples';
 type HumanReviewLabel =
   | 'strong_advisory_candidate'
   | 'covered_by_model_1'
-  | 'covered_by_RAID_RECLAIM'
+  | 'covered_by_uninstalled_context'
   | 'weak_or_noisy'
   | 'needs_chart_review'
   | 'reject_time_window_standalone';
@@ -23,7 +23,7 @@ type ChartEvidenceRecommendation =
   | 'downgrade_to_weak_or_noisy'
   | 'reject_time_window_standalone'
   | 'covered_by_model_1'
-  | 'covered_by_RAID_RECLAIM';
+  | 'covered_by_uninstalled_context';
 
 interface CuratedSample {
   sampleId: string;
@@ -171,7 +171,7 @@ const REVIEW_WARNING = 'Research-only. This human review file does not approve t
 export const TWLD_HUMAN_REVIEW_LABELS: HumanReviewLabel[] = [
   'strong_advisory_candidate',
   'covered_by_model_1',
-  'covered_by_RAID_RECLAIM',
+  'covered_by_uninstalled_context',
   'weak_or_noisy',
   'needs_chart_review',
   'reject_time_window_standalone',
@@ -344,7 +344,7 @@ function buildSummaryRecommendation(samples: ReviewedSample[], labelCounts: Reco
   const advisoryReviewed = samples.filter((sample) => sample.sourceBucket === 'advisory_only_samples' && sample.finalHumanLabel);
   if (advisoryReviewed.length > 0) {
     const weakOrRejected = advisoryReviewed.filter((sample) => sample.finalHumanLabel === 'weak_or_noisy' || sample.finalHumanLabel === 'reject_time_window_standalone').length;
-    const coveredByExisting = advisoryReviewed.filter((sample) => sample.finalHumanLabel === 'covered_by_model_1' || sample.finalHumanLabel === 'covered_by_RAID_RECLAIM').length;
+    const coveredByExisting = advisoryReviewed.filter((sample) => sample.finalHumanLabel === 'covered_by_model_1' || sample.finalHumanLabel === 'covered_by_uninstalled_context').length;
     const strong = advisoryReviewed.filter((sample) => sample.finalHumanLabel === 'strong_advisory_candidate').length;
     if (weakOrRejected > advisoryReviewed.length / 2) recommendations.push('Most reviewed advisory-only samples are weak or rejected; keep AM TWLD advisory-only.');
     if (coveredByExisting > advisoryReviewed.length / 2) recommendations.push('Most reviewed advisory-only samples are covered by existing models; treat AM TWLD as context for existing models only.');
@@ -362,7 +362,7 @@ function labelFromChartEvidenceRecommendation(recommendation: ChartEvidenceRecom
   if (recommendation === 'upgrade_to_strong_advisory_candidate') return 'strong_advisory_candidate';
   if (recommendation === 'downgrade_to_weak_or_noisy') return 'weak_or_noisy';
   if (recommendation === 'covered_by_model_1') return 'covered_by_model_1';
-  if (recommendation === 'covered_by_RAID_RECLAIM') return 'covered_by_RAID_RECLAIM';
+  if (recommendation === 'covered_by_uninstalled_context') return 'covered_by_uninstalled_context';
   throw new Error(`Unsupported chart evidence recommendation: ${recommendation}`);
 }
 
@@ -373,7 +373,7 @@ function isChartEvidenceRecommendation(value: string): value is ChartEvidenceRec
     'downgrade_to_weak_or_noisy',
     'reject_time_window_standalone',
     'covered_by_model_1',
-    'covered_by_RAID_RECLAIM',
+    'covered_by_uninstalled_context',
   ].includes(value);
 }
 

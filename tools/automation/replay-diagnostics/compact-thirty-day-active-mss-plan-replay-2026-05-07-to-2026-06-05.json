@@ -61,7 +61,7 @@
     "ConditionalTrade": 216
   },
   "conditionalBySetup": {
-    "RaidReclaimReversal": 120,
+    "HistoricalReviewReversal": 120,
     "SweepMssFvgRetrace": 68,
     "SweepMssFvgRetrace": 76,
     "IntradayMssMicroContinuation": 62

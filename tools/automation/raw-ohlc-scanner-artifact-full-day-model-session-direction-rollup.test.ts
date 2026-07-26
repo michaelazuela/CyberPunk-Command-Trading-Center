@@ -22,10 +22,10 @@ fs.writeFileSync(strongArtifact, JSON.stringify({
 
 const replayRows = [
   ...Array.from({ length: 20 }, (_, index) => ({
-    ticketId: `weak-artifact|2026-06-10T10:00:00:${index}:SweepMssFvgRetrace:LONG`,
+    ticketId: `weak-artifact|2026-06-10T10:00:00:${index}:NoInstalledSetup:LONG`,
     tradeDate: '2026-06-10',
     session: 'morning',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG' as const,
     proofTime: '2026-06-10T10:00:00',
     entry: 100,
@@ -34,10 +34,10 @@ const replayRows = [
     t2: 120,
   })),
   ...Array.from({ length: 20 }, (_, index) => ({
-    ticketId: `strong-artifact|2026-06-11T10:00:00:${index}:OpeningDriveFvgContinuation:LONG`,
+    ticketId: `strong-artifact|2026-06-11T10:00:00:${index}:NoInstalledSetup:LONG`,
     tradeDate: '2026-06-11',
     session: 'morning',
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG' as const,
     proofTime: '2026-06-11T10:00:00',
     entry: 100,
@@ -61,10 +61,10 @@ assert.equal(report.status, 'pass');
 assert.equal(report.summary.replayRows, 40);
 assert.equal(report.summary.resolvedRows, 40);
 assert.equal(report.summary.groups, 2);
-assert.equal(report.summary.weakestGroupId, 'SweepMssFvgRetrace|morning|LONG');
-assert.equal(report.summary.strongestGroupId, 'OpeningDriveFvgContinuation|morning|LONG');
+assert.equal(report.summary.weakestGroupId, 'NoInstalledSetup|morning|LONG');
+assert.equal(report.summary.strongestGroupId, 'NoInstalledSetup|morning|LONG');
 assert.equal(report.rollupRows[0].researchPriority, 'weak_pocket');
-assert.equal(report.rollupRows.find((row) => row.groupId === 'OpeningDriveFvgContinuation|morning|LONG')?.researchPriority, 'strong_pocket');
+assert.equal(report.rollupRows.find((row) => row.groupId === 'NoInstalledSetup|morning|LONG')?.researchPriority, 'strong_pocket');
 assert.equal(report.summary.runtimeRankConsumerAllowedByThisReport, false);
 assert.match(report.markdown, /Full-Day Model\/Session\/Direction Rollup/);
 

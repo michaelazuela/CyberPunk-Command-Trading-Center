@@ -96,7 +96,7 @@ export interface RawOhlcScannerArtifactSweepMorningLongOutcomeDrilldownReport {
     reportDir: string;
     outcomePath: string | null;
     filter: {
-      setupType: 'SweepMssFvgRetrace';
+      setupType: 'NoInstalledSetup';
       session: 'morning';
       direction: 'LONG';
     };
@@ -320,7 +320,7 @@ export function buildRawOhlcScannerArtifactSweepMorningLongOutcomeDrilldownRepor
   const outcomePath = args.outcomePath ?? latestMatchingFile(reportDir, 'unified-positive-held-local-preview-replay-package-outcome-');
   const outcome = args.outcome ?? readJson<OutcomeReport>(outcomePath);
   const rows = (outcome?.rows || []).filter((row) => (
-    row.setupType === 'SweepMssFvgRetrace'
+    row.setupType === 'NoInstalledSetup'
     && row.session === 'morning'
     && row.direction === 'LONG'
   ));
@@ -332,7 +332,7 @@ export function buildRawOhlcScannerArtifactSweepMorningLongOutcomeDrilldownRepor
     !outcome ? 'missing outcome report' : null,
     outcome && outcome.status !== 'pass' ? `outcome report status ${outcome.status}` : null,
     (outcome?.rows || []).length === 0 ? 'outcome report has no rows' : null,
-    rows.length === 0 ? 'no SweepMssFvgRetrace morning LONG rows found' : null,
+    rows.length === 0 ? 'no NoInstalledSetup morning LONG rows found' : null,
   ].filter((item): item is string => Boolean(item));
   const bucketRows = [
     ...bucketize(rows, 'outcome_label', (row) => row.outcomeLabel),
@@ -369,7 +369,7 @@ export function buildRawOhlcScannerArtifactSweepMorningLongOutcomeDrilldownRepor
       reportDir,
       outcomePath,
       filter: {
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         session: 'morning',
         direction: 'LONG',
       },

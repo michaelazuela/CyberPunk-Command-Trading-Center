@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport,
 } from './unified-positive-held-local-preview-raidReclaim-review-note-wording-probe';
 
-type WordingRow = UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport['rows'][number];
+type WordingRow = UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport['rows'][number];
 
 interface PlacementRow {
   clusterId: string;
@@ -27,8 +27,8 @@ interface PlacementRow {
   writesSupabase: false;
 }
 
-export interface UnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_review_note_placement_simulation';
+export interface UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport {
+  reportType: 'unified_positive_held_local_preview_historicalReview_review_note_placement_simulation';
   generatedAt: string;
   status: 'pass' | 'fail';
   authority: {
@@ -104,7 +104,7 @@ function latestMatchingFile(reportDir: string, pattern: RegExp): string | null {
   return matches[0] || null;
 }
 
-function authority(): UnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport['authority'] {
+function authority(): UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport['authority'] {
   return {
     readOnly: true,
     localOnly: true,
@@ -152,9 +152,9 @@ function escapeTable(value: string): string {
   return value.replace(/\|/g, '/').replace(/\r?\n/g, ' ');
 }
 
-function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport, 'markdown'>): string {
+function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport, 'markdown'>): string {
   return [
-    '# Unified Positive Held-Local Preview raidReclaim Review Note Placement Simulation',
+    '# Unified Positive Held-Local Preview historicalReview Review Note Placement Simulation',
     '',
     `Status: ${report.status}`,
     '',
@@ -183,23 +183,23 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimRe
   ].join('\n');
 }
 
-export function buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport(args: {
+export function buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport(args: {
   reportDir: string;
   reviewNoteWordingProbePath: string | null;
-  reviewNoteWordingProbeReport: UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport | null;
-}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport {
+  reviewNoteWordingProbeReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport | null;
+}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport {
   const wordingRows = args.reviewNoteWordingProbeReport?.rows || [];
   const rows = wordingRows.map(placementRow);
   const blockers = [
-    !args.reviewNoteWordingProbePath ? 'missing raidReclaim review-note wording probe path' : null,
-    !args.reviewNoteWordingProbeReport ? 'missing raidReclaim review-note wording probe report' : null,
-    args.reviewNoteWordingProbeReport && args.reviewNoteWordingProbeReport.status !== 'pass' ? `raidReclaim review-note wording probe status ${args.reviewNoteWordingProbeReport.status}` : null,
-    wordingRows.length === 0 ? 'no raidReclaim review-note wording rows found' : null,
+    !args.reviewNoteWordingProbePath ? 'missing historicalReview review-note wording probe path' : null,
+    !args.reviewNoteWordingProbeReport ? 'missing historicalReview review-note wording probe report' : null,
+    args.reviewNoteWordingProbeReport && args.reviewNoteWordingProbeReport.status !== 'pass' ? `historicalReview review-note wording probe status ${args.reviewNoteWordingProbeReport.status}` : null,
+    wordingRows.length === 0 ? 'no historicalReview review-note wording rows found' : null,
     rows.some((row) => row.originalOrdinal !== row.simulatedOrdinal) ? 'placement simulation changed row order' : null,
     rows.some((row) => !row.ticketVisibleAfter) ? 'placement simulation hid at least one ticket' : null,
   ].filter((item): item is string => Boolean(item));
-  const base: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport, 'markdown'> = {
-    reportType: 'unified_positive_held_local_preview_raidReclaim_review_note_placement_simulation',
+  const base: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport, 'markdown'> = {
+    reportType: 'unified_positive_held_local_preview_historicalReview_review_note_placement_simulation',
     generatedAt,
     status: blockers.length ? 'fail' : 'pass',
     authority: authority(),
@@ -244,8 +244,8 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlaceme
   return { ...base, markdown: buildMarkdown(base) };
 }
 
-export function writeUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport(
-  report: UnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport,
+export function writeUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport(
+  report: UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport,
   outDir = DEFAULT_REPORT_DIR,
 ): { jsonPath: string; markdownPath: string } {
   fs.mkdirSync(outDir, { recursive: true });
@@ -257,18 +257,18 @@ export function writeUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlaceme
   return { jsonPath, markdownPath };
 }
 
-export function runUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationCli(args = process.argv.slice(2)): void {
+export function runUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationCli(args = process.argv.slice(2)): void {
   const outDir = readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR;
   const reviewNoteWordingProbePath = readFlag(args, '--review-note-wording-probe') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-raidReclaim-review-note-wording-probe-\d+\.json$/);
-  const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport({
+  const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport({
     reportDir: outDir,
     reviewNoteWordingProbePath,
     reviewNoteWordingProbeReport: reviewNoteWordingProbePath && fs.existsSync(reviewNoteWordingProbePath)
-      ? JSON.parse(fs.readFileSync(reviewNoteWordingProbePath, 'utf8')) as UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport
+      ? JSON.parse(fs.readFileSync(reviewNoteWordingProbePath, 'utf8')) as UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport
       : null,
   });
-  const paths = writeUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport(report, outDir);
+  const paths = writeUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport(report, outDir);
   if (args.includes('--json')) {
     console.log(JSON.stringify({ ...paths, status: report.status, summary: report.summary }, null, 2));
   } else {
@@ -281,7 +281,7 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacement
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   try {
-    runUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationCli();
+    runUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationCli();
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

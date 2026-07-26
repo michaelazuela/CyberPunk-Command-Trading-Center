@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {
-  buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport,
+  buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport,
 } from './unified-positive-held-local-preview-raidReclaim-review-note-placement-simulation';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport,
 } from './unified-positive-held-local-preview-raidReclaim-review-note-wording-probe';
 
 const authority = {
@@ -25,8 +25,8 @@ const authority = {
   changesAppRuntime: false,
 } as const;
 
-const wordingProbeReport: UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport = {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_review_note_wording_probe',
+const wordingProbeReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport = {
+  reportType: 'unified_positive_held_local_preview_historicalReview_review_note_wording_probe',
   generatedAt: '2026-07-17T00:00:00.000Z',
   status: 'pass',
   authority,
@@ -65,7 +65,7 @@ const wordingProbeReport: UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWo
     unresolved: 0,
     oneMesPl: -210,
     noteCandidate: true,
-    proposedNote: 'raidReclaim long remains review-only: require fresh completed 5M entry.',
+    proposedNote: 'historicalReview long remains review-only: require fresh completed 5M entry.',
     suppressesTicket: false,
     changesRanking: false,
     changesCanExecute: false,
@@ -77,13 +77,13 @@ const wordingProbeReport: UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWo
   markdown: '',
 };
 
-const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport({
+const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport({
   reportDir: 'diagnostic-reports',
   reviewNoteWordingProbePath: 'wording.json',
   reviewNoteWordingProbeReport: wordingProbeReport,
 }, '2026-07-17T00:01:00.000Z');
 
-assert.equal(report.reportType, 'unified_positive_held_local_preview_raidReclaim_review_note_placement_simulation');
+assert.equal(report.reportType, 'unified_positive_held_local_preview_historicalReview_review_note_placement_simulation');
 assert.equal(report.status, 'pass');
 assert.equal(report.authority.readOnly, true);
 assert.equal(report.authority.changesTradingLogic, false);
@@ -107,13 +107,13 @@ assert.equal(report.rows[0].ticketVisibleAfter, true);
 assert.equal(report.rows[0].changesDiscordPosting, false);
 assert.match(report.markdown, /Placement Simulation/);
 
-const missing = buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNotePlacementSimulationReport({
+const missing = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNotePlacementSimulationReport({
   reportDir: 'diagnostic-reports',
   reviewNoteWordingProbePath: null,
   reviewNoteWordingProbeReport: null,
 }, '2026-07-17T00:02:00.000Z');
 
 assert.equal(missing.status, 'fail');
-assert.ok(missing.blockers.includes('missing raidReclaim review-note wording probe path'));
+assert.ok(missing.blockers.includes('missing historicalReview review-note wording probe path'));
 
-console.log('unified positive held-local raidReclaim review note placement simulation verified.');
+console.log('unified positive held-local historicalReview review note placement simulation verified.');

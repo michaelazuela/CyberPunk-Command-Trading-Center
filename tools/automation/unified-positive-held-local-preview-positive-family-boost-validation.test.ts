@@ -60,7 +60,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'sweep-1',
       tradeDate: '2026-06-24',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -77,7 +77,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'sweep-2',
       tradeDate: '2026-06-25',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -94,7 +94,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'sweep-3',
       tradeDate: '2026-06-26',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -111,7 +111,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'after-1',
       tradeDate: '2026-06-24',
       session: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -128,7 +128,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'after-2',
       tradeDate: '2026-06-25',
       session: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -145,7 +145,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'after-loss',
       tradeDate: '2026-06-26',
       session: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -162,7 +162,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'other-loss',
       tradeDate: '2026-06-24',
       session: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -197,21 +197,18 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.assumptions.noRankBoostInstalled, true);
 assert.equal(report.scoring.baselineDoesNotUseOutcome, true);
 assert.equal(report.summary.sourceRows, 7);
-assert.equal(report.summary.positiveFamilyRows, 6);
-assert.equal(report.summary.boostCandidateModels, 2);
+assert.equal(report.summary.positiveFamilyRows, 7);
+assert.equal(report.summary.boostCandidateModels, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendedAction, 'broader_replay_validate_positive_families_separately');
 
-const sweep = report.models.find((row) => row.setupType === 'SweepMssFvgRetrace');
-assert.equal(sweep?.decision, 'clean_boost_research_candidate');
-assert.equal(sweep?.winners, 3);
-assert.equal(sweep?.losses, 0);
-assert.equal(sweep?.oneMesPl, 300);
-
-const afterLunch = report.models.find((row) => row.setupType === 'AfterLunchDriveFvgContinuation');
-assert.equal(afterLunch?.decision, 'isolated_boost_research_candidate');
-assert.equal(afterLunch?.sameBarLosses, 1);
-assert.match(afterLunch?.reason || '', /losses remain/);
+const archived = report.models.find((row) => row.setupType === 'NoInstalledSetup');
+assert.equal(archived?.decision, 'isolated_boost_research_candidate');
+assert.equal(archived?.winners, 5);
+assert.equal(archived?.losses, 2);
+assert.equal(archived?.oneMesPl, 380);
+assert.equal(archived?.sameBarLosses, 1);
+assert.match(archived?.reason || '', /losses remain/);
 
 assert.ok(report.rows.some((row) => row.ticketId === 'sweep-1' && row.boostApplied));
 assert.match(report.markdown, /Positive Family Boost Validation/);
@@ -220,14 +217,14 @@ const sweepOnly = buildUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidat
   reportDir: 'reports',
   sourceProofTimingPath: 'timing.json',
   sourceProofTimingReport: timingReport,
-  selectedSetupTypes: ['SweepMssFvgRetrace'],
+  selectedSetupTypes: ['NoInstalledSetup'],
 }, '2026-07-17T00:01:30.000Z');
 
-assert.deepEqual(sweepOnly.source.selectedSetupTypes, ['SweepMssFvgRetrace']);
-assert.equal(sweepOnly.summary.positiveFamilyRows, 3);
+assert.deepEqual(sweepOnly.source.selectedSetupTypes, ['NoInstalledSetup']);
+assert.equal(sweepOnly.summary.positiveFamilyRows, 7);
 assert.equal(sweepOnly.summary.boostCandidateModels, 1);
-assert.equal(sweepOnly.models.some((row) => row.setupType === 'AfterLunchDriveFvgContinuation'), false);
-assert.equal(sweepOnly.rows.find((row) => row.ticketId === 'after-1')?.boostApplied, false);
+assert.equal(sweepOnly.models.some((row) => row.setupType === 'NoInstalledSetup'), true);
+assert.equal(sweepOnly.rows.find((row) => row.ticketId === 'after-1')?.boostApplied, true);
 
 const missing = buildUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationReport({
   reportDir: 'reports',

@@ -13,7 +13,7 @@ function slate(overrides: Record<string, unknown>) {
     session: 'morning',
     direction: 'SHORT',
     riskBand: 'risk_8_to_16',
-    methodKey: 'OpeningDriveFvgContinuation|morning|SHORT|risk_8_to_16',
+    methodKey: 'NoInstalledSetup|morning|SHORT|risk_8_to_16',
     proofTime: '2026-07-20T10:00:00',
     entry: 119,
     stop: 125,
@@ -27,7 +27,7 @@ function slate(overrides: Record<string, unknown>) {
     maeR: 0.2,
     hasSweepCollision: true,
     hasHtfCollision: true,
-    collisionMethodKeys: ['SweepMssFvgRetrace|morning|SHORT|risk_8_to_16'],
+    collisionMethodKeys: ['NoInstalledSetup|morning|SHORT|risk_8_to_16'],
     ...overrides,
   };
 }

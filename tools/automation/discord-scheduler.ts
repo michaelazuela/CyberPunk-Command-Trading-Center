@@ -738,7 +738,7 @@ function topConditionalCandidates(candidates: SetupCandidate[] | undefined, curr
   const reviewOnlyCandidates = (candidates || []).filter((candidate) =>
     (candidate.direction === 'LONG' || candidate.direction === 'SHORT') &&
     candidate.executionStatus === ExecutionStatus.Conditional &&
-    candidate.setupType === SetupType.IntradayMssMicroContinuation
+    candidate.setupType === SetupType.NoSetup
   );
   const lineInSandReviewCandidates = reviewOnlyCandidates.filter((candidate) =>
     candidate.pathway === 'intraday_mss_micro_continuation' &&
@@ -814,7 +814,7 @@ async function formatMorningNewsBrief(tradeDate: string, context: Partial<ChartC
     active?.active
       ? `\n⚠️ Active caution: ${active.eventLabel || 'USA macro event'}${active.minutesUntil ? ` in ${active.minutesUntil} min` : active.minutesAfter != null ? ` released ${active.minutesAfter} min ago` : ''}. Wait for post-release structure confirmation.`
       : '\n✅ Active caution: none at the report timestamp.',
-    '🚫 Desk rule: do not chase pre-news movement. Wait for sweep/reclaim and confirmed 5M structure.',
+    '🚫 Desk rule: do not chase pre-news movement. Wait for historical reversal pattern and confirmed 5M structure.',
   ].join('\n');
 }
 
@@ -1137,13 +1137,13 @@ function formatWeeklyApprovedModels(context: Partial<ChartContext> | null): stri
     '✅ Required: meaningful raid -> failed continuation -> reclaim -> valid entry/retest -> stop beyond sweep wick -> clean 1.5R path.',
     `🎯 Downside draw: ${sellSide}.`,
     '',
-    '🚫 Supporting evidence can improve quality, but it cannot create a third model.',
+    '🚫 historical context can improve quality, but it cannot create a third model.',
   ].join('\n');
 }
 
 function formatWeeklyDeskRules(): string {
   return [
-    '✅ Best trades: with big-picture structure, at meaningful liquidity, after sweep/reclaim, with clean 5M trigger and 2.0R.',
+    '✅ Best trades: with big-picture structure, at meaningful liquidity, after historical reversal pattern, with clean 5M trigger and 2.0R.',
     '🟡 Conditional only: counter-structure, minor structure break without inducement swept, news caution, chop, stale setup, or obstacle before 1R.',
     '🔴 No trade: no sweep, no reclaim, no valid 5M trigger, wrong-side stop, under 2.0R, or outside approved scan windows.',
     '🧠 Parent rule: big-picture structure is the map. The 5M execution chart is the trigger.',

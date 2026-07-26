@@ -357,7 +357,7 @@ function recommendations(report: Omit<RawOhlcScannerArtifactGeneratorReport, 're
     lines.push('Do not draw HTF structural conclusions from data-limited events; reload or supply 30-day HTF OHLC first.');
   }
   if (report.summary.invalidGeometryBlockedCandidates > 0) {
-    lines.push('Invalid entry/stop geometry is now blocked by the scanner validator in replay artifacts; keep the model family, but do not promote those rows.');
+    lines.push('Invalid entry/stop geometry is blocked in replay artifacts; no model family is installed or promoted in blank-slate mode.');
   }
   return lines;
 }

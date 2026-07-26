@@ -104,7 +104,7 @@ export interface UnifiedPositiveHeldLocalPreviewAfterLunchProofTimeProxySourceCo
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SETUP = 'AfterLunchDriveFvgContinuation';
+const SETUP = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);

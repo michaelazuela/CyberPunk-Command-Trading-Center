@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
   classifyActiveSetupScanWindowByEtMinutes,
   isMarketMappingWindowByEtMinutes,
-  isIntradayMssMicroContinuationLateDayReviewByEtMinutes,
+  isLateDayReviewByEtMinutes,
   EVENING_MARKET_MAPPING_WINDOW,
   MARKET_MAPPING_WINDOW,
   MODEL_SPECIFIC_TIME_WINDOWS,
@@ -26,9 +26,9 @@ assert.equal(TIME_WINDOWS.evening.openHour, 18);
 assert.equal(TIME_WINDOWS.evening.openMinute, 45);
 assert.equal(TIME_WINDOWS.evening.closeHour, 22);
 assert.equal(TIME_WINDOWS.evening.closeMinute, 15);
-assert.equal(MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.startHour, 15);
-assert.equal(MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.endHour, 16);
-assert.equal(MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.endMinute, 40);
+assert.equal(MODEL_SPECIFIC_TIME_WINDOWS.lateDayReview.startHour, 15);
+assert.equal(MODEL_SPECIFIC_TIME_WINDOWS.lateDayReview.endHour, 16);
+assert.equal(MODEL_SPECIFIC_TIME_WINDOWS.lateDayReview.endMinute, 40);
 assert.equal(MARKET_MAPPING_WINDOW.startHour, 9);
 assert.equal(MARKET_MAPPING_WINDOW.startMinute, 15);
 assert.equal(MARKET_MAPPING_WINDOW.endHour, 16);
@@ -57,11 +57,11 @@ assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('18:45')), 'EVENIN
 assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('20:00')), 'EVENING_SETUP_SCAN');
 assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('22:14')), 'EVENING_SETUP_SCAN');
 assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('22:15')), 'OUTSIDE_SETUP_SCAN');
-assert.equal(isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes('14:59')), false);
-assert.equal(isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes('15:00')), true);
-assert.equal(isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes('15:30')), true);
-assert.equal(isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes('16:40')), true);
-assert.equal(isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes('16:41')), false);
+assert.equal(isLateDayReviewByEtMinutes(minutes('14:59')), false);
+assert.equal(isLateDayReviewByEtMinutes(minutes('15:00')), true);
+assert.equal(isLateDayReviewByEtMinutes(minutes('15:30')), true);
+assert.equal(isLateDayReviewByEtMinutes(minutes('16:40')), true);
+assert.equal(isLateDayReviewByEtMinutes(minutes('16:41')), false);
 assert.equal(isMarketMappingWindowByEtMinutes(minutes('09:14')), false);
 assert.equal(isMarketMappingWindowByEtMinutes(minutes('09:15')), true);
 assert.equal(isMarketMappingWindowByEtMinutes(minutes('09:29')), true);

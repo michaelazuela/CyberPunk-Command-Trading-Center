@@ -25,7 +25,7 @@ const authority = {
 } as const;
 
 function ticketId(index: number, session: 'morning' | 'lunch', direction: 'LONG' | 'SHORT'): string {
-  return `2026-07-16-${session}-SweepMssFvgRetrace-${direction}-20260716T14${String(index).padStart(2, '0')}00`;
+  return `2026-07-16-${session}-NoInstalledSetup-${direction}-20260716T14${String(index).padStart(2, '0')}00`;
 }
 
 function event(index: number, args: {
@@ -49,7 +49,7 @@ function event(index: number, args: {
     },
     setupCandidateStatus: {
       statuses: [{
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: args.direction,
         confidence: args.outcomeTag === 'clean' ? 'High' : 'Medium',
         rankScore: args.outcomeTag === 'clean' ? 260 : 175,
@@ -90,7 +90,7 @@ function outcomeRow(index: number, args: {
     ticketId: ticketId(index, args.session, args.direction),
     tradeDate: '2026-07-16',
     session: args.session,
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: args.direction,
     proofTime: `2026-07-16T14:${String(index).padStart(2, '0')}:00`,
     outcomeStatus: 'resolved' as const,

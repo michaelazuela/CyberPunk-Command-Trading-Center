@@ -177,7 +177,7 @@ function sessionType(session: string): 'replay_morning' | 'replay_lunch' | 'repl
 function buildRows(validation: RawOhlcScannerArtifactOpeningDriveOosBroaderPriorityValidationReport): InstalledComparisonRow[] {
   return validation.rows.map((row) => {
     const openingDrive = candidate({
-      setupType: SetupType.OpeningDriveFvgContinuation,
+      setupType: SetupType.NoSetup,
       ticketId: row.openingDriveTicketId,
       direction: row.direction,
       score: 95,
@@ -195,7 +195,7 @@ function buildRows(validation: RawOhlcScannerArtifactOpeningDriveOosBroaderPrior
       completedBarTime: row.proofTime,
       candidates: [openingDrive, priority],
     });
-    const openingDriveItem = book.candidates.find((item) => item.setupType === SetupType.OpeningDriveFvgContinuation);
+    const openingDriveItem = book.candidates.find((item) => item.setupType === SetupType.NoSetup);
     const priorityItem = book.candidates.find((item) => item.candidateKey.includes(row.priorityTicketId));
     const primary = book.primaryDeskIdea;
     const canExecuteTrueRows = book.candidates.filter((item) => item.canExecute).length;

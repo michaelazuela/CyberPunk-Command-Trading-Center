@@ -9,10 +9,10 @@ const replayPackage = {
   source: { artifactPaths: [] },
   rows: [
     {
-      ticketId: 'synthetic-artifact|2026-06-10T11:00:00:0:SweepMssFvgRetrace:LONG',
+      ticketId: 'synthetic-artifact|2026-06-10T11:00:00:0:NoInstalledSetup:LONG',
       tradeDate: '2026-06-10',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG' as const,
       proofTime: '2026-06-10T11:00:00',
       entry: 100,
@@ -28,7 +28,7 @@ const unresolvedTopDrilldown = {
   rows: [
     {
       slateId: '2026-06-10|morning',
-      baselineTopTicketId: 'synthetic-artifact|2026-06-10T11:00:00:0:SweepMssFvgRetrace:LONG',
+      baselineTopTicketId: 'synthetic-artifact|2026-06-10T11:00:00:0:NoInstalledSetup:LONG',
       baselineTopOutcomeLabel: 'no_target_or_stop_hit',
     },
   ],

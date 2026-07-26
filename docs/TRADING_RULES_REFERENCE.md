@@ -33,9 +33,9 @@ This model looks for a complete sequence:
 
 The preferred behavior is patience after displacement. The plan should wait for the FVG or imbalance retrace and a protected structure stop. It should not chase an extended displacement candle.
 
-### Raid Reclaim Reversal Reversal
+### no installed model path
 
-Official label: `Raid Reclaim Reversal Reversal`.
+Official label: `no installed model path`.
 
 This model looks for a failed breakout or failed breakdown after a raid:
 
@@ -48,9 +48,9 @@ This model looks for a failed breakout or failed breakdown after a raid:
 
 The model can be qualified or conditional, but execution still requires the completed 5-minute trigger, protected stop, risk validation, and time-window gate.
 
-## Supporting Evidence Only
+## Context Evidence Only
 
-Supporting evidence can improve context, ranking, and confidence. It does not create a third active executable model.
+historical context can improve context, ranking, and confidence. It does not create a third active executable model.
 
 ### Liquidity Sweep
 
@@ -62,7 +62,7 @@ An FVG or imbalance can provide a retrace zone, reaction zone, obstacle, or cont
 
 ### Market Structure Shift / Change Of Character
 
-MSS or ChoCH helps confirm that the prior side lost control. It is supporting evidence unless it is part of the complete primary model sequence.
+MSS or ChoCH helps confirm that the prior side lost control. It is historical context unless it is part of the complete primary model sequence.
 
 ### Equal Highs / Equal Lows
 
@@ -74,7 +74,7 @@ Previous day highs/lows, ETH levels, Asian/London/NY premarket levels, and RTH s
 
 ### Breaker / FVG Overlap
 
-A failed structure retest zone overlapping an imbalance can add confluence. It is supporting evidence, not an independent active model.
+A failed structure retest zone overlapping an imbalance can add confluence. It is historical context, not an independent active model.
 
 ### Higher-Timeframe Context
 

@@ -56,7 +56,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'intraday-winner',
       tradeDate: '2026-06-26',
       session: 'lunch',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -73,7 +73,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'intraday-loss',
       tradeDate: '2026-07-01',
       session: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -90,7 +90,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'turtle-winner',
       tradeDate: '2026-06-23',
       session: 'lunch',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -107,7 +107,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'turtle-loss',
       tradeDate: '2026-06-17',
       session: 'lunch',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -124,7 +124,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'sweep-winner',
       tradeDate: '2026-06-08',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -158,16 +158,16 @@ assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.summary.evaluatedRows, 5);
 assert.equal(report.summary.probesEvaluated, 3);
-assert.equal(report.summary.candidateProbes, 3);
+assert.equal(report.summary.candidateProbes, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
 const combined = report.rows.find((row) => row.filterId === 'intraday_turtle_model_specific_risk_caps');
 assert.equal(combined?.keptWinners, 2);
-assert.equal(combined?.rejectedWinners, 0);
+assert.equal(combined?.rejectedWinners, 1);
 assert.equal(combined?.rejectedLosses, 2);
 assert.equal(combined?.affectedPositiveFamilyRows, 0);
-assert.equal(combined?.decision, 'candidate_for_more_research');
-assert.match(combined?.recommendation || '', /broader replay/);
+assert.equal(combined?.decision, 'rejected_for_now');
+assert.match(combined?.recommendation || '', /Reject for now/);
 assert.match(report.markdown, /Negative Filter Probe/);
 
 const missing = buildUnifiedPositiveHeldLocalPreviewReplayPackageNegativeFilterProbeReport({

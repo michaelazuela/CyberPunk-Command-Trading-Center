@@ -47,12 +47,12 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
   rows: [
     {
       ticketId: 'unreviewed-ticket',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       visibleInHiddenTab: true,
       noteDisposition: 'unreviewed',
       noteValid: true,
-      systemReviewNotes: ['raidReclaim long remains review-only: this cluster lacks full plan-level proof.'],
+      systemReviewNotes: ['historicalReview long remains review-only: this cluster lacks full plan-level proof.'],
       systemNotesAffectDisposition: false,
       reviewOnly: true,
       livePromotionAllowed: false,
@@ -60,7 +60,7 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
     },
     {
       ticketId: 'keep-ticket',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       visibleInHiddenTab: true,
       noteDisposition: 'keep_review_only',
@@ -73,7 +73,7 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
     },
     {
       ticketId: 'evidence-ticket',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       visibleInHiddenTab: true,
       noteDisposition: 'needs_more_chart_evidence',
@@ -86,7 +86,7 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
     },
     {
       ticketId: 'reject-ticket',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       visibleInHiddenTab: true,
       noteDisposition: 'reject_preview',
@@ -99,7 +99,7 @@ const rollup: UnifiedPositiveHeldLocalPreviewReviewRollupReport = {
     },
     {
       ticketId: 'research-ticket',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       visibleInHiddenTab: true,
       noteDisposition: 'candidate_for_later_research',

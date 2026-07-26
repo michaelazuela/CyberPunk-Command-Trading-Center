@@ -309,7 +309,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityFreshObservationM
     recommendations: recommendation === 'continue_observation'
       ? [
         'Fresh artifacts continue to support the installed same-event Sweep/HTF priority overlay.',
-        'Keep this in observation before broadening to AfterLunch, raidReclaim, Sweep variants, or failed-plan reversal.',
+        'Keep this in observation before broadening to AfterLunch, historicalReview, Sweep variants, or failed-plan reversal.',
       ]
       : recommendation === 'await_fresh_replay_or_live_observation_artifacts'
         ? [

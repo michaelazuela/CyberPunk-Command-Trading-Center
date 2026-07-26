@@ -26,7 +26,7 @@ interface CuratedSample {
   sweepRaidPlusReclaimPresent: boolean;
   deliveryStatus: 'achieved' | 'failed' | 'not_observed';
   modelOneOverlap: boolean;
-  raidReclaimOverlap: boolean;
+  historicalReversalOverlap: boolean;
   advisoryOnly: boolean;
   suggestedReviewLabels: string[];
   chartPath: string | null;
@@ -146,7 +146,7 @@ const BUCKETS: TriageBucket[] = [
 const LABEL_OPTIONS = [
   'strong_advisory_candidate',
   'covered_by_model_1',
-  'covered_by_RAID_RECLAIM',
+  'covered_by_uninstalled_context',
   'weak_or_noisy',
   'needs_chart_review',
   'reject_time_window_standalone',

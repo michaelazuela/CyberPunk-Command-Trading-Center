@@ -5,10 +5,10 @@ const proofReport = {
   summary: { proofOnlyMissingPlanFields: 1 },
   cases: [
     {
-      caseId: '2026-06-09|morning|IntradayMssMicroContinuation|SHORT',
+      caseId: '2026-06-09|morning|NoInstalledSetup|SHORT',
       tradeDate: '2026-06-09',
       sessionType: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       firstNoChaseTime: '2026-06-09T11:35:00',
       proofBarTime: '2026-06-09T11:40:00',

@@ -52,10 +52,10 @@ const installedScore: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreC
   },
   rows: [
     {
-      ticketId: '2026-07-09-evening-SweepMssFvgRetrace-SHORT',
+      ticketId: '2026-07-09-evening-NoInstalledSetup-SHORT',
       tradeDate: '2026-07-09',
       session: 'evening',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       executionStatus: 'Blocked',
       blockReason: 'InvalidStopLocation',
@@ -72,10 +72,10 @@ const installedScore: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreC
       riskPreserved: true,
     },
     {
-      ticketId: '2026-07-09-evening-SweepMssFvgRetrace-LONG',
+      ticketId: '2026-07-09-evening-NoInstalledSetup-LONG',
       tradeDate: '2026-07-09',
       session: 'evening',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -92,10 +92,10 @@ const installedScore: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreC
       riskPreserved: true,
     },
     {
-      ticketId: '2026-07-09-evening-raidReclaim-LONG',
+      ticketId: '2026-07-09-evening-historicalReview-LONG',
       tradeDate: '2026-07-09',
       session: 'evening',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -141,7 +141,7 @@ assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesCanExecute, false);
-assert.equal(report.rows.some((row) => row.setupType === 'raidReclaim'), false);
+assert.equal(report.rows.some((row) => row.setupType === 'historicalReview'), false);
 assert.equal(report.rows.find((row) => row.validSweepLead)?.scannerArtifact.deskTicketState, 'ACTIVE_REVIEW');
 assert.equal(report.rows.find((row) => row.invalidStopSweepPenaltyCandidate)?.scannerArtifact.deskTicketState, 'BLOCKED_REVIEW');
 

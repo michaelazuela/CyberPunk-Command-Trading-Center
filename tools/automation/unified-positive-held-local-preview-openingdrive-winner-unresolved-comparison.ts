@@ -64,7 +64,7 @@ interface GroupSummary {
   nyPremarketHighSweepRate: number | null;
   bearishOpeningDriveRate: number | null;
   averageEntryEthPercentile: number | null;
-  averageHtfSupportCount: number | null;
+  averageHtfContextCount: number | null;
   averageHtfCautionCount: number | null;
 }
 
@@ -174,7 +174,7 @@ function proofMinute(proofTime: string): number | null {
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
-function htfSupportCount(row: SlateStory): number {
+function htfContextCount(row: SlateStory): number {
   return row.timeframeStories.filter((story) => story.shortContext === 'support').length;
 }
 
@@ -199,7 +199,7 @@ function summarize(key: string, rows: SlateStory[]): GroupSummary {
     nyPremarketHighSweepRate: rate(rows.map((row) => row.session.sweptNyPremarketHigh)),
     bearishOpeningDriveRate: rate(rows.map((row) => row.session.openingDriveDirection === 'bearish')),
     averageEntryEthPercentile: avg(rows.map((row) => row.session.entryInEthPercentile)),
-    averageHtfSupportCount: avg(rows.map(htfSupportCount)),
+    averageHtfContextCount: avg(rows.map(htfContextCount)),
     averageHtfCautionCount: avg(rows.map(htfCautionCount)),
   };
 }
@@ -232,9 +232,9 @@ function escapeTable(value: string): string {
 
 function groupTable(groups: GroupSummary[]): string[] {
   return [
-    '| Group | Slates | W/L/U/B | P/L | Avg Risk | Avg MFE R | Avg MAE R | Avg Proof Min | NY Low Break | NY High Sweep | Bearish OD | Avg ETH % | HTF Support | HTF Caution |',
+    '| Group | Slates | W/L/U/B | P/L | Avg Risk | Avg MFE R | Avg MAE R | Avg Proof Min | NY Low Break | NY High Sweep | Bearish OD | Avg ETH % | HTF Context | HTF Caution |',
     '|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|',
-    ...groups.map((row) => `| ${escapeTable(row.key)} | ${row.slates} | ${row.winners}/${row.losses}/${row.unresolved}/${row.blocked} | ${row.oneMesPl ?? '-'} | ${row.averageRiskPoints ?? '-'} | ${row.averageMfeR ?? '-'} | ${row.averageMaeR ?? '-'} | ${row.averageProofMinute ?? '-'} | ${row.nyPremarketLowBreakRate ?? '-'} | ${row.nyPremarketHighSweepRate ?? '-'} | ${row.bearishOpeningDriveRate ?? '-'} | ${row.averageEntryEthPercentile ?? '-'} | ${row.averageHtfSupportCount ?? '-'} | ${row.averageHtfCautionCount ?? '-'} |`),
+    ...groups.map((row) => `| ${escapeTable(row.key)} | ${row.slates} | ${row.winners}/${row.losses}/${row.unresolved}/${row.blocked} | ${row.oneMesPl ?? '-'} | ${row.averageRiskPoints ?? '-'} | ${row.averageMfeR ?? '-'} | ${row.averageMaeR ?? '-'} | ${row.averageProofMinute ?? '-'} | ${row.nyPremarketLowBreakRate ?? '-'} | ${row.nyPremarketHighSweepRate ?? '-'} | ${row.bearishOpeningDriveRate ?? '-'} | ${row.averageEntryEthPercentile ?? '-'} | ${row.averageHtfContextCount ?? '-'} | ${row.averageHtfCautionCount ?? '-'} |`),
   ];
 }
 

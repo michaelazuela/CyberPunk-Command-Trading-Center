@@ -59,7 +59,7 @@
     "deliveryAchievedCount": 76,
     "failedDeliveryCount": 6,
     "modelOneOverlapCount": 140,
-    "raidReclaimOverlapCount": 60,
+    "historicalReversalOverlapCount": 60,
     "advisoryOnlyCount": 57
   },
   "candidates": [
@@ -1311,7 +1311,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -1632,7 +1632,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -1953,7 +1953,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -2274,7 +2274,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -2381,7 +2381,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -3237,7 +3237,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -3451,7 +3451,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -3772,7 +3772,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -3879,7 +3879,7 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -5484,7 +5484,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -5591,7 +5591,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -5698,7 +5698,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -6661,7 +6661,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -6768,7 +6768,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -6875,7 +6875,7 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -7089,7 +7089,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -7410,7 +7410,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -7945,7 +7945,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -8801,7 +8801,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -9122,7 +9122,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -9229,7 +9229,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -9443,7 +9443,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -10513,7 +10513,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -10727,7 +10727,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -10834,7 +10834,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -10941,7 +10941,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -11369,7 +11369,7 @@
       "priceAlreadyReachedDrawBeforeSetup": false,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -11797,7 +11797,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -11904,7 +11904,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -12011,7 +12011,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -12974,7 +12974,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -13402,7 +13402,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -14472,7 +14472,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -14793,7 +14793,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -15756,7 +15756,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -17468,7 +17468,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -17575,7 +17575,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -17682,7 +17682,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -17789,7 +17789,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -18003,7 +18003,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -18966,7 +18966,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -19180,7 +19180,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": true,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -19287,7 +19287,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -20036,7 +20036,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -20678,7 +20678,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -20785,7 +20785,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -21213,7 +21213,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -21748,7 +21748,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -22283,7 +22283,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -22390,7 +22390,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -23995,7 +23995,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -24423,7 +24423,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -24744,7 +24744,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -25065,7 +25065,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -25707,7 +25707,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -26028,7 +26028,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -26349,7 +26349,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -26884,7 +26884,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -27098,7 +27098,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [
@@ -27205,7 +27205,7 @@
       "priceAlreadyReachedDrawBeforeSetup": true,
       "riskWouldBeTooWideUnderCurrentApprovedRules": false,
       "largerTimeframeContextConflictAvailable": false,
-      "overlapClassification": "RAID_RECLAIM_overlap_possible",
+      "overlapClassification": "HISTORICAL_REVERSAL_overlap_possible",
       "researchOnly": true,
       "boundary": "research_only_not_execution_authority",
       "notes": [

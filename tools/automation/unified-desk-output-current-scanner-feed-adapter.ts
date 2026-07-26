@@ -20,8 +20,8 @@ interface SelectorPreviewRow {
   riskPoints: number | null;
   movement: string;
   primaryLane: string;
-  supportingModels: string[];
-  sourceCandidateRole: 'primary_lane' | 'supporting_lane';
+  contextLabels: string[];
+  sourceCandidateRole: 'primary_lane' | 'context_lane';
   deskLanguage: {
     headline: string;
     what: string;
@@ -314,7 +314,7 @@ function rowFromEvent(args: {
     riskPoints,
     movement: movementFrom(args.event, decision),
     primaryLane: model,
-    supportingModels: (args.event.setupCandidateStatus?.statuses || [])
+    contextLabels: (args.event.setupCandidateStatus?.statuses || [])
       .map((candidate) => candidate.setupType)
       .filter((value): value is string => Boolean(value) && value !== model),
     sourceCandidateRole: 'primary_lane',

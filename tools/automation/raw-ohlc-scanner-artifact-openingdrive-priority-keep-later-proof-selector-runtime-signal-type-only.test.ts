@@ -8,7 +8,7 @@ const proofSelectionSignal: SetupCandidateProofSelectionSignal = {
   completedBarTime: '2026-07-01T14:05:00.000Z',
   groupKey: 'morning|2026-07-01T14:05:00.000Z|LONG',
   groupSize: 2,
-  competingSetupTypes: [SetupType.SweepMssFvgRetrace, SetupType.OpeningDriveFvgContinuation],
+  competingSetupTypes: [SetupType.NoSetup, SetupType.NoSetup],
   changesCanExecute: false,
   changesEntryStopTargets: false,
   changesRiskRules: false,
@@ -20,7 +20,7 @@ const proofSelectionSignal: SetupCandidateProofSelectionSignal = {
 };
 
 const candidateBoundary = {
-  setupType: SetupType.SweepMssFvgRetrace,
+  setupType: SetupType.NoSetup,
   proofSelectionSignal,
 } satisfies Partial<SetupCandidate>;
 

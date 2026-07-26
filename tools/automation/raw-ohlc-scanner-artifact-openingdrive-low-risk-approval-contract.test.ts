@@ -31,7 +31,7 @@ const lowRiskValidation = {
   source: {
     reportDir: 'reports',
     samebarSeparatorReportPath: 'samebar.json',
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
   },
   assumptions: {
     readOnlyPostProcessor: true,
@@ -107,7 +107,7 @@ const freshReplayPackage = {
   generatedAt: '2026-07-20T00:00:00.000Z',
   status: 'pass',
   authority,
-  source: { reportDir: 'reports', setupType: 'OpeningDriveFvgContinuation', samebarReportPaths: [] },
+  source: { reportDir: 'reports', setupType: 'NoInstalledSetup', samebarReportPaths: [] },
   assumptions: {
     savedReportsOnly: true,
     openingDriveOnly: true,

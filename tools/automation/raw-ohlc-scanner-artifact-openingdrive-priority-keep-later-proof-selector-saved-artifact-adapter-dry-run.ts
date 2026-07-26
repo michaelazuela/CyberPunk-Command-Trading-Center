@@ -143,7 +143,7 @@ function buildRows(dryRunComparison: RawOhlcScannerArtifactOpeningDrivePriorityK
   return (dryRunComparison?.slates || []).map((slate) => {
     const adapterDecision = slate.selectedCandidateChanged ? 'would_select_sweep_keep_later_proof' : 'no_change';
     const blockers = [
-      slate.selectedCandidateChanged && slate.proposedSetupType !== 'SweepMssFvgRetrace' ? 'changed proposed row is not SweepMssFvgRetrace' : null,
+      slate.selectedCandidateChanged && slate.proposedSetupType !== 'NoInstalledSetup' ? 'changed proposed row is not NoInstalledSetup' : null,
       slate.selectedCandidateChanged && slate.proposedSelectorDecision !== 'keep_later_sweep_proof' ? 'changed proposed row is not keep_later_sweep_proof' : null,
       slate.selectedCandidateChanged && !slate.proposedStrictReadySourceProofPositive ? 'changed proposed row is not strict-ready/source-proof-positive' : null,
       slate.selectedCandidateChanged && !slate.proposedDeterministicLevelsValid ? 'changed proposed row has invalid deterministic levels' : null,
@@ -223,7 +223,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
   const rows = buildRows(args.dryRunComparison);
   const changedRows = rows.filter((row) => row.adapterDecision === 'would_select_sweep_keep_later_proof');
   const blockedAdapterRows = changedRows.filter((row) => row.blockers.length > 0).length;
-  const nonSweepAdapterRows = changedRows.filter((row) => row.proposedSetupType !== 'SweepMssFvgRetrace').length;
+  const nonSweepAdapterRows = changedRows.filter((row) => row.proposedSetupType !== 'NoInstalledSetup').length;
   const missingOutcomeRows = changedRows.filter((row) => row.proposedOutcomeLabel === null).length;
   const invalidProposedRows = changedRows.filter((row) => row.blockers.length > 0).length;
   const blockers = [
@@ -238,7 +238,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
     args.dryRunComparison && args.dryRunComparison.summary.recommendation !== 'dry_run_supports_sweep_only_guarded_selector_research' ? `dry-run comparison recommendation is ${args.dryRunComparison.summary.recommendation}` : null,
     changedRows.length === 0 ? 'no changed adapter rows were built' : null,
     blockedAdapterRows > 0 ? `${blockedAdapterRows} changed adapter rows are blocked` : null,
-    nonSweepAdapterRows > 0 ? `${nonSweepAdapterRows} changed adapter rows are not SweepMssFvgRetrace` : null,
+    nonSweepAdapterRows > 0 ? `${nonSweepAdapterRows} changed adapter rows are not NoInstalledSetup` : null,
     missingOutcomeRows > 0 ? `${missingOutcomeRows} changed adapter rows are missing outcome evidence` : null,
     args.dryRunComparison && args.dryRunComparison.summary.shouldPostRows !== 0 ? `${args.dryRunComparison.summary.shouldPostRows} shouldPost rows in dry-run comparison` : null,
     args.dryRunComparison && args.dryRunComparison.summary.publishDiscordRows !== 0 ? `${args.dryRunComparison.summary.publishDiscordRows} publishDiscord rows in dry-run comparison` : null,

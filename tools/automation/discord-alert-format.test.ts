@@ -80,7 +80,7 @@ assert.throws(() => validateDiscordPayload({
 
 function sampleCandidate(direction: 'LONG' | 'SHORT' = 'LONG'): SetupCandidate {
   return {
-    setupType: SetupType.RaidReclaimReversal,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Liquidity sweep reclaim',
     direction,
     detectedStatus: SetupCandidateStatus.Detected,
@@ -817,8 +817,8 @@ assert.ok(!/Long T1 Hit|Short T1 Hit|Stopped|Scratch/.test(JSON.stringify(watchP
 
 const deskPlayLongCandidate = {
   ...sampleCandidate('LONG'),
-  setupType: SetupType.SweepMssFvgRetrace,
-  scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
+  setupType: SetupType.NoSetup,
+  scenarioLabel: 'ICT no installed model path Long: Sweep Reclaim Imbalance Retrace',
   entry: 7312,
   stop: 7271.75,
   target1: 7400,
@@ -867,7 +867,7 @@ const deskPlayPayload = compactDiscordSummary({
         sourceOfTruth: 'scanner_protected_structure_trend_confirmation',
         direction: 'LONG',
         status: 'aligned',
-        supportingTimeframes: ['15M', '5M'],
+        contextTimeframes: ['15M', '5M'],
         lineInSand: 7271.75,
         confirmation: '15M and 5M protected structure are BULL now; changes BEAR below 7271.75 on completed close+hold.',
         summary: 'Desk Direction: LONG. Trend confirmation: 15M+5M protected structure aligned; changes BEAR below 7271.75.',
@@ -999,7 +999,7 @@ const deskPlayPayload = compactDiscordSummary({
       discordEligible: true,
       longBias: {
         state: 'primary',
-        scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
+        scenarioLabel: 'ICT no installed model path Long: Sweep Reclaim Imbalance Retrace',
         decisionQualityScore: 82,
         modelConfidenceScore: 79,
         lineInSand: 7342,
@@ -1031,7 +1031,7 @@ const deskPlayPayload = compactDiscordSummary({
       },
       shortBias: {
         state: 'countertrend_review',
-        scenarioLabel: 'Bearish Raid Reclaim Reversal Reversal',
+        scenarioLabel: 'Bearish no installed model path',
         decisionQualityScore: 58,
         modelConfidenceScore: 61,
         lineInSand: 7303.5,
@@ -1048,7 +1048,7 @@ const deskPlayPayload = compactDiscordSummary({
           strength: 'strong',
           whyItMayReact: 'Real session liquidity where short delivery can stall or reverse.',
         },
-        nextTrigger: 'Bearish Raid Reclaim Reversal requires completed 5M acceptance below 7303.50.',
+        nextTrigger: 'Bearish no installed model path requires completed 5M acceptance below 7303.50.',
         tradeReadiness: {
           sourceOfTruth: 'scanner_trade_readiness_routing',
           direction: 'SHORT',
@@ -1116,8 +1116,8 @@ assert.ok(/Long T1 Hit|Long Stopped|Scratch|Missed/.test(JSON.stringify(deskPlay
 
 const farAwayConditionalShortCandidate = {
   ...sampleCandidate('SHORT'),
-  setupType: SetupType.SweepMssFvgRetrace,
-  scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
+  setupType: SetupType.NoSetup,
+  scenarioLabel: 'ICT no installed model path Short: Sweep Reclaim Imbalance Retrace',
   entry: 7430.5,
   stop: 7487,
   target1: 7345.75,
@@ -1178,7 +1178,7 @@ const farAwayConditionalPayload = compactDiscordSummary({
       discordEligible: true,
       shortBias: {
         state: 'primary',
-        scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
+        scenarioLabel: 'ICT no installed model path Short: Sweep Reclaim Imbalance Retrace',
         decisionQualityScore: 93,
         lineInSand: 7430,
         nextTrigger: farAwayConditionalShortCandidate.requiredTrigger,
@@ -1204,7 +1204,7 @@ assert.ok(!/^Entry: 7430\.50$/m.test(farAwayConditionalText));
 
 const targetToLineReviewCandidate = {
   ...sampleCandidate('LONG'),
-  setupType: SetupType.RaidReclaimReversal,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'June 29 target-to-line long review',
   entry: null,
   stop: null,
@@ -1327,7 +1327,7 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
     visibilityMode: 'HOLD_WITH_REASON',
     discordAction: 'post_review',
     lineInSand: 7342,
-    nextTrigger: 'Bearish Failed Breakout Reversal: buy-side sweep above 7437.5, reclaim back below the swept high, then reject on the retest.',
+    nextTrigger: 'Bearish no installed model path: buy-side sweep above 7437.5, reclaim back below the swept high, then reject on the retest.',
     invalidation: 'Completed 5M reclaim above protected structure cancels the short review.',
     canExecute: false,
     primaryDeskPlay: {
@@ -1337,7 +1337,7 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
       lineInSand: 7342,
       longAbove: null,
       shortBelow: 7342,
-      nextTrigger: 'Bearish Failed Breakout Reversal: buy-side sweep above 7437.5, reclaim back below the swept high, then reject on the retest.',
+      nextTrigger: 'Bearish no installed model path: buy-side sweep above 7437.5, reclaim back below the swept high, then reject on the retest.',
       invalidation: 'Completed 5M reclaim above 7342.00 pauses the short review.',
       noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',
       htfConflict: false,
@@ -1439,7 +1439,7 @@ const waitMapShortRow = [
 assert.ok(waitMapShortRow.every((index) => index >= 0), 'expected concise WAIT Desk Plan');
 assert.deepEqual([...waitMapShortRow].sort((a, b) => a - b), waitMapShortRow, 'WAIT Desk Plan must keep primary, battle plan, line, and status in order');
 assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
-assert.ok(!deskPlayDecisionMapText.includes('Bearish Failed Breakout Reversal'));
+assert.ok(!deskPlayDecisionMapText.includes('Bearish no installed model path'));
 assert.ok(!deskPlayDecisionMapText.includes('reclaim back below t...'));
 assert.ok(!deskPlayDecisionMapText.includes('Need: protected 5M shift + canExecute.'));
 assert.equal(deskPlayDecisionMapText.includes('No HTF-supported directional play is confirmed'), false);
@@ -1641,7 +1641,7 @@ assert.ok(!invalidDeskMapText.includes('SHORT BELOW 7437.50 | Entry 7441.00'));
 assert.ok(!invalidDeskMapText.includes('Stop 7433.00 | T1 7429.00 | T2 7425.00'));
 
 const pullbackReviewCandidate = sampleCandidate('LONG');
-pullbackReviewCandidate.setupType = SetupType.RaidReclaimReversal;
+pullbackReviewCandidate.setupType = SetupType.NoSetup;
 pullbackReviewCandidate.entry = 7432.5;
 pullbackReviewCandidate.stop = 7414.75;
 pullbackReviewCandidate.target1 = 7470;
@@ -1685,7 +1685,7 @@ const pullbackReferenceDeskMapPayload = compactDiscordSummary({
         originalLine: 7436.25,
         activeLine: 7454.5,
         migrated: true,
-        supportingTimeframes: ['15M', '5M'],
+        contextTimeframes: ['15M', '5M'],
         reason: 'Active tactical line migrated from original campaign line 7436.25 to 7454.50 using 15M+5M protected-structure confirmation.',
         nextTrigger: 'Use 7454.50 as the active tactical line: completed 5M hold/retest above that line is required before fresh execution consideration.',
         standDown: 'Stand down from fresh LONG entries if completed 5M acceptance returns below 7454.50; manage any earlier plan separately.',
@@ -1978,7 +1978,7 @@ const deskPlaySupportedShortPayload = compactDiscordSummary({
         decisionQualityScore: 93,
         lineInSand: 7342,
         nextTrigger: 'Completed 5M close below 7342.00, then failed retest.',
-        reason: 'Short review has explicit completed HTF support and app-owned entry/stop math available.',
+        reason: 'Short review has explicit completed HTF context and app-owned entry/stop math available.',
         blockers: ['canExecute=false'],
       },
     },
@@ -2519,7 +2519,7 @@ const freshReentryWatchPayload = compactDiscordSummary({
         activeLine: 7464,
         originalLine: 7482.25,
         migrated: true,
-        supportingTimeframes: ['5M'],
+        contextTimeframes: ['5M'],
         reason: 'Active line migrated to current 5M structure.',
         nextTrigger: 'Active line 7464.00: completed 5M hold/retest below required before fresh execution consideration.',
         standDown: 'Fresh SHORT stand down on completed 5M acceptance above 7464.00.',
@@ -2573,7 +2573,7 @@ const freshReentryWatchPayload = compactDiscordSummary({
           stop: 7487,
           target1: 7464,
           target2: 7459.25,
-          triggerNeeded: 'Bearish Raid Reclaim Reversal trigger already moved into target context.',
+          triggerNeeded: 'Bearish no installed model path trigger already moved into target context.',
         },
         routingSummary: 'HTF-first routing: 240M parent FVG frames the map.',
         standDown: 'Stand down on completed 5M acceptance above parent zone 7512.00.',
@@ -2628,7 +2628,7 @@ const freshReentryWatchPayload = compactDiscordSummary({
       },
       shortBias: {
         state: 'primary',
-        scenarioLabel: 'Missed raidReclaim short with fresh re-entry watch',
+        scenarioLabel: 'Missed historicalReview short with fresh re-entry watch',
         lineInSand: 7464,
         nextTrigger: 'Completed 5M close/hold below 7464.00 with fresh protected 5M structure.',
         reason: 'Fresh line watch after old entry missed.',
@@ -2650,7 +2650,7 @@ assert.ok(freshReentryWatchText.includes('Status: approved for Discord condition
 assert.equal(freshReentryWatchText.includes('Fresh entry/stop/T1/T2: pending new 5M structure'), false, freshReentryWatchText);
 
 const deskPlayWideReviewCandidate = sampleCandidate('SHORT');
-deskPlayWideReviewCandidate.setupType = SetupType.IntradayMssMicroContinuation;
+deskPlayWideReviewCandidate.setupType = SetupType.NoSetup;
 deskPlayWideReviewCandidate.entry = 7581.25;
 deskPlayWideReviewCandidate.stop = 7600.5;
 deskPlayWideReviewCandidate.target1 = 7552.5;
@@ -2762,15 +2762,15 @@ assert.deepEqual((lunch.components || []).flatMap((row: any) => row.components.m
 assert.ok(!JSON.stringify(lunch.components).includes('Long T1 Hit'));
 
 const eveningMissedCandidate = sampleCandidate('LONG');
-eveningMissedCandidate.setupType = SetupType.RaidReclaimReversal;
-eveningMissedCandidate.scenarioLabel = 'Bullish Raid Reclaim Reversal Reversal - normalized plan not executable';
+eveningMissedCandidate.setupType = SetupType.NoSetup;
+eveningMissedCandidate.scenarioLabel = 'Bullish no installed model path - normalized plan not executable';
 eveningMissedCandidate.entry = 7552.5;
 eveningMissedCandidate.stop = 7546.5;
 eveningMissedCandidate.target1 = 7565;
 eveningMissedCandidate.target2 = 7570;
 eveningMissedCandidate.riskPoints = 6;
 eveningMissedCandidate.modelConfidenceScore = 85;
-eveningMissedCandidate.requiredTrigger = 'Bullish Raid Reclaim Reversal: sell-side sweep below 7548.5, reclaim back above the swept low, then confirm upward rejection or expansion.';
+eveningMissedCandidate.requiredTrigger = 'Bullish no installed model path: sell-side sweep below 7548.5, reclaim back above the swept low, then confirm upward rejection or expansion.';
 eveningMissedCandidate.nextAction = 'Preferred plan: take only the reclaim-confirmed reversal or the retrace after expansion; do not chase the first reversal candle. Risk exceeds standard limit. Human final decision required. Normalized app-owned plan is not executable. Wait for a fresh completed 5M trigger/retest before human review.';
 eveningMissedCandidate.invalidation = 'Invalid if price trades below the sweep wick structure stop near 7546.5.';
 const eveningMissed = compactDiscordSummary({
@@ -3021,7 +3021,7 @@ assert.ok(!scannerHtfOppositionExecutableText.includes('HTF Runner Map:'));
 assert.ok(!scannerHtfOppositionExecutableText.includes('Memory:'));
 
 const scannerReadyCandidate = sampleCandidate('LONG');
-scannerReadyCandidate.setupType = SetupType.IntradayMssMicroContinuation;
+scannerReadyCandidate.setupType = SetupType.NoSetup;
 scannerReadyCandidate.scenarioLabel = 'HTF Context Continuation After Raid/Reclaim';
 scannerReadyCandidate.executionStatus = ExecutionStatus.Executable;
 scannerReadyCandidate.candidateState = 'MSS_HOLD_CONFIRMED';
@@ -3064,7 +3064,7 @@ assert.equal(/APPROVED|EXECUTABLE/i.test(scannerReadyPayload.content || ''), fal
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
 
 const blockedTargetRoomHighScoreCandidate = sampleCandidate('LONG');
-blockedTargetRoomHighScoreCandidate.setupType = SetupType.RaidReclaimReversal;
+blockedTargetRoomHighScoreCandidate.setupType = SetupType.NoSetup;
 blockedTargetRoomHighScoreCandidate.decisionQualityScore = 98;
 blockedTargetRoomHighScoreCandidate.decisionQualityHardBlocker = 'Clean 1.5R path unavailable: imbalance sits before T1.';
 blockedTargetRoomHighScoreCandidate.targetRoom = {
@@ -3097,8 +3097,8 @@ assert.ok(!blockedTargetRoomText.includes('HIGH-CONFIDENCE CONDITIONAL'));
 assert.ok(blockedTargetRoomText.includes('NO TRADE') || blockedTargetRoomText.includes('WAIT'));
 
 const discordChartDriftCandidate = sampleCandidate('LONG');
-discordChartDriftCandidate.setupType = SetupType.RaidReclaimReversal;
-discordChartDriftCandidate.scenarioLabel = 'Bullish Raid Reclaim Reversal Reversal - normalized plan not executable';
+discordChartDriftCandidate.setupType = SetupType.NoSetup;
+discordChartDriftCandidate.scenarioLabel = 'Bullish no installed model path - normalized plan not executable';
 discordChartDriftCandidate.entry = 7426.75;
 discordChartDriftCandidate.stop = 7422;
 discordChartDriftCandidate.target1 = 7437.5;
@@ -3106,7 +3106,7 @@ discordChartDriftCandidate.target2 = 7440;
 discordChartDriftCandidate.riskPoints = 4.75;
 discordChartDriftCandidate.decisionQualityScore = 87;
 discordChartDriftCandidate.modelConfidenceScore = 87;
-discordChartDriftCandidate.requiredTrigger = 'Bullish Raid Reclaim Reversal: sell-side sweep below 7422.5, reclaim back above the swept low, then confirm upward rejection or expansion.';
+discordChartDriftCandidate.requiredTrigger = 'Bullish no installed model path: sell-side sweep below 7422.5, reclaim back above the swept low, then confirm upward rejection or expansion.';
 discordChartDriftCandidate.invalidation = 'Invalid if price trades below the sweep wick structure stop near 7422.';
 discordChartDriftCandidate.targetObjectivePlan = {
   ...discordChartDriftCandidate.targetObjectivePlan!,
@@ -3194,7 +3194,7 @@ assert.ok(!discordChartDriftText.includes('T2: 7446.50'));
 assert.ok(!discordChartDriftText.includes('HTF target: 7459.25 / runner 7496.50'));
 
 const openingDriveHumanReviewCandidate = sampleCandidate('SHORT');
-openingDriveHumanReviewCandidate.setupType = SetupType.OpeningDriveFvgContinuation;
+openingDriveHumanReviewCandidate.setupType = SetupType.NoSetup;
 openingDriveHumanReviewCandidate.scenarioLabel = 'Opening Drive FVG Continuation';
 openingDriveHumanReviewCandidate.executionStatus = ExecutionStatus.Conditional;
 openingDriveHumanReviewCandidate.candidateState = 'HUMAN_REVIEW_READY';
@@ -3238,7 +3238,7 @@ assert.ok(openingDriveText.includes('Stop: 7522.00'));
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(openingDriveText), false);
 
 const scannerRetestPendingCandidate = sampleCandidate('SHORT');
-scannerRetestPendingCandidate.setupType = SetupType.IntradayMssMicroContinuation;
+scannerRetestPendingCandidate.setupType = SetupType.NoSetup;
 scannerRetestPendingCandidate.scenarioLabel = 'HTF Context + 5M MSS Continuation';
 scannerRetestPendingCandidate.executionStatus = ExecutionStatus.Conditional;
 scannerRetestPendingCandidate.candidateState = 'MSS_CONTINUATION_RETEST_PENDING';
@@ -3271,7 +3271,7 @@ assert.ok(scannerRetestPendingText.length < 1400, `expected retest-pending scann
 assert.equal(/EXECUTABLE -|Trade now|Entry confirmed|Take the trade|Enter now|Sell now|Trade approved/i.test(scannerRetestPendingText), false);
 
 const dataLimitedScannerCandidate = sampleCandidate('LONG');
-dataLimitedScannerCandidate.setupType = SetupType.IntradayMssMicroContinuation;
+dataLimitedScannerCandidate.setupType = SetupType.NoSetup;
 dataLimitedScannerCandidate.scenarioLabel = 'HTF Context Continuation After Raid/Reclaim';
 dataLimitedScannerCandidate.executionStatus = ExecutionStatus.Conditional;
 dataLimitedScannerCandidate.htfLiquidityDrawState = htfStateFixture(true) as HtfLiquidityDrawState;
@@ -3304,7 +3304,7 @@ assert.equal(/HTF conflict confirmed|Bullish structure confirmed|Bearish structu
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(dataLimitedScannerText), false);
 
 const staleZoneShortCandidate = sampleCandidate('SHORT');
-staleZoneShortCandidate.setupType = SetupType.IntradayMssMicroContinuation;
+staleZoneShortCandidate.setupType = SetupType.NoSetup;
 staleZoneShortCandidate.entry = 7536;
 staleZoneShortCandidate.stop = 7571;
 staleZoneShortCandidate.target1 = 7483.5;

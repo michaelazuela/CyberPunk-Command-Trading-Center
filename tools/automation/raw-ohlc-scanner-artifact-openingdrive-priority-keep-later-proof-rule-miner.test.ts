@@ -10,7 +10,7 @@ const cases = Array.from({ length: 10 }, (_, index) => ({
   baselineTopTicketId: `later-${index}`,
   baselineDirection: 'LONG',
   replacementTicketId: `replacement-${index}`,
-  replacementSetupType: 'OpeningDriveFvgContinuation',
+  replacementSetupType: 'NoInstalledSetup',
   candidateRows: 2,
   duplicateOrdinal: 3,
   minutesSinceCampaignFirst: 10,

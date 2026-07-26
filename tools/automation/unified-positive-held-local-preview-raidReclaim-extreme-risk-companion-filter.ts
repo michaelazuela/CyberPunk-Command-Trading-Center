@@ -8,7 +8,7 @@ import type {
   UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport,
 } from './unified-positive-held-local-preview-sweep-penalty-installed-score-comparison';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport,
 } from './unified-positive-held-local-preview-raidReclaim-extreme-risk-rank-simulation';
 
 type InstalledRow = UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport['rows'][number];
@@ -62,8 +62,8 @@ interface ChangedSlate {
   topAfterValidReview: boolean;
 }
 
-export interface UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_extreme_risk_companion_filter';
+export interface UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport {
+  reportType: 'unified_positive_held_local_preview_historicalReview_extreme_risk_companion_filter';
   generatedAt: string;
   status: 'pass' | 'fail';
   authority: {
@@ -125,22 +125,22 @@ const PENALTY_POINTS = 12;
 const VARIANTS = [
   {
     id: 'risk_gt_15',
-    description: 'raidReclaim riskPoints > 15',
+    description: 'historicalReview riskPoints > 15',
     matches: (row: CandidateRow) => (row.riskPoints ?? 0) > 15,
   },
   {
     id: 'risk_gt_20',
-    description: 'raidReclaim riskPoints > 20',
+    description: 'historicalReview riskPoints > 20',
     matches: (row: CandidateRow) => (row.riskPoints ?? 0) > 20,
   },
   {
     id: 'risk_gt_20_proof_0',
-    description: 'raidReclaim riskPoints > 20 and proofToEntryMinutes = 0',
+    description: 'historicalReview riskPoints > 20 and proofToEntryMinutes = 0',
     matches: (row: CandidateRow) => (row.riskPoints ?? 0) > 20 && row.proofToEntryMinutes === 0,
   },
   {
     id: 'risk_gte_23_proof_0',
-    description: 'raidReclaim riskPoints >= 23 and proofToEntryMinutes = 0',
+    description: 'historicalReview riskPoints >= 23 and proofToEntryMinutes = 0',
     matches: (row: CandidateRow) => (row.riskPoints ?? 0) >= 23 && row.proofToEntryMinutes === 0,
   },
 ] as const;
@@ -164,7 +164,7 @@ function readJson<T>(filePath: string): T {
   return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
 }
 
-function authority(): UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport['authority'] {
+function authority(): UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport['authority'] {
   return {
     readOnly: true,
     localOnly: true,
@@ -236,7 +236,7 @@ function variantSummary(rows: CandidateRow[], variant: typeof VARIANTS[number]):
   for (const row of rows) {
     groups.set(row.slateId, [...(groups.get(row.slateId) || []), row]);
   }
-  const penalizes = (row: CandidateRow) => isValidReview(row) && row.setupType === 'raidReclaim' && variant.matches(row);
+  const penalizes = (row: CandidateRow) => isValidReview(row) && row.setupType === 'historicalReview' && variant.matches(row);
   const scoreAfter = (row: CandidateRow) => row.installedScore === null ? null : row.installedScore - (penalizes(row) ? PENALTY_POINTS : 0);
   const changed: ChangedSlate[] = [];
   const topBeforePl: Array<number | null> = [];
@@ -298,9 +298,9 @@ function variantSummary(rows: CandidateRow[], variant: typeof VARIANTS[number]):
   };
 }
 
-function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport, 'markdown'>): string {
+function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport, 'markdown'>): string {
   return [
-    '# Unified Positive Held-Local Preview raidReclaim Extreme-Risk Companion Filter',
+    '# Unified Positive Held-Local Preview historicalReview Extreme-Risk Companion Filter',
     '',
     `Status: ${report.status}`,
     '',
@@ -319,15 +319,15 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimEx
   ].join('\n');
 }
 
-export function buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport(args: {
+export function buildUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport(args: {
   reportDir: string;
   installedScoreComparisonPath: string | null;
   installedScoreComparisonReport: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport | null;
   sourceProofTimingPath: string | null;
   sourceProofTimingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport | null;
   extremeRiskSimulationPath: string | null;
-  extremeRiskSimulationReport: UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport | null;
-}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport {
+  extremeRiskSimulationReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport | null;
+}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport {
   const installedRows = args.installedScoreComparisonReport?.rows || [];
   const timingRows = args.sourceProofTimingReport?.rows || [];
   const rows = joinRows(installedRows, timingRows);
@@ -358,8 +358,8 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompan
   const recommendation = blockers.length ? 'reject_missing_source'
     : candidateVariants > 0 ? 'fresh_validate_candidate_variant'
       : 'do_not_install_extreme_risk_penalty';
-  const base: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport, 'markdown'> = {
-    reportType: 'unified_positive_held_local_preview_raidReclaim_extreme_risk_companion_filter',
+  const base: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport, 'markdown'> = {
+    reportType: 'unified_positive_held_local_preview_historicalReview_extreme_risk_companion_filter',
     generatedAt,
     status: blockers.length ? 'fail' : 'pass',
     authority: authority(),
@@ -394,15 +394,15 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompan
       : candidateVariants > 0
         ? ['Fresh-validate the candidate variant on regenerated replay artifacts before any scanner-visible proposal.']
         : [
-          'Do not install a raidReclaim extreme-risk rank penalty from this evidence.',
-          'Treat wide-risk raidReclaim as a human-review caution note until a valid replacement-positive separator is proven.',
+          'Do not install a historicalReview extreme-risk rank penalty from this evidence.',
+          'Treat wide-risk historicalReview as a human-review caution note until a valid replacement-positive separator is proven.',
         ],
   };
   return { ...base, markdown: buildMarkdown(base) };
 }
 
-export function writeUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport(
-  report: UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport,
+export function writeUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport(
+  report: UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport,
   outDir = DEFAULT_REPORT_DIR,
 ): { jsonPath: string; markdownPath: string } {
   fs.mkdirSync(outDir, { recursive: true });
@@ -414,7 +414,7 @@ export function writeUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompan
   return { jsonPath, markdownPath };
 }
 
-export function runUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterCli(args = process.argv.slice(2)): void {
+export function runUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterCli(args = process.argv.slice(2)): void {
   const outDir = readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR;
   const installedScoreComparisonPath = readFlag(args, '--installed-score-comparison') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-sweep-penalty-installed-score-comparison-\d+\.json$/);
@@ -422,7 +422,7 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanio
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-replay-package-source-proof-timing-\d+\.json$/);
   const extremeRiskSimulationPath = readFlag(args, '--extreme-risk-simulation') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-raidReclaim-extreme-risk-rank-simulation-\d+\.json$/);
-  const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport({
+  const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport({
     reportDir: outDir,
     installedScoreComparisonPath,
     installedScoreComparisonReport: installedScoreComparisonPath && fs.existsSync(installedScoreComparisonPath)
@@ -434,10 +434,10 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanio
       : null,
     extremeRiskSimulationPath,
     extremeRiskSimulationReport: extremeRiskSimulationPath && fs.existsSync(extremeRiskSimulationPath)
-      ? readJson<UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport>(extremeRiskSimulationPath)
+      ? readJson<UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport>(extremeRiskSimulationPath)
       : null,
   });
-  const paths = writeUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport(report, outDir);
+  const paths = writeUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport(report, outDir);
   if (args.includes('--json')) {
     console.log(JSON.stringify({ ...paths, status: report.status, summary: report.summary, variants: report.variants }, null, 2));
   } else {
@@ -450,7 +450,7 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanio
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   try {
-    runUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterCli();
+    runUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterCli();
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

@@ -208,7 +208,7 @@ export interface ScannerCandidateLifecycleTraceItem {
   targetReactionReason: string | null;
   levelTransition: DeskLevelTransitionMap | null;
   htfConflict: boolean;
-  htfSupported: boolean;
+  htfContextAlignmented: boolean;
   countertrend: boolean;
   hasFullPlanLevels: boolean;
   selected: boolean;
@@ -671,7 +671,7 @@ export interface DeskFreshReentryCandidate {
   sourceOfTruth: 'scanner_fresh_tactical_reentry_candidate';
   candidateKey: string;
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
-  setupType: SetupType.IntradayMssMicroContinuation;
+  setupType: SetupType.NoSetup;
   candidateState: 'QUALIFIED_CONDITIONAL';
   approvalStatus: 'approved_discord_conditional_display';
   status: DeskFreshReentryCandidateStatus;
@@ -832,7 +832,7 @@ export interface DeskTrendConfirmation {
   sourceOfTruth: 'scanner_protected_structure_trend_confirmation';
   direction: DeskPlayDirection;
   status: 'aligned' | 'not_aligned' | 'data_limited' | 'unavailable';
-  supportingTimeframes: Array<'15M' | '5M'>;
+  contextTimeframes: Array<'15M' | '5M'>;
   lineInSand: number | null;
   confirmation: string;
   summary: string;
@@ -849,7 +849,7 @@ export interface DeskActiveTacticalLine {
   originalLine: number | null;
   activeLine: number | null;
   migrated: boolean;
-  supportingTimeframes: Array<'15M' | '5M'>;
+  contextTimeframes: Array<'15M' | '5M'>;
   reason: string;
   nextTrigger: string;
   standDown: string;
@@ -1005,7 +1005,7 @@ export interface DeskSameSideCampaignStack {
   stackStatus: DeskSameSideCampaignStackStatus;
   leadTacticalPlanKey: string | null;
   campaignThesisKey: string | null;
-  supportingEvidenceKeys: string[];
+  contextKeys: string[];
   leadSelectionReason: string;
   roleAssignmentReason: string;
   staleLeadReason: string | null;
@@ -1722,18 +1722,20 @@ export function buildScannerAuthorityMetadata(args: {
   discordEligible?: boolean;
 }): ScannerAuthorityMetadata {
   const candidate = args.candidate || null;
+  const modelInstalled = Boolean(candidate?.setupType && candidate.setupType !== SetupType.NoSetup);
   const directional = candidate?.direction === 'LONG' || candidate?.direction === 'SHORT';
   const fullPlan = hasFullPlanLevels(candidate);
   const executionEligible = Boolean(
+    modelInstalled &&
     directional &&
     candidate?.executionStatus === ExecutionStatus.Executable &&
     !candidate.blockReason
   );
   return {
-    registeredModel: Boolean(candidate?.setupType),
-    activeModel: Boolean(candidate && (args.window ? args.window.allowsDeskPlan : true)),
-    watchEligible: Boolean(directional && hasMeaningfulStructuredEvidence(candidate)),
-    planEligible: Boolean(directional && fullPlan),
+    registeredModel: modelInstalled,
+    activeModel: Boolean(modelInstalled && candidate && (args.window ? args.window.allowsDeskPlan : true)),
+    watchEligible: Boolean(modelInstalled && directional && hasMeaningfulStructuredEvidence(candidate)),
+    planEligible: Boolean(modelInstalled && directional && fullPlan),
     discordEligible: Boolean(args.discordEligible ?? false),
     executionEligible,
     humanReviewOnly: Boolean(candidate?.humanReview || (candidate && !executionEligible)),
@@ -1817,11 +1819,7 @@ export function classifyScannerVisibility(args: {
 }
 
 function registryEntryHumanReviewOnly(entry: SetupRegistryEntry): boolean {
-  return (
-    entry.setupType === SetupType.OpeningDriveFvgContinuation ||
-    entry.setupType === SetupType.AfterLunchDriveFvgContinuation ||
-    entry.setupType === SetupType.IntradayMssMicroContinuation
-  );
+  return entry.setupType === SetupType.NoSetup;
 }
 
 function suppressionPathsForRegistryEntry(entry: SetupRegistryEntry): string[] {
@@ -1835,14 +1833,11 @@ function suppressionPathsForRegistryEntry(entry: SetupRegistryEntry): string[] {
     'Structured HTF context below the 30-day sufficiency requirement becomes data-quality visibility, not structural confirmation.',
   ];
 
-  if (entry.role === 'supporting_evidence') {
-    paths.unshift('Supporting-evidence registry role contributes facts/reasons/scoring only and does not create the active candidate by itself.');
-  }
   if (entry.role === 'deprecated') {
     paths.unshift('Deprecated registry role is excluded from active scanner, Discord alert, and trade-decision authority.');
   }
   if (registryEntryHumanReviewOnly(entry)) {
-    paths.unshift('Human-review-only model metadata keeps canExecute false unless another deterministic app-owned path already allows execution.');
+    paths.unshift('Blank-slate model metadata keeps canExecute false because no trading model is installed.');
   }
 
   return paths;
@@ -1852,11 +1847,8 @@ function canExecuteRelationshipForRegistryEntry(entry: SetupRegistryEntry): stri
   if (entry.role === 'deprecated') {
     return 'Deprecated registry entry; canExecute must remain false unless a current app-owned primary model separately creates an executable plan.';
   }
-  if (entry.role === 'supporting_evidence') {
-    return 'Supporting evidence can improve context/scoring only; canExecute is decided by the app-owned active candidate pipeline.';
-  }
   if (registryEntryHumanReviewOnly(entry)) {
-    return 'Human-review-only primary model; current metadata expects canExecute=false and trader confirmation before action.';
+    return 'Blank-slate primary model placeholder; current metadata expects canExecute=false.';
   }
   return 'Primary model can be execution-eligible only after deterministic app-owned session, 5M trigger, stop, target, risk, invalidation, and canExecute gates pass.';
 }
@@ -1877,7 +1869,7 @@ export function buildTradeDecisionMapAudit(entries: SetupRegistryEntry[] = SETUP
         sessionWindows: [...entry.allowedSessions],
         requiredEvidence: [...entry.requiredEvidence],
         rankWeight: entry.priority,
-        watchEligible: primary || entry.role === 'supporting_evidence',
+        watchEligible: primary,
         planEligible: primary,
         discordEligible: primary,
         executionEligible: primary && !humanReviewOnly,
@@ -2075,7 +2067,7 @@ function lifecycleItemCampaignRole(
   if (/opening.*fvg|fvg.*continuation/i.test(`${item.setupType} ${item.scenarioLabel || ''}`)) {
     return { role: 'entry_evidence', reason: 'Supports the defended FVG/reaction-zone entry evidence for the campaign.' };
   }
-  if (item.htfSupported) return { role: 'htf_context', reason: 'Supports the same-side campaign with HTF/session context.' };
+  if (item.htfContextAlignmented) return { role: 'htf_context', reason: 'Supports the same-side campaign with HTF/session context.' };
   return { role: 'management_target_context', reason: 'Supports same-side target or management context.' };
 }
 
@@ -2123,7 +2115,7 @@ export function buildSameSideCampaignStacks(args: {
   const directional = args.candidateLifecycleTrace.createdCandidates
     .filter((item) => (item.direction === 'LONG' || item.direction === 'SHORT') && (
       item.hasFullPlanLevels ||
-      item.htfSupported ||
+      item.htfContextAlignmented ||
       item.tacticalZone ||
       item.requiredTrigger ||
       item.nextTrigger
@@ -2198,7 +2190,7 @@ export function buildSameSideCampaignStacks(args: {
         stackStatus,
         leadTacticalPlanKey: lead?.candidateKey || null,
         campaignThesisKey: thesis?.candidateKey || null,
-        supportingEvidenceKeys: members
+        contextKeys: members
           .filter((member) => member.candidateKey !== lead?.candidateKey && member.candidateKey !== thesis?.candidateKey)
           .map((member) => member.candidateKey),
         leadSelectionReason: lead
@@ -2666,14 +2658,9 @@ function buildHtfProtectedStructureMap(
 
 function candidateHasHtfConflict(candidate: SetupCandidate | null | undefined): boolean {
   if (!candidate) return false;
-  const confirmedIntradayCampaign = candidateHasConfirmedIntradayMssCampaign(candidate);
   const text = [
     ...(candidate.missingEvidence || []),
-    ...(
-      confirmedIntradayCampaign
-        ? (candidate.evidence || []).filter((item) => !/htf caution.*opposing completed|opposing completed.*reported for human review/i.test(item))
-        : (candidate.evidence || [])
-    ),
+    ...(candidate.evidence || []),
     candidate.blockReason,
     candidate.activeRuleset?.timeframeMss?.status,
     ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
@@ -2685,33 +2672,18 @@ function textHasHtfCautionOnlyNoSupport(text: string): boolean {
   return /no completed (?:60m\/120m\/240m|htf).*mss support|htf is caution\/context only/i.test(text);
 }
 
-function candidateHasConfirmedIntradayMssCampaign(candidate: SetupCandidate | null | undefined): boolean {
-  if (!candidate?.activeCampaign) return false;
-  if (candidate.activeCampaign.primaryTrigger !== '15M_5M_MSS') return false;
-  return candidate.activeCampaign.evidenceLayers.some((layer) =>
-    layer.layer === '15M_5M_MSS_CAMPAIGN' &&
-    layer.status === 'confirmed' &&
-    layer.direction === candidate.direction
-  );
-}
-
-function textHasConfirmedIntradayMssCampaign(text: string): boolean {
-  return /15m.*5m.*mss|5m.*15m.*mss|aligned completed 15m and 5m|15m\/5m.*campaign/i.test(text);
-}
-
 function candidateHasHtfSupport(candidate: SetupCandidate | null | undefined): boolean {
   if (!candidate) return false;
-  if (candidateHasConfirmedIntradayMssCampaign(candidate)) return true;
   const text = [
     ...(candidate.evidence || []),
     ...(candidate.missingEvidence || []),
     ...(candidate.activeRuleset?.timeframeMss?.evidence || []),
     ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
     candidate.activeCampaign?.htfRelationship === 'caution' ? 'HTF is caution/context only.' : null,
-    candidate.activeCampaign?.htfRelationship === 'support' ? 'active campaign HTF support' : null,
+    candidate.activeCampaign?.htfRelationship === 'support' ? 'active campaign HTF context' : null,
   ].filter(Boolean).join(' ');
   if (textHasHtfCautionOnlyNoSupport(text)) return false;
-  if ((candidate.activeCampaign?.htfSupportTimeframes || []).length > 0) return true;
+  if ((candidate.activeCampaign?.htfContextAlignmentTimeframes || []).length > 0) return true;
   return /htf mss support in campaign direction|active campaign htf support|active timeframe mss context aligned on|higher-timeframe bias aligned|higher-timeframe (?:structure|bias|mss).*supports|(?:15m|60m|120m|240m|1h|2h|4h).*htf support/i.test(text);
 }
 
@@ -2737,15 +2709,14 @@ function lifecycleItemHasHtfSupport(item: ScannerCandidateLifecycleTraceItem | n
     item.requiredTrigger,
     item.targetReactionReason,
   ].filter(Boolean).join(' ');
-  if (item.htfSupported && textHasConfirmedIntradayMssCampaign(text)) return true;
   if (textHasHtfCautionOnlyNoSupport(text)) return false;
-  if (item.htfSupported) return true;
+  if (item.htfContextAlignmented) return true;
   return /htf mss support in campaign direction|active campaign htf support|active timeframe mss context aligned on|higher-timeframe bias aligned|higher-timeframe (?:structure|bias|mss).*supports|(?:15m|60m|120m|240m|1h|2h|4h).*htf support/i.test(text);
 }
 
 function lifecycleItemIsHtfFvgMicroMssReaction(item: ScannerCandidateLifecycleTraceItem | null | undefined): boolean {
   if (!item || (item.direction !== 'LONG' && item.direction !== 'SHORT')) return false;
-  if (item.setupType !== SetupType.IntradayMssMicroContinuation) return false;
+  if (item.setupType !== SetupType.NoSetup) return false;
   if (item.executionStatus !== ExecutionStatus.Conditional && item.executionStatus !== ExecutionStatus.Executable) return false;
   const text = [
     item.scenarioLabel,
@@ -2761,7 +2732,7 @@ function lifecycleItemIsHtfFvgMicroMssReaction(item: ScannerCandidateLifecycleTr
   ].filter(Boolean).join(' ');
   const hasLine = typeof lineForLifecycleItem(item) === 'number' && Number.isFinite(lineForLifecycleItem(item) as number);
   const hasMicroMss = /5m.*mss|mss.*5m|close-through|close through|retest\/hold|retest\/failure|micro[-\s]?continuation/i.test(text);
-  const hasHtfFvgReaction = item.htfSupported ||
+  const hasHtfFvgReaction = item.htfContextAlignmented ||
     /htf.*fvg|fvg.*htf|parent fvg|15m.*fvg|60m.*fvg|120m.*fvg|240m.*fvg|1h.*fvg|2h.*fvg|4h.*fvg|higher-timeframe.*fvg/i.test(text);
   return hasLine && hasMicroMss && hasHtfFvgReaction;
 }
@@ -2785,11 +2756,11 @@ function htfManagementWarningForLifecycleItem(item: ScannerCandidateLifecycleTra
   return `${item.direction} is pressing into ${opposingHtfStructureLabel(item.direction)}. Treat T1/T2 as management, stop pressing at ${htfReactionAreaLabelForLifecycleItem(item)}, and wait for a protected completed 5M line-in-the-sand shift before continuing or reversing.`;
 }
 
-function htfSupportWarningForLifecycleItem(item: ScannerCandidateLifecycleTraceItem | null | undefined): string | null {
+function htfContextAlignmentWarningForLifecycleItem(item: ScannerCandidateLifecycleTraceItem | null | undefined): string | null {
   if (!item || (item.direction !== 'LONG' && item.direction !== 'SHORT') || lifecycleItemHasHtfConflict(item) || lifecycleItemHasHtfSupport(item)) {
     return null;
   }
-  return `${item.direction} evidence is review-only because completed HTF support is not confirmed. Keep both sides mapped; do not headline this as the active play until HTF support or completed 5M reversal proof changes the map.`;
+  return `${item.direction} evidence is review-only because completed HTF context is not confirmed. Keep both sides mapped; do not headline this as the active play until HTF context or completed 5M reversal proof changes the map.`;
 }
 
 function lifecycleItemScore(item: ScannerCandidateLifecycleTraceItem | null | undefined): number {
@@ -2901,7 +2872,7 @@ export function buildCandidateLifecycleTrace(args: {
       targetReactionReason: targetReaction?.reason ?? null,
       levelTransition,
       htfConflict: candidateHasHtfConflict(candidate),
-      htfSupported: candidateHasHtfSupport(candidate),
+      htfContextAlignmented: candidateHasHtfSupport(candidate),
       countertrend: candidateHasHtfConflict(candidate),
       hasFullPlanLevels: hasFullPlanLevels(candidate),
       selected,
@@ -3209,7 +3180,11 @@ function buildDeskTicket(args: {
   unifiedDeskOutputDisplayCandidate?: ScannerCandidateLifecycleTraceItem | null;
   visibilityMetadata: ScannerVisibilityMetadata;
   htfContextStatus: DeskStateHtfContextStatus;
-}): DeskTicket {
+}): DeskTicket | null {
+  const hasInstalledModelCandidate = [args.candidate, args.selectedCandidate, args.primaryLifecycleCandidate, args.unifiedDeskOutputDisplayCandidate]
+    .some((candidate) => candidate?.setupType && candidate.setupType !== SetupType.NoSetup);
+  if (!hasInstalledModelCandidate) return null;
+
   const play = args.primaryDeskPlay;
   const displayCandidate = args.unifiedDeskOutputDisplayCandidate || null;
   const selected = displayCandidate || args.selectedCandidate;
@@ -3439,7 +3414,7 @@ function primaryRegistryEntryForSetup(setupType: SetupType | null | undefined): 
 
 function protectedStructureFallbackModelEntry(direction: 'LONG' | 'SHORT', map: DeskHtfProtectedStructureMap): SetupRegistryEntry | null {
   if (protectedStructureSupportDirection(map) !== direction) return null;
-  return SETUP_REGISTRY.find((entry) => entry.setupType === SetupType.IntradayMssMicroContinuation && entry.role === 'primary_model') || null;
+  return SETUP_REGISTRY.find((entry) => entry.setupType === SetupType.NoSetup && entry.role === 'primary_model') || null;
 }
 
 function existingModelFitMissingProof(item: ScannerCandidateLifecycleTraceItem | null): string[] {
@@ -3484,10 +3459,10 @@ function buildApprovedModelFit(args: {
   const aligned = protectedDirection === args.direction;
   if (!aligned) {
     if (lifecycleItemIsHtfFvgMicroMssReaction(args.item)) {
-      const entry = primaryRegistryEntryForSetup(SetupType.IntradayMssMicroContinuation);
+      const entry = primaryRegistryEntryForSetup(SetupType.NoSetup);
       return {
         sourceOfTruth: 'scanner_protected_structure_model_fit',
-        setupType: SetupType.IntradayMssMicroContinuation,
+        setupType: SetupType.NoSetup,
         modelName: entry?.label || 'Intraday MSS Micro Continuation',
         parentModelFamily: entry?.parentModelFamily || 'INTRADAY_MSS_MICRO_CONTINUATION',
         fitScore: Math.max(70, Math.min(100, Math.round(lifecycleItemScore(args.item) + 6))),
@@ -3665,7 +3640,7 @@ function buildProtectedStructureTrendConfirmation(map: DeskHtfProtectedStructure
       sourceOfTruth: 'scanner_protected_structure_trend_confirmation',
       direction: 'WAIT',
       status: 'data_limited',
-      supportingTimeframes: [],
+      contextTimeframes: [],
       lineInSand: null,
       confirmation: 'HTF context is data-limited; protected structure cannot promote a desk direction.',
       summary: 'Trend confirmation unavailable: HTF protected-structure context is data-limited.',
@@ -3680,7 +3655,7 @@ function buildProtectedStructureTrendConfirmation(map: DeskHtfProtectedStructure
       sourceOfTruth: 'scanner_protected_structure_trend_confirmation',
       direction: 'WAIT',
       status: 'unavailable',
-      supportingTimeframes: [],
+      contextTimeframes: [],
       lineInSand: null,
       confirmation: '15M and 5M protected structure rows are both required.',
       summary: 'Trend confirmation unavailable: missing 15M or 5M protected-structure row.',
@@ -3692,7 +3667,7 @@ function buildProtectedStructureTrendConfirmation(map: DeskHtfProtectedStructure
       sourceOfTruth: 'scanner_protected_structure_trend_confirmation',
       direction: 'WAIT',
       status: 'not_aligned',
-      supportingTimeframes: [],
+      contextTimeframes: [],
       lineInSand: null,
       confirmation: '15M and 5M protected structure are not aligned.',
       summary: 'Trend confirmation: WAIT until 15M and 5M protected structure align.',
@@ -3716,7 +3691,7 @@ function buildProtectedStructureTrendConfirmation(map: DeskHtfProtectedStructure
     sourceOfTruth: 'scanner_protected_structure_trend_confirmation',
     direction,
     status: 'aligned',
-    supportingTimeframes: ['15M', '5M'],
+    contextTimeframes: ['15M', '5M'],
     lineInSand: resolvedLine,
     confirmation: `15M and 5M protected structure are ${direction === 'LONG' ? 'BULL' : 'BEAR'} now; ${changeText} on completed close+hold.`,
     summary: `Desk Direction: ${direction}. Trend confirmation: 15M+5M protected structure aligned; ${changeText}.`,
@@ -3746,7 +3721,7 @@ function buildActiveTacticalLine(args: {
       originalLine: args.originalLine,
       activeLine: args.originalLine,
       migrated: false,
-      supportingTimeframes: [],
+      contextTimeframes: [],
       reason: 'No primary side is active, so no tactical line migration is available.',
       nextTrigger: 'Wait for 15M+5M structure alignment and completed 5M proof.',
       standDown: 'Stand down until one primary side is active.',
@@ -3772,12 +3747,12 @@ function buildActiveTacticalLine(args: {
     Number.isFinite(activeLine) &&
     Number.isFinite(args.originalLine) &&
     Math.abs(activeLine - args.originalLine) >= 0.25;
-  const supportingTimeframes = rows.map((row) => row.timeframe);
+  const contextTimeframes = rows.map((row) => row.timeframe);
   const lineText = typeof activeLine === 'number' && Number.isFinite(activeLine) ? activeLine.toFixed(2) : 'N/A';
   const originalText = typeof args.originalLine === 'number' && Number.isFinite(args.originalLine) ? args.originalLine.toFixed(2) : 'N/A';
   const directionWord = args.direction === 'LONG' ? 'above' : 'below';
   const standDownWord = args.direction === 'LONG' ? 'below' : 'above';
-  const structureText = supportingTimeframes.length ? supportingTimeframes.join('+') : 'current 5M/15M';
+  const structureText = contextTimeframes.length ? contextTimeframes.join('+') : 'current 5M/15M';
 
   return {
     sourceOfTruth: 'scanner_active_tactical_line',
@@ -3785,7 +3760,7 @@ function buildActiveTacticalLine(args: {
     originalLine: args.originalLine,
     activeLine: typeof activeLine === 'number' && Number.isFinite(activeLine) ? activeLine : null,
     migrated,
-    supportingTimeframes,
+    contextTimeframes,
     reason: migrated
       ? `Active line migrated ${originalText} -> ${lineText} via ${structureText} structure.`
       : `Active line remains ${lineText}; no stronger ${structureText} line has replaced it.`,
@@ -5531,7 +5506,7 @@ function buildFreshReentryCandidateSet(args: {
           sourceOfTruth: 'scanner_fresh_tactical_reentry_candidate',
           candidateKey,
           direction,
-          setupType: SetupType.IntradayMssMicroContinuation,
+          setupType: SetupType.NoSetup,
           candidateState: 'QUALIFIED_CONDITIONAL',
           approvalStatus: 'approved_discord_conditional_display',
           status,
@@ -5754,7 +5729,7 @@ function buildPrimaryDeskPlay(args: {
     lifecycleItemHasHtfConflict(args.candidateLifecycleTrace.bestShortPlan);
   const countertrendWarning = htfManagementWarningForLifecycleItem(primaryLifecycleItem) ||
     htfManagementWarningForLifecycleItem(selectedLifecycleItem) ||
-    htfSupportWarningForLifecycleItem(selectedLifecycleItem) ||
+    htfContextAlignmentWarningForLifecycleItem(selectedLifecycleItem) ||
     htfManagementWarningForLifecycleItem(oppositeLifecycleItem) ||
     (oppositeBias?.state === 'countertrend_review'
     ? `${oppositeBias.direction} evidence is counter-HTF/review-only until completed 5M confirmation proves the reversal path.`
@@ -5767,7 +5742,7 @@ function buildPrimaryDeskPlay(args: {
       ? `${trendConfirmation.summary} Opposite side stays visible as ${oppositeBias?.state || 'not_present'}.`
       : `${directionLabel(primaryDirection)} remains primary while its line/trigger holds. Opposite side stays visible as ${oppositeBias?.state || 'not_present'}.`
     : selectedLifecycleItem?.direction && !lifecycleItemHasHtfSupport(selectedLifecycleItem)
-    ? `No HTF-supported directional play is confirmed. ${selectedLifecycleItem.direction} evidence stays review-only until completed HTF support or protected 5M reversal proof changes the map.`
+    ? `No HTF-supported directional play is confirmed. ${selectedLifecycleItem.direction} evidence stays review-only until completed HTF context or protected 5M reversal proof changes the map.`
     : countertrendWarning && selectedLifecycleItem?.direction
     ? `No HTF-supported directional play is confirmed. ${selectedLifecycleItem.direction} evidence is review-only against opposing HTF/session structure until protected 5M proof changes the map.`
     : 'No HTF-supported directional play is confirmed from scanner-owned lifecycle state.';
@@ -6061,6 +6036,43 @@ export function buildDeskPublishDecision(args: {
   const deskState = args.deskState;
   const ticket = deskState.deskTicket;
   const selected = deskState.selectedCandidate;
+  if (!ticket) {
+    return {
+      sourceOfTruth: 'scanner_desk_publish_decision',
+      action: deskState.visibilityMode,
+      discordAction: deskState.discordAction,
+      shouldPost: false,
+      reason: 'Blank-slate mode: no installed trading model produced a desk ticket.',
+      displaySource: 'none',
+      candidateKey: null,
+      direction: 'WAIT',
+      setupType: null,
+      lineInSand: null,
+      triggerCondition: null,
+      entry: null,
+      stop: null,
+      t1: null,
+      t2: null,
+      invalidation: null,
+      invalidationText: null,
+      hasCompletePlan: false,
+      humanReviewOnly: true,
+      canExecute: false,
+      noChaseState: false,
+      htfContextStatus: deskState.htfContextStatus,
+      dataQualityStatus: deskState.dataQualityStatus,
+      discordReason: 'Blank-slate mode: no installed trading model produced a desk ticket.',
+      managementWarnings: [],
+      driftBlocker: null,
+      approvalBoundary: {
+        changesTradeApprovals: false,
+        changesCanExecute: false,
+        changesEntryStopTargets: false,
+        changesRiskRules: false,
+        changesBridgeBehavior: false,
+      },
+    };
+  }
   const ticketOwnsUnifiedDeskOutputDisplay = candidateKeyIsUnifiedDeskOutputProductionModel(ticket.sourceCandidateKey);
   const selectedHasCompletePlan = lifecycleItemHasCompletePublishLevels(selected);
   const selectedCanPublish = selectedHasCompletePlan &&
@@ -6474,7 +6486,7 @@ const ICT_RULE_WEIGHTS = {
   LIQUIDITY_SWEEP: 25,
   RECLAIM_AFTER_SWEEP: 15,
   WICK_REJECTION_SUPPORT: 10,
-  RAID_RECLAIM_REVERSAL: 20,
+  NO_MODEL_REVERSAL_CONTEXT: 20,
   DISPLACEMENT_CONFIRMED: 20,
   MARKET_STRUCTURE_SHIFT: 20,
   FVG_OR_IMBALANCE_ENTRY: 15,
@@ -6521,18 +6533,8 @@ function isIctHardDisqualified(candidate: SetupCandidate): boolean {
   return Boolean(ictHardDisqualifierReason(candidate));
 }
 
-function isIntradayMssMicroContinuationWatch(candidate: SetupCandidate | null | undefined): boolean {
-  if (!candidate) return false;
-  return (
-    candidate.setupType === SetupType.IntradayMssMicroContinuation &&
-    candidate.candidateState === 'MSS_CONTINUATION_RETEST_PENDING' &&
-    candidate.executionStatus === ExecutionStatus.Conditional &&
-    candidate.humanReview?.canExecute === false &&
-    candidate.humanReview.requiresTraderConfirmation === true &&
-    typeof candidate.activeRuleset?.htfLineInSand?.lineInSand === 'number' &&
-    Number.isFinite(candidate.activeRuleset.htfLineInSand.lineInSand) &&
-    candidate.activeRuleset.htfLineInSand.lineInSand > 0
-  );
+function isBlankSlateModelWatch(_candidate: SetupCandidate | null | undefined): boolean {
+  return false;
 }
 
 function ictHardDisqualifierReason(candidate: SetupCandidate): string | null {
@@ -6597,7 +6599,7 @@ function extractIctSignals(candidate: SetupCandidate) {
     hasReclaimAfterSweep:
       scenario.includes('reclaim') ||
       trigger.includes('reclaim') ||
-      scenario.includes('sweep and reclaim') ||
+      scenario.includes('historical reversal pattern') ||
       scenario.includes('sweep-reclaim'),
 
     hasWickRejectionSupport:
@@ -6608,12 +6610,12 @@ function extractIctSignals(candidate: SetupCandidate) {
       scenario.includes('closed back above swept low') ||
       scenario.includes('closed back below swept high'),
 
-    hasraidReclaimReversal:
-      scenario.includes('Raid Reclaim Reversal') ||
-      setupType.includes('Raid Reclaim Reversal') ||
+    hasBlankSlateReversalEvidence:
+      scenario.includes('blank slate reversal') ||
+      setupType.includes('blank slate reversal') ||
       scenario.includes('failed breakout') ||
       scenario.includes('failed breakdown') ||
-      scenario.includes('liquidity raid reversal'),
+      scenario.includes('failed liquidity reversal'),
 
     hasDisplacement:
       scenario.includes('displacement') ||
@@ -6701,7 +6703,7 @@ export function scoreScannerCandidate(
         score: 0,
         max: 25,
         status: 'blocked',
-        note: 'No registered primary Model 1 or Raid Reclaim Reversal candidate was available.',
+        note: 'No registered trading model is installed.',
       }],
     };
   }
@@ -6749,11 +6751,11 @@ export function scoreScannerCandidate(
     !signals.hasDisplacement &&
     !signals.hasMarketStructureShift &&
     !signals.hasFvgOrImbalanceEntry &&
-    !signals.hasraidReclaimReversal &&
+    !signals.hasBlankSlateReversalEvidence &&
     !higherTimeframeAligned;
 
   if (wickOnly) {
-    const hardBlocker = 'Wick rejection support is not enough without reclaim, displacement, market structure shift, FVG, Raid Reclaim Reversal, or higher-timeframe alignment';
+    const hardBlocker = 'Wick rejection support is not enough without a newly installed model contract and higher-timeframe alignment';
     return {
       score: ICT_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons: [],
@@ -6765,7 +6767,7 @@ export function scoreScannerCandidate(
         score: 0,
         max: 25,
         status: 'blocked',
-        note: 'Wick-only rejection is supporting evidence, not a standalone trade.',
+        note: 'Wick-only rejection is context only, not a standalone trade.',
       }],
     };
   }
@@ -6774,7 +6776,7 @@ export function scoreScannerCandidate(
   add(signals.hasLiquiditySweep, ICT_RULE_WEIGHTS.LIQUIDITY_SWEEP, 'Liquidity sweep confirmed', 'No confirmed liquidity sweep');
   add(signals.hasReclaimAfterSweep, ICT_RULE_WEIGHTS.RECLAIM_AFTER_SWEEP, 'Reclaim after sweep confirmed', 'No confirmed liquidity sweep');
   add(signals.hasWickRejectionSupport, ICT_RULE_WEIGHTS.WICK_REJECTION_SUPPORT, 'Wick rejection support', 'Wick rejection support missing');
-  add(signals.hasraidReclaimReversal, ICT_RULE_WEIGHTS.RAID_RECLAIM_REVERSAL, 'Raid Reclaim Reversal reversal', 'No confirmed liquidity sweep');
+  add(signals.hasBlankSlateReversalEvidence, ICT_RULE_WEIGHTS.NO_MODEL_REVERSAL_CONTEXT, 'Reversal evidence confirmed', 'No confirmed liquidity reversal');
   add(signals.hasDisplacement, ICT_RULE_WEIGHTS.DISPLACEMENT_CONFIRMED, 'Displacement confirmed', 'No confirmed displacement');
   add(signals.hasMarketStructureShift, ICT_RULE_WEIGHTS.MARKET_STRUCTURE_SHIFT, 'Market structure shift confirmed', 'No confirmed market structure shift');
   add(signals.hasFvgOrImbalanceEntry, ICT_RULE_WEIGHTS.FVG_OR_IMBALANCE_ENTRY, 'Fair value gap / imbalance entry model', 'No fair value gap / imbalance entry model');
@@ -6798,9 +6800,9 @@ export function scoreScannerCandidate(
   const modelCompletion = clampScore(
     (signals.hasLiquiditySweep ? 6 : 0) +
     (signals.hasReclaimAfterSweep ? 6 : 0) +
-    (signals.hasraidReclaimReversal || signals.hasFvgOrImbalanceEntry || isIntradayMssMicroContinuationWatch(candidate) ? 7 : 0) +
+    (signals.hasBlankSlateReversalEvidence || signals.hasFvgOrImbalanceEntry || isBlankSlateModelWatch(candidate) ? 7 : 0) +
     (signals.hasDisplacement || signals.hasMarketStructureShift ? 6 : 0) +
-    (isIntradayMssMicroContinuationWatch(candidate) ? 6 : 0),
+    (isBlankSlateModelWatch(candidate) ? 6 : 0),
     25
   );
   const executionQuality = clampScore(
@@ -6846,12 +6848,12 @@ export function scoreScannerCandidate(
         score: modelCompletion,
         max: 25,
         status: scoreStatus(modelCompletion, 25),
-        note: isIntradayMssMicroContinuationWatch(candidate)
-          ? 'Intraday MSS Micro Continuation watch is active from aligned 15M/5M MSS and a named line in the sand.'
-          : signals.hasraidReclaimReversal
-            ? 'Raid Reclaim Reversal evidence is present.'
+        note: isBlankSlateModelWatch(candidate)
+          ? 'Blank-slate model watch is active.'
+          : signals.hasBlankSlateReversalEvidence
+            ? 'Reversal evidence is present.'
             : signals.hasFvgOrImbalanceEntry
-              ? 'Model 1 FVG/imbalance evidence is present.'
+              ? 'FVG/imbalance evidence is present.'
               : 'Active model is still missing required evidence.',
       },
       {
@@ -7105,8 +7107,8 @@ export function shouldSendScannerAlert(args: {
       : { shouldSend: false, reason: 'Blocked setup did not meet educational Discord threshold.' };
   }
   if (args.state === 'Conditional') {
-    if (isIntradayMssMicroContinuationWatch(args.candidate) && (args.candidate?.modelConfidenceScore ?? args.confidence) >= 56) {
-      return { shouldSend: true, reason: 'Intraday MSS Micro Continuation watch qualified for Discord: aligned 15M/5M MSS plus named line in the sand. Human review only; no chase.' };
+    if (isBlankSlateModelWatch(args.candidate) && (args.candidate?.modelConfidenceScore ?? args.confidence) >= 56) {
+      return { shouldSend: false, reason: 'Blank-slate mode: no trading model is installed for Discord publishing.' };
     }
     return args.confidence >= thresholds.conditional
       ? { shouldSend: true, reason: `${scannerAlertQualityFromScore(args.confidence).label} qualified for Discord.` }

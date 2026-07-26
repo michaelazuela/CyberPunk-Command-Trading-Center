@@ -68,10 +68,10 @@ const queue: UnifiedPositiveHeldLocalPreviewReplayQueueReport = {
   },
   rows: [
     {
-      ticketId: '2026-06-16-morning-raidReclaim-LONG',
+      ticketId: '2026-06-16-morning-historicalReview-LONG',
       tradeDate: '2026-06-16',
       session: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       sourceSnapshotId: 'scanner-1',
       replayStatus: 'ready_for_read_only_outcome_replay',
@@ -101,10 +101,10 @@ const queue: UnifiedPositiveHeldLocalPreviewReplayQueueReport = {
       blockers: [],
     },
     {
-      ticketId: '2026-06-17-morning-raidReclaim-LONG',
+      ticketId: '2026-06-17-morning-historicalReview-LONG',
       tradeDate: '2026-06-17',
       session: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       sourceSnapshotId: 'scanner-2',
       replayStatus: 'ready_for_read_only_outcome_replay',
@@ -134,10 +134,10 @@ const queue: UnifiedPositiveHeldLocalPreviewReplayQueueReport = {
       blockers: [],
     },
     {
-      ticketId: '2026-06-18-morning-SweepMssFvgRetrace-LONG',
+      ticketId: '2026-06-18-morning-NoInstalledSetup-LONG',
       tradeDate: '2026-06-18',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       sourceSnapshotId: 'scanner-3',
       replayStatus: 'ready_for_read_only_outcome_replay',
@@ -177,7 +177,7 @@ function adapterRow(ticketId: string, triggerCondition: string): UnifiedPositive
     ticketId,
     sourceSnapshotId: 'scanner',
     session: ticketId.includes('morning') ? 'morning' : null,
-    setupType: 'raidReclaim',
+    setupType: 'historicalReview',
     direction: 'LONG',
     adapterStatus: 'held_local_artifact_created',
     artifact: {
@@ -219,9 +219,9 @@ const adapter: UnifiedPositiveHeldLocalTicketAdapterReport = {
     publishDiscordFalseArtifacts: 3,
   },
   rows: [
-    adapterRow('2026-06-16-morning-raidReclaim-LONG', 'Fresh completed 5M proof printed at 2026-06-16T10:05:00.'),
-    adapterRow('2026-06-17-morning-raidReclaim-LONG', 'Fresh completed 5M proof printed at 2026-06-17T10:05:00.'),
-    adapterRow('2026-06-18-morning-SweepMssFvgRetrace-LONG', 'Fresh completed 5M proof printed with missing timestamp.'),
+    adapterRow('2026-06-16-morning-historicalReview-LONG', 'Fresh completed 5M proof printed at 2026-06-16T10:05:00.'),
+    adapterRow('2026-06-17-morning-historicalReview-LONG', 'Fresh completed 5M proof printed at 2026-06-17T10:05:00.'),
+    adapterRow('2026-06-18-morning-NoInstalledSetup-LONG', 'Fresh completed 5M proof printed with missing timestamp.'),
   ],
   recommendations: [],
   markdown: '',
@@ -246,23 +246,23 @@ assert.equal(report.summary.queuedRows, 3);
 assert.equal(report.summary.resolvedRows, 2);
 assert.equal(report.summary.blockedRows, 1);
 assert.equal(report.summary.grossResolvedOneMesPl, 10);
-assert.equal(report.summary.raidReclaimResolvedOneMesPl, 10);
-assert.equal(report.summary.sweepMssFvgRetraceResolvedOneMesPl, null);
+assert.equal(report.summary.historicalReviewResolvedOneMesPl, 10);
+assert.equal(report.summary.NoInstalledSetupResolvedOneMesPl, null);
 
-const winner = report.rows.find((row) => row.ticketId === '2026-06-16-morning-raidReclaim-LONG');
+const winner = report.rows.find((row) => row.ticketId === '2026-06-16-morning-historicalReview-LONG');
 assert.equal(winner?.outcomeStatus, 'resolved');
 assert.equal(winner?.outcomeLabel, 't1_and_t2_hit');
 assert.equal(winner?.resolvedOneMesPl, 20);
 assert.equal(winner?.resolvedR, 2);
 
-const conservative = report.rows.find((row) => row.ticketId === '2026-06-17-morning-raidReclaim-LONG');
+const conservative = report.rows.find((row) => row.ticketId === '2026-06-17-morning-historicalReview-LONG');
 assert.equal(conservative?.outcomeStatus, 'resolved');
 assert.equal(conservative?.outcomeLabel, 'stopped_before_t1');
 assert.equal(conservative?.intrabarAmbiguity, true);
 assert.equal(conservative?.resolvedOneMesPl, -10);
 assert.equal(conservative?.resolvedR, -1);
 
-const blocked = report.rows.find((row) => row.ticketId === '2026-06-18-morning-SweepMssFvgRetrace-LONG');
+const blocked = report.rows.find((row) => row.ticketId === '2026-06-18-morning-NoInstalledSetup-LONG');
 assert.equal(blocked?.outcomeStatus, 'blocked');
 assert.ok(blocked?.blockers.includes('missing completed 5M proof time from held-local adapter'));
 assert.ok(report.blockers.some((blocker) => blocker.includes('missing completed 5M proof time')));

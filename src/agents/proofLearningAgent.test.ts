@@ -12,7 +12,7 @@ const originalPlan = {
   stop: 5316.25,
   t1: 5326.25,
   t2: 5328.25,
-  setupType: 'SweepMssFvgRetrace',
+  setupType: 'NoInstalledSetup',
   riskPoints: 4,
   noTradeReason: null,
 };

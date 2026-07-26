@@ -11,10 +11,10 @@ const report = buildDeskPlaybookAfterLunchEarliestProofPreviewReport({
     status: 'pass',
     rows: [
       {
-        ticketId: '2026-06-01-lunch-AfterLunchDriveFvgContinuation-LONG-20260601T123500',
+        ticketId: '2026-06-01-lunch-NoInstalledSetup-LONG-20260601T123500',
         tradeDate: '2026-06-01',
         session: 'lunch',
-        setupType: 'AfterLunchDriveFvgContinuation',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         outcomeBucket: 'winner_t1_t2',
         outcomeLabel: 't1_and_t2_hit',
@@ -26,10 +26,10 @@ const report = buildDeskPlaybookAfterLunchEarliestProofPreviewReport({
         issueTags: ['same_bar_entry'],
       },
       {
-        ticketId: '2026-06-01-lunch-AfterLunchDriveFvgContinuation-LONG-20260601T124500',
+        ticketId: '2026-06-01-lunch-NoInstalledSetup-LONG-20260601T124500',
         tradeDate: '2026-06-01',
         session: 'lunch',
-        setupType: 'AfterLunchDriveFvgContinuation',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         outcomeBucket: 'winner_t1_t2',
         outcomeLabel: 't1_and_t2_hit',
@@ -41,10 +41,10 @@ const report = buildDeskPlaybookAfterLunchEarliestProofPreviewReport({
         issueTags: ['same_bar_entry'],
       },
       {
-        ticketId: '2026-06-02-lunch-AfterLunchDriveFvgContinuation-SHORT-20260602T122000',
+        ticketId: '2026-06-02-lunch-NoInstalledSetup-SHORT-20260602T122000',
         tradeDate: '2026-06-02',
         session: 'lunch',
-        setupType: 'AfterLunchDriveFvgContinuation',
+        setupType: 'NoInstalledSetup',
         direction: 'SHORT',
         outcomeBucket: 'loss_stopped_before_t1',
         outcomeLabel: 'stopped_before_t1',
@@ -59,7 +59,7 @@ const report = buildDeskPlaybookAfterLunchEarliestProofPreviewReport({
         ticketId: 'ignored-morning',
         tradeDate: '2026-06-02',
         session: 'morning',
-        setupType: 'AfterLunchDriveFvgContinuation',
+        setupType: 'NoInstalledSetup',
         direction: 'SHORT',
         outcomeBucket: 'winner_t1_t2',
         outcomeLabel: 't1_and_t2_hit',
@@ -77,7 +77,7 @@ const report = buildDeskPlaybookAfterLunchEarliestProofPreviewReport({
     status: 'pass',
     rows: [
       {
-        ticketId: '2026-06-01-lunch-AfterLunchDriveFvgContinuation-LONG-20260601T123500',
+        ticketId: '2026-06-01-lunch-NoInstalledSetup-LONG-20260601T123500',
         entry: 7500,
         stop: 7491,
         t1: 7513.5,
@@ -85,7 +85,7 @@ const report = buildDeskPlaybookAfterLunchEarliestProofPreviewReport({
         riskPoints: 9,
       },
       {
-        ticketId: '2026-06-02-lunch-AfterLunchDriveFvgContinuation-SHORT-20260602T122000',
+        ticketId: '2026-06-02-lunch-NoInstalledSetup-SHORT-20260602T122000',
         entry: 7500,
         stop: 7506,
         t1: 7491,
@@ -99,11 +99,11 @@ const report = buildDeskPlaybookAfterLunchEarliestProofPreviewReport({
     status: 'pass',
     rows: [
       {
-        intakeId: '2026-06-01-lunch-AfterLunchDriveFvgContinuation-LONG',
+        intakeId: '2026-06-01-lunch-NoInstalledSetup-LONG',
         tradeDate: '2026-06-01',
         session: 'lunch',
         instrument: 'MES',
-        setupType: 'AfterLunchDriveFvgContinuation',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         firstSeenTime: '2026-06-01T12:35:00.0000000',
         entry: 7500,
@@ -113,11 +113,11 @@ const report = buildDeskPlaybookAfterLunchEarliestProofPreviewReport({
         riskPoints: 9,
       },
       {
-        intakeId: '2026-06-02-lunch-AfterLunchDriveFvgContinuation-SHORT',
+        intakeId: '2026-06-02-lunch-NoInstalledSetup-SHORT',
         tradeDate: '2026-06-02',
         session: 'lunch',
         instrument: 'MES',
-        setupType: 'AfterLunchDriveFvgContinuation',
+        setupType: 'NoInstalledSetup',
         direction: 'SHORT',
         firstSeenTime: '2026-06-02T12:20:00.0000000',
         entry: 7500,
@@ -134,7 +134,7 @@ const report = buildDeskPlaybookAfterLunchEarliestProofPreviewReport({
       {
         date: '2026-06-01',
         session: 'lunch',
-        selectedModel: 'AfterLunchDriveFvgContinuation',
+        selectedModel: 'NoInstalledSetup',
         selectedDirection: 'LONG',
         activeRaids: ['overnightHighRaid'],
         htfAlignment: 'supports',
@@ -163,7 +163,7 @@ assert.equal(report.authority.changesTradingRules, false);
 assert.equal(report.authority.changesCanExecute, false);
 
 const june1 = report.tickets.find((ticket) => ticket.slateId === '2026-06-01|lunch');
-assert.equal(june1?.ticketId, '2026-06-01-lunch-AfterLunchDriveFvgContinuation-LONG-20260601T123500');
+assert.equal(june1?.ticketId, '2026-06-01-lunch-NoInstalledSetup-LONG-20260601T123500');
 assert.equal(june1?.entry, 7500);
 assert.equal(june1?.stop, 7491);
 assert.deepEqual(june1?.activeRaids, ['overnightHighRaid']);

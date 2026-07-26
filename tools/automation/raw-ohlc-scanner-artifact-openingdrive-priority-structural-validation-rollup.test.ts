@@ -59,7 +59,7 @@ function report(args: {
       recommendation: args.featureLossRows > 0 && args.featureNonLossRows === 0 ? 'queue_fresh_structural_validation' : 'do_not_install_structural_filter',
     },
     featureRows: [{
-      featureTag: 'best_conditional_IntradayMssMicroContinuation',
+      featureTag: 'best_conditional_NoInstalledSetup',
       rows: args.featureLossRows + args.featureNonLossRows,
       priorityLossRows: args.featureLossRows,
       priorityNonLossRows: args.featureNonLossRows,
@@ -74,11 +74,11 @@ function report(args: {
       session: 'morning',
       proofTime: `${args.tradeDate}T10:30:00`,
       direction: 'LONG',
-      prioritySetupType: 'SweepMssFvgRetrace',
+      prioritySetupType: 'NoInstalledSetup',
       priorityOneMesPl: args.featureLossRows ? -48.75 : 212.5,
       priorityLoss: args.featureLossRows > 0,
       sourceTapePath: 'tape.json',
-      bestConditionalSetupType: 'IntradayMssMicroContinuation',
+      bestConditionalSetupType: 'NoInstalledSetup',
       candidateState: null,
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -87,7 +87,7 @@ function report(args: {
       timeframeMssStatus: 'blocked',
       riskAdvisoryStatus: 'RISK_ABOVE_STANDARD_LIMIT',
       activeCampaignLayerTags: [],
-      structuralTags: ['best_conditional_IntradayMssMicroContinuation'],
+      structuralTags: ['best_conditional_NoInstalledSetup'],
       blockers: [],
     }],
     blockers: [],
@@ -98,7 +98,7 @@ function report(args: {
 
 const rollup = buildRawOhlcScannerArtifactOpeningDrivePriorityStructuralValidationRollupReport({
   structuralContextReports: ['july15.json', 'july17.json'],
-  featureTag: 'best_conditional_IntradayMssMicroContinuation',
+  featureTag: 'best_conditional_NoInstalledSetup',
   loadedReports: [
     report({ tradeDate: '2026-07-15', featureLossRows: 2, featureNonLossRows: 0 }),
     report({ tradeDate: '2026-07-17', featureLossRows: 0, featureNonLossRows: 0 }),

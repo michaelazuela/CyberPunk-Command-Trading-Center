@@ -53,9 +53,9 @@ const sourceSelection: RawOhlcScannerArtifactOpeningDriveOosSourceInstalledSelec
     direction: 'LONG',
     openingDriveTicketId: 'od-a',
     priorityTicketId: 'sweep-a',
-    prioritySetupType: 'SweepMssFvgRetrace',
+    prioritySetupType: 'NoInstalledSetup',
     installedPrimaryTicketId: 'sweep-a',
-    installedPrimarySetupType: 'SweepMssFvgRetrace',
+    installedPrimarySetupType: 'NoInstalledSetup',
     installedSelectedPriority: true,
     openingDriveOneMesPl: -25,
     priorityOneMesPl: -48.75,
@@ -113,7 +113,7 @@ const samebar = {
   rows: [
     samebarRow({
       ticketId: 'od-a',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       oneMesPl: -25,
       riskPoints: 5,
       t1HitTime: '2026-07-09T09:40:00',
@@ -122,7 +122,7 @@ const samebar = {
     }),
     samebarRow({
       ticketId: 'sweep-a',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       oneMesPl: -48.75,
       riskPoints: 9.75,
       t1HitTime: '2026-07-09T09:55:00',

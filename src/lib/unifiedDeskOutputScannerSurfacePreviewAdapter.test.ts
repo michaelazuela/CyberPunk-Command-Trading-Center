@@ -40,7 +40,7 @@ const report = {
       session: 'morning',
       state: 'APPROVED_DESK_PLAN',
       stateLabel: 'Approved Desk Plan',
-      model: 'OpeningDriveFvgContinuation',
+      model: 'NoInstalledSetup',
       direction: 'SHORT',
       headline: 'Approved Desk Plan | MORNING | SHORT',
       bodyLines: ['Opening drive short.', 'Selected scanner-owned lane.'],

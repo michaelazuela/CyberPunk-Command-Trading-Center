@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {
-  buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport,
+  buildUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport,
 } from './unified-positive-held-local-preview-raidReclaim-extreme-risk-companion-filter';
 import type {
   UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport,
@@ -9,7 +9,7 @@ import type {
   UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport,
 } from './unified-positive-held-local-preview-sweep-penalty-installed-score-comparison';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport,
 } from './unified-positive-held-local-preview-raidReclaim-extreme-risk-rank-simulation';
 
 const authority = {
@@ -60,10 +60,10 @@ const installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCompar
   },
   rows: [
     {
-      ticketId: '2026-06-10-lunch-raidReclaim-LONG',
+      ticketId: '2026-06-10-lunch-historicalReview-LONG',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -80,10 +80,10 @@ const installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCompar
       riskPreserved: true,
     },
     {
-      ticketId: '2026-06-10-lunch-SweepMssFvgRetrace-LONG',
+      ticketId: '2026-06-10-lunch-NoInstalledSetup-LONG',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       executionStatus: 'Blocked',
       blockReason: 'InvalidStopLocation',
@@ -137,10 +137,10 @@ const timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRepor
   modelTiming: [],
   rows: [
     {
-      ticketId: '2026-06-10-lunch-raidReclaim-LONG',
+      ticketId: '2026-06-10-lunch-historicalReview-LONG',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -154,10 +154,10 @@ const timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRepor
       issueTags: [],
     },
     {
-      ticketId: '2026-06-10-lunch-SweepMssFvgRetrace-LONG',
+      ticketId: '2026-06-10-lunch-NoInstalledSetup-LONG',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeBucket: 'blocked',
       outcomeLabel: 'blocked',
@@ -176,8 +176,8 @@ const timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRepor
   markdown: '',
 };
 
-const extreme: UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport = {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_extreme_risk_rank_simulation',
+const extreme: UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport = {
+  reportType: 'unified_positive_held_local_preview_historicalReview_extreme_risk_rank_simulation',
   generatedAt: '2026-07-18T00:00:00.000Z',
   status: 'pass',
   authority,
@@ -197,7 +197,7 @@ const extreme: UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulati
     livePromotionAllowed: false,
   },
   scoring: {
-    setupType: 'raidReclaim',
+    setupType: 'historicalReview',
     riskThresholdPoints: 15,
     penaltyPoints: 12,
     baselineUsesInstalledScore: true,
@@ -225,7 +225,7 @@ const extreme: UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulati
   markdown: '',
 };
 
-const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport({
+const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport({
   reportDir: 'reports',
   installedScoreComparisonPath: 'installed.json',
   installedScoreComparisonReport: installed,
@@ -247,7 +247,7 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.ok(report.variants.some((row) => row.variantId === 'risk_gte_23_proof_0' && row.recommendation === 'reject_for_blocked_replacement'));
 assert.ok(report.changedSlates.every((row) => row.topAfterValidReview === false));
 
-const blocked = buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport({
+const blocked = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport({
   reportDir: 'reports',
   installedScoreComparisonPath: null,
   installedScoreComparisonReport: null,
@@ -261,4 +261,4 @@ assert.equal(blocked.status, 'fail');
 assert.equal(blocked.summary.recommendation, 'reject_missing_source');
 assert.ok(blocked.blockers.some((item) => item.includes('missing installed-score comparison path')));
 
-console.log('unified positive held-local raidReclaim extreme-risk companion filter verified.');
+console.log('unified positive held-local historicalReview extreme-risk companion filter verified.');

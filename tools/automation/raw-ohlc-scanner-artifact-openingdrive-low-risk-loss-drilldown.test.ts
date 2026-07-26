@@ -35,7 +35,7 @@ function row(args: {
     ticketId: args.ticketId,
     tradeDate: '2026-07-20',
     session: 'morning',
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     outcomeLabel: args.outcomeLabel,
     outcomeStatus: 'resolved',
@@ -84,7 +84,7 @@ const reports = [
 
 const report = buildRawOhlcScannerArtifactOpeningDriveLowRiskLossDrilldownReport({
   reportDir: 'reports',
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
   reports,
 }, '2026-07-20T00:00:00.000Z');
 
@@ -107,7 +107,7 @@ assert.match(report.markdown, /OpeningDrive Low-Risk Loss Drilldown/);
 
 const blocked = buildRawOhlcScannerArtifactOpeningDriveLowRiskLossDrilldownReport({
   reportDir: 'reports',
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
   reports: [],
 }, '2026-07-20T00:01:00.000Z');
 
@@ -118,13 +118,13 @@ const parsed = parseRawOhlcScannerArtifactOpeningDriveLowRiskLossDrilldownArgs([
   '--report-dir',
   'reports',
   '--setup-type',
-  'OpeningDriveFvgContinuation',
+  'NoInstalledSetup',
   '--out-dir',
   'out',
   '--json',
 ]);
 assert.equal(parsed.reportDir, 'reports');
-assert.equal(parsed.setupType, 'OpeningDriveFvgContinuation');
+assert.equal(parsed.setupType, 'NoInstalledSetup');
 assert.equal(parsed.outDir, 'out');
 assert.equal(parsed.json, true);
 

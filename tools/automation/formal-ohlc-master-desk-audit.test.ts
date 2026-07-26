@@ -26,7 +26,7 @@ writeTape('2026-06-01', 'morning', {
     htfHistoryCoverage: { status: 'sufficient' },
     deskState: { dataQualityStatus: 'ok', htfContextStatus: 'sufficient', primaryDeskPlay: { direction: 'LONG' } },
     plan: { decision: 'LONG', entry: 100, stop: 98, t1: 103, t2: 104, canExecute: true },
-    setupCandidateStatus: { selected: { setupType: 'raidReclaim', direction: 'LONG', requiredTrigger: 'completed 5M close above 100' } },
+    setupCandidateStatus: { selected: { setupType: 'historicalReview', direction: 'LONG', requiredTrigger: 'completed 5M close above 100' } },
     visibility: { visibilityMode: 'POST_PLAN' },
   },
   target: {
@@ -41,7 +41,7 @@ writeTape('2026-06-01', 'lunch', {
     deskState: { dataQualityStatus: 'ok', htfContextStatus: 'sufficient', primaryDeskPlay: { direction: 'SHORT' } },
     setupCandidateStatus: {
       selected: {
-        setupType: 'IntradayMssMicroContinuation',
+        setupType: 'NoInstalledSetup',
         direction: 'SHORT',
         entry: 110,
         stop: 112,
@@ -65,7 +65,7 @@ writeTape('2026-06-01', 'evening', {
     deskState: { dataQualityStatus: 'ok', htfContextStatus: 'sufficient', primaryDeskPlay: { direction: 'LONG' } },
     setupCandidateStatus: {
       selected: {
-        setupType: 'AfterLunchDriveFvgContinuation',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         entry: 120,
         stop: 118,
@@ -103,8 +103,8 @@ assert.equal(report.summary.scannerAllowed, 1);
 assert.equal(report.summary.researchCandidates, 1);
 assert.equal(report.summary.visibilityDriftRisks, 1);
 assert.equal(report.summary.positiveHeldCompleteCandidates, 2);
-assert.ok(report.findings.some((finding) => finding.verdict === 'research_candidate' && finding.setupType === 'IntradayMssMicroContinuation'));
-assert.ok(report.findings.some((finding) => finding.verdict === 'visibility_drift_risk' && finding.setupType === 'AfterLunchDriveFvgContinuation'));
+assert.ok(report.findings.some((finding) => finding.verdict === 'research_candidate' && finding.setupType === 'NoInstalledSetup'));
+assert.ok(report.findings.some((finding) => finding.verdict === 'visibility_drift_risk' && finding.setupType === 'NoInstalledSetup'));
 assert.match(report.reportMarkdown, /Master Desk Audit/);
 assert.match(report.reportMarkdown, /Research-only audit/);
 

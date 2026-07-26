@@ -89,6 +89,7 @@ export interface NoChaseArtifactRebuildSimulationReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_OUT_DIR = path.join(__dirname, 'diagnostic-reports');
+const BLANK_SLATE_MODE = Object.values(SetupType).length === 1 && Object.values(SetupType)[0] === SetupType.NoSetup;
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -131,6 +132,7 @@ function completePlan(row: NoChaseArtifactRebuildPackRow): boolean {
 }
 
 function buildArtifact(row: NoChaseArtifactRebuildPackRow): NoChaseRebuiltHumanReviewArtifact | null {
+  if (BLANK_SLATE_MODE) return null;
   if (row.rebuildDecision !== 'include_for_rebuild_review') return null;
   if (!completePlan(row)) return null;
   return {
@@ -256,8 +258,8 @@ export function buildNoChaseArtifactRebuildSimulationReport(args: {
       includeRows: args.rebuildPack.summary.includeForRebuildReview,
       simulatedArtifacts: artifacts.length,
       rejectedRows: rejectedRows.length,
-      afterLunchSimulated: artifacts.filter((artifact) => artifact.setupType === SetupType.AfterLunchDriveFvgContinuation).length,
-      intradaySimulated: artifacts.filter((artifact) => artifact.setupType === SetupType.IntradayMssMicroContinuation).length,
+      afterLunchSimulated: artifacts.filter((artifact) => artifact.setupType === SetupType.NoSetup).length,
+      intradaySimulated: artifacts.filter((artifact) => artifact.setupType === SetupType.NoSetup).length,
       completePlanArtifacts: artifacts.filter((artifact) => completePlan({
         caseId: artifact.caseId,
         tradeDate: artifact.tradeDate,

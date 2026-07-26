@@ -10,13 +10,13 @@ import type {
 
 function ticket(overrides: Partial<UnifiedPositiveReviewTicketSimulationTicket> = {}): UnifiedPositiveReviewTicketSimulationTicket {
   return {
-    ticketId: '2026-07-01-morning-raidReclaim-LONG',
+    ticketId: '2026-07-01-morning-historicalReview-LONG',
     tradeDate: '2026-07-01',
     sessionType: 'morning',
-    setupType: 'raidReclaim',
+    setupType: 'historicalReview',
     direction: 'LONG',
     sourceSnapshotId: 'scanner-morning-fixture',
-    sourceCandidateKey: 'raidReclaim|fixture|LONG|100.00|0',
+    sourceCandidateKey: 'historicalReview|fixture|LONG|100.00|0',
     suppressedDuplicateSnapshotIds: [],
     duplicateRowsCollapsed: 0,
     proofBarTime: '2026-07-01T10:05:00',
@@ -33,7 +33,7 @@ function ticket(overrides: Partial<UnifiedPositiveReviewTicketSimulationTicket> 
     publishDiscord: false,
     reviewOnly: true,
     ticketText: {
-      what: 'raidReclaim long is eligible for human review.',
+      what: 'historicalReview long is eligible for human review.',
       where: 'Entry 100, stop 96, T1 106, T2 108.',
       when: 'Fresh completed 5M proof printed at 2026-07-01T10:05:00.',
       why: 'Outcome overlay was positive.',
@@ -79,10 +79,10 @@ const simulation: UnifiedPositiveReviewTicketRebuildSimulationReport = {
   tickets: [
     ticket(),
     ticket({
-      ticketId: '2026-07-02-morning-SweepMssFvgRetrace-SHORT',
-      setupType: 'SweepMssFvgRetrace',
+      ticketId: '2026-07-02-morning-NoInstalledSetup-SHORT',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
-      sourceCandidateKey: 'SweepMssFvgRetrace|fixture|SHORT|200.00|0',
+      sourceCandidateKey: 'NoInstalledSetup|fixture|SHORT|200.00|0',
       entry: 200,
       stop: 204,
       target1: 194,
@@ -120,7 +120,7 @@ assert.equal(report.summary.shouldPostFalseRows, 3);
 assert.equal(report.summary.canExecuteFalseRows, 3);
 assert.equal(report.summary.publishDiscordFalseRows, 3);
 
-const compatible = report.rows.find((row) => row.ticketId === '2026-07-01-morning-raidReclaim-LONG');
+const compatible = report.rows.find((row) => row.ticketId === '2026-07-01-morning-historicalReview-LONG');
 assert.equal(compatible?.simulatedDeskTicket.sourceOfTruth, 'scanner_single_active_desk_ticket');
 assert.equal(compatible?.simulatedDeskTicket.state, 'ACTIVE_REVIEW');
 assert.equal(compatible?.simulatedDeskTicket.humanReviewOnly, true);

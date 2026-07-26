@@ -21,7 +21,7 @@ const packageAudit = {
     tradeDate: '2026-07-20',
     session: 'morning',
     direction: 'SHORT',
-    baselinePrimaryRowId: '2026-07-20-morning-SweepMssFvgRetrace-SHORT',
+    baselinePrimaryRowId: '2026-07-20-morning-NoInstalledSetup-SHORT',
     packageMatches: 0,
     packageFiles: [],
     executionStatusRows: 0,
@@ -35,7 +35,7 @@ const packageAudit = {
     tradeDate: '2026-07-20',
     session: 'evening',
     direction: 'LONG',
-    baselinePrimaryRowId: '2026-07-20-evening-SweepMssFvgRetrace-LONG',
+    baselinePrimaryRowId: '2026-07-20-evening-NoInstalledSetup-LONG',
     packageMatches: 0,
     packageFiles: [],
     executionStatusRows: 0,
@@ -58,7 +58,7 @@ fs.writeFileSync(path.join(tmpDir, 'raw-ohlc-scanner-artifacts-MES-2026-07-20-to
       session: 'morning',
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           executionStatus: 'Conditional',
         }],

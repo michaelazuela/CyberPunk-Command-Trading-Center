@@ -101,7 +101,7 @@ try {
       {
         ticketId: 'visual-ticket',
         sourceSnapshotId: 'scanner-visual',
-        setupType: 'raidReclaim',
+        setupType: 'historicalReview',
         direction: 'LONG',
         status: 'visual_rendered',
         pngPath,

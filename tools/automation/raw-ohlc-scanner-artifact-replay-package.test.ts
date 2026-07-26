@@ -19,7 +19,7 @@ const artifact = {
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'SweepMssFvgRetrace',
+            setupType: 'NoInstalledSetup',
             direction: 'LONG',
             detectedStatus: 'Possible',
             executionStatus: 'Conditional',
@@ -31,7 +31,7 @@ const artifact = {
             riskPoints: 2,
           },
           {
-            setupType: 'SweepMssFvgRetrace',
+            setupType: 'NoInstalledSetup',
             direction: 'LONG',
             detectedStatus: 'Blocked',
             executionStatus: 'Blocked',

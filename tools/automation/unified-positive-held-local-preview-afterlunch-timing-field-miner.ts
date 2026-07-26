@@ -77,7 +77,7 @@ export interface UnifiedPositiveHeldLocalPreviewAfterLunchTimingFieldMinerReport
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SETUP = 'AfterLunchDriveFvgContinuation';
+const SETUP = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -245,7 +245,7 @@ export function buildUnifiedPositiveHeldLocalPreviewAfterLunchTimingFieldMinerRe
     !sourceProofTimingPath && !args.sourceProofTimingReport ? 'missing source/proof timing path' : null,
     !sourceProofTimingReport ? 'missing source/proof timing report' : null,
     sourceProofTimingReport && sourceProofTimingReport.status !== 'pass' ? `source/proof timing status ${sourceProofTimingReport.status}` : null,
-    rows.length === 0 ? 'no AfterLunchDriveFvgContinuation timing rows found' : null,
+    rows.length === 0 ? 'no NoInstalledSetup timing rows found' : null,
   ].filter((item): item is string => Boolean(item));
   const base: Omit<UnifiedPositiveHeldLocalPreviewAfterLunchTimingFieldMinerReport, 'markdown'> = {
     reportType: 'unified_positive_held_local_preview_afterlunch_timing_field_miner',

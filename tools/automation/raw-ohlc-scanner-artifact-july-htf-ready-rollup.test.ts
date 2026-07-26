@@ -18,7 +18,7 @@ const outcomeReports = [
         {
           tradeDate: '2026-07-10',
           session: 'morning',
-          setupType: 'OpeningDriveFvgContinuation',
+          setupType: 'NoInstalledSetup',
           rows: 4,
           resolvedRows: 4,
           unresolvedRows: 0,
@@ -28,7 +28,7 @@ const outcomeReports = [
         {
           tradeDate: '2026-07-10',
           session: 'lunch',
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           rows: 6,
           resolvedRows: 4,
           unresolvedRows: 2,
@@ -51,7 +51,7 @@ const outcomeReports = [
         {
           tradeDate: '2026-07-11',
           session: 'morning',
-          setupType: 'OpeningDriveFvgContinuation',
+          setupType: 'NoInstalledSetup',
           rows: 5,
           resolvedRows: 5,
           unresolvedRows: 0,
@@ -82,7 +82,7 @@ const openingDriveSelectorReports = [
     status: 'pass' as const,
     source: {
       samebarSeparatorReportPath: 'samebar.json',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
     },
     summary: {
       sourceRows: 4,
@@ -138,7 +138,7 @@ assert.equal(report.summary.openingDriveSelectedLosses, 2);
 assert.equal(report.summary.openingDriveSelectedOneMesPl, -40);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.openingDriveSelectorVerdict, 'reject_live_promotion');
-assert.equal(report.modelSummaries[0].setupType, 'SweepMssFvgRetrace');
+assert.equal(report.modelSummaries[0].setupType, 'NoInstalledSetup');
 assert.match(report.markdown, /July HTF-Ready Replay Rollup/);
 assert.match(report.recommendations[0], /Do not promote/);
 

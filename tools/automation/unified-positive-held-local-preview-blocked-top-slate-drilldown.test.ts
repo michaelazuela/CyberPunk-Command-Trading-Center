@@ -66,14 +66,14 @@ const fullSlate: UnifiedPositiveHeldLocalPreviewSweepPenaltyFullSlateSelectionCo
     tradeDate: '2026-06-12',
     session: 'morning',
     rows: 1,
-    baselineTopTicketId: '2026-06-12-morning-SweepMssFvgRetrace-LONG',
-    baselineTopSetupType: 'SweepMssFvgRetrace',
+    baselineTopTicketId: '2026-06-12-morning-NoInstalledSetup-LONG',
+    baselineTopSetupType: 'NoInstalledSetup',
     baselineTopState: 'blocked',
     baselineTopScore: 43.94,
     baselineTopInvalidStopSweep: true,
     baselineTopValidReviewCandidate: false,
-    installedTopTicketId: '2026-06-12-morning-SweepMssFvgRetrace-LONG',
-    installedTopSetupType: 'SweepMssFvgRetrace',
+    installedTopTicketId: '2026-06-12-morning-NoInstalledSetup-LONG',
+    installedTopSetupType: 'NoInstalledSetup',
     installedTopState: 'blocked',
     installedTopScore: 25.94,
     installedTopInvalidStopSweep: true,
@@ -129,11 +129,11 @@ const intake: UnifiedPositiveHeldLocalPreviewIntakeTriageReport = {
   groups: [],
   rows: [
     {
-      intakeId: '2026-06-12-morning-SweepMssFvgRetrace-LONG',
+      intakeId: '2026-06-12-morning-NoInstalledSetup-LONG',
       tradeDate: '2026-06-12',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       firstSeenTime: '2026-06-12T10:10:00.0000000',
       lastSeenTime: '2026-06-12T11:55:00.0000000',
@@ -159,11 +159,11 @@ const intake: UnifiedPositiveHeldLocalPreviewIntakeTriageReport = {
       triageReason: 'Selected by read-only triage.',
     },
     {
-      intakeId: '2026-06-12-morning-SweepMssFvgRetrace-SHORT',
+      intakeId: '2026-06-12-morning-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-12',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       firstSeenTime: '2026-06-12T10:00:00.0000000',
       lastSeenTime: '2026-06-12T11:45:00.0000000',
@@ -243,10 +243,10 @@ const timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRepor
   },
   modelTiming: [],
   rows: [{
-    ticketId: '2026-06-12-morning-SweepMssFvgRetrace-LONG',
+    ticketId: '2026-06-12-morning-NoInstalledSetup-LONG',
     tradeDate: '2026-06-12',
     session: 'morning',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     outcomeBucket: 'blocked',
     outcomeLabel: 'blocked',
@@ -281,8 +281,8 @@ assert.equal(report.summary.validCandidateHeldOutSlates, 1);
 assert.equal(report.summary.noValidCandidateSlates, 0);
 assert.equal(report.summary.missingContextSlates, 0);
 assert.equal(report.rows[0].rootCause, 'valid_candidate_held_out_by_triage_selection');
-assert.deepEqual(report.rows[0].selectedReplayRows, ['2026-06-12-morning-SweepMssFvgRetrace-LONG']);
-assert.deepEqual(report.rows[0].heldValidReviewRows, ['2026-06-12-morning-SweepMssFvgRetrace-SHORT']);
+assert.deepEqual(report.rows[0].selectedReplayRows, ['2026-06-12-morning-NoInstalledSetup-LONG']);
+assert.deepEqual(report.rows[0].heldValidReviewRows, ['2026-06-12-morning-NoInstalledSetup-SHORT']);
 assert.equal(report.rows[0].intake.find((row) => row.intakeId.endsWith('-SHORT'))?.validCandidateHeldForLater, true);
 assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.writesSupabase, false);
@@ -298,7 +298,7 @@ const cleared = buildUnifiedPositiveHeldLocalPreviewBlockedTopSlateDrilldownRepo
       ...fullSlate.slates[0],
       installedTopInvalidStopSweep: false,
       installedTopValidReviewCandidate: true,
-      installedTopTicketId: '2026-06-12-morning-SweepMssFvgRetrace-SHORT',
+      installedTopTicketId: '2026-06-12-morning-NoInstalledSetup-SHORT',
     }],
   },
   intakeTriagePath: 'intake.json',

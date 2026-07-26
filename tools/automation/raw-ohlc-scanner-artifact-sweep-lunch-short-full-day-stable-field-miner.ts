@@ -65,7 +65,7 @@ export interface RawOhlcScannerArtifactSweepLunchShortFullDayStableFieldMinerRep
     reportDir: string;
     fullDayRollupPath: string | null;
     filter: {
-      setupType: 'SweepMssFvgRetrace';
+      setupType: 'NoInstalledSetup';
       session: 'lunch';
       direction: 'SHORT';
     };
@@ -159,7 +159,7 @@ function targetToRiskBucket(targetPoints: number, riskPoints: number): string {
 }
 
 function isTarget(row: OutcomeRow): boolean {
-  return row.setupType === 'SweepMssFvgRetrace' && row.session === 'lunch' && row.direction === 'SHORT';
+  return row.setupType === 'NoInstalledSetup' && row.session === 'lunch' && row.direction === 'SHORT';
 }
 
 function isWinner(row: OutcomeRow): boolean {
@@ -286,7 +286,7 @@ export function buildRawOhlcScannerArtifactSweepLunchShortFullDayStableFieldMine
     !fullDayRollupPath && !args.fullDayRollup ? 'missing full-day rollup path' : null,
     !fullDayRollup ? 'missing full-day rollup report' : null,
     fullDayRollup && fullDayRollup.status !== 'pass' ? `full-day rollup status ${fullDayRollup.status}` : null,
-    targetRows.length === 0 ? 'no SweepMssFvgRetrace lunch SHORT full-day rows found' : null,
+    targetRows.length === 0 ? 'no NoInstalledSetup lunch SHORT full-day rows found' : null,
   ].filter((item): item is string => Boolean(item));
   const base: Omit<RawOhlcScannerArtifactSweepLunchShortFullDayStableFieldMinerReport, 'markdown'> = {
     reportType: 'raw_ohlc_scanner_artifact_sweep_lunch_short_full_day_stable_field_miner',
@@ -297,7 +297,7 @@ export function buildRawOhlcScannerArtifactSweepLunchShortFullDayStableFieldMine
       reportDir,
       fullDayRollupPath,
       filter: {
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         session: 'lunch',
         direction: 'SHORT',
       },

@@ -675,7 +675,7 @@ async function main() {
       bestConditionalCandidate: slimOpeningDrive ? slimCandidateRow(pipeline.opportunitySelection?.bestConditionalCandidate || null) : candidateRow(pipeline.opportunitySelection?.bestConditionalCandidate || null),
     };
     const openingDriveCandidate = scan.candidates.find((candidate) =>
-      candidate.setupType === SetupType.OpeningDriveFvgContinuation &&
+      candidate.setupType === SetupType.NoSetup &&
       candidate.detectedStatus !== 'NotDetected'
     ) || null;
     if (openingDriveCandidate) {

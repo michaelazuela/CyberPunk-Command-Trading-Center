@@ -11,7 +11,7 @@ interface PreviewTicket {
   ticketId: string;
   tradeDate: string;
   session: 'lunch';
-  model: 'AfterLunchDriveFvgContinuation';
+  model: 'NoInstalledSetup';
   direction: Direction;
   proofTime: string;
   entryHitTime: string | null;
@@ -54,7 +54,7 @@ interface DryRunContractTicket {
   slateId: string;
   tradeDate: string;
   session: 'lunch';
-  model: 'AfterLunchDriveFvgContinuation';
+  model: 'NoInstalledSetup';
   direction: Direction;
   proofTime: string;
   entry: number | null;
@@ -109,7 +109,7 @@ export interface DeskPlaybookAfterLunchScannerOwnedDryRunContractReport {
     earliestProofPreviewPath: string | null;
   };
   contract: {
-    model: 'AfterLunchDriveFvgContinuation';
+    model: 'NoInstalledSetup';
     session: 'lunch';
     selector: 'earliest_valid_completed_5m_proof_per_lunch_slate';
     oneTicketPerSlate: true;
@@ -194,7 +194,7 @@ function buildTicketText(ticket: PreviewTicket, blockers: string[]): DryRunContr
   const raids = ticket.activeRaids.length ? ticket.activeRaids.join(', ') : 'no saved raid context';
   const htf = normalizeHtf(ticket.htfAlignment);
   return {
-    what: `AfterLunchDriveFvgContinuation ${side} dry-run review ticket from the first completed 5M proof in the lunch window.`,
+    what: `NoInstalledSetup ${side} dry-run review ticket from the first completed 5M proof in the lunch window.`,
     where: levelText(ticket),
     when: `Proof time ${ticket.proofTime} ET. One scanner-owned ticket is allowed for this lunch slate.`,
     why: `Saved context: HTF=${htf}, raids=${raids}, movement=${ticket.movement || 'not saved'}. Outcome is research measurement only.`,
@@ -237,7 +237,7 @@ function contractTicket(ticket: PreviewTicket, seenSlates: Set<string>): DryRunC
     slateId: ticket.slateId,
     tradeDate: ticket.tradeDate,
     session: 'lunch',
-    model: 'AfterLunchDriveFvgContinuation',
+    model: 'NoInstalledSetup',
     direction: ticket.direction,
     proofTime: ticket.proofTime,
     entry: ticket.entry,
@@ -366,7 +366,7 @@ export function buildDeskPlaybookAfterLunchScannerOwnedDryRunContractReport(args
       earliestProofPreviewPath: args.earliestProofPreviewPath ?? null,
     },
     contract: {
-      model: 'AfterLunchDriveFvgContinuation',
+      model: 'NoInstalledSetup',
       session: 'lunch',
       selector: 'earliest_valid_completed_5m_proof_per_lunch_slate',
       oneTicketPerSlate: true,

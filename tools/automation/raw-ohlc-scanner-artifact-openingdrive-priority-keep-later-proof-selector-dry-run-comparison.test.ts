@@ -7,10 +7,10 @@ const strictReplayPackage = {
   status: 'pass',
   rows: [
     {
-      ticketId: '2026-06-10|morning|raidReclaim|SHORT|prefer_replacement|snap-a',
+      ticketId: '2026-06-10|morning|historicalReview|SHORT|prefer_replacement|snap-a',
       tradeDate: '2026-06-10',
       session: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'SHORT',
       entry: 7500,
       stop: 7510,
@@ -24,10 +24,10 @@ const strictReplayPackage = {
       barsAfterProof: 12,
     },
     {
-      ticketId: '2026-06-10|morning|SweepMssFvgRetrace|LONG|keep_later_sweep_proof|snap-b',
+      ticketId: '2026-06-10|morning|NoInstalledSetup|LONG|keep_later_sweep_proof|snap-b',
       tradeDate: '2026-06-10',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       entry: 7502,
       stop: 7492,
@@ -41,10 +41,10 @@ const strictReplayPackage = {
       barsAfterProof: 10,
     },
     {
-      ticketId: '2026-06-11|lunch|SweepMssFvgRetrace|SHORT|keep_later_sweep_proof|snap-c',
+      ticketId: '2026-06-11|lunch|NoInstalledSetup|SHORT|keep_later_sweep_proof|snap-c',
       tradeDate: '2026-06-11',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       entry: 7520,
       stop: 7530,
@@ -64,12 +64,12 @@ const outcome = {
   status: 'pass',
   rows: [
     {
-      ticketId: '2026-06-10|morning|SweepMssFvgRetrace|LONG|keep_later_sweep_proof|snap-b',
+      ticketId: '2026-06-10|morning|NoInstalledSetup|LONG|keep_later_sweep_proof|snap-b',
       outcomeLabel: 't1_hit_only',
       resolvedOneMesPl: 75,
     },
     {
-      ticketId: '2026-06-11|lunch|SweepMssFvgRetrace|SHORT|keep_later_sweep_proof|snap-c',
+      ticketId: '2026-06-11|lunch|NoInstalledSetup|SHORT|keep_later_sweep_proof|snap-c',
       outcomeLabel: 'no_fill',
       resolvedOneMesPl: null,
     },

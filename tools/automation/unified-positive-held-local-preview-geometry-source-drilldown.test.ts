@@ -38,7 +38,7 @@ fs.writeFileSync(tapePath, JSON.stringify({
     '2026-06-10T13:50:00.0000000': {
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           executionStatus: 'Conditional',
           blockReason: 'EntryTriggerPending',
@@ -53,7 +53,7 @@ fs.writeFileSync(tapePath, JSON.stringify({
     '2026-06-10T14:45:00.0000000': {
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           executionStatus: 'Conditional',
           blockReason: 'EntryTriggerPending',
@@ -102,7 +102,7 @@ const replacement = {
     slateId: '2026-06-10|lunch',
     tradeDate: '2026-06-10',
     session: 'lunch',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     candidateBookState: 'watch',
     executionStatus: 'Conditional',
@@ -153,7 +153,7 @@ const replayPackage = {
     tradeDate: '2026-06-10',
     session: 'lunch',
     instrument: 'MES',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     proofTime: '2026-06-10T13:50:00',
     firstSeenTime: '2026-06-10T13:50:00.0000000',

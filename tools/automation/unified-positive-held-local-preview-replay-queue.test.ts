@@ -26,7 +26,7 @@ const authority = {
   changesAppRuntime: false,
 } as const;
 
-const ticketId = '2026-06-16-morning-raidReclaim-LONG';
+const ticketId = '2026-06-16-morning-historicalReview-LONG';
 
 const decisionSummary: UnifiedPositiveHeldLocalPreviewDecisionSummaryReport = {
   reportType: 'unified_positive_held_local_preview_decision_summary',
@@ -49,11 +49,11 @@ const decisionSummary: UnifiedPositiveHeldLocalPreviewDecisionSummaryReport = {
   rows: [
     {
       ticketId,
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       noteDisposition: 'candidate_for_later_research',
       decisionAction: 'queue_for_replay_research',
-      systemReviewNotes: ['raidReclaim long remains review-only: this cluster lacks full plan-level proof.'],
+      systemReviewNotes: ['historicalReview long remains review-only: this cluster lacks full plan-level proof.'],
       systemNotesAffectDecision: false,
       researchOnly: true,
       livePromotionAllowed: false,
@@ -61,8 +61,8 @@ const decisionSummary: UnifiedPositiveHeldLocalPreviewDecisionSummaryReport = {
       boundary: 'Research decision only.',
     },
     {
-      ticketId: '2026-06-17-morning-OpeningDriveFvgContinuation-SHORT',
-      setupType: 'OpeningDriveFvgContinuation',
+      ticketId: '2026-06-17-morning-NoInstalledSetup-SHORT',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       noteDisposition: 'unreviewed',
       decisionAction: 'hold_for_manual_review',
@@ -112,7 +112,7 @@ const heldLocalAdapter: UnifiedPositiveHeldLocalTicketAdapterReport = {
       ticketId,
       sourceSnapshotId: 'scanner-morning-2026-06-16-MES-MORNING-20260616-140147',
       session: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       adapterStatus: 'held_local_artifact_created',
       artifact: {
@@ -203,7 +203,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
     changesBridgeBehavior: false,
     changesDiscordPosting: false,
   },
-  source: { inspectionSurfacePath: 'inspection.json', wordingGuardPath: 'wording.json', raidReclaimReviewNotePlacementSimulationPath: null },
+  source: { inspectionSurfacePath: 'inspection.json', wordingGuardPath: 'wording.json', historicalReviewReviewNotePlacementSimulationPath: null },
   summary: {
     inspectionRowsLoaded: 1,
     previewPayloadsCreated: 1,
@@ -220,7 +220,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
       ticketId,
       sourceSnapshotId: 'scanner-morning-2026-06-16-MES-MORNING-20260616-140147',
       session: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       status: 'preview_payload_created',
       payload: {
@@ -228,7 +228,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
         ticketId,
         sourceSnapshotId: 'scanner-morning-2026-06-16-MES-MORNING-20260616-140147',
         session: 'morning',
-        setupType: 'raidReclaim',
+        setupType: 'historicalReview',
         direction: 'LONG',
         state: 'ACTIVE_REVIEW',
         publishDiscord: false,
@@ -239,7 +239,7 @@ const previewPayload: UnifiedPositiveHeldLocalPreviewPayloadReport = {
         reviewOnly: true,
         humanReviewOnly: true,
         noAutomatedOrders: true,
-        title: 'raidReclaim LONG ACTIVE_REVIEW local preview',
+        title: 'historicalReview LONG ACTIVE_REVIEW local preview',
         sections: {
           what: 'what',
           where: 'where',
@@ -304,7 +304,7 @@ assert.equal(report.rows[0].evidence.canExecute, false);
 assert.equal(report.rows[0].evidence.publishDiscord, false);
 assert.equal(report.rows[0].evidence.shouldPost, false);
 assert.equal(report.rows[0].evidence.writesSupabase, false);
-assert.equal(report.rows.some((row) => row.ticketId === '2026-06-17-morning-OpeningDriveFvgContinuation-SHORT'), false);
+assert.equal(report.rows.some((row) => row.ticketId === '2026-06-17-morning-NoInstalledSetup-SHORT'), false);
 assert.match(report.markdown, /local-only read-only replay queue evidence/);
 
 const unsafeAdapter = structuredClone(heldLocalAdapter);

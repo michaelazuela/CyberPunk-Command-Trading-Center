@@ -11,7 +11,7 @@ import type { NoChaseIntradayGeometryBlockerClassifierReport } from './no-chase-
 
 function candidate(): SetupCandidate {
   return {
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Intraday MSS Micro Continuation',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Possible,

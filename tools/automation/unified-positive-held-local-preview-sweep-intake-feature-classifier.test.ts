@@ -29,7 +29,7 @@ function timingRow(id: string, overrides: Partial<UnifiedPositiveHeldLocalPrevie
     ticketId: id,
     tradeDate: id.slice(0, 10),
     session: id.includes('lunch') ? 'lunch' : 'morning',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: id.includes('SHORT') ? 'SHORT' : 'LONG',
     outcomeBucket: 'winner_t1_t2',
     outcomeLabel: 't1_and_t2_hit',
@@ -51,7 +51,7 @@ function intakeRow(id: string, overrides: Partial<UnifiedPositiveHeldLocalPrevie
     tradeDate: id.slice(0, 10),
     session: id.includes('lunch') ? 'lunch' : 'morning',
     instrument: 'MES',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: id.includes('SHORT') ? 'SHORT' : 'LONG',
     firstSeenTime: `${id.slice(0, 10)}T12:00:00.0000000`,
     lastSeenTime: `${id.slice(0, 10)}T12:05:00.0000000`,
@@ -80,14 +80,14 @@ function intakeRow(id: string, overrides: Partial<UnifiedPositiveHeldLocalPrevie
 }
 
 const ids = [
-  '2026-06-01-lunch-SweepMssFvgRetrace-SHORT',
-  '2026-06-02-lunch-SweepMssFvgRetrace-SHORT',
-  '2026-06-03-lunch-SweepMssFvgRetrace-SHORT',
-  '2026-06-04-lunch-SweepMssFvgRetrace-SHORT',
-  '2026-06-05-lunch-SweepMssFvgRetrace-SHORT',
-  '2026-06-06-morning-SweepMssFvgRetrace-LONG',
-  '2026-06-07-morning-SweepMssFvgRetrace-LONG',
-  '2026-06-08-morning-SweepMssFvgRetrace-LONG',
+  '2026-06-01-lunch-NoInstalledSetup-SHORT',
+  '2026-06-02-lunch-NoInstalledSetup-SHORT',
+  '2026-06-03-lunch-NoInstalledSetup-SHORT',
+  '2026-06-04-lunch-NoInstalledSetup-SHORT',
+  '2026-06-05-lunch-NoInstalledSetup-SHORT',
+  '2026-06-06-morning-NoInstalledSetup-LONG',
+  '2026-06-07-morning-NoInstalledSetup-LONG',
+  '2026-06-08-morning-NoInstalledSetup-LONG',
 ];
 
 const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport = {

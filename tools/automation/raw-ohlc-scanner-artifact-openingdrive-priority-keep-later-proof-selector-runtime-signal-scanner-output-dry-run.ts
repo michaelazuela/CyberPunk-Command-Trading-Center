@@ -267,14 +267,14 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
     const scopedCandidates = scan.candidates.filter((candidate) =>
       candidate.direction !== 'NO TRADE' &&
       (
-        candidate.setupType === SetupType.SweepMssFvgRetrace ||
-        candidate.setupType === SetupType.OpeningDriveFvgContinuation ||
-        candidate.setupType === SetupType.AfterLunchDriveFvgContinuation
+        candidate.setupType === SetupType.NoSetup ||
+        candidate.setupType === SetupType.NoSetup ||
+        candidate.setupType === SetupType.NoSetup
       )
     );
     const fallbackCandidates = scopedCandidates.length ? scopedCandidates : [
       {
-        setupType: SetupType.SweepMssFvgRetrace,
+        setupType: SetupType.NoSetup,
         direction: fixture.context.marketStructure?.trend === 'bearish' ? 'SHORT' : 'LONG',
         detectedStatus: SetupCandidateStatus.Detected,
         confidence: 'High',
@@ -288,7 +288,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
         reducedRiskPlan: null,
       },
       {
-        setupType: fixture.sessionType === 'lunch' ? SetupType.AfterLunchDriveFvgContinuation : SetupType.OpeningDriveFvgContinuation,
+        setupType: fixture.sessionType === 'lunch' ? SetupType.NoSetup : SetupType.NoSetup,
         direction: fixture.context.marketStructure?.trend === 'bearish' ? 'SHORT' : 'LONG',
         detectedStatus: SetupCandidateStatus.Detected,
         confidence: 'High',
@@ -302,13 +302,13 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
         reducedRiskPlan: null,
       },
     ] as SetupCandidate[];
-    const hasSweep = fallbackCandidates.some((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
-    const hasReplacement = fallbackCandidates.some((candidate) => candidate.setupType !== SetupType.SweepMssFvgRetrace);
+    const hasSweep = fallbackCandidates.some((candidate) => candidate.setupType === SetupType.NoSetup);
+    const hasReplacement = fallbackCandidates.some((candidate) => candidate.setupType !== SetupType.NoSetup);
     if (hasSweep && !hasReplacement) {
-      const sweep = fallbackCandidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace)!;
+      const sweep = fallbackCandidates.find((candidate) => candidate.setupType === SetupType.NoSetup)!;
       fallbackCandidates.push({
         ...cloneCandidate(sweep),
-        setupType: fixture.sessionType === 'lunch' ? SetupType.AfterLunchDriveFvgContinuation : SetupType.OpeningDriveFvgContinuation,
+        setupType: fixture.sessionType === 'lunch' ? SetupType.NoSetup : SetupType.NoSetup,
         priority: Math.max(0, sweep.priority - 1),
         nextAction: 'Synthetic companion clone for population dry-run collision coverage only.',
       });

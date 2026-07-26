@@ -49,9 +49,9 @@ const dryRunComparison = {
       tradeDate: '2026-06-10',
       session: 'morning',
       baselineTicketId: 'baseline',
-      baselineSetupType: 'raidReclaim',
+      baselineSetupType: 'historicalReview',
       proposedTicketId: 'proposed',
-      proposedSetupType: 'SweepMssFvgRetrace',
+      proposedSetupType: 'NoInstalledSetup',
       proposedSelectorDecision: 'keep_later_sweep_proof',
       selectedCandidateChanged: true,
       proposedStrictReadySourceProofPositive: true,
@@ -65,9 +65,9 @@ const dryRunComparison = {
       tradeDate: '2026-06-11',
       session: 'morning',
       baselineTicketId: 'unchanged',
-      baselineSetupType: 'raidReclaim',
+      baselineSetupType: 'historicalReview',
       proposedTicketId: 'unchanged',
-      proposedSetupType: 'raidReclaim',
+      proposedSetupType: 'historicalReview',
       proposedSelectorDecision: 'prefer_replacement',
       selectedCandidateChanged: false,
       proposedStrictReadySourceProofPositive: false,
@@ -124,7 +124,7 @@ const blocked = buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
     slates: [
       {
         ...dryRunComparison.slates[0],
-        proposedSetupType: 'raidReclaim',
+        proposedSetupType: 'historicalReview',
       },
     ],
   } as any,
@@ -132,7 +132,7 @@ const blocked = buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
 
 assert.equal(blocked.status, 'fail');
 assert.equal(blocked.summary.recommendation, 'fix_inputs');
-assert.ok(blocked.blockers.some((blocker) => blocker.includes('not SweepMssFvgRetrace')));
+assert.ok(blocked.blockers.some((blocker) => blocker.includes('not NoInstalledSetup')));
 
 const missing = buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSelectorSavedArtifactAdapterDryRunReport({
   adapterContractPath: null,

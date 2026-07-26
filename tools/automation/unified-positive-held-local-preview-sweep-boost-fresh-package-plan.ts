@@ -115,7 +115,7 @@ function commandPlan(report: UnifiedPositiveHeldLocalPreviewSweepBoostFreshValid
   const bestCandidate = report?.candidates.find((candidate) => candidate.complete) || null;
   if (bestCandidate && report?.summary.freshValidationReady) {
     return [
-      'npm run diagnostic:held-local-preview-positive-family-boost-validation -- --source-proof-timing <fresh-source-proof-timing-report> --model-family SweepMssFvgRetrace --json',
+      'npm run diagnostic:held-local-preview-positive-family-boost-validation -- --source-proof-timing <fresh-source-proof-timing-report> --model-family NoInstalledSetup --json',
       'npm run diagnostic:held-local-preview-sweep-boost-guarded-selection-simulation -- --boost-validation <fresh-boost-validation-report> --guard-miner <locked-guard-miner-report> --period fresh --json',
       'npm run diagnostic:held-local-preview-sweep-boost-guarded-validation-contract -- --train-simulation <locked-train-simulation> --test-simulation <fresh-guarded-simulation> --json',
     ];

@@ -50,7 +50,7 @@ interface TradeCandidate {
   lineInSand: number;
   lineReason: string;
   htfStory: string;
-  htfSupport: string[];
+  htfContextAlignment: string[];
   htfCaution: string[];
   managementNotes: string[];
   evidenceTags: string[];
@@ -398,7 +398,7 @@ function findMssCloseThroughCandidates(args: {
         ? 'Completed 5M close below prior protected swing low.'
         : 'Completed 5M close above prior protected swing high.',
       htfStory: htf.story,
-      htfSupport: htf.support,
+      htfContextAlignment: htf.support,
       htfCaution: htf.caution,
       managementNotes,
       evidenceTags,
@@ -689,7 +689,7 @@ function markdownReport(report: any): string {
       (trade.catalystScore ?? 0).toFixed(1),
       trade.outcome.firstHit,
       trade.outcome.mesProfitLossDollars === null ? 'N/A' : `$${trade.outcome.mesProfitLossDollars.toFixed(2)}`,
-      `${trade.catalystScoreBreakdown?.length ? `Catalyst: ${trade.catalystScoreBreakdown.join(', ')}. ` : ''}${trade.evidenceTags?.length ? `Evidence: ${trade.evidenceTags.join(', ')}. ` : ''}${trade.htfSupport.length ? trade.htfSupport.join(' ') : '5M execution only'}${trade.htfCaution.length ? ` Caution: ${trade.htfCaution.join(' ')}` : ''}${trade.managementNotes?.length ? ` Management: ${trade.managementNotes.join(' ')}` : ''}`.replace(/\|/g, '/'),
+      `${trade.catalystScoreBreakdown?.length ? `Catalyst: ${trade.catalystScoreBreakdown.join(', ')}. ` : ''}${trade.evidenceTags?.length ? `Evidence: ${trade.evidenceTags.join(', ')}. ` : ''}${trade.htfContextAlignment.length ? trade.htfContextAlignment.join(' ') : '5M execution only'}${trade.htfCaution.length ? ` Caution: ${trade.htfCaution.join(' ')}` : ''}${trade.managementNotes?.length ? ` Management: ${trade.managementNotes.join(' ')}` : ''}`.replace(/\|/g, '/'),
       '|',
     ].join(' | ')) : ['| N/A | N/A | N/A | N/A | N/A | 0 | 0 | 0 | 0 | 0 | 0 | NONE | $0.00 | N/A |']),
     '',

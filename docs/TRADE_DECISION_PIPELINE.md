@@ -4,7 +4,7 @@ This app is a trading decision-support system. It must use the same trade-decisi
 
 AI may extract chart context, summarize visible structure, and propose advisory observations. The final trade decision must be produced by a deterministic, rule-based app pipeline.
 
-Confidence is a supporting field only. It may help rank otherwise valid candidates, but it must never override a failed gate. Example: `High` confidence plus a failed risk check still returns `NoTrade`.
+Confidence is a context field only. It may help rank otherwise valid candidates, but it must never override a failed gate. Example: `High` confidence plus a failed risk check still returns `NoTrade`.
 
 ## Layered Decision Architecture
 
@@ -20,9 +20,9 @@ The intended architecture must stay separated:
 
 2. **Setup scanner**
    Applies active primary setup definitions:
-   "Does this meet Sweep -> MSS -> FVG Retrace or Raid Reclaim Reversal Reversal?"
+   "Does this meet Sweep -> MSS -> FVG Retrace or no installed model path?"
 
-   Liquidity sweeps, FVG/imbalance facts, market structure shifts, resting liquidity, prior-session sweeps, and breaker/FVG overlap are supporting evidence. They do not create a third active executable model.
+   Liquidity sweeps, FVG/imbalance facts, market structure shifts, resting liquidity, prior-session sweeps, and breaker/FVG overlap are historical context. They do not create a third active executable model.
 
 3. **Ranking engine**
    Scores candidates:
@@ -41,7 +41,7 @@ The OHLC layer must not approve setups, rank trades, accept risk, or produce exe
 The app should evaluate session levels before final candidate ranking:
 
 1. Extract or import Asian high/low, London high/low, NY premarket high/low, full ETH high/low, RTH high/low, and nearby round numbers when available.
-2. Score each level for source quality, confidence, proximity, touches, sweep/reclaim context, round-number overlap, FVG overlap, and session relationships.
+2. Score each level for source quality, confidence, proximity, touches, historical reversal pattern context, round-number overlap, FVG overlap, and session relationships.
 3. Evaluate context rules: Asian low below London low, London sweeps Asian high/low, NY premarket sweeps London high/low, RTH open relative to Midnight Open, RTH returning into ETH range, and RTH expanding away from ETH range.
 4. Attach the most useful long-side and short-side levels to candidate scoring and target context.
 5. Display the market map in the workflow with long-side reaction zones, short-side reaction zones, levels to watch, nearby target obstacles, and runner objectives.
@@ -172,7 +172,7 @@ The current scanner evaluates the active primary setup models for the session be
 Examples:
 
 - Sweep -> MSS -> FVG Retrace
-- Raid Reclaim Reversal Reversal
+- no installed model path
 - No Trade
 
 Setup detection must be separate from execution approval. A detected primary setup can still be blocked, conditional, or invalid for execution.

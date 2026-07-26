@@ -36,7 +36,7 @@ const snapshotReport: RawOhlcScannerArtifactSweepSnapshotFieldMinerReport = {
     testArtifacts: [],
     testOutcomeReports: [],
     minRowsPerPeriod: 5,
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
   },
   assumptions: {
     consumesExistingRawScannerArtifactsAndOutcomeReportsOnly: true,
@@ -82,7 +82,7 @@ const artifact = {
       completed5m: { time: '2026-07-16T14:00:00', open: 100, high: 104, low: 96, close: 99, volume: 100 },
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           detectedStatus: 'Conditional',
           executionStatus: 'EntryTriggerPending',
@@ -106,7 +106,7 @@ const artifact = {
       completed5m: { time: '2026-07-16T14:05:00', open: 99, high: 101, low: 97, close: 100, volume: 100 },
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           entry: 100,
           stop: 96,
@@ -137,7 +137,7 @@ assert.equal(report.summary.selectorSegments, 1);
 assert.equal(report.summary.replayPackageRows, 1);
 assert.equal(report.summary.readyRows, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
-assert.equal(report.rows[0].ticketId, '2026-07-16-lunch-SweepMssFvgRetrace-SHORT-20260716T140000');
+assert.equal(report.rows[0].ticketId, '2026-07-16-lunch-NoInstalledSetup-SHORT-20260716T140000');
 assert.equal(report.rows[0].sweepCompositeValidation?.matchedSegmentKind, 'session_direction_candle_rank');
 assert.match(report.markdown, /Sweep Composite Validation Package/);
 

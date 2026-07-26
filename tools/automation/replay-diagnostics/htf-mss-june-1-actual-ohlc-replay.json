@@ -502,11 +502,11 @@
   },
   "setupDetection": {
     "candidateDetected": true,
-    "setupType": "RaidReclaimReversal",
+    "setupType": "HistoricalReviewReversal",
     "label": "HTF Context Continuation After Raid/Reclaim",
     "direction": "LONG",
     "candidate": {
-      "setupType": "RaidReclaimReversal",
+      "setupType": "HistoricalReviewReversal",
       "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
       "pathway": "intraday_mss_micro_continuation",
       "direction": "LONG",
@@ -560,7 +560,7 @@
     "noTradeReason": null,
     "bestExecutableCandidate": null,
     "bestConditionalCandidate": {
-      "setupType": "RaidReclaimReversal",
+      "setupType": "HistoricalReviewReversal",
       "scenarioLabel": "Bullish Raid Reclaim Reversal Reversal",
       "direction": "LONG",
       "detectedStatus": "Conditional",

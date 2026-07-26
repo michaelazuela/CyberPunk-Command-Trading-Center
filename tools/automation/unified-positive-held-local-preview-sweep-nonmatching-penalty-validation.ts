@@ -94,7 +94,7 @@ export interface UnifiedPositiveHeldLocalPreviewSweepNonmatchingPenaltyValidatio
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SWEEP_SETUP = 'SweepMssFvgRetrace';
+const SWEEP_SETUP = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -332,7 +332,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepNonmatchingPenaltyValid
       ? ['Do not use Sweep nonmatching penalty validation until timing, intake, and top-selection reports load cleanly.']
       : rec === 'validate_invalid_stop_penalty_research_only'
         ? [
-          'Validate Blocked/InvalidStopLocation Sweep rows as a rank-penalty candidate in research only; do not remove SweepMssFvgRetrace.',
+          'Validate Blocked/InvalidStopLocation Sweep rows as a rank-penalty candidate in research only; do not remove NoInstalledSetup.',
           'This supports preventing invalid-stop Sweep rows from winning same-session ranking, not weakening valid Conditional/EntryTriggerPending Sweep rows.',
           'Do not change live ranking, canExecute, Discord, Supabase, bridge, entry, stop, target, risk, or model availability from this diagnostic.',
         ]

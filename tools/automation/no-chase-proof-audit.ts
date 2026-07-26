@@ -5,7 +5,7 @@ import { buildUnifiedDeskCandidateBook, type UnifiedDeskCandidateBookItem } from
 import { SetupType, type SetupCandidate } from '../../src/types';
 import { loadUnifiedDeskCandidateDiagnosticSnapshotsFromDir, type UnifiedDeskCandidateDiagnosticSnapshot } from './unified-desk-candidate-book-diagnostic';
 
-type ProofAuditSetup = SetupType.IntradayMssMicroContinuation | SetupType.AfterLunchDriveFvgContinuation;
+type ProofAuditSetup = SetupType.NoSetup | SetupType.NoSetup;
 type ProofAuditSession = UnifiedDeskCandidateDiagnosticSnapshot['sessionType'];
 
 export interface NoChaseProofAuditCase {
@@ -82,8 +82,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_OUT_DIR = path.join(__dirname, 'diagnostic-reports');
 const TARGET_SETUPS: ProofAuditSetup[] = [
-  SetupType.IntradayMssMicroContinuation,
-  SetupType.AfterLunchDriveFvgContinuation,
+  SetupType.NoSetup,
+  SetupType.NoSetup,
 ];
 
 function authority(): NoChaseProofAuditReport['authority'] {
@@ -212,14 +212,14 @@ function buildCase(noChaseGroup: CandidateObservation[], allForKey: CandidateObs
 
 function buildRecommendations(report: Omit<NoChaseProofAuditReport, 'recommendations' | 'markdown'>): string[] {
   const recommendations = [
-    'Do not broaden raidReclaim or SweepMssFvgRetrace from this audit; they are intentionally out of scope.',
+    'Do not broaden historicalReview or NoInstalledSetup from this audit; they are intentionally out of scope.',
     'Keep no-chase blocked unless a later scanner-owned candidate shows completed 5M retest/rejection, close-through, acceptance, or hold proof.',
   ];
   if (report.summary.afterLunchNoChaseCases === 0) {
-    recommendations.push('AfterLunchDriveFvgContinuation produced no no-chase cases in this artifact set; isolate it with after-lunch human-review candidates rather than no-chase conversion.');
+    recommendations.push('NoInstalledSetup produced no no-chase cases in this artifact set; isolate it with after-lunch human-review candidates rather than no-chase conversion.');
   }
   if (report.summary.intradayConverted > 0) {
-    recommendations.push('IntradayMssMicroContinuation has later proof conversions worth a narrow replay outcome review before any scanner-visible wiring.');
+    recommendations.push('NoInstalledSetup has later proof conversions worth a narrow replay outcome review before any scanner-visible wiring.');
   }
   if (report.summary.convertedToHumanReview === 0) {
     recommendations.push('No no-chase case converted to fresh proof in this run; keep the current no-chase block intact.');
@@ -287,10 +287,10 @@ export function buildNoChaseProofAuditReport(
       convertedToHumanReview: cases.filter((item) => item.proofStatus === 'converted_to_human_review').length,
       remainsNoChase: cases.filter((item) => item.proofStatus === 'remains_no_chase').length,
       watchOnlyAfterNoChase: cases.filter((item) => item.proofStatus === 'watch_only_after_no_chase').length,
-      intradayNoChaseCases: cases.filter((item) => item.setupType === SetupType.IntradayMssMicroContinuation).length,
-      intradayConverted: cases.filter((item) => item.setupType === SetupType.IntradayMssMicroContinuation && item.proofStatus === 'converted_to_human_review').length,
-      afterLunchNoChaseCases: cases.filter((item) => item.setupType === SetupType.AfterLunchDriveFvgContinuation).length,
-      afterLunchConverted: cases.filter((item) => item.setupType === SetupType.AfterLunchDriveFvgContinuation && item.proofStatus === 'converted_to_human_review').length,
+      intradayNoChaseCases: cases.filter((item) => item.setupType === SetupType.NoSetup).length,
+      intradayConverted: cases.filter((item) => item.setupType === SetupType.NoSetup && item.proofStatus === 'converted_to_human_review').length,
+      afterLunchNoChaseCases: cases.filter((item) => item.setupType === SetupType.NoSetup).length,
+      afterLunchConverted: cases.filter((item) => item.setupType === SetupType.NoSetup && item.proofStatus === 'converted_to_human_review').length,
     },
     cases,
   };

@@ -42,10 +42,10 @@ const scannerDryRun: UnifiedPositiveScannerDryRunReplayReport = {
     adapterPublishDiscordFalseRows: 1,
   },
   rows: [{
-    ticketId: '2026-07-09-evening-SweepMssFvgRetrace-SHORT',
+    ticketId: '2026-07-09-evening-NoInstalledSetup-SHORT',
     sourceSnapshotId: 'scanner-evening-fixture',
     session: 'evening',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'SHORT',
     normalDeskOutput: {
       sourceOfTruth: 'scanner_desk_state_normal_output_preserved',
@@ -119,10 +119,10 @@ const installedScore: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreC
   },
   rows: [
     {
-      ticketId: '2026-07-09-evening-SweepMssFvgRetrace-SHORT',
+      ticketId: '2026-07-09-evening-NoInstalledSetup-SHORT',
       tradeDate: '2026-07-09',
       session: 'evening',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       executionStatus: 'Blocked',
       blockReason: 'InvalidStopLocation',
@@ -139,10 +139,10 @@ const installedScore: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreC
       riskPreserved: true,
     },
     {
-      ticketId: '2026-07-09-evening-SweepMssFvgRetrace-LONG',
+      ticketId: '2026-07-09-evening-NoInstalledSetup-LONG',
       tradeDate: '2026-07-09',
       session: 'evening',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -198,8 +198,8 @@ const needsFresh = buildUnifiedPositiveHeldLocalPreviewSweepPenaltyScannerArtifa
     ...scannerDryRun,
     rows: [{
       ...scannerDryRun.rows[0],
-      ticketId: '2026-07-09-evening-raidReclaim-LONG',
-      setupType: 'raidReclaim',
+      ticketId: '2026-07-09-evening-historicalReview-LONG',
+      setupType: 'historicalReview',
       direction: 'LONG',
     }],
   },
@@ -208,8 +208,8 @@ const needsFresh = buildUnifiedPositiveHeldLocalPreviewSweepPenaltyScannerArtifa
     ...installedScore,
     rows: [{
       ...installedScore.rows[0],
-      ticketId: '2026-07-09-evening-raidReclaim-LONG',
-      setupType: 'raidReclaim',
+      ticketId: '2026-07-09-evening-historicalReview-LONG',
+      setupType: 'historicalReview',
       invalidStopSweepPenaltyCandidate: false,
       installedPenaltyExpected: false,
     }],
@@ -226,8 +226,8 @@ const missingInstalledCoverage = buildUnifiedPositiveHeldLocalPreviewSweepPenalt
     ...scannerDryRun,
     rows: [{
       ...scannerDryRun.rows[0],
-      ticketId: '2026-07-10-evening-raidReclaim-LONG',
-      setupType: 'raidReclaim',
+      ticketId: '2026-07-10-evening-historicalReview-LONG',
+      setupType: 'historicalReview',
       direction: 'LONG',
     }],
   },

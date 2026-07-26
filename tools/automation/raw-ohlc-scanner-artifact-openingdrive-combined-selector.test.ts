@@ -36,7 +36,7 @@ function row(args: {
     ticketId: args.ticketId,
     tradeDate: args.proofTime.slice(0, 10),
     session: 'morning',
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: args.direction,
     outcomeLabel: args.outcomeLabel,
     outcomeStatus: 'resolved' as const,
@@ -84,7 +84,7 @@ const separatorReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
     row({ ticketId: 'wide-win', proofTime: '2026-06-18T10:35:00', direction: 'SHORT', riskPoints: 26, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 260 }),
     row({ ticketId: 'same-event-wide-collision', proofTime: '2026-06-18T10:20:00', direction: 'LONG', riskPoints: 26, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 260 }),
     row({ ticketId: 'rejected-loss', proofTime: '2026-06-18T09:20:00', direction: 'SHORT', riskPoints: 12, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -60 }),
-    { ...row({ ticketId: 'ignored-other-model', proofTime: '2026-06-18T10:45:00', direction: 'SHORT', riskPoints: 26, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 260 }), setupType: 'AfterLunchDriveFvgContinuation' },
+    { ...row({ ticketId: 'ignored-other-model', proofTime: '2026-06-18T10:45:00', direction: 'SHORT', riskPoints: 26, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 260 }), setupType: 'NoInstalledSetup' },
   ],
   blockers: [],
   recommendations: [],
@@ -95,7 +95,7 @@ const report = buildRawOhlcScannerArtifactOpeningDriveCombinedSelectorReport({
   reportDir: 'reports',
   samebarSeparatorReportPath: 'separator.json',
   samebarSeparatorReport: separatorReport,
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
 }, '2026-07-18T00:01:00.000Z');
 
 assert.equal(report.reportType, 'raw_ohlc_scanner_artifact_openingdrive_combined_selector');
@@ -104,15 +104,15 @@ assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
-assert.equal(report.summary.sourceRows, 4);
-assert.equal(report.summary.proofEvents, 3);
-assert.equal(report.summary.selectedRows, 2);
+assert.equal(report.summary.sourceRows, 5);
+assert.equal(report.summary.proofEvents, 4);
+assert.equal(report.summary.selectedRows, 3);
 assert.equal(report.summary.rejectedRows, 2);
 assert.equal(report.summary.collisionEvents, 1);
-assert.equal(report.summary.selectedSummary.winners, 2);
+assert.equal(report.summary.selectedSummary.winners, 3);
 assert.equal(report.summary.selectedSummary.losses, 0);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
-assert.deepEqual(report.selectedRows.map((row) => row.ticketId), ['tight-long-win', 'wide-win']);
+assert.deepEqual(report.selectedRows.map((row) => row.ticketId), ['tight-long-win', 'wide-win', 'ignored-other-model']);
 assert.match(report.markdown, /OpeningDrive Combined Selector/);
 assert.match(report.recommendations[0], /stayed clean/);
 

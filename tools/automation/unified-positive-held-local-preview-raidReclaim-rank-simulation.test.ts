@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
 import {
-  buildUnifiedPositiveHeldLocalPreviewraidReclaimRankSimulationReport,
+  buildUnifiedPositiveHeldLocalPreviewhistoricalReviewRankSimulationReport,
 } from './unified-positive-held-local-preview-raidReclaim-rank-simulation';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimRankPenaltyValidationReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewRankPenaltyValidationReport,
 } from './unified-positive-held-local-preview-raidReclaim-rank-penalty-validation';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport,
 } from './unified-positive-held-local-preview-raidReclaim-replay-package';
 
-type PackageRow = UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport['rows'][number];
+type PackageRow = UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport['rows'][number];
 
 function packageRow(args: {
   id: string;
@@ -42,28 +42,28 @@ function packageRow(args: {
 
 const rows = [
   packageRow({
-    id: '2026-06-17-morning-raidReclaim-LONG-blocked-winner',
+    id: '2026-06-17-morning-historicalReview-LONG-blocked-winner',
     group: 'blocked_protected_stop',
     outcomeBucket: 'winner',
     pl: 50,
     selected: true,
   }),
   packageRow({
-    id: '2026-06-17-morning-raidReclaim-SHORT-clean-winner',
+    id: '2026-06-17-morning-historicalReview-SHORT-clean-winner',
     group: 'conditional_protected_stop_clean',
     outcomeBucket: 'winner',
     pl: 120,
     weak: 3,
   }),
   packageRow({
-    id: '2026-06-18-lunch-raidReclaim-LONG-blocked-loss',
+    id: '2026-06-18-lunch-historicalReview-LONG-blocked-loss',
     group: 'blocked_protected_stop',
     outcomeBucket: 'loss',
     pl: -100,
     selected: true,
   }),
   packageRow({
-    id: '2026-06-18-lunch-raidReclaim-SHORT-clean-winner',
+    id: '2026-06-18-lunch-historicalReview-SHORT-clean-winner',
     group: 'conditional_protected_stop_clean',
     outcomeBucket: 'winner',
     pl: 150,
@@ -90,8 +90,8 @@ const authority = {
   changesAppRuntime: false,
 } as const;
 
-const packageReport: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport = {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_replay_package',
+const packageReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport = {
+  reportType: 'unified_positive_held_local_preview_historicalReview_replay_package',
   generatedAt: '2026-07-17T00:00:00.000Z',
   status: 'pass',
   authority,
@@ -110,10 +110,10 @@ const packageReport: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepo
   },
   summary: {
     sourceRows: rows.length,
-    raidReclaimRows: rows.length,
+    historicalReviewRows: rows.length,
     conditionalProtectedStopCleanRows: 2,
     blockedProtectedStopRows: 2,
-    otherraidReclaimStateRows: 0,
+    otherhistoricalReviewStateRows: 0,
     groupSummaries: 3,
     daySessionSummaries: 2,
     replayQuestion: 'candidate_for_broader_replay',
@@ -127,15 +127,15 @@ const packageReport: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepo
   markdown: '',
 };
 
-const validationReport: UnifiedPositiveHeldLocalPreviewraidReclaimRankPenaltyValidationReport = {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_rank_penalty_validation',
+const validationReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewRankPenaltyValidationReport = {
+  reportType: 'unified_positive_held_local_preview_historicalReview_rank_penalty_validation',
   generatedAt: '2026-07-17T00:00:00.000Z',
   status: 'pass',
   authority,
   source: {
     reportDir: 'diagnostic-reports',
-    raidReclaimReplayPackagePath: 'package.json',
-    raidReclaimActionProbePath: 'probe.json',
+    historicalReviewReplayPackagePath: 'package.json',
+    historicalReviewActionProbePath: 'probe.json',
   },
   assumptions: {
     validationIsResearchOnly: true,
@@ -168,15 +168,15 @@ const validationReport: UnifiedPositiveHeldLocalPreviewraidReclaimRankPenaltyVal
   markdown: '',
 };
 
-const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimRankSimulationReport({
+const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewRankSimulationReport({
   reportDir: 'diagnostic-reports',
-  raidReclaimReplayPackagePath: 'package.json',
-  raidReclaimReplayPackageReport: packageReport,
-  raidReclaimRankPenaltyValidationPath: 'validation.json',
-  raidReclaimRankPenaltyValidationReport: validationReport,
+  historicalReviewReplayPackagePath: 'package.json',
+  historicalReviewReplayPackageReport: packageReport,
+  historicalReviewRankPenaltyValidationPath: 'validation.json',
+  historicalReviewRankPenaltyValidationReport: validationReport,
 }, '2026-07-17T00:01:00.000Z');
 
-assert.equal(report.reportType, 'unified_positive_held_local_preview_raidReclaim_rank_simulation');
+assert.equal(report.reportType, 'unified_positive_held_local_preview_historicalReview_rank_simulation');
 assert.equal(report.status, 'pass');
 assert.equal(report.authority.readOnly, true);
 assert.equal(report.authority.changesScannerBehavior, false);
@@ -197,15 +197,15 @@ assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.ok(report.rows.some((row) => row.falseWinnerDemotion));
 assert.match(report.markdown, /Rank Simulation/);
 
-const missing = buildUnifiedPositiveHeldLocalPreviewraidReclaimRankSimulationReport({
+const missing = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewRankSimulationReport({
   reportDir: 'diagnostic-reports',
-  raidReclaimReplayPackagePath: null,
-  raidReclaimReplayPackageReport: null,
-  raidReclaimRankPenaltyValidationPath: null,
-  raidReclaimRankPenaltyValidationReport: null,
+  historicalReviewReplayPackagePath: null,
+  historicalReviewReplayPackageReport: null,
+  historicalReviewRankPenaltyValidationPath: null,
+  historicalReviewRankPenaltyValidationReport: null,
 }, '2026-07-17T00:02:00.000Z');
 
 assert.equal(missing.status, 'fail');
-assert.ok(missing.blockers.includes('missing raidReclaim replay package path'));
+assert.ok(missing.blockers.includes('missing historicalReview replay package path'));
 
-console.log('unified positive held-local raidReclaim rank simulation verified.');
+console.log('unified positive held-local historicalReview rank simulation verified.');

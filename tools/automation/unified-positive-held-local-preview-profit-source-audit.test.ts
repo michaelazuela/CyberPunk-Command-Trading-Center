@@ -12,7 +12,7 @@ const report = buildUnifiedPositiveHeldLocalPreviewProfitSourceAuditReport({
       ticketId: 'a-1',
       tradeDate: '2026-07-20',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-20T09:35:00',
       outcomeStatus: 'resolved',
@@ -32,7 +32,7 @@ const report = buildUnifiedPositiveHeldLocalPreviewProfitSourceAuditReport({
       ticketId: 'a-2-duplicate-campaign',
       tradeDate: '2026-07-20',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-20T09:40:00',
       outcomeStatus: 'resolved',
@@ -52,7 +52,7 @@ const report = buildUnifiedPositiveHeldLocalPreviewProfitSourceAuditReport({
       ticketId: 'b-1',
       tradeDate: '2026-07-20',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofTime: '2026-07-20T09:35:00',
       outcomeStatus: 'resolved',
@@ -72,7 +72,7 @@ const report = buildUnifiedPositiveHeldLocalPreviewProfitSourceAuditReport({
       ticketId: 'c-1',
       tradeDate: '2026-07-20',
       session: 'lunch',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-20T12:30:00',
       outcomeStatus: 'resolved',
@@ -99,7 +99,7 @@ assert.equal(report.summary.uniqueCampaignRows, 3);
 assert.equal(report.summary.uniqueCampaignGrossOneMesPl, 95);
 assert.equal(report.summary.onePerSlateRows, 3);
 assert.equal(report.summary.onePerSlateGrossOneMesPl, 160);
-assert.equal(report.summary.topModel, 'SweepMssFvgRetrace');
+assert.equal(report.summary.topModel, 'NoInstalledSetup');
 assert.equal(report.summary.topModelGrossOneMesPl, 80);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.rawRiskMethodGroups[0].grossOneMesPl, 80);

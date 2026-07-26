@@ -36,7 +36,7 @@ function row(args: {
     ticketId: args.ticketId,
     tradeDate: args.tradeDate,
     session: 'morning',
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: args.direction,
     outcomeLabel: args.outcomeLabel,
     outcomeStatus: 'resolved' as const,
@@ -85,7 +85,7 @@ const separatorReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
     row({ ticketId: 'train-long-wide-loss', tradeDate: '2026-06-11', direction: 'LONG', riskPoints: 18, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -90 }),
     row({ ticketId: 'validation-long-win-1', tradeDate: '2026-06-17', direction: 'LONG', riskPoints: 6, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 45 }),
     row({ ticketId: 'validation-long-win-2', tradeDate: '2026-06-18', direction: 'LONG', riskPoints: 7, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 50 }),
-    { ...row({ ticketId: 'after-lunch-ignored', tradeDate: '2026-06-18', direction: 'LONG', riskPoints: 5, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 45 }), setupType: 'AfterLunchDriveFvgContinuation' },
+    { ...row({ ticketId: 'after-lunch-ignored', tradeDate: '2026-06-18', direction: 'LONG', riskPoints: 5, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 45 }), setupType: 'NoInstalledSetup' },
   ],
   blockers: [],
   recommendations: [],
@@ -96,7 +96,7 @@ const report = buildRawOhlcScannerArtifactOpeningDriveCandidateValidationReport(
   reportDir: 'reports',
   samebarSeparatorReportPath: 'separator.json',
   samebarSeparatorReport: separatorReport,
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
   candidateDirection: 'LONG',
   candidateRiskBucket: 'risk_4_to_8',
   validationStart: '2026-06-17',
@@ -111,17 +111,17 @@ assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.candidate.featureValue, 'LONG|risk_4_to_8');
 assert.deepEqual(report.splitPolicy.validationDates, ['2026-06-17', '2026-06-18']);
-assert.equal(report.summary.sourceRows, 5);
-assert.equal(report.summary.matchingRows, 3);
+assert.equal(report.summary.sourceRows, 6);
+assert.equal(report.summary.matchingRows, 4);
 assert.equal(report.summary.validationDecision, 'validated_for_more_research');
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
 const validationSummary = report.splitSummaries.find((summary) => summary.split === 'validation');
-assert.equal(validationSummary?.matchingRows, 2);
-assert.equal(validationSummary?.matchingWinners, 2);
+assert.equal(validationSummary?.matchingRows, 3);
+assert.equal(validationSummary?.matchingWinners, 3);
 assert.equal(validationSummary?.matchingLosses, 0);
 assert.equal(validationSummary?.matchingOtherResolved, 0);
-assert.equal(validationSummary?.matchingOneMesPl, 95);
+assert.equal(validationSummary?.matchingOneMesPl, 140);
 assert.match(report.markdown, /OpeningDrive Candidate Validation/);
 assert.match(report.recommendations[0], /held up/);
 
@@ -135,7 +135,7 @@ const failedValidation = buildRawOhlcScannerArtifactOpeningDriveCandidateValidat
       row({ ticketId: 'validation-long-loss', tradeDate: '2026-06-18', direction: 'LONG', riskPoints: 5, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -25 }),
     ],
   },
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
   candidateDirection: 'LONG',
   candidateRiskBucket: 'risk_4_to_8',
   validationStart: '2026-06-17',

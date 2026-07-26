@@ -85,7 +85,7 @@ export interface RawOhlcScannerArtifactOpeningDriveOosSourceInstalledSelectionRe
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const PRIORITY_SET = new Set(['SweepMssFvgRetrace', 'IntradayMssMicroContinuation']);
+const PRIORITY_SET = new Set(['NoInstalledSetup', 'NoInstalledSetup']);
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -216,7 +216,7 @@ function buildRows(reports: RawOhlcScannerArtifactSameBarSeparatorDrilldownRepor
     grouped.set(sameEventKey(row), [...(grouped.get(sameEventKey(row)) || []), row]);
   }
   return [...grouped.values()].flatMap((rows) => {
-    const openingDrive = bestByPl(rows.filter((row) => row.setupType === 'OpeningDriveFvgContinuation'));
+    const openingDrive = bestByPl(rows.filter((row) => row.setupType === 'NoInstalledSetup'));
     const priority = bestByPl(rows.filter((row) => PRIORITY_SET.has(row.setupType)));
     if (!openingDrive || !priority) return [];
     const book = buildUnifiedDeskCandidateBook({

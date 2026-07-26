@@ -2834,7 +2834,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -3084,7 +3084,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -5546,7 +5546,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -5797,7 +5797,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -6048,7 +6048,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -6287,7 +6287,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -9284,7 +9284,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -9534,7 +9534,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -11996,7 +11996,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -12247,7 +12247,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -12498,7 +12498,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -12737,7 +12737,7 @@
       "htfSufficiency": "sufficient",
       "scannerBestExecutable": null,
       "scannerBestConditional": {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",

@@ -11,7 +11,7 @@ import type { NoChaseProtectedGeometryOmissionDiagnosticReport } from './no-chas
 
 const dispositionRollup = {
   rows: [{
-    caseId: '2026-06-25|lunch|IntradayMssMicroContinuation|LONG',
+    caseId: '2026-06-25|lunch|NoInstalledSetup|LONG',
     tradeDate: '2026-06-25',
     sessionType: 'lunch',
     direction: 'LONG',
@@ -24,10 +24,10 @@ const dispositionRollup = {
 
 const omissionReport = {
   rows: [{
-    caseId: '2026-06-25|lunch|IntradayMssMicroContinuation|LONG',
+    caseId: '2026-06-25|lunch|NoInstalledSetup|LONG',
     tradeDate: '2026-06-25',
     sessionType: 'lunch',
-    setupType: 'IntradayMssMicroContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     firstNoChaseSnapshotId: 'fixture-snapshot',
     firstNoChaseTime: '2026-06-25T14:15:00.0000000',
@@ -70,7 +70,7 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'residual-retest-swing-'))
 fs.writeFileSync(path.join(tempDir, 'fixture-snapshot.json'), `${JSON.stringify({
   normalizedPlan: {
     setupCandidates: [{
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       entry: 7439.75,
       candidateState: 'MSS_CONTINUATION_RETEST_PENDING',

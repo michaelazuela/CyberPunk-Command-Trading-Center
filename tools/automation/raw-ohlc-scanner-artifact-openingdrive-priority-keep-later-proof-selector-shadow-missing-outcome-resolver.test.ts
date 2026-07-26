@@ -8,10 +8,10 @@ const missingReplayPackage = {
   rows: [
     {
       packagePriority: 1,
-      replayQueueKey: '2026-06-23|evening|SweepMssFvgRetrace|LONG|keep_later_sweep_proof',
+      replayQueueKey: '2026-06-23|evening|NoInstalledSetup|LONG|keep_later_sweep_proof',
       tradeDate: '2026-06-23',
       sessionType: 'evening',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       selectorDecision: 'keep_later_sweep_proof',
       shadowRows: 41,
@@ -19,10 +19,10 @@ const missingReplayPackage = {
     },
     {
       packagePriority: 2,
-      replayQueueKey: '2026-06-23|evening|raidReclaim|SHORT|prefer_replacement',
+      replayQueueKey: '2026-06-23|evening|historicalReview|SHORT|prefer_replacement',
       tradeDate: '2026-06-23',
       sessionType: 'evening',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'SHORT',
       selectorDecision: 'prefer_replacement',
       shadowRows: 37,
@@ -30,10 +30,10 @@ const missingReplayPackage = {
     },
     {
       packagePriority: 3,
-      replayQueueKey: '2026-06-24|morning|raidReclaim|SHORT|prefer_replacement',
+      replayQueueKey: '2026-06-24|morning|historicalReview|SHORT|prefer_replacement',
       tradeDate: '2026-06-24',
       sessionType: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'SHORT',
       selectorDecision: 'prefer_replacement',
       shadowRows: 16,
@@ -46,7 +46,7 @@ const outcomeRecords = [
   {
     tradeDate: '2026-06-23',
     sessionType: 'lunch',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     outcome: 't1_and_t2_hit',
     oneMesGross: 100,
@@ -55,7 +55,7 @@ const outcomeRecords = [
   {
     tradeDate: '2026-06-24',
     sessionType: 'morning',
-    setupType: 'raidReclaim',
+    setupType: 'historicalReview',
     direction: 'SHORT',
     outcome: 'stopped_before_t1',
     oneMesGross: -50,
@@ -86,9 +86,9 @@ assert.equal(report.summary.strictGrossOneMesPl, -50);
 assert.equal(report.summary.weakAdjacentGrossOneMesPl, 100);
 assert.equal(report.summary.recommendation, 'run_actual_missing_session_replay');
 
-const weak = report.rows.find((row) => row.replayQueueKey.includes('SweepMssFvgRetrace'));
-const strict = report.rows.find((row) => row.replayQueueKey === '2026-06-24|morning|raidReclaim|SHORT|prefer_replacement');
-const missing = report.rows.find((row) => row.replayQueueKey === '2026-06-23|evening|raidReclaim|SHORT|prefer_replacement');
+const weak = report.rows.find((row) => row.replayQueueKey.includes('NoInstalledSetup'));
+const strict = report.rows.find((row) => row.replayQueueKey === '2026-06-24|morning|historicalReview|SHORT|prefer_replacement');
+const missing = report.rows.find((row) => row.replayQueueKey === '2026-06-23|evening|historicalReview|SHORT|prefer_replacement');
 
 assert.equal(weak?.resolutionStatus, 'weak_adjacent_evidence_only');
 assert.equal(strict?.resolutionStatus, 'resolved_strict');

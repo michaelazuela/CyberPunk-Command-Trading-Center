@@ -33,7 +33,7 @@ function fixturePack(): ResearchSampleReviewPack {
     summary: 'Defined window showed liquidity-delivery behavior.',
     whyAdvisoryOnly: 'Approved gates did not independently pass.',
     model1Overlap: false,
-    raidReclaimOverlap: false,
+    historicalReversalOverlap: false,
     researchDetectorReason: 'Research-only detector reason.',
     warningFailureReason: 'Research-only warning.',
     dataQualityNotes: ['Fixture data.'],

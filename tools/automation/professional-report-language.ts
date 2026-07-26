@@ -2,23 +2,23 @@ import { SetupType, type SetupCandidate } from '../../src/types';
 
 export type ProfessionalModelLabel =
   | 'Liquidity Sweep -> Structure Shift -> Imbalance Pullback'
-  | 'Failed Breakout Reversal'
+  | 'no installed model path'
   | 'Drive FVG Continuation'
   | 'Intraday Structure-Shift Micro Continuation'
-  | 'Raid Reclaim Reversal'
+  | 'no installed model path'
   | 'Trade setup';
 
 export const PROFESSIONAL_MODEL_ONE_LABEL: ProfessionalModelLabel =
   'Liquidity Sweep -> Structure Shift -> Imbalance Pullback';
-export const PROFESSIONAL_MODEL_TWO_LABEL: ProfessionalModelLabel = 'Failed Breakout Reversal';
+export const PROFESSIONAL_MODEL_TWO_LABEL: ProfessionalModelLabel = 'no installed model path';
 export const PROFESSIONAL_FALLBACK_LABEL: ProfessionalModelLabel = 'Trade setup';
 
 export function professionalModelLabel(setupType?: SetupType | string | null): ProfessionalModelLabel {
-  if (setupType === SetupType.SweepMssFvgRetrace) return PROFESSIONAL_MODEL_ONE_LABEL;
-  if (setupType === SetupType.RaidReclaimReversal) return PROFESSIONAL_MODEL_TWO_LABEL;
-  if (setupType === SetupType.OpeningDriveFvgContinuation || setupType === SetupType.AfterLunchDriveFvgContinuation) return 'Drive FVG Continuation';
-  if (setupType === SetupType.IntradayMssMicroContinuation) return 'Intraday Structure-Shift Micro Continuation';
-  if (setupType === SetupType.RaidReclaimReversal) return 'Raid Reclaim Reversal';
+  if (setupType === SetupType.NoSetup) return PROFESSIONAL_MODEL_ONE_LABEL;
+  if (setupType === SetupType.NoSetup) return PROFESSIONAL_MODEL_TWO_LABEL;
+  if (setupType === SetupType.NoSetup || setupType === SetupType.NoSetup) return 'Drive FVG Continuation';
+  if (setupType === SetupType.NoSetup) return 'Intraday Structure-Shift Micro Continuation';
+  if (setupType === SetupType.NoSetup) return 'no installed model path';
   return PROFESSIONAL_FALLBACK_LABEL;
 }
 

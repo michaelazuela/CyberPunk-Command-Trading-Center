@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { buildUnifiedDeskOutputDiscordPostReceiptAuditReport } from './unified-desk-output-discord-post-receipt-audit';
 
-const candidateId = 'unified-desk-output-disabled|2026-01-06|morning|APPROVED_DESK_PLAN|OpeningDriveFvgContinuation|LONG|2026-01-06T09:35:00';
+const candidateId = 'unified-desk-output-disabled|2026-01-06|morning|APPROVED_DESK_PLAN|NoInstalledSetup|LONG|2026-01-06T09:35:00';
 const idempotencyKey = `unified-desk-output:discord-one-row-rehearsal:${candidateId}`;
 
 const receipt = {
@@ -76,7 +76,7 @@ const rehearsal = {
   rehearsalCandidate: {
     id: candidateId,
     idempotencyKey,
-    payloadPreview: '**Approved Desk Plan**\nOpeningDriveFvgContinuation LONG.',
+    payloadPreview: '**Approved Desk Plan**\nNoInstalledSetup LONG.',
     publishDiscord: false,
     webhookCalls: 0,
     canExecute: false,

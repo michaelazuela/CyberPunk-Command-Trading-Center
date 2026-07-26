@@ -74,7 +74,7 @@ export interface UnifiedPositiveHeldLocalPreviewModelDecisionReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const MODELS = ['raidReclaim', 'SweepMssFvgRetrace'] as const;
+const MODELS = ['historicalReview', 'NoInstalledSetup'] as const;
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -261,7 +261,7 @@ export function buildUnifiedPositiveHeldLocalPreviewModelDecisionReport(args: {
     blockers,
     recommendations: blockers.length
       ? ['Do not make model decisions until the formal replay and OHLC outcome reports both load cleanly.']
-      : ['Do not remove raidReclaim or SweepMssFvgRetrace from this evidence. Keep both strict and research the reviewed-row filter before any live behavior change.'],
+      : ['Do not remove historicalReview or NoInstalledSetup from this evidence. Keep both strict and research the reviewed-row filter before any live behavior change.'],
   };
   return { ...base, markdown: buildMarkdown(base) };
 }

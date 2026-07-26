@@ -86,7 +86,7 @@ function sourceFiles(rootDir: string): string[] {
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.SweepMssFvgRetrace,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Lifecycle audit long conditional with complete levels',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,
@@ -113,7 +113,7 @@ function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
 function buildFixtureTrace() {
   const selected = candidate();
   const lowerRankedShort = candidate({
-    setupType: SetupType.RaidReclaimReversal,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Lifecycle audit short watch missing levels',
     direction: 'SHORT',
     priority: 95,
@@ -138,7 +138,7 @@ function buildFixtureTrace() {
     executionStatus: ExecutionStatus.Conditional,
   });
   const blockedCandidate = candidate({
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Lifecycle audit blocked data-limited candidate',
     direction: 'LONG',
     priority: 97,
@@ -175,7 +175,7 @@ function buildFindings() {
       `createdCandidates=${trace.createdCandidates.length}`,
     ]));
   }
-  if (!trace.highestRankedCandidate || trace.highestRankedCandidate.setupType !== SetupType.SweepMssFvgRetrace) {
+  if (!trace.highestRankedCandidate || trace.highestRankedCandidate.setupType !== SetupType.NoSetup) {
     findings.push(finding('highest_ranked_candidate', 'Trace does not identify the highest-ranked candidate.', [
       String(trace.highestRankedCandidate?.setupType ?? 'none'),
     ]));

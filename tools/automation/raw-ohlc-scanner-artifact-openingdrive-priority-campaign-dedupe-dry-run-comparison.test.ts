@@ -54,7 +54,7 @@ const outcome: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport = {
       ticketId: 'lead',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-10T09:35:00',
       outcomeStatus: 'resolved',
@@ -83,7 +83,7 @@ const outcome: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport = {
       ticketId: 'duplicate-loss',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-10T09:40:00',
       outcomeStatus: 'resolved',
@@ -112,7 +112,7 @@ const outcome: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport = {
       ticketId: 'other-model',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-10T09:35:00',
       outcomeStatus: 'resolved',
@@ -153,7 +153,7 @@ const report = buildRawOhlcScannerArtifactOpeningDrivePriorityCampaignDedupeDryR
   replayPackageOutcome: outcome,
   approvalContractPath: 'approval.json',
   approvalContract,
-  setupType: 'SweepMssFvgRetrace',
+  setupType: 'NoInstalledSetup',
 });
 
 assert.equal(report.status, 'pass');

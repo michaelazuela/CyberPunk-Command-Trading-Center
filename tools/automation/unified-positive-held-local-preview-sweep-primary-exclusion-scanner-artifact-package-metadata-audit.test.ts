@@ -56,7 +56,7 @@ const dryRunReport: UnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionDryRunRe
     tradeDate: '2026-07-20',
     session: 'morning',
     rows: 1,
-    baselinePrimaryRowId: '2026-07-20-morning-SweepMssFvgRetrace-SHORT',
+    baselinePrimaryRowId: '2026-07-20-morning-NoInstalledSetup-SHORT',
     baselinePrimaryInvalidStopSweep: true,
     simulatedPrimaryRowId: null,
     simulatedPrimaryInvalidStopSweep: false,
@@ -75,7 +75,7 @@ fs.writeFileSync(path.join(tmpDir, 'raw-ohlc-scanner-artifacts-MES-2026-07-20-to
       session: 'morning',
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           executionStatus: 'Conditional',
           blockReason: 'InvalidStopLocation',

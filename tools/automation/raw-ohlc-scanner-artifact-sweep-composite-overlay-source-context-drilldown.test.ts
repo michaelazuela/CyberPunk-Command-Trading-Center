@@ -39,7 +39,7 @@ fs.writeFileSync(artifactPath, `${JSON.stringify({
       session: 'lunch',
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           detectedStatus: 'Possible',
           executionStatus: 'Conditional',
@@ -82,11 +82,11 @@ const replayPackage: UnifiedPositiveHeldLocalPreviewReplayPackageReport = {
     livePromotionAllowedRows: 0,
   },
   rows: [{
-    ticketId: '2026-07-16-lunch-IntradayMssMicroContinuation-SHORT-20260716T150500',
+    ticketId: '2026-07-16-lunch-NoInstalledSetup-SHORT-20260716T150500',
     tradeDate: '2026-07-16',
     session: 'lunch',
     instrument: 'MES',
-    setupType: 'IntradayMssMicroContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'SHORT',
     proofTime: '2026-07-16T15:05:00',
     firstSeenTime: '2026-07-16T15:05:00',
@@ -145,10 +145,10 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
     livePromotionAllowedRows: 0,
   },
   rows: [{
-    ticketId: '2026-07-16-lunch-IntradayMssMicroContinuation-SHORT-20260716T150500',
+    ticketId: '2026-07-16-lunch-NoInstalledSetup-SHORT-20260716T150500',
     tradeDate: '2026-07-16',
     session: 'lunch',
-    setupType: 'IntradayMssMicroContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'SHORT',
     proofTime: '2026-07-16T15:05:00',
     outcomeStatus: 'unresolved',

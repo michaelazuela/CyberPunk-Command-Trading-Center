@@ -56,8 +56,8 @@ interface SlateSummary {
   penalizedTopAfter: boolean;
 }
 
-export interface UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_extreme_risk_rank_simulation';
+export interface UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport {
+  reportType: 'unified_positive_held_local_preview_historicalReview_extreme_risk_rank_simulation';
   generatedAt: string;
   status: 'pass' | 'fail';
   authority: {
@@ -94,7 +94,7 @@ export interface UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimula
     livePromotionAllowed: false;
   };
   scoring: {
-    setupType: 'raidReclaim';
+    setupType: 'historicalReview';
     riskThresholdPoints: 15;
     penaltyPoints: number;
     baselineUsesInstalledScore: true;
@@ -151,7 +151,7 @@ function readJson<T>(filePath: string): T {
   return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
 }
 
-function authority(): UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport['authority'] {
+function authority(): UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport['authority'] {
   return {
     readOnly: true,
     localOnly: true,
@@ -195,7 +195,7 @@ function isReviewCandidate(row: InstalledRow): boolean {
 
 function shouldPenalize(row: InstalledRow, timing: TimingRow | undefined): boolean {
   return isReviewCandidate(row) &&
-    row.setupType === 'raidReclaim' &&
+    row.setupType === 'historicalReview' &&
     typeof timing?.riskPoints === 'number' &&
     timing.riskPoints > RISK_THRESHOLD_POINTS;
 }
@@ -307,7 +307,7 @@ function recommendation(args: {
   falseWinnerDemotions: number;
   penalizedTopAfterSlates: number;
   penalizedTopBeforeSlates: number;
-}): UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport['summary']['recommendation'] {
+}): UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport['summary']['recommendation'] {
   if (args.blockers.length) return 'reject_missing_source';
   if (args.penalizedRows === 0) return 'reject_extreme_risk_penalty';
   if ((args.topSelectionDeltaOneMesPl ?? 0) > 0 && args.falseWinnerDemotions <= 1 && args.penalizedTopAfterSlates < args.penalizedTopBeforeSlates) {
@@ -321,18 +321,18 @@ function escapeTable(value: string): string {
   return value.replace(/\|/g, '/').replace(/\r?\n/g, ' ');
 }
 
-function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport, 'markdown'>): string {
+function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport, 'markdown'>): string {
   return [
-    '# Unified Positive Held-Local Preview raidReclaim Extreme-Risk Rank Simulation',
+    '# Unified Positive Held-Local Preview historicalReview Extreme-Risk Rank Simulation',
     '',
     `Status: ${report.status}`,
     '',
-    'Authority: local-only read-only rank simulation. It does not install rank penalties, remove raidReclaim, hard-block a setup, post Discord, write Supabase, read live bridge data, run setupScanner, change canExecute, or change entry/stop/target/risk math.',
+    'Authority: local-only read-only rank simulation. It does not install rank penalties, remove historicalReview, hard-block a setup, post Discord, write Supabase, read live bridge data, run setupScanner, change canExecute, or change entry/stop/target/risk math.',
     '',
     '## Summary',
     `- Joined rows: ${report.summary.joinedRows}.`,
     `- Slates: ${report.summary.slates}.`,
-    `- Penalized raidReclaim risk > 15 rows: ${report.summary.penalizedRows}.`,
+    `- Penalized historicalReview risk > 15 rows: ${report.summary.penalizedRows}.`,
     `- Penalized top before/after: ${report.summary.penalizedTopBeforeSlates}/${report.summary.penalizedTopAfterSlates}.`,
     `- Top changed slates: ${report.summary.topChangedSlates}.`,
     `- Top P/L before/after: ${report.summary.topBeforeOneMesPl ?? '-'}/${report.summary.topAfterOneMesPl ?? '-'}.`,
@@ -353,7 +353,7 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimEx
   ].join('\n');
 }
 
-export function buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport(args: {
+export function buildUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport(args: {
   reportDir: string;
   installedScoreComparisonPath: string | null;
   installedScoreComparisonReport: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport | null;
@@ -361,7 +361,7 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSi
   sourceProofTimingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport | null;
   separatorDiagnosticPath: string | null;
   separatorDiagnosticReport: UnifiedPositiveHeldLocalPreviewValidReviewSeparatorDiagnosticReport | null;
-}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport {
+}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport {
   const installedRows = args.installedScoreComparisonReport?.rows || [];
   const timingRows = args.sourceProofTimingReport?.rows || [];
   const baseRows = joinedRows(installedRows, timingRows);
@@ -386,8 +386,8 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSi
       ? `separator diagnostic status ${args.separatorDiagnosticReport.status}`
       : null,
     args.separatorDiagnosticReport &&
-      !args.separatorDiagnosticReport.topCautionBuckets.some((row) => row.key === 'raidReclaim|risk_extreme_over_15')
-      ? 'separator diagnostic did not identify raidReclaim|risk_extreme_over_15 caution bucket'
+      !args.separatorDiagnosticReport.topCautionBuckets.some((row) => row.key === 'historicalReview|risk_extreme_over_15')
+      ? 'separator diagnostic did not identify historicalReview|risk_extreme_over_15 caution bucket'
       : null,
     installedRows.length === 0 ? 'no installed-score rows found' : null,
     timingRows.length === 0 ? 'no source/proof timing rows found' : null,
@@ -401,8 +401,8 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSi
     penalizedTopAfterSlates: slates.filter((row) => row.penalizedTopAfter).length,
     penalizedTopBeforeSlates: slates.filter((row) => row.penalizedTopBefore).length,
   });
-  const base: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport, 'markdown'> = {
-    reportType: 'unified_positive_held_local_preview_raidReclaim_extreme_risk_rank_simulation',
+  const base: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport, 'markdown'> = {
+    reportType: 'unified_positive_held_local_preview_historicalReview_extreme_risk_rank_simulation',
     generatedAt,
     status: blockers.length ? 'fail' : 'pass',
     authority: authority(),
@@ -422,7 +422,7 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSi
       livePromotionAllowed: false,
     },
     scoring: {
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       riskThresholdPoints: RISK_THRESHOLD_POINTS,
       penaltyPoints: PENALTY_POINTS,
       baselineUsesInstalledScore: true,
@@ -450,18 +450,18 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSi
       ? ['Do not use extreme-risk simulation until installed score, timing, and separator reports all pass.']
       : rec === 'continue_research_only_extreme_risk_penalty'
         ? [
-          'Continue research only with a raidReclaim risk-width rank penalty candidate; do not install live behavior yet.',
+          'Continue research only with a historicalReview risk-width rank penalty candidate; do not install live behavior yet.',
           'Review any false winner demotion manually before proposing scanner-visible behavior.',
         ]
         : rec === 'review_note_only'
-          ? ['Use raidReclaim extreme-risk as a review-note hypothesis only; rank effect is not strong enough.']
-          : ['Reject raidReclaim extreme-risk rank penalty for now.'],
+          ? ['Use historicalReview extreme-risk as a review-note hypothesis only; rank effect is not strong enough.']
+          : ['Reject historicalReview extreme-risk rank penalty for now.'],
   };
   return { ...base, markdown: buildMarkdown(base) };
 }
 
-export function writeUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport(
-  report: UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport,
+export function writeUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport(
+  report: UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport,
   outDir = DEFAULT_REPORT_DIR,
 ): { jsonPath: string; markdownPath: string } {
   fs.mkdirSync(outDir, { recursive: true });
@@ -473,7 +473,7 @@ export function writeUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSi
   return { jsonPath, markdownPath };
 }
 
-export function runUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationCli(args = process.argv.slice(2)): void {
+export function runUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationCli(args = process.argv.slice(2)): void {
   const outDir = readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR;
   const installedScoreComparisonPath = readFlag(args, '--installed-score-comparison') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-sweep-penalty-installed-score-comparison-\d+\.json$/);
@@ -481,7 +481,7 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimu
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-replay-package-source-proof-timing-\d+\.json$/);
   const separatorDiagnosticPath = readFlag(args, '--separator-diagnostic') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-valid-review-separator-diagnostic-\d+\.json$/);
-  const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport({
+  const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport({
     reportDir: outDir,
     installedScoreComparisonPath,
     installedScoreComparisonReport: installedScoreComparisonPath && fs.existsSync(installedScoreComparisonPath)
@@ -496,7 +496,7 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimu
       ? readJson<UnifiedPositiveHeldLocalPreviewValidReviewSeparatorDiagnosticReport>(separatorDiagnosticPath)
       : null,
   });
-  const paths = writeUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport(report, outDir);
+  const paths = writeUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport(report, outDir);
   if (args.includes('--json')) {
     console.log(JSON.stringify({ ...paths, status: report.status, summary: report.summary }, null, 2));
   } else {
@@ -509,7 +509,7 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimu
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   try {
-    runUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationCli();
+    runUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationCli();
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

@@ -88,9 +88,9 @@ function intakeRow(
   };
 }
 
-const invalidSweepId = '2026-07-09-evening-SweepMssFvgRetrace-SHORT';
-const validSweepId = '2026-07-09-evening-SweepMssFvgRetrace-LONG';
-const turtleId = '2026-07-09-evening-raidReclaim-LONG';
+const invalidSweepId = '2026-07-09-evening-NoInstalledSetup-SHORT';
+const validSweepId = '2026-07-09-evening-NoInstalledSetup-LONG';
+const turtleId = '2026-07-09-evening-historicalReview-LONG';
 
 const sourceProofTimingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport = {
   reportType: 'unified_positive_held_local_preview_replay_package_source_proof_timing',
@@ -120,9 +120,9 @@ const sourceProofTimingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourc
   },
   modelTiming: [],
   rows: [
-    timingRow(invalidSweepId, 'SweepMssFvgRetrace'),
-    timingRow(validSweepId, 'SweepMssFvgRetrace'),
-    timingRow(turtleId, 'raidReclaim'),
+    timingRow(invalidSweepId, 'NoInstalledSetup'),
+    timingRow(validSweepId, 'NoInstalledSetup'),
+    timingRow(turtleId, 'historicalReview'),
   ],
   blockers: [],
   recommendations: [],
@@ -147,9 +147,9 @@ const intakeTriageReport: UnifiedPositiveHeldLocalPreviewIntakeTriageReport = {
   },
   groups: [],
   rows: [
-    intakeRow(invalidSweepId, 'SweepMssFvgRetrace', 'Blocked', 'InvalidStopLocation'),
-    intakeRow(validSweepId, 'SweepMssFvgRetrace', 'Conditional', 'EntryTriggerPending'),
-    intakeRow(turtleId, 'raidReclaim', 'Conditional', 'EntryTriggerPending'),
+    intakeRow(invalidSweepId, 'NoInstalledSetup', 'Blocked', 'InvalidStopLocation'),
+    intakeRow(validSweepId, 'NoInstalledSetup', 'Conditional', 'EntryTriggerPending'),
+    intakeRow(turtleId, 'historicalReview', 'Conditional', 'EntryTriggerPending'),
   ],
   selectedReplayPackage: [],
   blockers: [],
@@ -221,10 +221,10 @@ const report = buildUnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCom
 }, '2026-07-18T00:00:00.000Z');
 
 assert.equal(report.status, 'pass');
-assert.equal(report.summary.recommendation, 'installed_score_path_matches_research_overlay');
-assert.equal(report.summary.validSweepLeadRows, 1);
-assert.equal(report.summary.invalidStopSweepPenaltyRows, 1);
-assert.equal(report.summary.installedPenaltyRows, 1);
+assert.equal(report.summary.recommendation, 'blank_slate_no_installed_penalty_path');
+assert.equal(report.summary.validSweepLeadRows, 0);
+assert.equal(report.summary.invalidStopSweepPenaltyRows, 0);
+assert.equal(report.summary.installedPenaltyRows, 0);
 assert.equal(report.summary.validSweepLeadRowsPenalized, 0);
 assert.equal(report.summary.canExecuteTrueRows, 0);
 assert.equal(report.summary.entryStopTargetRiskDriftRows, 0);
@@ -237,7 +237,7 @@ assert.equal(report.authority.readsLiveBridge, false);
 
 const invalidSweep = report.rows.find((row) => row.ticketId === invalidSweepId);
 const validSweep = report.rows.find((row) => row.ticketId === validSweepId);
-assert.equal(invalidSweep?.installedPenaltyExpected, true);
+assert.equal(invalidSweep?.installedPenaltyExpected, false);
 assert.equal(validSweep?.installedPenaltyExpected, false);
 assert.equal(validSweep?.entryPreserved, true);
 assert.equal(validSweep?.stopPreserved, true);

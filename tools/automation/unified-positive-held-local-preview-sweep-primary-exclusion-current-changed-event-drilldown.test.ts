@@ -22,12 +22,12 @@ const selectionImpactSimulation = {
     session: 'lunch',
     eventTime: '2026-06-23T13:45:00',
     candidates: 2,
-    baselineTopCandidateKey: '2026-06-23|lunch|2026-06-23T13:45:00|SweepMssFvgRetrace|LONG|Conditional|InvalidStopLocation|7457.75|null|null|null|null|251',
-    baselineTopSetupType: 'SweepMssFvgRetrace',
+    baselineTopCandidateKey: '2026-06-23|lunch|2026-06-23T13:45:00|NoInstalledSetup|LONG|Conditional|InvalidStopLocation|7457.75|null|null|null|null|251',
+    baselineTopSetupType: 'NoInstalledSetup',
     baselineTopDirection: 'LONG',
     baselineTopExactInvalidStopSweep: true,
-    simulatedTopCandidateKey: '2026-06-23|lunch|2026-06-23T13:45:00|raidReclaim|LONG|Conditional|EntryTriggerMissing|null|7460.25|null|null|null|249',
-    simulatedTopSetupType: 'raidReclaim',
+    simulatedTopCandidateKey: '2026-06-23|lunch|2026-06-23T13:45:00|historicalReview|LONG|Conditional|EntryTriggerMissing|null|7460.25|null|null|null|249',
+    simulatedTopSetupType: 'historicalReview',
     simulatedTopDirection: 'LONG',
     topChanged: true,
     simulatedHasReplacement: true,
@@ -52,11 +52,11 @@ fs.writeFileSync(path.join(tmpDir, 'raw-ohlc-scanner-artifacts-sample.json'), `$
         conditionalCount: 2,
         blockedCount: 0,
         bestExecutableSetupType: null,
-        bestConditionalSetupType: 'SweepMssFvgRetrace',
+        bestConditionalSetupType: 'NoInstalledSetup',
       },
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           executionStatus: 'Conditional',
           blockReason: 'InvalidStopLocation',
@@ -67,7 +67,7 @@ fs.writeFileSync(path.join(tmpDir, 'raw-ohlc-scanner-artifacts-sample.json'), `$
           riskPoints: null,
           rankScore: 251,
         }, {
-          setupType: 'raidReclaim',
+          setupType: 'historicalReview',
           direction: 'LONG',
           executionStatus: 'Conditional',
           blockReason: 'EntryTriggerMissing',
@@ -97,12 +97,12 @@ assert.equal(report.summary.scannerOwnedSelectedCandidateFieldEvents, 0);
 assert.equal(report.summary.deskTicketFieldEvents, 0);
 assert.equal(report.summary.publishDecisionFieldEvents, 0);
 assert.equal(report.summary.runtimeProposalReadyEvents, 0);
-assert.equal(report.summary.raidReclaimEntryTriggerMissingReplacementEvents, 1);
+assert.equal(report.summary.historicalReviewEntryTriggerMissingReplacementEvents, 1);
 assert.equal(report.summary.canExecuteChangedEvents, 0);
 assert.equal(report.summary.tradeMathChangedEvents, 1);
 assert.equal(report.summary.runtimeInstallAllowed, false);
-assert.equal(report.changedEvents[0].baselineCandidate?.setupType, 'SweepMssFvgRetrace');
-assert.equal(report.changedEvents[0].simulatedCandidate?.setupType, 'raidReclaim');
+assert.equal(report.changedEvents[0].baselineCandidate?.setupType, 'NoInstalledSetup');
+assert.equal(report.changedEvents[0].simulatedCandidate?.setupType, 'historicalReview');
 assert.equal(report.changedEvents[0].runtimeProposalReady, false);
 assert.ok(report.changedEvents[0].runtimeReadinessBlockers.includes('scanner-owned selected-candidate fields are absent from raw package event'));
 assert.ok(report.changedEvents[0].runtimeReadinessBlockers.includes('DeskTicket fields are absent from raw package event'));

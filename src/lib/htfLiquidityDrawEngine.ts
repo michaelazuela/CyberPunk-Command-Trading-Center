@@ -70,7 +70,7 @@ export interface TimeframeMssState {
 
 export type HtfLiquidityDrawClassification =
   | 'HTF_DRAW_DETECTED'
-  | 'RAID_RECLAIM_DEVELOPING'
+  | 'NO_MODEL_CONTEXT_DEVELOPING'
   | 'MSS_TRIGGER_PENDING'
   | 'MSS_TRIGGER_CONFIRMED'
   | 'MSS_HOLD_TRIGGER_PENDING'
@@ -640,8 +640,8 @@ export function describeHtfLiquidityDrawStateForDisplay(state: Pick<HtfLiquidity
   switch (state.classification) {
     case 'HTF_DRAW_DETECTED':
       return 'HTF draw detected. No 5M MSS trigger yet. Context only. No executable trade.';
-    case 'RAID_RECLAIM_DEVELOPING':
-      return 'Liquidity raid/reclaim developing. Waiting for 5M MSS trigger.';
+    case 'NO_MODEL_CONTEXT_DEVELOPING':
+      return 'liquidity historical reversal pattern developing. Waiting for 5M MSS trigger.';
     case 'MSS_TRIGGER_PENDING':
       return '5M MSS trigger pending. Potential MSS is forming, but no confirmed swing break with displacement yet.';
     case 'MSS_TRIGGER_CONFIRMED':
@@ -651,7 +651,7 @@ export function describeHtfLiquidityDrawStateForDisplay(state: Pick<HtfLiquidity
     case 'MSS_HOLD_CONFIRMED':
       return 'MSS hold confirmed by completed 5M close. Scanner candidate fields may be reviewed, but final app-owned gates still control canExecute.';
     case 'REVERSAL_DELIVERY_PLAN_CANDIDATE':
-      return 'HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align as context. This is not a standalone model; an active scanner model still needs deterministic entry, stop, target, risk, and final pipeline gates.';
+      return 'HTF draw, liquidity historical reversal pattern, and confirmed 5M MSS align as context. This is not a standalone model; an active scanner model still needs deterministic entry, stop, target, risk, and final pipeline gates.';
     case 'QUALIFIED_CONDITIONAL':
       return 'Qualified conditional. Directional structure supports the model, but execution still needs the listed trigger, retest, risk, or validation requirement.';
     case 'FAILED_MSS':
@@ -1004,7 +1004,7 @@ function classificationFromState(args: {
     return 'MSS_TRIGGER_CONFIRMED';
   }
   if (fiveMinute.lifecycleState === 'mss_trigger_pending') return 'MSS_TRIGGER_PENDING';
-  if (fiveMinute.lifecycleState === 'potential_mss') return 'RAID_RECLAIM_DEVELOPING';
+  if (fiveMinute.lifecycleState === 'potential_mss') return 'NO_MODEL_CONTEXT_DEVELOPING';
   if (macroContext === 'bullish' || macroContext === 'bearish') return 'HTF_DRAW_DETECTED';
   return 'NO_QUALIFIED_STATE';
 }
@@ -1125,7 +1125,7 @@ export function buildHtfLiquidityDrawState(input: HtfLiquidityDrawInput): HtfLiq
   const blockers = [
     ...(missingRequired ? ['Missing one or more required 4H/1H/15M/5M OHLC timeframes; HTF/MSS state is not candidate-qualified.'] : []),
     ...htfContextSufficiency.blockers,
-    ...(classification === 'MSS_TRIGGER_PENDING' || classification === 'RAID_RECLAIM_DEVELOPING'
+    ...(classification === 'MSS_TRIGGER_PENDING' || classification === 'NO_MODEL_CONTEXT_DEVELOPING'
       ? ['5M MSS is developing or pending; confirmed 5M swing break with displacement is still required.']
       : []),
     ...(classification === 'NO_QUALIFIED_STATE' && !missingRequired ? ['No qualifying HTF draw + raid/reclaim + 5M MSS state was derived from structured OHLC.'] : []),

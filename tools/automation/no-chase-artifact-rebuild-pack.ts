@@ -83,6 +83,7 @@ export interface NoChaseArtifactRebuildPackReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_OUT_DIR = path.join(__dirname, 'diagnostic-reports');
+const BLANK_SLATE_MODE = Object.values(SetupType).length === 1 && Object.values(SetupType)[0] === SetupType.NoSetup;
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -136,6 +137,7 @@ function recommendationFor(caseItem: NoChaseOhlcProofCase, decision: RebuildDeci
 }
 
 function buildRow(caseItem: NoChaseOhlcProofCase): NoChaseArtifactRebuildPackRow | null {
+  if (BLANK_SLATE_MODE) return null;
   if (caseItem.reviewClassification !== 'reviewable_full_plan') return null;
   if (caseItem.entry === null || caseItem.stop === null || caseItem.target1 === null || caseItem.target2 === null) return null;
   const rebuildDecision = rebuildDecisionFor(caseItem);
@@ -169,7 +171,7 @@ function buildRow(caseItem: NoChaseOhlcProofCase): NoChaseArtifactRebuildPackRow
 function buildRecommendations(report: Omit<NoChaseArtifactRebuildPackReport, 'recommendations' | 'markdown'>): string[] {
   const recommendations = [
     'Research-only rebuild pack. Do not post Discord, set canExecute, or wire scanner behavior from this artifact.',
-    'Keep raidReclaim and SweepMssFvgRetrace excluded; this pack only covers full-plan Intraday MSS and After-Lunch FVG no-chase cases.',
+    'Keep historicalReview and NoInstalledSetup excluded; this pack only covers full-plan Intraday MSS and After-Lunch FVG no-chase cases.',
   ];
   if (report.summary.includeForRebuildReview > 0) {
     recommendations.push('Use include_for_rebuild_review rows as the only candidates for a later read-only scanner artifact rebuild simulation.');
@@ -235,10 +237,10 @@ export function buildNoChaseArtifactRebuildPackReport(args: {
       includeForRebuildReview: rows.filter((row) => row.rebuildDecision === 'include_for_rebuild_review').length,
       holdForFilterReview: rows.filter((row) => row.rebuildDecision === 'hold_for_filter_review').length,
       excludeUntilRevalidated: rows.filter((row) => row.rebuildDecision === 'exclude_until_revalidated').length,
-      afterLunchRows: rows.filter((row) => row.setupType === SetupType.AfterLunchDriveFvgContinuation).length,
-      afterLunchIncludeForReview: rows.filter((row) => row.setupType === SetupType.AfterLunchDriveFvgContinuation && row.rebuildDecision === 'include_for_rebuild_review').length,
-      intradayRows: rows.filter((row) => row.setupType === SetupType.IntradayMssMicroContinuation).length,
-      intradayIncludeForReview: rows.filter((row) => row.setupType === SetupType.IntradayMssMicroContinuation && row.rebuildDecision === 'include_for_rebuild_review').length,
+      afterLunchRows: rows.filter((row) => row.setupType === SetupType.NoSetup).length,
+      afterLunchIncludeForReview: rows.filter((row) => row.setupType === SetupType.NoSetup && row.rebuildDecision === 'include_for_rebuild_review').length,
+      intradayRows: rows.filter((row) => row.setupType === SetupType.NoSetup).length,
+      intradayIncludeForReview: rows.filter((row) => row.setupType === SetupType.NoSetup && row.rebuildDecision === 'include_for_rebuild_review').length,
       replayWins: rows.filter((row) => row.rebuildDecision === 'include_for_rebuild_review').length,
       replayLosses: rows.filter((row) => row.replayOutcome === 'STOP_HIT').length,
       replayNoFill: rows.filter((row) => row.replayOutcome === 'NO_FILL').length,

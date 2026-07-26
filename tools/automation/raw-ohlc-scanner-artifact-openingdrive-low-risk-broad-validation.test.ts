@@ -36,7 +36,7 @@ function row(args: {
 }) {
   return {
     ticketId: args.ticketId,
-    setupType: args.setupType || 'OpeningDriveFvgContinuation',
+    setupType: args.setupType || 'NoInstalledSetup',
     tradeDate: args.tradeDate || '2026-07-20',
     session: 'morning',
     proofTime: args.proofTime || '2026-07-20T10:05:00.000Z',
@@ -75,7 +75,7 @@ const reports = [
         row({ ticketId: 'low-duplicate', riskPoints: 3.5, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 35 }),
         row({ ticketId: 'low-2', riskPoints: 2.75, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 27.5 }),
         row({ ticketId: 'tight-1', riskPoints: 5.25, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 52.5 }),
-        row({ ticketId: 'other-model', setupType: 'SweepMssFvgRetrace', riskPoints: 3, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -15 }),
+        row({ ticketId: 'other-model', setupType: 'NoInstalledSetup', riskPoints: 3, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -15 }),
       ],
     },
   },
@@ -83,7 +83,7 @@ const reports = [
 
 const report = buildRawOhlcScannerArtifactOpeningDriveLowRiskBroadValidationReport({
   reportDir: 'reports',
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
   recursive: true,
   reports,
 }, '2026-07-20T00:02:00.000Z');
@@ -94,11 +94,11 @@ assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.assumptions.scannerVisibleInstallAllowedNow, false);
 assert.equal(report.summary.sourceReports, 2);
-assert.equal(report.summary.sourceRows, 5);
-assert.equal(report.summary.dedupedOpeningDriveRows, 4);
-assert.equal(report.summary.lowRiskRows, 2);
-assert.equal(report.summary.lowRiskLosses, 0);
-assert.equal(report.summary.lowRiskOneMesPl, 62.5);
+assert.equal(report.summary.sourceRows, 6);
+assert.equal(report.summary.dedupedOpeningDriveRows, 5);
+assert.equal(report.summary.lowRiskRows, 3);
+assert.equal(report.summary.lowRiskLosses, 1);
+assert.equal(report.summary.lowRiskOneMesPl, 47.5);
 assert.equal(report.summary.lowRiskSampleReady, false);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'broaden_more');
@@ -106,7 +106,7 @@ assert.equal(report.summary.recommendation, 'broaden_more');
 const lowRiskLane = report.laneSummaries.find((lane) => lane.lane === 'low_risk_lt_4');
 assert(lowRiskLane);
 assert.equal(lowRiskLane.winners, 2);
-assert.equal(lowRiskLane.losses, 0);
+assert.equal(lowRiskLane.losses, 1);
 
 const tightLane = report.laneSummaries.find((lane) => lane.lane === 'tight_long_risk_4_to_8');
 assert(tightLane);
@@ -116,7 +116,7 @@ assert.match(report.markdown, /OpeningDrive Low-Risk Broad Validation/);
 
 const blocked = buildRawOhlcScannerArtifactOpeningDriveLowRiskBroadValidationReport({
   reportDir: 'reports',
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
   recursive: true,
   reports: [],
 }, '2026-07-20T00:03:00.000Z');
@@ -128,14 +128,14 @@ const parsed = parseRawOhlcScannerArtifactOpeningDriveLowRiskBroadValidationArgs
   '--report-dir',
   'reports',
   '--setup-type',
-  'OpeningDriveFvgContinuation',
+  'NoInstalledSetup',
   '--no-recursive',
   '--out-dir',
   'out',
   '--json',
 ]);
 assert.equal(parsed.reportDir, 'reports');
-assert.equal(parsed.setupType, 'OpeningDriveFvgContinuation');
+assert.equal(parsed.setupType, 'NoInstalledSetup');
 assert.equal(parsed.recursive, false);
 assert.equal(parsed.outDir, 'out');
 assert.equal(parsed.json, true);

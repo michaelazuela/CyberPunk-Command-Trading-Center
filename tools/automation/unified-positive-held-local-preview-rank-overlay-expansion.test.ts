@@ -39,7 +39,7 @@ function sourceReport(rows: UnifiedPositiveHeldLocalPreviewSourceProofFilterRepo
       filterDifferencePath: 'filter.json',
     },
     filterCriteria: {
-      targetSetupTypes: ['raidReclaim', 'SweepMssFvgRetrace'],
+      targetSetupTypes: ['historicalReview', 'NoInstalledSetup'],
       requiresScannerOwnedHeldLocalArtifact: true,
       requiresCompletedFiveMinuteRetestReentryProof: true,
       requiresCanExecuteFalseForResearch: true,
@@ -71,7 +71,7 @@ function sourceReport(rows: UnifiedPositiveHeldLocalPreviewSourceProofFilterRepo
   };
 }
 
-function accepted(rowId: string, setupType: 'raidReclaim' | 'SweepMssFvgRetrace', pl: number): UnifiedPositiveHeldLocalPreviewSourceProofFilterReport['rows'][number] {
+function accepted(rowId: string, setupType: 'historicalReview' | 'NoInstalledSetup', pl: number): UnifiedPositiveHeldLocalPreviewSourceProofFilterReport['rows'][number] {
   return {
     rowId,
     sourceBucket: 'reviewed_held_local_winner',
@@ -95,7 +95,7 @@ function rejected(rowId: string, pl: number): UnifiedPositiveHeldLocalPreviewSou
   return {
     rowId,
     sourceBucket: 'formal_dominant_review_loser',
-    setupType: 'raidReclaim',
+    setupType: 'historicalReview',
     tradeDate: '2026-06-11',
     session: 'morning',
     direction: 'SHORT',
@@ -111,7 +111,7 @@ function rejected(rowId: string, pl: number): UnifiedPositiveHeldLocalPreviewSou
   };
 }
 
-function outcome(ticketId: string, setupType: 'raidReclaim' | 'SweepMssFvgRetrace', pl: number, riskPoints: number, mfe: number, mae: number): UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport['rows'][number] {
+function outcome(ticketId: string, setupType: 'historicalReview' | 'NoInstalledSetup', pl: number, riskPoints: number, mfe: number, mae: number): UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport['rows'][number] {
   return {
     ticketId,
     tradeDate: '2026-06-26',
@@ -168,8 +168,8 @@ function outcomeReport(rows: UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport['r
       unresolvedRows: 0,
       blockedRows: 0,
       grossResolvedOneMesPl: rows.reduce((total, row) => total + (row.resolvedOneMesPl ?? 0), 0),
-      raidReclaimResolvedOneMesPl: rows.filter((row) => row.setupType === 'raidReclaim').reduce((total, row) => total + (row.resolvedOneMesPl ?? 0), 0),
-      sweepMssFvgRetraceResolvedOneMesPl: rows.filter((row) => row.setupType === 'SweepMssFvgRetrace').reduce((total, row) => total + (row.resolvedOneMesPl ?? 0), 0),
+      historicalReviewResolvedOneMesPl: rows.filter((row) => row.setupType === 'historicalReview').reduce((total, row) => total + (row.resolvedOneMesPl ?? 0), 0),
+      NoInstalledSetupResolvedOneMesPl: rows.filter((row) => row.setupType === 'NoInstalledSetup').reduce((total, row) => total + (row.resolvedOneMesPl ?? 0), 0),
       livePromotionAllowedRows: 0,
     },
     rows,
@@ -183,13 +183,13 @@ const report = buildUnifiedPositiveHeldLocalPreviewRankOverlayExpansionReport({
   reportDir: 'diagnostic-reports',
   sourceProofFilterPaths: ['newest-source.json', 'older-source.json'],
   sourceProofFilterReports: [
-    sourceReport([accepted('winner-existing', 'raidReclaim', 40), rejected('formal-loser', -25)]),
-    sourceReport([accepted('winner-existing', 'raidReclaim', 40), accepted('winner-expanded', 'SweepMssFvgRetrace', 90)]),
+    sourceReport([accepted('winner-existing', 'historicalReview', 40), rejected('formal-loser', -25)]),
+    sourceReport([accepted('winner-existing', 'historicalReview', 40), accepted('winner-expanded', 'NoInstalledSetup', 90)]),
   ],
   ohlcOutcomePaths: ['newest-outcome.json', 'older-outcome.json'],
   ohlcOutcomeReports: [
-    outcomeReport([outcome('winner-existing', 'raidReclaim', 40, 8, 12, 1)]),
-    outcomeReport([outcome('winner-expanded', 'SweepMssFvgRetrace', 90, 6, 22, 0)]),
+    outcomeReport([outcome('winner-existing', 'historicalReview', 40, 8, 12, 1)]),
+    outcomeReport([outcome('winner-expanded', 'NoInstalledSetup', 90, 6, 22, 0)]),
   ],
 }, '2026-07-17T00:05:00.000Z');
 

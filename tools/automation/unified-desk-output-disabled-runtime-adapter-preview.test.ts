@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { buildUnifiedDeskOutputDisabledRuntimeAdapterPreviewReport } from './unified-desk-output-disabled-runtime-adapter-preview';
 
-const row = (state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ' | 'SILENT_INTERNAL', model = 'OpeningDriveFvgContinuation') => ({
+const row = (state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ' | 'SILENT_INTERNAL', model = 'NoInstalledSetup') => ({
   date: '2026-07-22',
   session: 'morning' as const,
   requestedVisibleState: state === 'SILENT_INTERNAL' ? 'FORMING_DESK_READ' as const : state,
@@ -15,8 +15,8 @@ const row = (state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ' | 'SILENT_INTERNA
   target2: 108,
   riskPoints: 4,
   movement: 'bullish_drive',
-  primaryLane: 'OpeningDriveFvgContinuation',
-  supportingModels: ['IntradayMssMicroContinuation'],
+  primaryLane: 'NoInstalledSetup',
+  contextLabels: ['NoInstalledSetup'],
   publishHasCompletePlan: state !== 'SILENT_INTERNAL',
   publishShouldPost: state !== 'SILENT_INTERNAL',
   publishCanExecute: false,
@@ -40,8 +40,8 @@ const report = buildUnifiedDeskOutputDisabledRuntimeAdapterPreviewReport({
     generatedAt: '2026-07-22T00:00:00.000Z',
     rows: [
       row('APPROVED_DESK_PLAN'),
-      row('FORMING_DESK_READ', 'IntradayMssMicroContinuation'),
-      row('SILENT_INTERNAL', 'SweepMssFvgRetrace'),
+      row('FORMING_DESK_READ', 'NoInstalledSetup'),
+      row('SILENT_INTERNAL', 'NoInstalledSetup'),
     ],
   },
 }, '2026-07-22T01:00:00.000Z');

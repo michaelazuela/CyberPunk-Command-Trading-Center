@@ -215,8 +215,8 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
         phase: 'candidate ordering after deterministic candidates exist',
       },
       selectorRules: [
-        'If the two-candidate duplicate slate is LONG, keep the later SweepMssFvgRetrace proof candidate.',
-        'If the two-candidate duplicate slate is lunch, keep the later SweepMssFvgRetrace proof candidate.',
+        'If the two-candidate duplicate slate is LONG, keep the later NoInstalledSetup proof candidate.',
+        'If the two-candidate duplicate slate is lunch, keep the later NoInstalledSetup proof candidate.',
         'Otherwise prefer the replacement candidate for the same duplicate slate.',
         'Only apply to candidates already built by deterministic scanner/proof gates.',
       ],

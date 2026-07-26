@@ -193,8 +193,8 @@ export function buildRawOhlcScannerArtifactSweepCompositeOverlayNegativeModelTag
   outcomeComparison: RawOhlcScannerArtifactSweepCompositeOverlayNegativeOutcomeComparisonReport | null;
 }, generatedAt = new Date().toISOString()): RawOhlcScannerArtifactSweepCompositeOverlayNegativeModelTagCrosstabReport {
   const rows = buildRows(args);
-  const htfRows = rows.filter((row) => row.replacementSetupType === 'IntradayMssMicroContinuation');
-  const nonHtfRows = rows.filter((row) => row.replacementSetupType !== 'IntradayMssMicroContinuation');
+  const htfRows = rows.filter((row) => row.replacementSetupType === 'NoInstalledSetup');
+  const nonHtfRows = rows.filter((row) => row.replacementSetupType !== 'NoInstalledSetup');
   const htfPl = sum(htfRows.map((row) => row.replacementResolvedGrossOneMesPl));
   const nonHtfPl = sum(nonHtfRows.map((row) => row.replacementResolvedGrossOneMesPl));
   const blockers = [

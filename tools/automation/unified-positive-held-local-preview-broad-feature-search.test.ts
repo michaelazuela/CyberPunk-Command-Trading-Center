@@ -57,7 +57,7 @@ const broadRiskCapValidationReport: UnifiedPositiveHeldLocalPreviewBroadRiskCapV
       rowId: 'morning-win-1',
       tradeDate: '2026-06-17',
       session: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       triageDecision: 'held_for_later_batch',
       riskPoints: 6,
@@ -71,7 +71,7 @@ const broadRiskCapValidationReport: UnifiedPositiveHeldLocalPreviewBroadRiskCapV
       rowId: 'morning-win-2',
       tradeDate: '2026-06-18',
       session: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       triageDecision: 'held_for_later_batch',
       riskPoints: 8,
@@ -85,7 +85,7 @@ const broadRiskCapValidationReport: UnifiedPositiveHeldLocalPreviewBroadRiskCapV
       rowId: 'morning-win-3',
       tradeDate: '2026-06-19',
       session: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       triageDecision: 'held_for_later_batch',
       riskPoints: 9,
@@ -99,7 +99,7 @@ const broadRiskCapValidationReport: UnifiedPositiveHeldLocalPreviewBroadRiskCapV
       rowId: 'morning-loss',
       tradeDate: '2026-06-20',
       session: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       triageDecision: 'held_for_later_batch',
       riskPoints: 12,
@@ -113,7 +113,7 @@ const broadRiskCapValidationReport: UnifiedPositiveHeldLocalPreviewBroadRiskCapV
       rowId: 'lunch-loss-1',
       tradeDate: '2026-06-21',
       session: 'lunch',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       triageDecision: 'held_for_later_batch',
       riskPoints: 6,
@@ -127,7 +127,7 @@ const broadRiskCapValidationReport: UnifiedPositiveHeldLocalPreviewBroadRiskCapV
       rowId: 'lunch-loss-2',
       tradeDate: '2026-06-22',
       session: 'lunch',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       triageDecision: 'held_for_later_batch',
       riskPoints: 7,
@@ -141,7 +141,7 @@ const broadRiskCapValidationReport: UnifiedPositiveHeldLocalPreviewBroadRiskCapV
       rowId: 'lunch-unresolved',
       tradeDate: '2026-06-23',
       session: 'lunch',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       triageDecision: 'held_for_later_batch',
       riskPoints: 15,
@@ -175,7 +175,7 @@ assert.equal(report.summary.acceptedCandidates, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
 const top = report.candidates[0];
-assert.equal(top.featureId, 'IntradayMssMicroContinuation_session_morning');
+assert.equal(top.featureId, 'NoInstalledSetup_session_morning');
 assert.equal(top.decision, 'candidate_for_more_research');
 assert.equal(top.keptWinners, 3);
 assert.equal(top.keptLosses, 1);

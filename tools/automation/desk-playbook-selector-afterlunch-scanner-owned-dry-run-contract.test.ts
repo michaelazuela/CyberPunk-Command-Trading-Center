@@ -6,7 +6,7 @@ const baseTicket = {
   ticketId: 'source-a',
   tradeDate: '2026-06-01',
   session: 'lunch' as const,
-  model: 'AfterLunchDriveFvgContinuation' as const,
+  model: 'NoInstalledSetup' as const,
   direction: 'SHORT' as const,
   proofTime: '2026-06-01T12:20:00',
   entryHitTime: '2026-06-01T12:20:00',

@@ -20,7 +20,7 @@ The live sessions are:
 
 The workflow shows session chips, visible screenshot/OCR/precheck states, and an `Advanced data/model controls` disclosure for bridge, provider, cache, and diagnostic controls.
 
-The current rules reference lives in `docs/TRADING_RULES_REFERENCE.md`. Active trade candidates are limited to the current primary models from the app-owned setup registry; supporting evidence is context, not a third executable model.
+The current rules reference lives in `docs/TRADING_RULES_REFERENCE.md`. Active trade candidates are limited to the current primary models from the app-owned setup registry; historical context is context, not a third executable model.
 
 ## Morning / AM
 

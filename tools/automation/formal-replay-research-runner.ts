@@ -607,8 +607,8 @@ export function buildFormalReplayResearchReport(options: CliOptions, generatedAt
     },
     recommendations: [
       'Do not publish every human-review selectable candidate; the dominant review bucket is negative overall.',
-      'Research expansion should focus on Intraday MSS MicroContinuation and AfterLunchDriveFvgContinuation, the only positive non-strict setup groups in this sample.',
-      'Keep raidReclaim and SweepMssFvgRetrace strict until a separate filter proves they can avoid the large losing bucket.',
+      'Research expansion should focus on Intraday MSS MicroContinuation and NoInstalledSetup, the only positive non-strict setup groups in this sample.',
+      'Keep historicalReview and NoInstalledSetup strict until a separate filter proves they can avoid the large losing bucket.',
       'Next improvement should be a raw-OHLC scanner-cycle replay API only if this decision-tape runner identifies a specific profitable rule family worth validating.',
     ],
   };

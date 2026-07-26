@@ -6,11 +6,11 @@ import {
 
 const intake = {
   rows: [{
-    intakeId: '2026-07-20-morning-IntradayMssMicroContinuation-LONG',
+    intakeId: '2026-07-20-morning-NoInstalledSetup-LONG',
     tradeDate: '2026-07-20',
     session: 'morning',
     instrument: 'MES',
-    setupType: 'IntradayMssMicroContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     firstSeenTime: '2026-07-20T09:35:00.0000000',
     lastSeenTime: '2026-07-20T09:45:00.0000000',
@@ -29,11 +29,11 @@ const intake = {
     triageScore: 225,
     triageDecision: 'selected_for_replay_package',
   }, {
-    intakeId: '2026-07-20-morning-SweepMssFvgRetrace-LONG',
+    intakeId: '2026-07-20-morning-NoInstalledSetup-LONG',
     tradeDate: '2026-07-20',
     session: 'morning',
     instrument: 'MES',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     firstSeenTime: '2026-07-20T10:00:00.0000000',
     lastSeenTime: '2026-07-20T10:10:00.0000000',
@@ -56,10 +56,10 @@ const intake = {
 
 const replay = {
   rows: [{
-    rowId: '2026-07-20-morning-IntradayMssMicroContinuation-LONG',
+    rowId: '2026-07-20-morning-NoInstalledSetup-LONG',
     tradeDate: '2026-07-20',
     session: 'morning',
-    setupType: 'IntradayMssMicroContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     outcomeBucket: 'winner',
     outcomeLabel: 't1_and_t2_hit',
@@ -89,9 +89,9 @@ assert.equal(report.summary.publishableWinners, 1);
 assert.equal(report.summary.publishableResolvedOneMesPl, 80);
 assert.equal(report.summary.recommendation, 'build_replay_package_for_publishable_candidates');
 assert.equal(report.selectedReplayPackage.length, 1);
-assert.equal(report.selectedReplayPackage[0].setupType, 'IntradayMssMicroContinuation');
+assert.equal(report.selectedReplayPackage[0].setupType, 'NoInstalledSetup');
 assert.equal(report.selectedReplayPackage[0].publishShouldPost, true);
-assert.equal(report.rows.find((row) => row.setupType === 'SweepMssFvgRetrace')?.recommendation, 'blocked');
+assert.equal(report.rows.find((row) => row.setupType === 'NoInstalledSetup')?.recommendation, 'blocked');
 
 const missing = buildUnifiedPositiveHeldLocalPreviewPublishableCandidateMinerReport({
   intakeTriagePath: null,

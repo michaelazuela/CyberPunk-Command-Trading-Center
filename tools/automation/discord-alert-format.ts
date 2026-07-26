@@ -109,7 +109,7 @@ export interface CompactDeskStateForDiscord {
       sourceOfTruth?: string;
       direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
       status?: string;
-      supportingTimeframes?: string[];
+      contextTimeframes?: string[];
       lineInSand?: number | null;
       confirmation?: string;
       summary?: string;
@@ -120,7 +120,7 @@ export interface CompactDeskStateForDiscord {
       originalLine?: number | null;
       activeLine?: number | null;
       migrated?: boolean;
-      supportingTimeframes?: string[];
+      contextTimeframes?: string[];
       reason?: string | null;
       nextTrigger?: string | null;
       standDown?: string | null;
@@ -495,7 +495,7 @@ export interface CompactDeskStateForDiscord {
       stackStatus?: string | null;
       leadTacticalPlanKey?: string | null;
       campaignThesisKey?: string | null;
-      supportingEvidenceKeys?: string[];
+      contextKeys?: string[];
       staleLeadReason?: string | null;
       freshEntryStatus?: string | null;
       managementInstruction?: string | null;
@@ -1115,7 +1115,7 @@ function candidateDiscordHtfPublishIssue(candidate: SetupCandidate | null): 'opp
     return 'opposed';
   }
   if (
-    /completed HTF support is not confirmed|HTF support (?:is )?not confirmed|HTF is caution\/context only|not headline this as the active play until HTF support/i.test(text)
+    /completed HTF context is not confirmed|HTF context (?:is )?not confirmed|HTF is caution\/context only|not headline this as the active play until HTF context/i.test(text)
   ) {
     return 'unconfirmed';
   }
@@ -1140,7 +1140,7 @@ function statusLine(status: DiscordDecisionStatus, candidate: SetupCandidate | n
   if (candidate?.humanReview?.status === 'HumanReviewReady') return 'HUMAN REVIEW READY - decision-support plan only; trader confirmation required';
   if (status === 'EXECUTABLE') return 'EXECUTABLE - verify completed 5M trigger before trader action';
   if (isHighConfidenceConditionalCandidate(candidate, normalized)) return 'HIGH-CONFIDENCE CONDITIONAL TRADE PLAN - armed after named completed 5M condition';
-  if (status === 'CONDITIONAL' && candidateDiscordHtfPublishIssue(candidate)) return 'WAIT - HTF support required before Discord execution alert';
+  if (status === 'CONDITIONAL' && candidateDiscordHtfPublishIssue(candidate)) return 'WAIT - HTF context required before Discord execution alert';
   if (status === 'CONDITIONAL') return 'WAIT - fresh completed 5M required';
   if (status === 'NO TRADE') return `NO TRADE - ${normalized.noTradeReason || candidate?.blockReason || 'no active executable plan'}`;
   return 'WAIT - app-owned pipeline has not approved execution';
@@ -1219,7 +1219,7 @@ function missingProofLines(candidate: SetupCandidate): string[] {
 }
 
 function htfFvgReactionCandidateLines(candidate: SetupCandidate): string[] {
-  if (candidate.setupType !== SetupType.IntradayMssMicroContinuation) return [];
+  if (candidate.setupType !== SetupType.NoSetup) return [];
   const sourceText = [
     candidate.scenarioLabel,
     candidate.activeRuleset?.htfLineInSand?.lineReason,
@@ -1248,7 +1248,7 @@ function htfFvgReactionCandidateLines(candidate: SetupCandidate): string[] {
 }
 
 function htfFvgMicroMssProofCandidateLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): string[] {
-  if (candidate.setupType !== SetupType.IntradayMssMicroContinuation) return [];
+  if (candidate.setupType !== SetupType.NoSetup) return [];
   const proof = primaryDeskPlayFromDeskState(args.deskState)?.htfFvgMicroMssProof;
   if (!proof || proof.direction !== candidate.direction) return [];
   const htf = proof.htfFvgProof;
@@ -1925,7 +1925,7 @@ function deskPlayBiasSummary(
   }
   if (parts.length) return parts.join(', ');
   const trendSummary = play.trendConfirmation?.summary || play.trendConfirmation?.confirmation || null;
-  return compactLine(trendSummary || `${direction} review map; HTF support not fully aligned.`, 96);
+  return compactLine(trendSummary || `${direction} review map; HTF context not fully aligned.`, 96);
 }
 
 function deskPlayHtfTargetLine(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>): string {
@@ -2260,7 +2260,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
   const statusText = htfPublishIssue === 'opposed'
     ? 'Review only; HTF opposes this side.'
     : htfPublishIssue === 'unconfirmed'
-    ? 'Review only; HTF support not confirmed.'
+    ? 'Review only; HTF context not confirmed.'
     : dataLimitedIssue
     ? 'Review only; HTF context is data-limited.'
     : riskAboveStandard
@@ -2460,8 +2460,8 @@ function deskPlayLineDisplayLines(
   const active = play.activeTacticalLine;
   const originalLine = deskPlayOriginalLine(play);
   if (active?.direction === direction && active.migrated && isFinitePrice(active.activeLine)) {
-    const timeframes = Array.isArray(active.supportingTimeframes) && active.supportingTimeframes.length
-      ? active.supportingTimeframes.join('+')
+    const timeframes = Array.isArray(active.contextTimeframes) && active.contextTimeframes.length
+      ? active.contextTimeframes.join('+')
       : '5M/15M';
     return [
       `Original campaign line: ${priceLine(originalLine)}`,
@@ -2577,7 +2577,7 @@ function deskPlaySameSideCampaignStackLines(
     `Campaign ID: ${compactLine(stack.campaignStackId, 92)}`,
     `Lead tactical plan: ${sameSideCampaignMemberLabel(lead)}.`,
     `Campaign thesis: ${sameSideCampaignMemberLabel(thesis)}.`,
-    ...(support.length ? [`Supporting evidence: ${support.join(' | ')}.`] : []),
+    ...(support.length ? [`historical context: ${support.join(' | ')}.`] : []),
     `Reaction / entry zone: ${zone}.`,
     ...(leadHasLevels ? [
       `Lead Entry: ${priceLine(lead!.entry)} | Stop: ${priceLine(lead!.stop)} | Risk: ${numberLine(lead!.riskPoints)} pts`,

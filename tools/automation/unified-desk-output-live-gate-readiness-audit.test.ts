@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { buildUnifiedDeskOutputLiveGateReadinessAuditReport } from './unified-desk-output-live-gate-readiness-audit';
 
-const card = (state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ' | 'SILENT_INTERNAL', model = 'OpeningDriveFvgContinuation') => ({
+const card = (state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ' | 'SILENT_INTERNAL', model = 'NoInstalledSetup') => ({
   cardId: `fixture|${state}|${model}`,
   date: '2026-07-22',
   session: 'morning' as const,
@@ -73,8 +73,8 @@ const sourceReport = {
   },
   cards: [
     card('APPROVED_DESK_PLAN'),
-    card('FORMING_DESK_READ', 'IntradayMssMicroContinuation'),
-    card('SILENT_INTERNAL', 'SweepMssFvgRetrace'),
+    card('FORMING_DESK_READ', 'NoInstalledSetup'),
+    card('SILENT_INTERNAL', 'NoInstalledSetup'),
   ],
   blockers: [],
 };

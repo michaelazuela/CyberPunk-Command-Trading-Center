@@ -141,7 +141,7 @@ function renderPrettySummary(pack: ResearchSampleReviewPack): string {
     '',
     'Concepts:',
     ...pack.conceptSummaries.map((summary) =>
-      `- ${summary.title}: selected ${summary.selectedSamples}/${summary.availableSamples}; advisory=${summary.classificationCounts.advisoryOnly}; model1-review=${summary.classificationCounts.model1Overlap}; turtle-review=${summary.classificationCounts.raidReclaimOverlap}`
+      `- ${summary.title}: selected ${summary.selectedSamples}/${summary.availableSamples}; advisory=${summary.classificationCounts.advisoryOnly}; model1-review=${summary.classificationCounts.model1Overlap}; turtle-review=${summary.classificationCounts.historicalReversalOverlap}`
     ),
     '',
     'Agent inspection:',

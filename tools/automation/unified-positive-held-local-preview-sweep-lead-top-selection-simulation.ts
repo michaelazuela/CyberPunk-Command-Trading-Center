@@ -127,7 +127,7 @@ export interface UnifiedPositiveHeldLocalPreviewSweepLeadTopSelectionSimulationR
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SWEEP_SETUP = 'SweepMssFvgRetrace';
+const SWEEP_SETUP = 'NoInstalledSetup';
 const SWEEP_LEAD_EXECUTION_STATUS = 'Conditional';
 const SWEEP_LEAD_BLOCK_REASON = 'EntryTriggerPending';
 const NON_MATCHING_SWEEP_PENALTY_POINTS = 18;

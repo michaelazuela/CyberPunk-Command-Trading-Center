@@ -56,7 +56,7 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
       ticketId: 'same-bar-win',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofTime: '2026-06-10T12:50:00',
       outcomeStatus: 'resolved',
@@ -85,7 +85,7 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
       ticketId: 'same-bar-loss',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofTime: '2026-06-10T13:05:00',
       outcomeStatus: 'resolved',
@@ -114,7 +114,7 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
       ticketId: 'delayed-win-ignored',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-06-10T13:00:00',
       outcomeStatus: 'resolved',
@@ -165,7 +165,7 @@ assert.equal(report.summary.winners, 1);
 assert.equal(report.summary.losses, 1);
 assert.equal(report.summary.grossOneMesPl, 20);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
-assert.equal(report.modelSummaries[0].setupType, 'AfterLunchDriveFvgContinuation');
+assert.equal(report.modelSummaries[0].setupType, 'NoInstalledSetup');
 assert.equal(report.modelSummaries[0].firstReplayBarStopRows, 1);
 assert.equal(report.modelSummaries[0].firstReplayBarT1Rows, 1);
 assert.equal(report.rows.find((row) => row.ticketId === 'same-bar-loss')?.separatorTags.includes('first_replay_bar_stop'), true);

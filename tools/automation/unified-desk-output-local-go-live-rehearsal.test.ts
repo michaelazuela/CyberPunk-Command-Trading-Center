@@ -8,7 +8,7 @@ const surfaceRow = (state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ') => ({
   session: state === 'APPROVED_DESK_PLAN' ? 'morning' as const : 'lunch' as const,
   state,
   stateLabel: state === 'APPROVED_DESK_PLAN' ? 'Approved Desk Plan' as const : 'Forming Desk Read' as const,
-  model: state === 'APPROVED_DESK_PLAN' ? 'OpeningDriveFvgContinuation' : 'AfterLunchDriveFvgContinuation',
+  model: state === 'APPROVED_DESK_PLAN' ? 'NoInstalledSetup' : 'NoInstalledSetup',
   direction: state === 'APPROVED_DESK_PLAN' ? 'SHORT' as const : 'LONG' as const,
   headline: `${state} headline`,
   bodyLines: ['What: scanner-owned setup.', 'Why: HTF story plus completed 5M proof.'],

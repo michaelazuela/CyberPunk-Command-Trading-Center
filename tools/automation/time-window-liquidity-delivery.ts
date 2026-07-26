@@ -15,7 +15,7 @@ type AuditWindowId =
   | 'pm_liquidity_delivery_window';
 type OverlapClassification =
   | 'model_1_overlap_possible'
-  | 'RAID_RECLAIM_overlap_possible'
+  | 'HISTORICAL_REVERSAL_overlap_possible'
   | 'advisory_only_time_window_research';
 
 interface AuditOptions {
@@ -130,7 +130,7 @@ export interface TimeWindowLiquidityDeliveryAuditReport {
     deliveryAchievedCount: number;
     failedDeliveryCount: number;
     modelOneOverlapCount: number;
-    raidReclaimOverlapCount: number;
+    historicalReversalOverlapCount: number;
     advisoryOnlyCount: number;
   };
   candidates: WindowCandidateAudit[];
@@ -456,7 +456,7 @@ function buildCandidate(
   const overlapClassification: OverlapClassification = zones.length && mss && sweep
     ? 'model_1_overlap_possible'
     : sweep
-      ? 'RAID_RECLAIM_overlap_possible'
+      ? 'HISTORICAL_REVERSAL_overlap_possible'
       : 'advisory_only_time_window_research';
 
   return {
@@ -493,9 +493,9 @@ function buildCandidate(
     notes: [
       'Research-only time-window observation. No executable setup is created.',
       overlapClassification === 'model_1_overlap_possible'
-        ? 'Model 1 overlap is advisory classification only; use current approved Model 1 rules for any separate review.'
-        : overlapClassification === 'RAID_RECLAIM_overlap_possible'
-          ? 'Raid Reclaim Reversal overlap is advisory classification only; use current approved Raid Reclaim Reversal rules for any separate review.'
+        ? 'no installed model path overlap is advisory classification only; use current approved no installed model path rules for any separate review.'
+        : overlapClassification === 'HISTORICAL_REVERSAL_overlap_possible'
+          ? 'no installed model path overlap is advisory classification only; use current approved no installed model path rules for any separate review.'
           : 'Advisory-only time-window research; no approved model overlap was inferred.',
     ],
   };
@@ -549,13 +549,13 @@ export function buildTimeWindowLiquidityDeliveryAuditReport(
       deliveryAchievedCount: candidates.filter((candidate) => candidate.deliveryAchieved).length,
       failedDeliveryCount: candidates.filter((candidate) => candidate.failedDelivery).length,
       modelOneOverlapCount: candidates.filter((candidate) => candidate.overlapClassification === 'model_1_overlap_possible').length,
-      raidReclaimOverlapCount: candidates.filter((candidate) => candidate.overlapClassification === 'RAID_RECLAIM_overlap_possible').length,
+      historicalReversalOverlapCount: candidates.filter((candidate) => candidate.overlapClassification === 'HISTORICAL_REVERSAL_overlap_possible').length,
       advisoryOnlyCount: candidates.filter((candidate) => candidate.overlapClassification === 'advisory_only_time_window_research').length,
     },
     candidates,
     requiredNextActions: [
       'Review sample evidence cards manually before any rule-review discussion.',
-      'Keep Model 1 and Raid Reclaim Reversal overlap as advisory classification only.',
+      'Keep no installed model path and no installed model path overlap as advisory classification only.',
       'Do not create entries, stops, T1/T2, outcome buttons, live alerts, or execution authority from this audit.',
       'Collect 20-30 examples per window before discussing any rules.',
     ],
@@ -594,8 +594,8 @@ export function renderTimeWindowLiquidityDeliveryMarkdown(report: TimeWindowLiqu
     `- MSS count: ${report.summary.marketStructureShiftCount}`,
     `- Delivery achieved count: ${report.summary.deliveryAchievedCount}`,
     `- Failed delivery count: ${report.summary.failedDeliveryCount}`,
-    `- Model 1 overlap count: ${report.summary.modelOneOverlapCount}`,
-    `- Raid Reclaim Reversal overlap count: ${report.summary.raidReclaimOverlapCount}`,
+    `- no installed model path overlap count: ${report.summary.modelOneOverlapCount}`,
+    `- no installed model path overlap count: ${report.summary.historicalReversalOverlapCount}`,
     `- Advisory-only count: ${report.summary.advisoryOnlyCount}`,
     '',
     '## Evidence Collection Threshold',
@@ -647,8 +647,8 @@ export async function runTimeWindowLiquidityDeliveryCli(rawArgs = process.argv.s
       `Markdown: ${report.outputPaths.markdownPath}`,
       `Candidates: ${report.summary.candidateCount}`,
       `Clean draws: ${report.summary.cleanDrawCount}`,
-      `Model 1 overlaps: ${report.summary.modelOneOverlapCount}`,
-      `Raid Reclaim Reversal overlaps: ${report.summary.raidReclaimOverlapCount}`,
+      `no installed model path overlaps: ${report.summary.modelOneOverlapCount}`,
+      `no installed model path overlaps: ${report.summary.historicalReversalOverlapCount}`,
       `Advisory-only: ${report.summary.advisoryOnlyCount}`,
       'Research-only. This report does not approve trades and does not create execution authority.',
     ].join('\n'));

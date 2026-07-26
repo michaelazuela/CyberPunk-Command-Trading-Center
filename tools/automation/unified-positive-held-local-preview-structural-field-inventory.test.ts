@@ -34,7 +34,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-17-MES-morni
           detectedStatus: 'Conditional',
           visibilityMode: 'HUMAN_REVIEW',
           htfConflict: false,
-          htfSupported: true,
+          htfContextAligned: true,
           countertrend: false,
           lineInSand: 100,
           targetReactionLevel: 110,
@@ -100,7 +100,7 @@ const enrichmentReport: UnifiedPositiveHeldLocalPreviewBroadProofContextEnrichme
     rowId: 'row-1',
     tradeDate: '2026-06-17',
     session: 'morning',
-    setupType: 'IntradayMssMicroContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     proofState: 'human_review_ready',
     riskQuality: 'tight',
@@ -154,7 +154,7 @@ const intakeReport: UnifiedPositiveHeldLocalPreviewIntakeTriageReport = {
     tradeDate: '2026-06-17',
     session: 'morning',
     instrument: 'MES',
-    setupType: 'IntradayMssMicroContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     firstSeenTime: '2026-06-17T09:30:00',
     lastSeenTime: '2026-06-17T09:35:00',
@@ -220,7 +220,7 @@ assert.equal(row.hasProtectedStopBlocker, true);
 assert.equal(row.hasTargetRoomBlocker, true);
 assert.equal(row.hasEntryTriggerPending, true);
 
-assert.ok(report.fields.some((field) => field.fieldId === 'IntradayMssMicroContinuation|mentionsFvg=true'));
+assert.ok(report.fields.some((field) => field.fieldId === 'NoInstalledSetup|mentionsFvg=true'));
 assert.match(report.markdown, /Structural Field Inventory/);
 
 const missing = buildUnifiedPositiveHeldLocalPreviewStructuralFieldInventoryReport({

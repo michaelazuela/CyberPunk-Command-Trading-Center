@@ -40,7 +40,7 @@ function row(args: {
     ticketId: args.ticketId,
     tradeDate: proofTime.slice(0, 10),
     session: 'morning',
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: args.direction,
     outcomeLabel: args.outcomeLabel,
     outcomeStatus: 'resolved',
@@ -90,7 +90,7 @@ const separatorReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
     row({ ticketId: 'rejected-short-win-2', direction: 'SHORT', riskPoints: 20, proofTime: '2026-06-19T10:40:00', outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 85 }),
     row({ ticketId: 'rejected-short-win-3', direction: 'SHORT', riskPoints: 22, proofTime: '2026-06-20T10:45:00', outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
     row({ ticketId: 'rejected-long-loss', direction: 'LONG', riskPoints: 18, proofTime: '2026-06-20T09:20:00', outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -90 }),
-    { ...row({ ticketId: 'ignored-other-model', direction: 'SHORT', riskPoints: 18, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 80 }), setupType: 'AfterLunchDriveFvgContinuation' },
+    { ...row({ ticketId: 'ignored-other-model', direction: 'SHORT', riskPoints: 18, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 80 }), setupType: 'NoInstalledSetup' },
   ],
   blockers: [],
   recommendations: [],
@@ -101,7 +101,7 @@ const report = buildRawOhlcScannerArtifactOpeningDriveRejectedGeometryMinerRepor
   reportDir: 'reports',
   samebarSeparatorReportPath: 'separator.json',
   samebarSeparatorReport: separatorReport,
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
   candidateDirection: 'LONG',
   candidateRiskBucket: 'risk_4_to_8',
   minBucketRows: 3,
@@ -113,17 +113,17 @@ assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
-assert.equal(report.summary.sourceRows, 6);
+assert.equal(report.summary.sourceRows, 7);
 assert.equal(report.summary.candidateRows, 2);
-assert.equal(report.summary.rejectedRows, 4);
+assert.equal(report.summary.rejectedRows, 5);
 assert.equal(report.summary.candidateSummary.otherResolved, 1);
-assert.equal(report.summary.rejectedWinnerRows, 3);
+assert.equal(report.summary.rejectedWinnerRows, 4);
 assert.equal(report.summary.rejectedLossRows, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
 const cleanShortRiskBucket = report.topRejectedBuckets.find((bucket) => bucket.feature === 'direction_risk' && bucket.value === 'SHORT|risk_gte_16');
 assert.ok(cleanShortRiskBucket);
-assert.equal(cleanShortRiskBucket.rows, 3);
+assert.equal(cleanShortRiskBucket.rows, 4);
 assert.equal(cleanShortRiskBucket.losses, 0);
 assert.match(cleanShortRiskBucket.recommendation, /Clean rejected research lead/);
 

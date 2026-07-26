@@ -6,7 +6,7 @@ const card = (state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ') => ({
   date: '2026-07-22',
   session: state === 'APPROVED_DESK_PLAN' ? 'morning' as const : 'lunch' as const,
   state,
-  model: state === 'APPROVED_DESK_PLAN' ? 'OpeningDriveFvgContinuation' : 'AfterLunchDriveFvgContinuation',
+  model: state === 'APPROVED_DESK_PLAN' ? 'NoInstalledSetup' : 'NoInstalledSetup',
   direction: state === 'APPROVED_DESK_PLAN' ? 'SHORT' as const : 'LONG' as const,
   proofTime: state === 'APPROVED_DESK_PLAN' ? '2026-07-22T09:45:00' : '2026-07-22T12:35:00',
   entry: 100,

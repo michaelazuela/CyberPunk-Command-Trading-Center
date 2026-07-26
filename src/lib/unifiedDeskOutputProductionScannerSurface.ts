@@ -4,8 +4,7 @@ type SessionName = 'morning' | 'lunch' | 'evening';
 type Direction = 'LONG' | 'SHORT';
 type DeskState = 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ';
 
-export const UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS = [  'IntradayMssMicroContinuation',
-] as const;
+export const UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS = [] as const;
 
 export type UnifiedDeskOutputApprovedProductionModel = typeof UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS[number];
 
@@ -113,7 +112,7 @@ function candidateBlockers(candidate: UnifiedDeskOutputFinalReadinessCandidate):
     candidate.state === 'APPROVED_DESK_PLAN' || candidate.state === 'FORMING_DESK_READ' ? null : `${candidate.cardId || '<candidate>'} has unsupported desk state.`,
     candidate.model ? null : `${candidate.cardId || '<candidate>'} missing model.`,
     candidate.model && !isUnifiedDeskOutputApprovedProductionModel(candidate.model)
-      ? `${candidate.cardId || '<candidate>'} model ${candidate.model} is not approved for Unified Desk Output production visibility.`
+      ? `${candidate.cardId || '<candidate>'} model ${candidate.model} is not approved because the desk is in blank-slate mode.`
       : null,
     candidate.direction === 'LONG' || candidate.direction === 'SHORT' ? null : `${candidate.cardId || '<candidate>'} missing direction.`,
     candidate.proofTime ? null : `${candidate.cardId || '<candidate>'} missing completed 5M proof time.`,
@@ -142,8 +141,8 @@ function surfaceRow(candidate: UnifiedDeskOutputFinalReadinessCandidate): Unifie
     direction: candidate.direction,
     headline: `${label} | ${candidate.session.toUpperCase()} | ${candidate.direction} | ${candidate.model}`,
     bodyLines: [
-      `${candidate.session} ${candidate.direction.toLowerCase()} desk plan from the approved Unified Desk Output go-live gate.`,
-      `${candidate.model} is the selected scanner-owned lane for this window.`,
+      `${candidate.session} ${candidate.direction.toLowerCase()} desk plan is blocked because no trade models are installed.`,
+      'Blank-slate mode has no scanner-owned lane for this window.',
     ],
     levelLine: `Entry ${candidate.entry} | Stop ${candidate.stop} | T1 ${candidate.target1} | T2 ${candidate.target2}`,
     riskLine: `Risk ${candidate.riskPoints} points from scanner-owned entry/stop.`,
@@ -163,17 +162,17 @@ export function buildUnifiedDeskOutputProductionScannerSurfaceActivation(args: {
   finalReadinessChecklist: UnifiedDeskOutputFinalProductionReadinessChecklistInput;
 }, generatedAt = new Date().toISOString()): UnifiedDeskOutputProductionScannerSurfaceActivation {
   const checklist = args.finalReadinessChecklist;
-  const expectedRows = checklist.summary.eveningRows === 1 ? 3 : 2;
-  const expectedApprovedRows = expectedRows;
-  const expectedRenderedRows = expectedRows;
+  const expectedRows = 0;
+  const expectedApprovedRows = 0;
+  const expectedRenderedRows = 0;
   const sourceBlockers = [
     checklist.reportType === 'unified_desk_output_final_production_readiness_checklist' ? null : 'Source report is not the final production readiness checklist.',
     checklist.status === 'pass' ? null : `Final readiness checklist status is ${checklist.status}.`,
     checklist.summary.recommendation === 'ready_for_explicit_production_go_live_approval' ? null : `Final readiness recommendation is ${checklist.summary.recommendation}.`,
-    checklist.summary.selectedRows === expectedRows ? null : `Final readiness did not select exactly ${expectedRows} rows.`,
-    checklist.summary.morningRows === 1 ? null : 'Final readiness did not select exactly one morning row.',
-    checklist.summary.lunchRows === 1 ? null : 'Final readiness did not select exactly one lunch row.',
-    (checklist.summary.eveningRows || 0) <= 1 ? null : 'Final readiness selected more than one evening row.',
+    checklist.summary.selectedRows === expectedRows ? null : 'Final readiness selected rows while the desk is in blank-slate mode.',
+    checklist.summary.morningRows === 0 ? null : 'Final readiness selected a morning row while the desk is in blank-slate mode.',
+    checklist.summary.lunchRows === 0 ? null : 'Final readiness selected a lunch row while the desk is in blank-slate mode.',
+    (checklist.summary.eveningRows || 0) === 0 ? null : 'Final readiness selected an evening row while the desk is in blank-slate mode.',
     checklist.summary.approvedDeskPlanRows === expectedApprovedRows ? null : `Final readiness did not prove ${expectedApprovedRows} Approved Desk Plan rows.`,
     checklist.summary.browserRenderedRows === expectedRenderedRows ? null : `Final readiness did not prove ${expectedRenderedRows} browser-rendered rows.`,
     checklist.summary.discordPostRows === 0 ? null : 'Final readiness has Discord post rows.',
@@ -195,11 +194,11 @@ export function buildUnifiedDeskOutputProductionScannerSurfaceActivation(args: {
     .map(surfaceRow);
   const rowBlockers = [
     rows.length === expectedRows ? null : `Production surface did not build exactly ${expectedRows} rows.`,
-    rows.filter((row) => row.session === 'morning').length === 1 ? null : 'Production surface does not have exactly one morning row.',
-    rows.filter((row) => row.session === 'lunch').length === 1 ? null : 'Production surface does not have exactly one lunch row.',
-    rows.filter((row) => row.session === 'evening').length <= 1 ? null : 'Production surface has more than one evening row.',
+    rows.filter((row) => row.session === 'morning').length === 0 ? null : 'Production surface has a morning row while blank-slate mode is active.',
+    rows.filter((row) => row.session === 'lunch').length === 0 ? null : 'Production surface has a lunch row while blank-slate mode is active.',
+    rows.filter((row) => row.session === 'evening').length === 0 ? null : 'Production surface has an evening row while blank-slate mode is active.',
     rows.every((row) => row.state === 'APPROVED_DESK_PLAN') ? null : 'Production surface contains non-Approved Desk Plan rows.',
-    rows.every((row) => isUnifiedDeskOutputApprovedProductionModel(row.model)) ? null : 'Production surface contains a model outside the two approved Unified Desk Output production models.',
+    rows.length === 0 ? null : 'Production surface contains a model while blank-slate mode is active.',
     rows.every((row) => !row.publishDiscord) ? null : 'Production surface would publish Discord.',
     rows.every((row) => !row.writesSupabase) ? null : 'Production surface would write Supabase.',
     rows.every((row) => !row.readsLiveBridge) ? null : 'Production surface would read live bridge.',

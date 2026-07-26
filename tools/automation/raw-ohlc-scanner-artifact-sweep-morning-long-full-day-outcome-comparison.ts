@@ -257,7 +257,7 @@ function buildRows(args: {
 }): ComparisonRow[] {
   const baselineByTicket = new Map((args.baselineOutcome?.rows || []).map((row) => [row.ticketId, row]));
   return (args.replayPackage?.rows || [])
-    .filter((row) => row.setupType === 'SweepMssFvgRetrace' && row.session === 'morning' && row.direction === 'LONG')
+    .filter((row) => row.setupType === 'NoInstalledSetup' && row.session === 'morning' && row.direction === 'LONG')
     .map((row) => {
       const artifactPath = artifactPathForTicket(args.reportDir, args.replayPackage, row.ticketId);
       const fullDay = fullDayOutcome(row, loadArtifactBars(artifactPath));
@@ -321,7 +321,7 @@ export function buildRawOhlcScannerArtifactSweepMorningLongFullDayOutcomeCompari
     !baselineOutcome ? 'missing baseline outcome report' : null,
     replayPackage && replayPackage.status !== 'pass' ? `replay package status ${replayPackage.status}` : null,
     baselineOutcome && baselineOutcome.status !== 'pass' ? `baseline outcome status ${baselineOutcome.status}` : null,
-    rows.length === 0 ? 'no SweepMssFvgRetrace morning LONG rows found' : null,
+    rows.length === 0 ? 'no NoInstalledSetup morning LONG rows found' : null,
     rows.some((row) => !row.sourceArtifactPath) ? 'one or more rows missing full-day scanner artifact path' : null,
   ].filter((item): item is string => Boolean(item));
   const baselineGross = sum(rows.map((row) => row.baselineOneMesPl));

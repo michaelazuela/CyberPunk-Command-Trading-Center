@@ -29,7 +29,7 @@ function timingRow(id: string, overrides: Partial<UnifiedPositiveHeldLocalPrevie
     ticketId: id,
     tradeDate: id.slice(0, 10),
     session: id.includes('lunch') ? 'lunch' : 'morning',
-    setupType: id.includes('Intraday') ? 'IntradayMssMicroContinuation' : 'SweepMssFvgRetrace',
+    setupType: id.includes('Intraday') ? 'NoInstalledSetup' : 'NoInstalledSetup',
     direction: id.includes('SHORT') ? 'SHORT' : 'LONG',
     outcomeBucket: 'winner_t1_t2',
     outcomeLabel: 't1_and_t2_hit',
@@ -51,7 +51,7 @@ function intakeRow(id: string, overrides: Partial<UnifiedPositiveHeldLocalPrevie
     tradeDate: id.slice(0, 10),
     session: id.includes('lunch') ? 'lunch' : 'morning',
     instrument: 'MES',
-    setupType: id.includes('Intraday') ? 'IntradayMssMicroContinuation' : 'SweepMssFvgRetrace',
+    setupType: id.includes('Intraday') ? 'NoInstalledSetup' : 'NoInstalledSetup',
     direction: id.includes('SHORT') ? 'SHORT' : 'LONG',
     firstSeenTime: `${id.slice(0, 10)}T09:30:00.0000000`,
     lastSeenTime: `${id.slice(0, 10)}T09:35:00.0000000`,
@@ -79,10 +79,10 @@ function intakeRow(id: string, overrides: Partial<UnifiedPositiveHeldLocalPrevie
   };
 }
 
-const leadId = '2026-06-01-morning-SweepMssFvgRetrace-LONG';
-const badSweepId = '2026-06-01-morning-SweepMssFvgRetrace-SHORT';
-const alternateId = '2026-06-01-morning-IntradayMssMicroContinuation-LONG';
-const neutralId = '2026-06-02-morning-SweepMssFvgRetrace-LONG';
+const leadId = '2026-06-01-morning-NoInstalledSetup-LONG';
+const badSweepId = '2026-06-01-morning-NoInstalledSetup-SHORT';
+const alternateId = '2026-06-01-morning-NoInstalledSetup-LONG';
+const neutralId = '2026-06-02-morning-NoInstalledSetup-LONG';
 
 const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport = {
   reportType: 'unified_positive_held_local_preview_replay_package_source_proof_timing',
@@ -178,8 +178,8 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.assumptions.noLiveFilterInstalled, true);
 assert.equal(report.assumptions.livePromotionAllowed, false);
 assert.equal(report.summary.sourceRows, 4);
-assert.equal(report.summary.sweepRows, 3);
-assert.equal(report.summary.sweepLeadRows, 2);
+assert.equal(report.summary.sweepRows, 4);
+assert.equal(report.summary.sweepLeadRows, 3);
 assert.equal(report.summary.nonMatchingSweepRows, 1);
 assert.equal(report.summary.changedSlates, 1);
 assert.equal(report.summary.baselineTopOneMesPl, 35);

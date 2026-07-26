@@ -103,7 +103,7 @@ export interface UnifiedPositiveHeldLocalPreviewAfterLunchStructuralSequenceLoss
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SETUP = 'AfterLunchDriveFvgContinuation';
+const SETUP = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -428,7 +428,7 @@ export function buildUnifiedPositiveHeldLocalPreviewAfterLunchStructuralSequence
       ? [
         'Treat the sequence selector as research-only until it survives fresh OOS scanner-artifact validation.',
         'Validate riskPoints<=10+htfLineBehindPrice against a later unseen scanner artifact before proposing any review note or rank penalty.',
-        'Do not remove AfterLunchDriveFvgContinuation, do not loosen canExecute, and do not change Discord/Supabase/bridge behavior from this report.',
+        'Do not remove NoInstalledSetup, do not loosen canExecute, and do not change Discord/Supabase/bridge behavior from this report.',
       ]
       : [
         'Mine additional known-at-proof structural context before any scanner-visible behavior changes.',

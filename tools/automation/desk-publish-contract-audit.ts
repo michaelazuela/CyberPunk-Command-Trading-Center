@@ -129,11 +129,12 @@ const DEFAULT_CHECKS: ContractCheck[] = [
     id: 'alert_regression_covers_canonical_artifacts',
     file: 'tools/automation/nt-scanner-alert.test.ts',
     required: [
-      'SCANNER-DESK-PLAY-CANONICAL-LINE-FIXTURE',
-      'SCANNER-DESK-PLAY-MISMATCH-FIXTURE',
-      'Canonical DeskPublishDecision held this Desk Play local.',
+      'nt-scanner-alert-blank',
+      'Blank-slate mode: no trading models are installed.',
+      'assert.equal(deskState.deskTicket, null)',
+      'assert.equal(publishDecision.shouldPost, false)',
     ],
-    note: 'Regression coverage proves canonical holds, mismatches, and stale chart-line leaks are caught.',
+    note: 'Regression coverage proves blank-slate mode creates no scanner-owned public Desk Play ticket.',
   },
 ];
 

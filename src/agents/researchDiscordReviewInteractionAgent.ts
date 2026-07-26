@@ -419,13 +419,13 @@ function handleResearchDiscordReviewInteractionUnsafe(input: ResearchDiscordInte
   const { reviewPackPath, pack, sample } = resolved;
   assertResearchOnlySampleBoundary(sample);
 
-  if (customId.label === 'possible_model1_mapping_review' && sample.classification !== 'model1_overlap' && sample.model1Overlap !== true) {
+  if (customId.label === 'historical_mapping_review' && sample.classification !== 'model1_overlap' && sample.model1Overlap !== true) {
     console.warn(`[research-discord-interactions] rejection=insufficient_model1_context; sampleId=${entry.sampleId}; reviewPackPath=${reviewPackPath}`);
-    return rejected('Insufficient Context: this sample does not include Model 1 mapping context. No review was written.');
+    return rejected('Insufficient Context: this sample does not include no installed model path mapping context. No review was written.');
   }
-  if (customId.label === 'possible_RAID_RECLAIM_mapping_review' && sample.classification !== 'RAID_RECLAIM_overlap' && sample.raidReclaimOverlap !== true) {
-    console.warn(`[research-discord-interactions] rejection=insufficient_RAID_RECLAIM_context; sampleId=${entry.sampleId}; reviewPackPath=${reviewPackPath}`);
-    return rejected('Insufficient Context: this sample does not include Raid Reclaim Reversal mapping context. No review was written.');
+  if (customId.label === 'historical_reversal_mapping_review' && sample.classification !== 'HISTORICAL_REVERSAL_overlap' && sample.historicalReversalOverlap !== true) {
+    console.warn(`[research-discord-interactions] rejection=insufficient_uninstalled_context; sampleId=${entry.sampleId}; reviewPackPath=${reviewPackPath}`);
+    return rejected('Insufficient Context: this sample does not include no installed model path mapping context. No review was written.');
   }
 
   const reviewedAt = input.reviewedAt || new Date().toISOString();

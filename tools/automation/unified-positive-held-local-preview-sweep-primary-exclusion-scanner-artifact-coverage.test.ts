@@ -62,7 +62,7 @@ const dryRunReport: UnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionDryRunRe
     tradeDate: '2026-07-20',
     session: 'morning',
     rows: 2,
-    baselinePrimaryRowId: '2026-07-20-morning-SweepMssFvgRetrace-SHORT',
+    baselinePrimaryRowId: '2026-07-20-morning-NoInstalledSetup-SHORT',
     baselinePrimaryInvalidStopSweep: true,
     simulatedPrimaryRowId: null,
     simulatedPrimaryInvalidStopSweep: false,
@@ -77,10 +77,10 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fc-sweep-scanner-coverage-
 fs.writeFileSync(path.join(tmpDir, 'raw-ohlc-scanner-artifact-sample.json'), `${JSON.stringify({
   reportType: 'raw_ohlc_scanner_artifact_sample',
   rows: [{
-    ticketId: '2026-07-20-morning-SweepMssFvgRetrace-SHORT-20260720T093500',
+    ticketId: '2026-07-20-morning-NoInstalledSetup-SHORT-20260720T093500',
     tradeDate: '2026-07-20',
     session: 'morning',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'SHORT',
     entry: 7539,
     stop: 7505.5,
@@ -112,10 +112,10 @@ assert.equal(passReport.summary.livePromotionAllowedRows, 0);
 const missingProofDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fc-sweep-scanner-coverage-missing-'));
 fs.writeFileSync(path.join(missingProofDir, 'raw-ohlc-scanner-artifact-sample.json'), `${JSON.stringify({
   rows: [{
-    ticketId: '2026-07-20-morning-SweepMssFvgRetrace-SHORT-20260720T093500',
+    ticketId: '2026-07-20-morning-NoInstalledSetup-SHORT-20260720T093500',
     tradeDate: '2026-07-20',
     session: 'morning',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'SHORT',
     entry: 7539,
     stop: 7505.5,

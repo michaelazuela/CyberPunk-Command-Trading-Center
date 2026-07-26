@@ -54,7 +54,7 @@ const rehearsalReport = {
     id: 'approved-fixture',
     idempotencyKey: 'unified-desk-output:discord-one-row-rehearsal:approved-fixture',
     route: 'production_discord_trade_plan_webhook' as const,
-    payloadPreview: '[APPROVED DESK PLAN] MORNING LONG OpeningDriveFvgContinuation',
+    payloadPreview: '[APPROVED DESK PLAN] MORNING LONG NoInstalledSetup',
     productionSendEnabled: false as const,
     explicitApprovalPresent: false as const,
     webhookTargetVerified: false as const,

@@ -122,7 +122,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
 const DEFAULT_AUDIT_DIR = path.join(__dirname, 'discord-audit');
-const DEFAULT_SETUP_TYPES = ['SweepMssFvgRetrace', 'AfterLunchDriveFvgContinuation'];
+const DEFAULT_SETUP_TYPES = ['NoInstalledSetup', 'NoInstalledSetup'];
 const POINT_VALUE = 5;
 
 function readFlag(args: string[], flag: string): string | null {

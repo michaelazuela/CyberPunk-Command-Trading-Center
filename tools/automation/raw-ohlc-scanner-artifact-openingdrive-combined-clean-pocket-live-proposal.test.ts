@@ -55,7 +55,7 @@ const approvalContract = {
   },
   gates: [],
   proposedScannerVisibleBehavior: {
-    model: 'OpeningDriveFvgContinuation',
+    model: 'NoInstalledSetup',
     proposedPackage: 'fine_risk_plus_all_live_zero_loss_tight_buckets',
     implementationAllowedNow: false,
     requiredFutureApproval: true,

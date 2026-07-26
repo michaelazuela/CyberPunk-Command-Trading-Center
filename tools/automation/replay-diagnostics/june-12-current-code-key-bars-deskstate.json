@@ -87,8 +87,8 @@
         }
       },
       "bestLong": {
-        "candidateKey": "RaidReclaimReversal|LONG|scenario|Blocked",
-        "setupType": "RaidReclaimReversal",
+        "candidateKey": "HistoricalReviewReversal|LONG|scenario|Blocked",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": null,
         "direction": "LONG",
         "detectedStatus": "Blocked",
@@ -473,8 +473,8 @@
         }
       },
       "bestLong": {
-        "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-        "setupType": "RaidReclaimReversal",
+        "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": null,
         "direction": "LONG",
         "detectedStatus": "Possible",
@@ -737,8 +737,8 @@
         "filteredOutReason": "InvalidStopLocation"
       },
       "bestShort": {
-        "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Blocked",
-        "setupType": "RaidReclaimReversal",
+        "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Blocked",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
         "direction": "SHORT",
         "detectedStatus": "Blocked",
@@ -940,8 +940,8 @@
         "filteredOutReason": "InvalidStopLocation"
       },
       "bestShort": {
-        "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Blocked",
-        "setupType": "RaidReclaimReversal",
+        "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Blocked",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
         "direction": "SHORT",
         "detectedStatus": "Blocked",
@@ -1143,8 +1143,8 @@
         "filteredOutReason": "InvalidStopLocation"
       },
       "bestShort": {
-        "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Blocked",
-        "setupType": "RaidReclaimReversal",
+        "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Blocked",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
         "direction": "SHORT",
         "detectedStatus": "Blocked",

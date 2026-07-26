@@ -45,8 +45,8 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
     systemReviewNoteRows: 1,
   },
   rows: [{
-    ticketId: '2026-06-16-morning-raidReclaim-LONG',
-    setupType: 'raidReclaim',
+    ticketId: '2026-06-16-morning-historicalReview-LONG',
+    setupType: 'historicalReview',
     direction: 'LONG',
     visibleInHiddenTab: true,
     reviewOnly: true,
@@ -57,7 +57,7 @@ const checklist: UnifiedPositiveHeldLocalPreviewReviewChecklistReport = {
     shouldDispatch: false,
     writesSupabase: false,
     reviewOnlyReasons: ['canExecute remains false.'],
-    systemReviewNotes: ['raidReclaim long remains review-only: this cluster lacks full plan-level proof.'],
+    systemReviewNotes: ['historicalReview long remains review-only: this cluster lacks full plan-level proof.'],
   }],
   blockers: [],
   recommendations: [],
@@ -82,7 +82,7 @@ assert.equal(report.summary.checklistRows, 1);
 assert.equal(report.summary.noteRows, 1);
 assert.equal(report.summary.unreviewedRows, 1);
 assert.equal(report.summary.reviewOnlyRows, 1);
-assert.deepEqual(report.rows[0].systemReviewNotes, ['raidReclaim long remains review-only: this cluster lacks full plan-level proof.']);
+assert.deepEqual(report.rows[0].systemReviewNotes, ['historicalReview long remains review-only: this cluster lacks full plan-level proof.']);
 assert.equal(report.rows[0].reviewerNote, '');
 assert.equal(report.rows[0].suggestedDisposition, 'unreviewed');
 assert.ok(report.rows[0].allowedDispositions.includes('candidate_for_later_research'));

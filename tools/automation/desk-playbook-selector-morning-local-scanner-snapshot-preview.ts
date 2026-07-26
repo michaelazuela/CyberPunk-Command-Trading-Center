@@ -511,7 +511,7 @@ export function buildDeskPlaybookMorningLocalScannerSnapshotPreviewReport(args: 
       ? [
         'The morning selector dry-run slates survive current scanner-owned DeskState and DeskPublishDecision builders as complete human-review tickets with canExecute=false.',
         'This is still not live behavior: no Discord post, no Supabase write, no runtime selector install, no canExecute change, and no trade-math change occurred.',
-        'Morning proof covers the selected SweepMssFvgRetrace morning-short selector lane only; OpeningDrive collisions are notes, not extra tickets.',
+        'Morning proof covers the selected NoInstalledSetup morning-short selector lane only; OpeningDrive collisions are notes, not extra tickets.',
       ]
       : [
         'Hold this morning local snapshot preview until every selected slate has complete scanner-owned DeskTicket and DeskPublishDecision fields without drift.',

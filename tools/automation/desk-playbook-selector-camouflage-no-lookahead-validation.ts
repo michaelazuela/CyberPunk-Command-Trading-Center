@@ -204,29 +204,29 @@ export function buildDeskPlaybookCamouflageNoLookaheadValidation(args: {
   const laneInputs = [
     {
       name: 'all_models_htf_support_with_raid',
-      description: 'Any selected model with HTF support, at least one raid, and at least 3 complete candidates. Does not use final session move.',
+      description: 'Any selected model with HTF context, at least one raid, and at least 3 complete candidates. Does not use final session move.',
       predicate: (row: CamouflageRow) => baseProofContext(row) && hasAnyRaid(row),
     },
     {
       name: 'openingdrive_morning_htf_support_with_raid',
-      description: 'OpeningDrive morning selected candidate with HTF support, raid context, and at least 3 complete candidates.',
-      predicate: (row: CamouflageRow) => row.selectedModel === 'OpeningDriveFvgContinuation'
+      description: 'OpeningDrive morning selected candidate with HTF context, raid context, and at least 3 complete candidates.',
+      predicate: (row: CamouflageRow) => row.selectedModel === 'NoInstalledSetup'
         && row.session === 'morning'
         && baseProofContext(row)
         && hasDirectionalRaid(row),
     },
     {
       name: 'afterlunch_lunch_htf_support_with_raid',
-      description: 'AfterLunch lunch selected candidate with HTF support, raid context, and at least 3 complete candidates.',
-      predicate: (row: CamouflageRow) => row.selectedModel === 'AfterLunchDriveFvgContinuation'
+      description: 'AfterLunch lunch selected candidate with HTF context, raid context, and at least 3 complete candidates.',
+      predicate: (row: CamouflageRow) => row.selectedModel === 'NoInstalledSetup'
         && row.session === 'lunch'
         && baseProofContext(row)
         && hasDirectionalRaid(row),
     },
     {
       name: 'intraday_lunch_htf_support_with_raid',
-      description: 'Intraday lunch selected candidate with HTF support, raid context, and at least 3 complete candidates.',
-      predicate: (row: CamouflageRow) => row.selectedModel === 'IntradayMssMicroContinuation'
+      description: 'Intraday lunch selected candidate with HTF context, raid context, and at least 3 complete candidates.',
+      predicate: (row: CamouflageRow) => row.selectedModel === 'NoInstalledSetup'
         && row.session === 'lunch'
         && baseProofContext(row)
         && hasDirectionalRaid(row),

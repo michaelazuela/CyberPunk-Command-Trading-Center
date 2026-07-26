@@ -59,7 +59,7 @@ const combinedProposal = {
   authority,
   source: { approvalContractPath: 'approval.json' },
   proposedBehavior: {
-    model: 'OpeningDriveFvgContinuation',
+    model: 'NoInstalledSetup',
     overlayName: 'openingdrive_combined_clean_pocket_preference',
     scannerVisibleInstallAllowedNow: false,
     requiredFutureApproval: true,

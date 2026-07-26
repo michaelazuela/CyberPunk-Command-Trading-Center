@@ -145,7 +145,7 @@ export interface UnifiedPositiveHeldLocalPreviewSweepPenaltyFreshScannerOverlayD
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SWEEP_SETUP = 'SweepMssFvgRetrace';
+const SWEEP_SETUP = 'NoInstalledSetup';
 const PENALTY_POINTS = 18;
 
 function readFlag(args: string[], flag: string): string | null {

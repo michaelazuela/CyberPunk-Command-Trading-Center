@@ -154,12 +154,12 @@ const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
 const DEFAULT_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const POINT_VALUE = 5;
 const TARGET_METHODS = new Set([
-  'SweepMssFvgRetrace|lunch|SHORT|risk_16_to_24',
-  'SweepMssFvgRetrace|morning|SHORT|risk_8_to_16',
-  'SweepMssFvgRetrace|morning|LONG|risk_gte_32',
-  'OpeningDriveFvgContinuation|morning|LONG|risk_gte_32',
-  'IntradayMssMicroContinuation|morning|SHORT|risk_16_to_24',
-  'IntradayMssMicroContinuation|morning|SHORT|risk_24_to_32',
+  'NoInstalledSetup|lunch|SHORT|risk_16_to_24',
+  'NoInstalledSetup|morning|SHORT|risk_8_to_16',
+  'NoInstalledSetup|morning|LONG|risk_gte_32',
+  'NoInstalledSetup|morning|LONG|risk_gte_32',
+  'NoInstalledSetup|morning|SHORT|risk_16_to_24',
+  'NoInstalledSetup|morning|SHORT|risk_24_to_32',
 ]);
 
 function readFlag(args: string[], flag: string): string | null {

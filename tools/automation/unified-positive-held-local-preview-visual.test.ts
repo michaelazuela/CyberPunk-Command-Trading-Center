@@ -12,9 +12,9 @@ import type { UnifiedPositiveHeldLocalPreviewRendererReport } from './unified-po
 
 const content = [
   '[HELD-LOCAL REVIEW] MES - LONG ACTIVE_REVIEW',
-  'raidReclaim LONG ACTIVE_REVIEW local preview',
+  'historicalReview LONG ACTIVE_REVIEW local preview',
   '',
-  'What: raidReclaim LONG held-local ACTIVE_REVIEW ticket.',
+  'What: historicalReview LONG held-local ACTIVE_REVIEW ticket.',
   'Where: Line 100.00; entry 100.00; stop 96.00; T1 106.00; T2 108.00.',
   'When: Fresh completed 5M proof.',
   'Why: HTF context supports review only.',
@@ -67,14 +67,14 @@ const rendererReport = {
     {
       ticketId: 'long-ticket',
       sourceSnapshotId: 'scanner-long',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       status: 'rendered',
       renderedCard: {
         sourceOfTruth: 'scanner_owned_held_local_local_preview_render',
         ticketId: 'long-ticket',
         sourceSnapshotId: 'scanner-long',
-        setupType: 'raidReclaim',
+        setupType: 'historicalReview',
         direction: 'LONG',
         status: 'rendered_local_preview_card',
         postable: false,
@@ -130,7 +130,7 @@ const preflightReport = {
     {
       ticketId: 'long-ticket',
       sourceSnapshotId: 'scanner-long',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       status: 'preflight_pass',
       contentLength: content.length,

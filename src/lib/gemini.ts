@@ -165,11 +165,11 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     ## Active Model Contract
 
     The active scanner model contract is limited to five app-owned model families:
-    - Raid Reclaim Reversal through SetupType.RaidReclaimReversal.
-    - Sweep -> MSS -> FVG Retrace through SetupType.SweepMssFvgRetrace.
-    - Opening Drive FVG Continuation through SetupType.OpeningDriveFvgContinuation for morning only.
-    - After-Lunch Drive FVG Continuation through SetupType.AfterLunchDriveFvgContinuation for Lunch/PM only.
-    - Intraday MSS Micro Continuation through SetupType.IntradayMssMicroContinuation.
+    - no installed model path through SetupType.NoSetup.
+    - Sweep -> MSS -> FVG Retrace through SetupType.NoSetup.
+    - Opening Drive FVG Continuation through SetupType.NoSetup for morning only.
+    - After-Lunch Drive FVG Continuation through SetupType.NoSetup for Lunch/PM only.
+    - Intraday MSS Micro Continuation through SetupType.NoSetup.
 
     HTF liquidity draw, HTF displacement, and failed-plan behavior are context only. They may support the market story, target management, caution, or confidence notes, but they must not create separate executable model families or produce retired setup names. Narrative fallback may provide notes only and cannot create a scanner-owned model or approve execution.
 
@@ -250,7 +250,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
 
     The package must not approve models for live use, approve a trade, activate a model, or imply actual/net P/L.
 
-    Estimated gross contract P/L is supporting context only. It does not replace a true backtest and must not make a concept ready by itself.
+    Estimated gross contract P/L is context only only. It does not replace a true backtest and must not make a concept ready by itself.
 
     If required backtest assumptions are missing, the agent must say what must be defined before a true backtest can be run.
 
@@ -272,7 +272,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     3. Adjust confidence and warnings if historical win rate conflicts with the current chart signal. Do not let memory alter setup rules, entry, stop, targets, time windows, or final approval.
     4. Return historical_context_used as true if similar setups were provided.
     5. Carry forward relevant context from the previous session (e.g., morning ETH levels, Midnight Open analysis).
-    6. Do not let historical replay data replace current chart analysis. First perform independent rule-based analysis from the current screenshot. Then use Replay/RAG records only as supporting evidence to adjust confidence and explain whether similar historical setups succeeded or failed.
+    6. Do not let historical replay data replace current chart analysis. First perform independent rule-based analysis from the current screenshot. Then use Replay/RAG records only as context-only labels to adjust confidence and explain whether similar historical setups succeeded or failed.
 
     =========================================
     MODULE 1: [DATA_EXTRACTOR] (Vision)
@@ -291,7 +291,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     - If price holds a protected swing sequence, mark impulse-continuation context; do not treat the label as execution approval.
     - If price remains inside the opening range with heavy overlap, mark chop/consolidation no-trade context.
     - If overlap > 80% and velocity is low, mark no clean trigger yet and wait for a completed clearing candle.
-    - If price fails beyond a mapped reference and reclaims it with a completed candle, extract the sweep/reclaim fact and the protected swing.
+    - If price fails beyond a mapped reference and reclaims it with a completed candle, extract the historical reversal pattern fact and the protected swing.
     - If price is extended away from the preferred retest zone, mark stale/chase risk. Do not market-enter on the pullback candle itself.
     - BREATHER BREAK PLAN LOCK: If the last visible candle is the breather/pullback candle itself, Breather_Break is NOT an already-triggered entry, but it IS a valid CONDITIONAL_STOP_ENTRY plan when the trend structure is intact. Do NOT output NO TRADE solely because the trigger has not fired yet.
     - For a LONG breather plan: entry = break of the completed breather candle high, stop = breather candle low or nearest protected HL. For a SHORT breather plan: entry = break of the completed breather candle low, stop = breather candle high or nearest protected LH.

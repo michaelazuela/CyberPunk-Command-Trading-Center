@@ -250,7 +250,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
   const blockedRowsExcluded = args.blockerDrilldown?.summary.blockedRows || 0;
   const waitingForEntryTriggerRows = args.levelPathDiagnostic?.summary.waitingForEntryTriggerRows || 0;
   const invalidatedRows = args.levelPathDiagnostic?.summary.invalidatedWithoutReplayableEntryRows || 0;
-  const sweep = rows.find((row) => row.setupType === 'SweepMssFvgRetrace');
+  const sweep = rows.find((row) => row.setupType === 'NoInstalledSetup');
   const recommendation = blockers.length ? 'fix_inputs'
     : sweep?.evidenceState === 'positive_strict_ready_subset' && blockedRowsExcluded === 0 ? 'prepare_sweep_only_guarded_proposal'
       : 'continue_research_no_live_selector';
@@ -284,8 +284,8 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
     },
     modelRows: rows,
     conclusions: [
-      'SweepMssFvgRetrace strict-ready evidence is positive in this package, but blocked placeholder/no-chase rows remain excluded.',
-      'raidReclaim strict-ready evidence is weak in this package, but the blocked raidReclaim row is waiting for fresh entry and is not removal proof.',
+      'NoInstalledSetup strict-ready evidence is positive in this package, but blocked placeholder/no-chase rows remain excluded.',
+      'historicalReview strict-ready evidence is weak in this package, but the blocked historicalReview row is waiting for fresh entry and is not removal proof.',
       'No scanner-visible selector, model removal, canExecute change, or entry/stop/target/risk change is supported by this summary alone.',
     ],
     blockers,

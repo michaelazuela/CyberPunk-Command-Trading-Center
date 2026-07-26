@@ -24,7 +24,7 @@ const formatterReport = {
   samplePayloads: [
     {
       id: 'forming-fixture',
-      content: '[FORMING DESK READ] MORNING SHORT SweepMssFvgRetrace\nDecision support only.',
+      content: '[FORMING DESK READ] MORNING SHORT NoInstalledSetup\nDecision support only.',
       shouldPost: false as const,
       publishDiscord: false as const,
       webhookCalls: 0 as const,
@@ -34,7 +34,7 @@ const formatterReport = {
     },
     {
       id: 'approved-fixture',
-      content: '[APPROVED DESK PLAN] MORNING LONG OpeningDriveFvgContinuation\nDecision support only.',
+      content: '[APPROVED DESK PLAN] MORNING LONG NoInstalledSetup\nDecision support only.',
       shouldPost: false as const,
       publishDiscord: false as const,
       webhookCalls: 0 as const,

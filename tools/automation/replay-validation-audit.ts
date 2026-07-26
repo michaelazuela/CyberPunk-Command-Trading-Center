@@ -76,7 +76,7 @@ const bars240m = [
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.SweepMssFvgRetrace,
+    setupType: SetupType.NoSetup,
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,
     confidence: 'High',

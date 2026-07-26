@@ -166,7 +166,7 @@ function riskInRange(risk: number, lower: number, upper: number): boolean {
 }
 
 function installedSelectors(row: RawOhlcScannerArtifactSameBarSeparatorRow): string[] {
-  if (row.setupType !== 'OpeningDriveFvgContinuation') return [];
+  if (row.setupType !== 'NoInstalledSetup') return [];
   const selectors: string[] = [];
   if (row.riskPoints >= 24 && row.riskPoints <= 32) selectors.push('fine_risk_24_to_32');
   if (row.direction !== 'LONG' || !riskInRange(row.riskPoints, 4, 8)) return selectors;
@@ -255,7 +255,7 @@ export function buildRawOhlcScannerArtifactOpeningDriveOosReplayCollisionPackage
   reports: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport[];
 }, generatedAt = new Date().toISOString()): RawOhlcScannerArtifactOpeningDriveOosReplayCollisionPackageReport {
   const sourceRows = args.reports.flatMap((report) => report.rows || []);
-  const rows = sourceRows.filter((row) => row.setupType === 'OpeningDriveFvgContinuation').map(toOosRow);
+  const rows = sourceRows.filter((row) => row.setupType === 'NoInstalledSetup').map(toOosRow);
   const selectedRows = rows.filter((row) => row.selectorMatched);
   const rejectedRows = rows.filter((row) => !row.selectorMatched);
   const selectedSummary = summarize(selectedRows);

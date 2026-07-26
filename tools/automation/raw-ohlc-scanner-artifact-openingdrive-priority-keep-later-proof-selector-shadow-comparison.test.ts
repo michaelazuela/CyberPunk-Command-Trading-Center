@@ -6,7 +6,7 @@ import { ExecutionStatus, SetupCandidateStatus, SetupType, type SetupCandidate }
 
 function candidate(overrides: Partial<SetupCandidate>): SetupCandidate {
   return {
-    setupType: SetupType.OpeningDriveFvgContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'fixture',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Conditional,
@@ -31,21 +31,21 @@ function candidate(overrides: Partial<SetupCandidate>): SetupCandidate {
 }
 
 const openingDrive = candidate({
-  setupType: SetupType.OpeningDriveFvgContinuation,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'opening-drive',
   priority: 95,
   modelConfidenceScore: 95,
   decisionQualityScore: 95,
 });
 const sweep = candidate({
-  setupType: SetupType.SweepMssFvgRetrace,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'later-sweep-proof',
   priority: 88,
   modelConfidenceScore: 88,
   decisionQualityScore: 88,
 });
 const replacement = candidate({
-  setupType: SetupType.IntradayMssMicroContinuation,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'replacement',
   direction: 'SHORT',
   priority: 89,
@@ -57,7 +57,7 @@ const replacement = candidate({
   target2: 92,
 });
 const shortSweep = candidate({
-  setupType: SetupType.SweepMssFvgRetrace,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'short-sweep',
   direction: 'SHORT',
   priority: 87,
@@ -118,9 +118,9 @@ assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.scannerVisibleChangeAllowedRows, 0);
 assert.equal(report.summary.entryStopTargetRiskDriftRows, 0);
 assert.equal(report.summary.recommendation, 'ready_for_saved_artifact_shadow_package');
-assert.equal(report.rows.find((row) => row.snapshotId === 'long-keep-sweep')?.shadowSelectedSetupType, SetupType.SweepMssFvgRetrace);
+assert.equal(report.rows.find((row) => row.snapshotId === 'long-keep-sweep')?.shadowSelectedSetupType, SetupType.NoSetup);
 assert.equal(report.rows.find((row) => row.snapshotId === 'long-keep-sweep')?.direction, 'LONG');
-assert.equal(report.rows.find((row) => row.snapshotId === 'short-prefer-replacement')?.shadowSelectedSetupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(report.rows.find((row) => row.snapshotId === 'short-prefer-replacement')?.shadowSelectedSetupType, SetupType.NoSetup);
 assert.equal(report.rows.find((row) => row.snapshotId === 'short-prefer-replacement')?.direction, 'SHORT');
 assert.match(report.markdown, /disabled shadow comparison/);
 

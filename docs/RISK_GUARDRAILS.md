@@ -4,7 +4,7 @@ Risk guardrails are deterministic and cannot be overridden by AI.
 
 AI may identify possible chart structure, but the app must validate entry, stop, target model, risk, and execution permission.
 
-Confidence is supporting context only. A `High` confidence label must not approve a trade when entry, stop, invalidation, time window, or risk validation fails.
+Confidence is context only only. A `High` confidence label must not approve a trade when entry, stop, invalidation, time window, or risk validation fails.
 
 ## Required Risk Sequence
 

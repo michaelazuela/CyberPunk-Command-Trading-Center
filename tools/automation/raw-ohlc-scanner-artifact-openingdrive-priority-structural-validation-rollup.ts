@@ -74,7 +74,7 @@ export interface RawOhlcScannerArtifactOpeningDrivePriorityStructuralValidationR
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const DEFAULT_FEATURE = 'best_conditional_IntradayMssMicroContinuation';
+const DEFAULT_FEATURE = 'best_conditional_NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);

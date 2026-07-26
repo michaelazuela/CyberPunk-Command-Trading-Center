@@ -49,7 +49,7 @@ const freshReplayPackage = {
   generatedAt: '2026-07-19T00:00:00.000Z',
   status: 'pass',
   authority,
-  source: { reportDir: 'reports', setupType: 'OpeningDriveFvgContinuation', samebarReportPaths: [] },
+  source: { reportDir: 'reports', setupType: 'NoInstalledSetup', samebarReportPaths: [] },
   assumptions: {
     savedReportsOnly: true,
     openingDriveOnly: true,
@@ -109,7 +109,7 @@ const approvalContract = {
     promotionDisabled: true,
   },
   proposedResearchBoundary: {
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     selector: 'fine_risk_24_to_32',
     scannerVisibleNow: false,
     requiresFutureApprovalGate: true,

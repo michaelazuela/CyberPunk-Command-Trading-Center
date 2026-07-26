@@ -90,7 +90,7 @@ function compact(value?: string | null, max = 78): string {
 function cardModelLabel(value?: string | null): string {
   const text = String(value || '').trim();
   if (text === 'Liquidity Sweep -> Structure Shift -> Imbalance Pullback') return 'Sweep -> Structure Shift -> Imbalance';
-  if (text === 'Intraday Structure-Shift Micro Continuation') return 'Structure-Shift Continuation';
+  if (text === 'Intraday Structure-Shift Micro Continuation') return 'Archived structure path';
   return text;
 }
 
@@ -98,7 +98,7 @@ function sidePanelModelLabel(value?: string | null): string {
   const text = String(value || '').trim();
   if (text === 'Liquidity Sweep -> Structure Shift -> Imbalance Pullback') return 'Sweep + Shift + Imbalance';
   if (text === 'Sweep -> Structure Shift -> Imbalance') return 'Sweep + Shift + Imbalance';
-  if (text === 'Intraday Structure-Shift Micro Continuation') return 'Structure-Shift Continuation';
+  if (text === 'Intraday Structure-Shift Micro Continuation') return 'Archived structure path';
   return text;
 }
 

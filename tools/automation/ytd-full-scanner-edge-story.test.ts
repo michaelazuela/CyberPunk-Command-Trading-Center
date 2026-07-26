@@ -26,7 +26,7 @@ const report = buildYtdFullScannerEdgeStoryReport({
         },
         completeCandidateCount: 4,
         selected: {
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           eventTime: '2026-06-09T10:25:00',
           entry: 7441,
@@ -55,7 +55,7 @@ const report = buildYtdFullScannerEdgeStoryReport({
         raids: {},
         completeCandidateCount: 2,
         selected: {
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           eventTime: '2026-06-10T12:55:00',
           entry: 7322.75,
@@ -82,7 +82,7 @@ const report = buildYtdFullScannerEdgeStoryReport({
         raids: {},
         completeCandidateCount: 1,
         selected: {
-          setupType: 'OpeningDriveFvgContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           eventTime: '2026-06-11T10:10:00',
           entry: 7400,
@@ -105,7 +105,7 @@ assert.equal(report.summary.sourceRows, 3);
 assert.equal(report.summary.winningRows, 2);
 assert.equal(report.summary.topRows, 2);
 assert.equal(report.summary.totalTopOneMesPl, 627.51);
-assert.equal(report.summary.strongestModel, 'IntradayMssMicroContinuation');
+assert.equal(report.summary.strongestModel, 'NoInstalledSetup');
 assert.equal(report.summary.strongestMovement, 'high_raid_reversal_down');
 assert.equal(report.topStories[0].rank, 1);
 assert.equal(report.topStories[0].htfAlignment, 'aligned');

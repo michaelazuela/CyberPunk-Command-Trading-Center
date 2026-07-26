@@ -46,7 +46,7 @@ const bundleReport: HeldLocalPreviewUiIndexReport = {
     {
       ticketId: 'preview-long',
       sourceSnapshotId: 'scanner-preview',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       pngPath: 'card-long.png',
       imageSrc: 'data:image/png;base64,iVBORw0KGgo=',
@@ -62,7 +62,7 @@ const bundleReport: HeldLocalPreviewUiIndexReport = {
     {
       ticketId: 'preview-short',
       sourceSnapshotId: 'scanner-preview',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       pngPath: 'card-short.png',
       imageSrc: 'data:image/png;base64,iVBORw0KGgo=',

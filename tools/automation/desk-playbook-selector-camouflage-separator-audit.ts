@@ -195,39 +195,39 @@ export function buildDeskPlaybookCamouflageSeparatorAudit(args: {
     },
     {
       name: 'direction_htf_support_and_raid',
-      description: 'Direction and HTF support plus at least one overnight/prior-day raid.',
+      description: 'Direction and HTF context plus at least one overnight/prior-day raid.',
       liveReadiness: 'research_only_contains_after_window_move' as const,
       predicate: (row: CamouflageRow) => selectedDirectionMatchesMove(row) && row.htfAlignment === 'supports' && hasAnyRaid(row),
     },
     {
       name: 'direction_htf_support_raid_not_three_sided',
-      description: 'Direction and HTF support, at least one raid, and no three-sided raid tangle.',
+      description: 'Direction and HTF context, at least one raid, and no three-sided raid tangle.',
       liveReadiness: 'research_only_contains_after_window_move' as const,
       predicate: (row: CamouflageRow) => selectedDirectionMatchesMove(row) && row.htfAlignment === 'supports' && hasAnyRaid(row) && raidCountAtMostTwo(row),
     },
     {
       name: 'openingdrive_morning_direction_htf_support',
-      description: 'OpeningDrive morning candidate direction matches measured session move and HTF supports it.',
+      description: 'OpeningDrive morning candidate direction matches measured session move and HTF contexts it.',
       liveReadiness: 'candidate_for_no_lookahead_validation' as const,
-      predicate: (row: CamouflageRow) => row.selectedModel === 'OpeningDriveFvgContinuation'
+      predicate: (row: CamouflageRow) => row.selectedModel === 'NoInstalledSetup'
         && row.session === 'morning'
         && selectedDirectionMatchesMove(row)
         && row.htfAlignment === 'supports',
     },
     {
       name: 'afterlunch_lunch_direction_htf_support',
-      description: 'AfterLunch lunch candidate direction matches measured session move and HTF supports it.',
+      description: 'AfterLunch lunch candidate direction matches measured session move and HTF contexts it.',
       liveReadiness: 'candidate_for_no_lookahead_validation' as const,
-      predicate: (row: CamouflageRow) => row.selectedModel === 'AfterLunchDriveFvgContinuation'
+      predicate: (row: CamouflageRow) => row.selectedModel === 'NoInstalledSetup'
         && row.session === 'lunch'
         && selectedDirectionMatchesMove(row)
         && row.htfAlignment === 'supports',
     },
     {
       name: 'intraday_lunch_direction_htf_support',
-      description: 'Intraday lunch candidate direction matches measured session move and HTF supports it.',
+      description: 'Intraday lunch candidate direction matches measured session move and HTF contexts it.',
       liveReadiness: 'candidate_for_no_lookahead_validation' as const,
-      predicate: (row: CamouflageRow) => row.selectedModel === 'IntradayMssMicroContinuation'
+      predicate: (row: CamouflageRow) => row.selectedModel === 'NoInstalledSetup'
         && row.session === 'lunch'
         && selectedDirectionMatchesMove(row)
         && row.htfAlignment === 'supports',

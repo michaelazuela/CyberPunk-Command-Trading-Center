@@ -19,7 +19,7 @@ interface CloseoutRow {
   ticketId: string;
   tradeDate: string;
   session: 'morning';
-  setupType: 'OpeningDriveFvgContinuation';
+  setupType: 'NoInstalledSetup';
   direction: Direction;
   riskBand: string;
   proofTime: string;

@@ -131,7 +131,7 @@ try {
       conceptTitle: 'False-Run Liquidity Fade Near Highs',
       direction: 'SHORT',
       window: '10:00-11:00 NY',
-      agentInspectionLabel: 'possible_RAID_RECLAIM_mapping_review',
+      agentInspectionLabel: 'historical_reversal_mapping_review',
       advisoryOnly: true,
     },
     overlay: {

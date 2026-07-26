@@ -400,7 +400,7 @@ function buildActiveRuleAcceptanceReview(comparison: any[]) {
     reviewBasis: [
       'Legacy-only confirmed MSS events are intentional active-rule demotions because they were confirmed by the recent-range displacement heuristic but not by completed close-through of confirmed swing structure with opposite prior swing direction.',
       'Structural-only confirmed MSS events are accepted only when structureBreak.type is mss, breaksStructure is true, the broken swing level is present, and the prior swing structure direction is opposite the MSS direction.',
-      'Displacement remains quality/supporting evidence. A structural MSS with weak displacement is accepted as MSS evidence with lower confidence, not as standalone trade approval.',
+      'Displacement remains quality/context-only labels. A structural MSS with weak displacement is accepted as MSS evidence with lower confidence, not as standalone trade approval.',
       'No narrative, screenshots, Gemini text, Discord text, or manual OHLC reconstruction was used.',
     ],
     totals,

@@ -136,7 +136,7 @@ export interface UnifiedPositiveHeldLocalPreviewOpeningDriveSlateEdgeAuditReport
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const TARGET_MODEL = 'OpeningDriveFvgContinuation';
+const TARGET_MODEL = 'NoInstalledSetup';
 const COLLISION_WINDOW_MINUTES = 10;
 
 function readFlag(args: string[], flag: string): string | null {
@@ -236,8 +236,8 @@ function buildSlate(key: string, rows: SessionBoundedRow[], allRows: SessionBoun
     rawRowsInSlate: sorted.length,
     duplicateRowsSuppressed: Math.max(0, sorted.length - 1),
     hasCollision: collisionMethodKeys.length > 0,
-    hasSweepCollision: collisionMethodKeys.some((item) => item.startsWith('SweepMssFvgRetrace|')),
-    hasHtfCollision: collisionMethodKeys.some((item) => item.startsWith('HtfDisplacement')),
+    hasSweepCollision: collisionMethodKeys.some((item) => item.startsWith('NoInstalledSetup|')),
+    hasHtfCollision: collisionMethodKeys.some((item) => item.startsWith('NoInstalledSetup')),
     collisionMethodKeys,
   };
 }
@@ -345,7 +345,7 @@ export function buildUnifiedPositiveHeldLocalPreviewOpeningDriveSlateEdgeAuditRe
     !args.sessionBoundedReportPath ? 'missing session-bounded report path' : null,
     !args.sessionBoundedReport ? 'missing session-bounded report' : null,
     rows.length === 0 ? 'session-bounded report has no rows' : null,
-    openingDriveRows.length === 0 ? 'session-bounded report has no OpeningDriveFvgContinuation rows' : null,
+    openingDriveRows.length === 0 ? 'session-bounded report has no NoInstalledSetup rows' : null,
   ].filter((item): item is string => Boolean(item));
   const recommendation = blockers.length
     ? 'fix_missing_session_bounded_report' as const

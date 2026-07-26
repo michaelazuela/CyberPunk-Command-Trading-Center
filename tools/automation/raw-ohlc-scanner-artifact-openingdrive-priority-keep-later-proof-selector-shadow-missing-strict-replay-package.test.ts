@@ -21,7 +21,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-evening-2026-06-23-MES-EVENING-val
   normalizedPlan: {
     setupCandidates: [
       {
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         entry: 7442.5,
         stop: 7450,
@@ -29,7 +29,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-evening-2026-06-23-MES-EVENING-val
         target2: 7457.5,
       },
       {
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         entry: 7442.5,
         stop: 7431.5,
@@ -78,7 +78,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-morning-2026-06-24-MES-MORNING-mis
   normalizedPlan: {
     setupCandidates: [
       {
-        setupType: 'raidReclaim',
+        setupType: 'historicalReview',
         direction: 'SHORT',
         entry: 7442,
         stop: 7452,
@@ -95,10 +95,10 @@ const missingReplayPackage = {
   rows: [
     {
       packagePriority: 1,
-      replayQueueKey: '2026-06-23|evening|SweepMssFvgRetrace|LONG|keep_later_sweep_proof',
+      replayQueueKey: '2026-06-23|evening|NoInstalledSetup|LONG|keep_later_sweep_proof',
       tradeDate: '2026-06-23',
       sessionType: 'evening',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       selectorDecision: 'keep_later_sweep_proof',
       shadowRows: 41,
@@ -109,10 +109,10 @@ const missingReplayPackage = {
     },
     {
       packagePriority: 2,
-      replayQueueKey: '2026-06-24|morning|raidReclaim|SHORT|prefer_replacement',
+      replayQueueKey: '2026-06-24|morning|historicalReview|SHORT|prefer_replacement',
       tradeDate: '2026-06-24',
       sessionType: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'SHORT',
       selectorDecision: 'prefer_replacement',
       shadowRows: 16,
@@ -147,7 +147,7 @@ assert.equal(report.summary.blockedRows, 1);
 assert.equal(report.summary.directionallyInvalidGeometryRows, 0);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
-const ready = report.rows.find((row) => row.setupType === 'SweepMssFvgRetrace');
+const ready = report.rows.find((row) => row.setupType === 'NoInstalledSetup');
 assert.equal(ready?.outcomeInputStatus, 'ready_for_read_only_outcome_replay');
 assert.equal(ready?.entry, 7442.5);
 assert.equal(ready?.stop, 7431.5);
@@ -158,7 +158,7 @@ assert.equal(ready?.proofTime, '2026-06-23T19:55:00');
 assert.equal(ready?.barsLoaded, 2);
 assert.equal(ready?.barsAfterProof, 2);
 
-const blocked = report.rows.find((row) => row.setupType === 'raidReclaim');
+const blocked = report.rows.find((row) => row.setupType === 'historicalReview');
 assert.equal(blocked?.outcomeInputStatus, 'blocked');
 assert.ok(blocked?.blockers.includes('missing scanner decision tape'));
 assert.ok(blocked?.blockers.includes('missing completed 5M bars from scanner decision tape'));
@@ -191,7 +191,7 @@ assert.equal(readyOnly.summary.replayPackageRows, 1);
 assert.equal(readyOnly.summary.readyRows, 1);
 assert.equal(readyOnly.summary.blockedRows, 0);
 assert.equal(readyOnly.rows.length, 1);
-assert.equal(readyOnly.rows[0].setupType, 'SweepMssFvgRetrace');
+assert.equal(readyOnly.rows[0].setupType, 'NoInstalledSetup');
 assert.deepEqual(readyOnly.blockers, []);
 assert.match(readyOnly.recommendations[0], /strict-ready rows/);
 

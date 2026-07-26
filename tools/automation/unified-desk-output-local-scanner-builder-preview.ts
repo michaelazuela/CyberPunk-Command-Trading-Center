@@ -36,8 +36,8 @@ interface SelectorPreviewRow {
   riskPoints: number | null;
   movement: string;
   primaryLane: string;
-  supportingModels: string[];
-  sourceCandidateRole: 'primary_lane' | 'supporting_lane';
+  contextLabels: string[];
+  sourceCandidateRole: 'primary_lane' | 'context_lane';
   deskLanguage: {
     headline: string;
     what: string;
@@ -70,7 +70,7 @@ interface BuilderPreviewRow {
   riskPoints: number | null;
   movement: string;
   primaryLane: string;
-  supportingModels: string[];
+  contextLabels: string[];
   scannerState: ScannerState;
   deskStateSourceOfTruth: DeskState['sourceOfTruth'];
   deskTicketSourceOfTruth: DeskState['deskTicket']['sourceOfTruth'];
@@ -213,7 +213,7 @@ function snapshotCandidate(row: SelectorPreviewRow): SetupCandidate {
     evidence: [
       `Unified Desk Output Selector state: ${row.visibleState}.`,
       `Primary lane: ${row.primaryLane}.`,
-      `Supporting models: ${row.supportingModels.join(', ') || 'none'}.`,
+      `Context labels: ${row.contextLabels.join(', ') || 'none'}.`,
       `Session movement: ${row.movement}.`,
       'This local preview uses scanner-owned builders and does not alter trade rules, canExecute, or live publishing.',
     ],
@@ -306,7 +306,7 @@ function buildRow(row: SelectorPreviewRow): BuilderPreviewRow {
     riskPoints: row.riskPoints,
     movement: row.movement,
     primaryLane: row.primaryLane,
-    supportingModels: [...row.supportingModels],
+    contextLabels: [...row.contextLabels],
     scannerState,
     deskStateSourceOfTruth: deskState.sourceOfTruth,
     deskTicketSourceOfTruth: deskState.deskTicket.sourceOfTruth,

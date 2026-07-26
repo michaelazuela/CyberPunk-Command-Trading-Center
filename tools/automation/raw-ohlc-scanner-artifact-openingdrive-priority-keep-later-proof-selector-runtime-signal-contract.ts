@@ -47,7 +47,7 @@ export interface RawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSelecto
     owner: 'setupScanner';
     consumer: 'rankSetupCandidate_future_approval_only';
     candidateField: 'proofSelectionSignal';
-    allowedSetupScope: ['SweepMssFvgRetrace'];
+    allowedSetupScope: ['NoInstalledSetup'];
     allowedSelectorDecision: ['keep_later_sweep_proof'];
     requiredFields: ProposedSignalField[];
     invariantFields: {
@@ -279,7 +279,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
       owner: 'setupScanner',
       consumer: 'rankSetupCandidate_future_approval_only',
       candidateField: 'proofSelectionSignal',
-      allowedSetupScope: ['SweepMssFvgRetrace'],
+      allowedSetupScope: ['NoInstalledSetup'],
       allowedSelectorDecision: ['keep_later_sweep_proof'],
       requiredFields: proposedFields(),
       invariantFields: {

@@ -117,7 +117,7 @@ export interface UnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationRep
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const DEFAULT_POSITIVE_FAMILIES = ['SweepMssFvgRetrace', 'AfterLunchDriveFvgContinuation'];
+const DEFAULT_POSITIVE_FAMILIES = ['NoInstalledSetup', 'NoInstalledSetup'];
 const POSITIVE_FAMILY_BOOST_POINTS = 12;
 
 function readFlag(args: string[], flag: string): string | null {
@@ -295,7 +295,7 @@ function recommendedAction(models: ModelSummary[], delta: number | null): Unifie
   const clean = models.filter((model) => model.decision === 'clean_boost_research_candidate');
   const isolated = models.filter((model) => model.decision === 'isolated_boost_research_candidate');
   if ((delta ?? 0) < 0 && (clean.length || isolated.length)) return 'reject_combined_boost_validate_segments';
-  if (clean.some((model) => model.setupType === 'SweepMssFvgRetrace') && (delta ?? 0) >= 0 && isolated.length === 0) {
+  if (clean.some((model) => model.setupType === 'NoInstalledSetup') && (delta ?? 0) >= 0 && isolated.length === 0) {
     return 'broader_replay_validate_sweep_only';
   }
   if (clean.length || isolated.length) return 'broader_replay_validate_positive_families_separately';
@@ -409,16 +409,16 @@ export function buildUnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidatio
       : rec === 'reject_combined_boost_validate_segments'
         ? [
           'Reject a blanket positive-family boost for now because same-slate top selection worsened.',
-          'Continue with segmented proof filters for SweepMssFvgRetrace and AfterLunchDriveFvgContinuation separately.',
+          'Continue with segmented proof filters for NoInstalledSetup and NoInstalledSetup separately.',
           'Do not change live ranking, canExecute, Discord, Supabase, or entry/stop/target/risk from this diagnostic.',
         ]
         : rec === 'broader_replay_validate_positive_families_separately'
         ? [
-          'Validate SweepMssFvgRetrace and AfterLunchDriveFvgContinuation in separate broader replay packages before any scanner-visible boost.',
+          'Validate NoInstalledSetup and NoInstalledSetup in separate broader replay packages before any scanner-visible boost.',
           'Do not change live ranking, canExecute, Discord, Supabase, or entry/stop/target/risk from this diagnostic.',
         ]
         : rec === 'broader_replay_validate_sweep_only'
-          ? ['Validate SweepMssFvgRetrace in a broader replay package before any scanner-visible boost.']
+          ? ['Validate NoInstalledSetup in a broader replay package before any scanner-visible boost.']
           : ['Reject positive-family boost for now.'],
   };
   return { ...base, markdown: buildMarkdown(base) };

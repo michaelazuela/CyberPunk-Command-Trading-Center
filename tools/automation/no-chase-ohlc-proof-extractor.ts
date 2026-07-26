@@ -6,7 +6,7 @@ import { SetupType, type SetupCandidate } from '../../src/types';
 import { loadUnifiedDeskCandidateDiagnosticSnapshotsFromDir, type UnifiedDeskCandidateDiagnosticSnapshot } from './unified-desk-candidate-book-diagnostic';
 
 type ReplaySession = 'morning' | 'lunch' | 'evening' | 'replay_morning' | 'replay_lunch' | 'replay_evening';
-type ProofSetup = SetupType.IntradayMssMicroContinuation | SetupType.AfterLunchDriveFvgContinuation;
+type ProofSetup = SetupType.NoSetup | SetupType.NoSetup;
 type Timeframe = '5m' | '15m' | '60m' | '120m' | '240m';
 type ReplayOutcome = 'T2_HIT' | 'T1_THEN_STOP' | 'T1_HIT_OPEN_RUNNER' | 'STOP_HIT' | 'NO_FILL' | 'FILLED_OPEN' | 'AMBIGUOUS' | 'NOT_REPLAYED';
 
@@ -120,8 +120,8 @@ const __dirname = path.dirname(__filename);
 const DEFAULT_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const DEFAULT_OUT_DIR = path.join(__dirname, 'diagnostic-reports');
 const TARGET_SETUPS: ProofSetup[] = [
-  SetupType.IntradayMssMicroContinuation,
-  SetupType.AfterLunchDriveFvgContinuation,
+  SetupType.NoSetup,
+  SetupType.NoSetup,
 ];
 const TIMEFRAMES: Timeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 const MES_DOLLARS_PER_POINT = 5;
@@ -530,7 +530,7 @@ function buildCase(args: {
 function buildRecommendations(report: Omit<NoChaseOhlcProofExtractorReport, 'recommendations' | 'markdown'>): string[] {
   const lines = [
     'This extractor is research-only. It must not create canExecute, Discord tickets, or scanner promotions.',
-    'Keep raidReclaim and SweepMssFvgRetrace out of scope for this phase.',
+    'Keep historicalReview and NoInstalledSetup out of scope for this phase.',
   ];
   if (report.summary.ohlcProofFound > 0) {
     lines.push('Review only proof-found cases classified as reviewable_full_plan before considering scanner artifact rebuild logic.');
@@ -636,10 +636,10 @@ export function buildNoChaseOhlcProofExtractorReport(args: {
       noLocalOhlcProof: cases.filter((item) => item.proofStatus === 'no_local_ohlc_proof').length,
       missingReferenceLevel: cases.filter((item) => item.proofStatus === 'missing_reference_level').length,
       missingFutureBars: cases.filter((item) => item.proofStatus === 'missing_future_bars').length,
-      intradayCases: cases.filter((item) => item.setupType === SetupType.IntradayMssMicroContinuation).length,
-      intradayProofFound: cases.filter((item) => item.setupType === SetupType.IntradayMssMicroContinuation && item.proofStatus === 'ohlc_proof_found').length,
-      afterLunchCases: cases.filter((item) => item.setupType === SetupType.AfterLunchDriveFvgContinuation).length,
-      afterLunchProofFound: cases.filter((item) => item.setupType === SetupType.AfterLunchDriveFvgContinuation && item.proofStatus === 'ohlc_proof_found').length,
+      intradayCases: cases.filter((item) => item.setupType === SetupType.NoSetup).length,
+      intradayProofFound: cases.filter((item) => item.setupType === SetupType.NoSetup && item.proofStatus === 'ohlc_proof_found').length,
+      afterLunchCases: cases.filter((item) => item.setupType === SetupType.NoSetup).length,
+      afterLunchProofFound: cases.filter((item) => item.setupType === SetupType.NoSetup && item.proofStatus === 'ohlc_proof_found').length,
       reviewableFullPlan: cases.filter((item) => item.reviewClassification === 'reviewable_full_plan').length,
       proofOnlyMissingPlanFields: cases.filter((item) => item.reviewClassification === 'proof_only_missing_plan_fields').length,
       notReviewableNoOhlcProof: cases.filter((item) => item.reviewClassification === 'not_reviewable_no_ohlc_proof').length,

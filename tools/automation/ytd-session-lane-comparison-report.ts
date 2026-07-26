@@ -78,7 +78,7 @@ interface LaneSummary extends Bucket {
 interface SessionRecommendation {
   session: SessionName;
   primaryLane: string | null;
-  supportingLanes: string[];
+  contextLanes: string[];
   reason: string;
 }
 
@@ -107,7 +107,7 @@ interface LaneComparisonReport {
     status: 'proposal_ready_not_installed';
     morningTicketCap: 1;
     lunchTicketCap: 1;
-    supportingModelsBecomeContextOnly: true;
+    contextLabelsOnly: true;
     canExecuteUntouched: true;
     discordSupabaseBridgeUntouched: true;
   };
@@ -125,8 +125,8 @@ const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
 
 const LANES_BY_SESSION: Record<SessionName, string[]> = {
-  morning: ['OpeningDriveFvgContinuation', 'SweepMssFvgRetrace', 'IntradayMssMicroContinuation'],
-  lunch: ['AfterLunchDriveFvgContinuation', 'IntradayMssMicroContinuation'],
+  morning: ['NoInstalledSetup', 'NoInstalledSetup', 'NoInstalledSetup'],
+  lunch: ['NoInstalledSetup', 'NoInstalledSetup'],
 };
 
 function readFlag(args: string[], flag: string): string | null {
@@ -272,14 +272,14 @@ function buildRecommendation(session: SessionName, summaries: LaneSummary[]): Se
     .filter((summary) => summary.session === session && summary.count > 0)
     .sort((a, b) => laneScore(b) - laneScore(a));
   const primary = sorted[0] || null;
-  const supporting = sorted.slice(1).map((summary) => summary.setupType);
+  const context = sorted.slice(1).map((summary) => summary.setupType);
   const reason = primary
-    ? `${primary.setupType} leads ${session} by combined realized P/L, resolved win quality, story match, and unresolved/no-fill drag. Supporting lanes should be context notes until a separate adapter gate approves them.`
+    ? `${primary.setupType} leads ${session} by combined realized P/L, resolved win quality, story match, and unresolved/no-fill drag. Context lanes should be context notes until a separate adapter gate approves them.`
     : `No ${session} lane had selected rows in the source report.`;
   return {
     session,
     primaryLane: primary?.setupType || null,
-    supportingLanes: supporting,
+    contextLanes: context,
     reason,
   };
 }
@@ -289,7 +289,7 @@ function buildMarkdown(report: Omit<LaneComparisonReport, 'reportMarkdown'>): st
     `| ${summary.session} | ${summary.setupType} | ${summary.count} | $${summary.pnl} | ${summary.wins}/${summary.losses}/${summary.noFill}/${summary.unresolved} | ${summary.winRateResolved ?? '-'} | ${summary.storyMatchRows}/${summary.count} | ${summary.avgProofTime || '-'} | ${summary.avgRiskPoints ?? '-'} |`
   )).join('\n');
   const recommendations = report.sessionRecommendations.map((item) => (
-    `- ${item.session}: primary=${item.primaryLane || 'none'}; supporting=${item.supportingLanes.join(', ') || 'none'}. ${item.reason}`
+    `- ${item.session}: primary=${item.primaryLane || 'none'}; context=${item.contextLanes.join(', ') || 'none'}. ${item.reason}`
   )).join('\n');
   return [
     '# YTD Session Lane Comparison Report',
@@ -312,7 +312,7 @@ function buildMarkdown(report: Omit<LaneComparisonReport, 'reportMarkdown'>): st
     '- Status: proposal_ready_not_installed',
     '- Morning cap: one scanner-owned human-review ticket.',
     '- Lunch cap: one scanner-owned human-review ticket.',
-    '- Supporting models: notes/context only.',
+    '- Context labels: notes/context only.',
     '- canExecute: untouched.',
     '- Discord/Supabase/bridge: untouched.',
     '',
@@ -361,7 +361,7 @@ export function buildYtdSessionLaneComparisonReport(args: {
       status: 'proposal_ready_not_installed',
       morningTicketCap: 1,
       lunchTicketCap: 1,
-      supportingModelsBecomeContextOnly: true,
+      contextLabelsOnly: true,
       canExecuteUntouched: true,
       discordSupabaseBridgeUntouched: true,
     },

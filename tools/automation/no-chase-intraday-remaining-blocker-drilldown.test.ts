@@ -45,7 +45,7 @@ const replayReport: NoChaseIntradayFullWindowStopReplayReport = {
     recommendation: 'hold_and_inspect',
   },
   rows: [{
-    caseId: '2026-06-25|lunch|IntradayMssMicroContinuation|SHORT',
+    caseId: '2026-06-25|lunch|NoInstalledSetup|SHORT',
     tradeDate: '2026-06-25',
     sessionType: 'lunch',
     direction: 'SHORT',

@@ -145,8 +145,8 @@ async function runBravo(): Promise<void> {
     const auditDir = path.join(outputDir, 'audit');
     const candles = buildCandles();
     const candidate: SetupCandidate = {
-      setupType: SetupType.SweepMssFvgRetrace,
-      scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
+      setupType: SetupType.NoSetup,
+      scenarioLabel: 'ICT no installed model path Short: Sweep Reclaim Imbalance Retrace',
       direction: 'SHORT',
       detectedStatus: SetupCandidateStatus.Conditional,
       executionStatus: ExecutionStatus.Conditional,

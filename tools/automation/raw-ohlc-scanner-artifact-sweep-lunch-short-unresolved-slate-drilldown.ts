@@ -136,7 +136,7 @@ export interface RawOhlcScannerArtifactSweepLunchShortUnresolvedSlateDrilldownRe
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SETUP = 'SweepMssFvgRetrace';
+const SETUP = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -365,7 +365,7 @@ export function buildRawOhlcScannerArtifactSweepLunchShortUnresolvedSlateDrilldo
     !scannerFieldMinerPath && !args.scannerFieldMiner ? 'missing scanner-field miner path' : null,
     !scannerFieldMiner ? 'missing scanner-field miner report' : null,
     scannerFieldMiner && scannerFieldMiner.status !== 'pass' ? `scanner-field miner status ${scannerFieldMiner.status}` : null,
-    rows.length === 0 ? 'no unresolved SweepMssFvgRetrace lunch SHORT rows found' : null,
+    rows.length === 0 ? 'no unresolved NoInstalledSetup lunch SHORT rows found' : null,
     ...rows.filter((row) => row.cause === 'missing_input').map((row) => `${row.ticketId}: missing saved replay input`),
   ].filter((item): item is string => Boolean(item));
   const keepAsReviewNoteRows = rows.filter((row) => row.researchAction === 'keep_as_unresolved_review_note').length;

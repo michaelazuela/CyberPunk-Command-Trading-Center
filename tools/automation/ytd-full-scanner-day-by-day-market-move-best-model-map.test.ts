@@ -77,7 +77,7 @@ const report = buildYtdFullScannerDayByDayMarketMoveBestModelMap({
           setupCandidateStatus: {
             statuses: [
               {
-                setupType: 'OpeningDriveFvgContinuation',
+                setupType: 'NoInstalledSetup',
                 direction: 'LONG',
                 entry: 101,
                 stop: 99,
@@ -90,7 +90,7 @@ const report = buildYtdFullScannerDayByDayMarketMoveBestModelMap({
                 executionStatus: 'Conditional',
               },
               {
-                setupType: 'IntradayMssMicroContinuation',
+                setupType: 'NoInstalledSetup',
                 direction: 'SHORT',
                 entry: 104,
                 stop: 106,
@@ -161,9 +161,9 @@ assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.changesCanExecute, false);
 assert.equal(july21Morning?.movement, 'high_raid_reversal_down');
-assert.equal(july21Morning?.bestOverall?.setupType, 'OpeningDriveFvgContinuation');
-assert.equal(july21Morning?.bestMovementMatch?.setupType, 'IntradayMssMicroContinuation');
-assert.equal(july21Morning?.selected?.setupType, 'IntradayMssMicroContinuation');
+assert.equal(july21Morning?.bestOverall?.setupType, 'NoInstalledSetup');
+assert.equal(july21Morning?.bestMovementMatch?.setupType, 'NoInstalledSetup');
+assert.equal(july21Morning?.selected?.setupType, 'NoInstalledSetup');
 assert.equal(july21Morning?.selected?.outcome.status, 't2_hit');
 assert.equal(july21Morning?.selected?.outcome.pnl, 17.5);
 assert.equal(july21Morning?.completeCandidateCount, 2);

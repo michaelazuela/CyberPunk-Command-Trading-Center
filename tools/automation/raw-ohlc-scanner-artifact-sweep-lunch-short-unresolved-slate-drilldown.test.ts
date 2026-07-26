@@ -6,7 +6,7 @@ function row(overrides: Record<string, unknown>) {
     ticketId: `ticket-${overrides.proofTime}`,
     tradeDate: '2026-06-25',
     session: 'lunch',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'SHORT',
     proofTime: '2026-06-25T12:35:00',
     entry: 7438.5,
@@ -51,7 +51,7 @@ const report = buildRawOhlcScannerArtifactSweepLunchShortUnresolvedSlateDrilldow
       }),
       row({
         proofTime: '2026-06-25T13:35:00',
-        setupType: 'OpeningDriveFvgContinuation',
+        setupType: 'NoInstalledSetup',
       }),
     ],
   },

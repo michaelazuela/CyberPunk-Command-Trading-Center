@@ -19,9 +19,9 @@ type MatrixCase = {
 
 const phase2Matrix: MatrixCase[] = [
   {
-    label: 'Raid Reclaim Reversal / failed breakout reversal',
-    setupType: SetupType.RaidReclaimReversal,
-    scenarioLabel: 'Bearish Raid Reclaim Reversal Reversal',
+    label: 'no installed model path / no installed model path',
+    setupType: SetupType.NoSetup,
+    scenarioLabel: 'Bearish no installed model path',
     direction: 'SHORT',
     executionStatus: ExecutionStatus.Executable,
     score: 98,
@@ -33,8 +33,8 @@ const phase2Matrix: MatrixCase[] = [
   },
   {
     label: 'Sweep + MSS + FVG retrace',
-    setupType: SetupType.SweepMssFvgRetrace,
-    scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
+    setupType: SetupType.NoSetup,
+    scenarioLabel: 'ICT no installed model path Short: Sweep Reclaim Imbalance Retrace',
     direction: 'SHORT',
     executionStatus: ExecutionStatus.Conditional,
     score: 93,
@@ -46,7 +46,7 @@ const phase2Matrix: MatrixCase[] = [
   },
   {
     label: 'HTF FVG cascade routed setup',
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'HTF Context FVG Continuation',
     direction: 'LONG',
     executionStatus: ExecutionStatus.Conditional,
@@ -59,7 +59,7 @@ const phase2Matrix: MatrixCase[] = [
   },
   {
     label: 'Active tactical zone migration setup',
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Intraday MSS Micro Continuation',
     direction: 'LONG',
     executionStatus: ExecutionStatus.Conditional,
@@ -72,8 +72,8 @@ const phase2Matrix: MatrixCase[] = [
   },
   {
     label: 'Opposite-side high-confidence conditional',
-    setupType: SetupType.RaidReclaimReversal,
-    scenarioLabel: 'Raid Reclaim Reversal',
+    setupType: SetupType.NoSetup,
+    scenarioLabel: 'no installed model path',
     direction: 'SHORT',
     executionStatus: ExecutionStatus.Conditional,
     score: 90,
@@ -85,7 +85,7 @@ const phase2Matrix: MatrixCase[] = [
   },
   {
     label: 'Tactical watch promoted only when full planning levels exist',
-    setupType: SetupType.RaidReclaimReversal,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Morning Failed High / Liquidity Rejection',
     direction: 'SHORT',
     executionStatus: ExecutionStatus.Conditional,

@@ -14,7 +14,7 @@ const artifact = {
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: SetupType.SweepMssFvgRetrace,
+            setupType: SetupType.NoSetup,
             direction: 'LONG',
             entry: 100,
             stop: 95,
@@ -34,7 +34,7 @@ const artifact = {
             missingEvidence: ['b', 'c'],
           },
           {
-            setupType: SetupType.OpeningDriveFvgContinuation,
+            setupType: SetupType.NoSetup,
             direction: 'LONG',
             entry: 100,
             stop: 95,

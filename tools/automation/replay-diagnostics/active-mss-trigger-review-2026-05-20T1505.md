@@ -4,7 +4,7 @@ Trigger: 2026-05-20T15:05:00 ET
 Boundary: replay_review_only_not_execution_authority
 
 ## Candidate
-- Setup: SweepMssFvgRetrace
+- Setup: ArchivedSetupPath
 - Direction: LONG
 - Entry/Stop/T1/T2: 7440.75 / 7437.25 / 7446 / 7450
 - Scanner execution status: Executable

@@ -17,7 +17,7 @@ const simulationReport = {
     {
       tradeDate: '2026-06-17',
       sessionType: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       status: 'human_review_rebuilt',
       plan: { entry: 7580.25, stop: 7591.5, target1: 7563.5, target2: 7557.75 },
@@ -39,7 +39,7 @@ const htfSufficiencyReport = {
     {
       tradeDate: '2026-06-17',
       sessionType: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofBarTime: '2026-06-17T14:05:00',
       reliability: 'structured_context_available',

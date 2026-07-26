@@ -9,7 +9,7 @@ import type { UnifiedDeskCandidateDiagnosticSnapshot } from './unified-desk-cand
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'fixture',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Conditional,
@@ -51,7 +51,7 @@ const proofReport: NoChaseOhlcProofExtractorReport = {
     changesBridgeBehavior: false,
   },
   scope: {
-    setupTypes: [SetupType.IntradayMssMicroContinuation, SetupType.AfterLunchDriveFvgContinuation],
+    setupTypes: [SetupType.NoSetup, SetupType.NoSetup],
     startDate: '2026-06-10',
     endDate: '2026-06-13',
     auditDir: 'fixture-audit',
@@ -84,10 +84,10 @@ const proofReport: NoChaseOhlcProofExtractorReport = {
   },
   cases: [
     {
-      caseId: '2026-06-10|morning|IntradayMssMicroContinuation|LONG',
+      caseId: '2026-06-10|morning|NoInstalledSetup|LONG',
       tradeDate: '2026-06-10',
       sessionType: 'morning',
-      setupType: SetupType.IntradayMssMicroContinuation,
+      setupType: SetupType.NoSetup,
       direction: 'LONG',
       firstNoChaseSnapshotId: 'missing-source-fields',
       firstNoChaseTime: '2026-06-10T10:00:00',
@@ -114,10 +114,10 @@ const proofReport: NoChaseOhlcProofExtractorReport = {
       recommendation: 'fixture',
     },
     {
-      caseId: '2026-06-11|morning|IntradayMssMicroContinuation|LONG',
+      caseId: '2026-06-11|morning|NoInstalledSetup|LONG',
       tradeDate: '2026-06-11',
       sessionType: 'morning',
-      setupType: SetupType.IntradayMssMicroContinuation,
+      setupType: SetupType.NoSetup,
       direction: 'LONG',
       firstNoChaseSnapshotId: 'invalid-source-fields',
       firstNoChaseTime: '2026-06-11T10:00:00',
@@ -144,10 +144,10 @@ const proofReport: NoChaseOhlcProofExtractorReport = {
       recommendation: 'fixture',
     },
     {
-      caseId: '2026-06-13|morning|IntradayMssMicroContinuation|LONG',
+      caseId: '2026-06-13|morning|NoInstalledSetup|LONG',
       tradeDate: '2026-06-13',
       sessionType: 'morning',
-      setupType: SetupType.IntradayMssMicroContinuation,
+      setupType: SetupType.NoSetup,
       direction: 'LONG',
       firstNoChaseSnapshotId: 'missing-snapshot',
       firstNoChaseTime: '2026-06-13T10:00:00',

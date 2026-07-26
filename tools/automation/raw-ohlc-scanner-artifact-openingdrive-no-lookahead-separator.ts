@@ -79,7 +79,7 @@ export interface RawOhlcScannerArtifactOpeningDriveNoLookaheadSeparatorReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const DEFAULT_SETUP_TYPE = 'OpeningDriveFvgContinuation';
+const DEFAULT_SETUP_TYPE = 'NoInstalledSetup';
 const DEFAULT_MIN_ROWS = 8;
 
 const ALLOWED_FEATURE_FIELDS = [

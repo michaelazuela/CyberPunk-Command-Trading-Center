@@ -28,7 +28,7 @@ await fs.writeFile(path.join(auditDir, 'scanner-decision-tape-2026-06-25-MES-mor
       scannerState: 'Approved',
       setupCandidateStatus: {
         selected: {
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           executionStatus: 'Executable',
           entry: 7454.75,
@@ -99,7 +99,7 @@ await fs.writeFile(path.join(auditDir, 'scanner-decision-tape-2026-06-25-MES-mor
       scannerState: 'Approved',
       setupCandidateStatus: {
         selected: {
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           executionStatus: 'Executable',
           entry: 7454.75,
@@ -205,7 +205,7 @@ await fs.writeFile(path.join(auditDir, 'scanner-decision-tape-2026-06-20-MES-mor
       scannerState: 'Approved',
       setupCandidateStatus: {
         selected: {
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           executionStatus: 'Executable',
           entry: 7454.75,

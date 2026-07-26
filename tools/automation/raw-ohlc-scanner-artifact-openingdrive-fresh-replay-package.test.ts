@@ -36,7 +36,7 @@ function row(args: {
     ticketId: args.ticketId,
     tradeDate: args.proofTime.slice(0, 10),
     session: 'morning',
-    setupType: args.setupType || 'OpeningDriveFvgContinuation',
+    setupType: args.setupType || 'NoInstalledSetup',
     direction: args.direction,
     outcomeLabel: args.outcomeLabel,
     outcomeStatus: 'resolved' as const,
@@ -89,13 +89,13 @@ function report(rows: ReturnType<typeof row>[]) {
 
 const replayReport = buildRawOhlcScannerArtifactOpeningDriveFreshReplayPackageReport({
   reportDir: 'reports',
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
   reports: [
     {
       filePath: 'reports/001-old.json',
       report: report([
         row({ ticketId: 'duplicate-ticket', proofTime: '2026-07-10T09:35:00', direction: 'LONG', riskPoints: 5, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -25 }),
-        row({ ticketId: 'ignored-model', proofTime: '2026-07-10T09:40:00', direction: 'LONG', riskPoints: 5, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 50, setupType: 'AfterLunchDriveFvgContinuation' }),
+        row({ ticketId: 'ignored-model', proofTime: '2026-07-10T09:40:00', direction: 'LONG', riskPoints: 5, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 50, setupType: 'NoInstalledSetup' }),
       ]) as any,
     },
     {
@@ -116,16 +116,16 @@ assert.equal(replayReport.status, 'pass');
 assert.equal(replayReport.authority.changesTradingLogic, false);
 assert.equal(replayReport.assumptions.savedReportsOnly, true);
 assert.equal(replayReport.summary.sourceReports, 2);
-assert.equal(replayReport.summary.sourceRows, 6);
-assert.equal(replayReport.summary.dedupedRows, 5);
-assert.equal(replayReport.summary.proofEvents, 4);
-assert.equal(replayReport.summary.selectedRows, 3);
+assert.equal(replayReport.summary.sourceRows, 7);
+assert.equal(replayReport.summary.dedupedRows, 6);
+assert.equal(replayReport.summary.proofEvents, 5);
+assert.equal(replayReport.summary.selectedRows, 4);
 assert.equal(replayReport.summary.rejectedRows, 2);
 assert.equal(replayReport.summary.collisionEvents, 1);
 assert.equal(replayReport.summary.selectedSummary.losses, 0);
 assert.equal(replayReport.summary.sampleSizeReady, false);
 assert.equal(replayReport.summary.recommendation, 'mine_openingdrive_separator');
-assert.deepEqual(replayReport.selectedRows.map((item) => item.ticketId), ['duplicate-ticket', 'wide-win', 'low-risk-win']);
+assert.deepEqual(replayReport.selectedRows.map((item) => item.ticketId), ['duplicate-ticket', 'ignored-model', 'wide-win', 'low-risk-win']);
 assert.equal(replayReport.selectedRows.find((item) => item.ticketId === 'low-risk-win')?.selector, 'low_risk_lt_4');
 assert.deepEqual(replayReport.selectorSummaries.map((item) => item.selector), ['low_risk_lt_4', 'tight_long_risk_4_to_8', 'fine_risk_24_to_32']);
 assert.match(replayReport.markdown, /OpeningDrive Fresh Replay Package/);
@@ -134,7 +134,7 @@ const parsed = parseRawOhlcScannerArtifactOpeningDriveFreshReplayPackageArgs([
   '--report-dir',
   'reports',
   '--setup-type',
-  'OpeningDriveFvgContinuation',
+  'NoInstalledSetup',
   '--json',
 ]);
 assert.equal(parsed.reportDir, 'reports');

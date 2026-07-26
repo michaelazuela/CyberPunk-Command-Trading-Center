@@ -45,7 +45,7 @@ const validation: NoChaseMssTimestampAlignmentValidationReport = {
     recommendedNextFix: 'validate_source_builder_ohlc_alignment_fallback',
   },
   rows: [{
-    caseId: '2026-06-25|lunch|IntradayMssMicroContinuation|SHORT',
+    caseId: '2026-06-25|lunch|NoInstalledSetup|SHORT',
     tradeDate: '2026-06-25',
     sessionType: 'lunch',
     direction: 'SHORT',

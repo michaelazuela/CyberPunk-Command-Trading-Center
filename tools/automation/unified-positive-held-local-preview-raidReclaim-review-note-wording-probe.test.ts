@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {
-  buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport,
+  buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport,
 } from './unified-positive-held-local-preview-raidReclaim-review-note-wording-probe';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport,
 } from './unified-positive-held-local-preview-raidReclaim-blocked-reason-drilldown';
 
 const authority = {
@@ -25,15 +25,15 @@ const authority = {
   changesAppRuntime: false,
 } as const;
 
-const drilldownReport: UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport = {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_blocked_reason_drilldown',
+const drilldownReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport = {
+  reportType: 'unified_positive_held_local_preview_historicalReview_blocked_reason_drilldown',
   generatedAt: '2026-07-17T00:00:00.000Z',
   status: 'pass',
   authority,
   source: {
     reportDir: 'diagnostic-reports',
-    raidReclaimReplayPackagePath: 'package.json',
-    raidReclaimRankSimulationPath: 'rank-simulation.json',
+    historicalReviewReplayPackagePath: 'package.json',
+    historicalReviewRankSimulationPath: 'rank-simulation.json',
   },
   assumptions: {
     drilldownIsResearchOnly: true,
@@ -82,19 +82,19 @@ const drilldownReport: UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDr
       reviewNoteCandidate: false,
     },
   ],
-  sampleReviewNote: 'raidReclaim remains valid, but this candidate is review-only.',
+  sampleReviewNote: 'historicalReview remains valid, but this candidate is review-only.',
   blockers: [],
   recommendations: [],
   markdown: '',
 };
 
-const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport({
+const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport({
   reportDir: 'diagnostic-reports',
   blockedReasonDrilldownPath: 'drilldown.json',
   blockedReasonDrilldownReport: drilldownReport,
 }, '2026-07-17T00:01:00.000Z');
 
-assert.equal(report.reportType, 'unified_positive_held_local_preview_raidReclaim_review_note_wording_probe');
+assert.equal(report.reportType, 'unified_positive_held_local_preview_historicalReview_review_note_wording_probe');
 assert.equal(report.status, 'pass');
 assert.equal(report.authority.readOnly, true);
 assert.equal(report.authority.changesTradingLogic, false);
@@ -116,13 +116,13 @@ assert.equal(report.rows[0].changesCanExecute, false);
 assert.match(report.rows[0].proposedNote, /Require fresh completed 5M entry/);
 assert.match(report.markdown, /Review Note Wording Probe/);
 
-const missing = buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport({
+const missing = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport({
   reportDir: 'diagnostic-reports',
   blockedReasonDrilldownPath: null,
   blockedReasonDrilldownReport: null,
 }, '2026-07-17T00:02:00.000Z');
 
 assert.equal(missing.status, 'fail');
-assert.ok(missing.blockers.includes('missing raidReclaim blocked reason drilldown path'));
+assert.ok(missing.blockers.includes('missing historicalReview blocked reason drilldown path'));
 
-console.log('unified positive held-local raidReclaim review note wording probe verified.');
+console.log('unified positive held-local historicalReview review note wording probe verified.');

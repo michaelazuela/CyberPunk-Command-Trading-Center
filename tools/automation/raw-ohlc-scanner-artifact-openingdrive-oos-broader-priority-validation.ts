@@ -89,7 +89,7 @@ export interface RawOhlcScannerArtifactOpeningDriveOosBroaderPriorityValidationR
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const PRIORITY_SET = new Set(['SweepMssFvgRetrace', 'IntradayMssMicroContinuation']);
+const PRIORITY_SET = new Set(['NoInstalledSetup', 'NoInstalledSetup']);
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -181,7 +181,7 @@ function buildRows(reports: RawOhlcScannerArtifactSameBarSeparatorDrilldownRepor
     grouped.set(sameEventKey(row), [...(grouped.get(sameEventKey(row)) || []), row]);
   }
   return [...grouped.values()].flatMap((rows) => {
-    const bestOpeningDrive = bestByPl(rows.filter((row) => row.setupType === 'OpeningDriveFvgContinuation'));
+    const bestOpeningDrive = bestByPl(rows.filter((row) => row.setupType === 'NoInstalledSetup'));
     const bestPriority = bestByPl(rows.filter((row) => PRIORITY_SET.has(row.setupType)));
     if (!bestOpeningDrive || !bestPriority) return [];
     const delta = typeof bestPriority.resolvedOneMesPl === 'number' && typeof bestOpeningDrive.resolvedOneMesPl === 'number'

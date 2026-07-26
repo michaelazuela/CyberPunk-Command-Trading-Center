@@ -52,10 +52,10 @@ const installedScore: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreC
   },
   rows: [
     {
-      ticketId: '2026-07-09-evening-SweepMssFvgRetrace-SHORT-invalid',
+      ticketId: '2026-07-09-evening-NoInstalledSetup-SHORT-invalid',
       tradeDate: '2026-07-09',
       session: 'evening',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       executionStatus: 'Blocked',
       blockReason: 'InvalidStopLocation',
@@ -72,10 +72,10 @@ const installedScore: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreC
       riskPreserved: true,
     },
     {
-      ticketId: '2026-07-09-evening-OpeningDriveFvgContinuation-LONG-valid',
+      ticketId: '2026-07-09-evening-NoInstalledSetup-LONG-valid',
       tradeDate: '2026-07-09',
       session: 'evening',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -92,10 +92,10 @@ const installedScore: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreC
       riskPreserved: true,
     },
     {
-      ticketId: '2026-07-10-morning-SweepMssFvgRetrace-SHORT-valid',
+      ticketId: '2026-07-10-morning-NoInstalledSetup-SHORT-valid',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -112,10 +112,10 @@ const installedScore: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreC
       riskPreserved: true,
     },
     {
-      ticketId: '2026-07-10-morning-raidReclaim-LONG-valid',
+      ticketId: '2026-07-10-morning-historicalReview-LONG-valid',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -169,7 +169,7 @@ assert.equal(report.rows.every((row) => row.livePromotionAllowed === false), tru
 const changedSlate = report.slates.find((slate) => slate.slateId === '2026-07-09|evening');
 assert.equal(changedSlate?.baselineTopInvalidStopSweep, true);
 assert.equal(changedSlate?.installedTopValidReviewCandidate, true);
-assert.equal(changedSlate?.installedTopSetupType, 'OpeningDriveFvgContinuation');
+assert.equal(changedSlate?.installedTopSetupType, 'NoInstalledSetup');
 
 const blocked = buildUnifiedPositiveHeldLocalPreviewSweepPenaltyFullSlateSelectionComparisonReport({
   reportDir: 'reports',

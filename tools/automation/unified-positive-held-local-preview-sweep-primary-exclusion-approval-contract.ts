@@ -52,7 +52,7 @@ export interface UnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionApprovalCon
     livePromotionAllowed: false;
   };
   proposedScannerVisibleBehavior: {
-    model: 'SweepMssFvgRetrace';
+    model: 'NoInstalledSetup';
     appliesOnlyWhen: {
       executionStatus: 'Blocked';
       blockReason: 'InvalidStopLocation';
@@ -216,7 +216,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionApprova
       livePromotionAllowed: false,
     },
     proposedScannerVisibleBehavior: {
-      model: 'SweepMssFvgRetrace',
+      model: 'NoInstalledSetup',
       appliesOnlyWhen: {
         executionStatus: 'Blocked',
         blockReason: 'InvalidStopLocation',
@@ -224,8 +224,8 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionApprova
       proposedEffect: 'exclude_from_primary_desk_idea_selection_only',
       preservedEffects: [
         'Blocked candidate remains available for audit and diagnostics.',
-        'Valid SweepMssFvgRetrace candidates remain rankable.',
-        'raidReclaim, AfterLunch, OpeningDrive, Intraday, and HTF families are not removed.',
+        'Valid NoInstalledSetup candidates remain rankable.',
+        'historicalReview, AfterLunch, OpeningDrive, Intraday, and HTF families are not removed.',
         'canExecute, entry, stop, target, risk, Discord, Supabase, and bridge behavior remain unchanged.',
       ],
       implementationAllowedNow: false,

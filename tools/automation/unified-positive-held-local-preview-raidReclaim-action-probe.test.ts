@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import {
-  buildUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport,
+  buildUnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport,
 } from './unified-positive-held-local-preview-raidReclaim-action-probe';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport,
 } from './unified-positive-held-local-preview-raidReclaim-replay-package';
 
-type PackageRow = UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport['rows'][number];
+type PackageRow = UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport['rows'][number];
 
 function row(id: string, group: PackageRow['group'], outcomeBucket: PackageRow['outcomeBucket'], pl: number): PackageRow {
   return {
@@ -40,8 +40,8 @@ const rows: PackageRow[] = [
   row('2026-06-23-lunch-a', 'blocked_protected_stop', 'unresolved', 0),
 ];
 
-const packageReport: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport = {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_replay_package',
+const packageReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport = {
+  reportType: 'unified_positive_held_local_preview_historicalReview_replay_package',
   generatedAt: '2026-07-17T00:00:00.000Z',
   status: 'pass',
   authority: {
@@ -77,10 +77,10 @@ const packageReport: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepo
   },
   summary: {
     sourceRows: rows.length,
-    raidReclaimRows: rows.length,
+    historicalReviewRows: rows.length,
     conditionalProtectedStopCleanRows: 3,
     blockedProtectedStopRows: 4,
-    otherraidReclaimStateRows: 0,
+    otherhistoricalReviewStateRows: 0,
     groupSummaries: 3,
     daySessionSummaries: 7,
     replayQuestion: 'candidate_for_broader_replay',
@@ -94,13 +94,13 @@ const packageReport: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepo
   markdown: '',
 };
 
-const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport({
+const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport({
   reportDir: 'diagnostic-reports',
-  raidReclaimReplayPackagePath: 'package.json',
-  raidReclaimReplayPackageReport: packageReport,
+  historicalReviewReplayPackagePath: 'package.json',
+  historicalReviewReplayPackageReport: packageReport,
 }, '2026-07-17T00:01:00.000Z');
 
-assert.equal(report.reportType, 'unified_positive_held_local_preview_raidReclaim_action_probe');
+assert.equal(report.reportType, 'unified_positive_held_local_preview_historicalReview_action_probe');
 assert.equal(report.status, 'pass');
 assert.equal(report.authority.readOnly, true);
 assert.equal(report.authority.changesTradingLogic, false);
@@ -113,15 +113,15 @@ assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.rows[0].decision, 'rank_penalty_candidate');
 assert.equal(report.rows[0].affectedOneMesPl, -210);
 assert.equal(report.rows[0].preservedOneMesPl, 160);
-assert.match(report.markdown, /raidReclaim Action Probe/);
+assert.match(report.markdown, /historicalReview Action Probe/);
 
-const missing = buildUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport({
+const missing = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport({
   reportDir: 'diagnostic-reports',
-  raidReclaimReplayPackagePath: null,
-  raidReclaimReplayPackageReport: null,
+  historicalReviewReplayPackagePath: null,
+  historicalReviewReplayPackageReport: null,
 }, '2026-07-17T00:02:00.000Z');
 
 assert.equal(missing.status, 'fail');
-assert.ok(missing.blockers.includes('missing raidReclaim replay package path'));
+assert.ok(missing.blockers.includes('missing historicalReview replay package path'));
 
-console.log('unified positive held-local raidReclaim action probe verified.');
+console.log('unified positive held-local historicalReview action probe verified.');

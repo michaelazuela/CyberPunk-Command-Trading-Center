@@ -209,14 +209,14 @@ const SELECTORS: Array<[string, (row: CaseRow) => 'keep' | 'replacement']> = [
   ['replace_short_morning_intraday_or_late_else_keep', (row) => {
     const age = ageBucket(row.minutesSinceCampaignFirst);
     const lateProof = age === 'age_31_to_60m' || age === 'age_61m_plus' || ordinalBucket(row.duplicateOrdinal) === 'ordinal_11_plus';
-    return row.baselineDirection === 'SHORT' || row.session === 'morning' || row.replacementSetupType === 'IntradayMssMicroContinuation' || lateProof
+    return row.baselineDirection === 'SHORT' || row.session === 'morning' || row.replacementSetupType === 'NoInstalledSetup' || lateProof
       ? 'replacement'
       : 'keep';
   }],
   ['keep_early_mid_not_intraday_replacement', (row) => {
     const age = ageBucket(row.minutesSinceCampaignFirst);
     const earlyMid = age === 'age_0_to_5m' || age === 'age_16_to_30m' || ordinalBucket(row.duplicateOrdinal) !== 'ordinal_11_plus';
-    return earlyMid && row.replacementSetupType !== 'IntradayMssMicroContinuation' ? 'keep' : 'replacement';
+    return earlyMid && row.replacementSetupType !== 'NoInstalledSetup' ? 'keep' : 'replacement';
   }],
 ];
 

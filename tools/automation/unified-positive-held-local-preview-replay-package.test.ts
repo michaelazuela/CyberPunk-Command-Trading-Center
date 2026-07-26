@@ -42,11 +42,11 @@ const triageReport = {
   status: 'pass',
   selectedReplayPackage: [
     {
-      intakeId: '2026-06-16-morning-OpeningDriveFvgContinuation-LONG',
+      intakeId: '2026-06-16-morning-NoInstalledSetup-LONG',
       tradeDate: '2026-06-16',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       firstSeenTime: '2026-06-16T10:00:00.0000000',
       lastSeenTime: '2026-06-16T10:05:00.0000000',
@@ -62,11 +62,11 @@ const triageReport = {
       triageReason: 'Selected by test.',
     },
     {
-      intakeId: '2026-06-17-lunch-AfterLunchDriveFvgContinuation-SHORT',
+      intakeId: '2026-06-17-lunch-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-17',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       firstSeenTime: '2026-06-17T13:00:00.0000000',
       lastSeenTime: '2026-06-17T13:05:00.0000000',
@@ -105,7 +105,7 @@ assert.equal(blockedReport.summary.blockedRows, 1);
 assert.equal(blockedReport.summary.directionallyInvalidGeometryRows, 1);
 assert.equal(blockedReport.summary.livePromotionAllowedRows, 0);
 
-const readyRow = blockedReport.rows.find((row) => row.ticketId === '2026-06-16-morning-OpeningDriveFvgContinuation-LONG');
+const readyRow = blockedReport.rows.find((row) => row.ticketId === '2026-06-16-morning-NoInstalledSetup-LONG');
 assert.equal(readyRow?.outcomeInputStatus, 'ready_for_read_only_outcome_replay');
 assert.equal(readyRow?.t1R, 1.5);
 assert.equal(readyRow?.t2R, 2);
@@ -113,7 +113,7 @@ assert.equal(readyRow?.barsLoaded, 2);
 assert.equal(readyRow?.barsAfterProof, 2);
 assert.equal(readyRow?.barsSource, 'scanner_decision_tape_completed_5m');
 
-const blockedRow = blockedReport.rows.find((row) => row.ticketId === '2026-06-17-lunch-AfterLunchDriveFvgContinuation-SHORT');
+const blockedRow = blockedReport.rows.find((row) => row.ticketId === '2026-06-17-lunch-NoInstalledSetup-SHORT');
 assert.equal(blockedRow?.outcomeInputStatus, 'blocked');
 assert.ok(blockedRow?.blockers.includes('directionally invalid entry-to-stop geometry'));
 assert.ok(blockedRow?.blockers.includes('missing scanner decision tape'));
@@ -148,7 +148,7 @@ assert.equal(passReport.status, 'fail');
 assert.equal(passReport.summary.readyRows, 1);
 assert.equal(passReport.summary.blockedRows, 1);
 assert.equal(passReport.summary.directionallyInvalidGeometryRows, 1);
-assert.equal(passReport.summary.modelGroups, 2);
+assert.equal(passReport.summary.modelGroups, 1);
 assert.equal(passReport.summary.sessionGroups, 2);
 
 const missing = buildUnifiedPositiveHeldLocalPreviewReplayPackageReport({

@@ -73,7 +73,7 @@ assert.ok(report.candidates.every((candidate) => candidate.researchOnly));
 assert.ok(report.candidates.every((candidate) => candidate.boundary === 'research_only_not_execution_authority'));
 assert.ok(report.candidates.every((candidate) =>
   candidate.overlapClassification === 'model_1_overlap_possible' ||
-  candidate.overlapClassification === 'RAID_RECLAIM_overlap_possible' ||
+  candidate.overlapClassification === 'HISTORICAL_REVERSAL_overlap_possible' ||
   candidate.overlapClassification === 'advisory_only_time_window_research'
 ));
 assert.ok(markdown.includes('This report does not approve trades and does not create execution authority.'));

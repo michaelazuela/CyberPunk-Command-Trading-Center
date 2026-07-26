@@ -29,7 +29,7 @@ function row(ticketId: string, status: 'ready_for_read_only_outcome_replay' | 'b
     tradeDate: '2026-07-19',
     session: 'morning',
     instrument: 'MES',
-    setupType: ticketId.includes('OpeningDrive') ? 'OpeningDriveFvgContinuation' : 'SweepMssFvgRetrace',
+    setupType: ticketId.includes('OpeningDrive') ? 'NoInstalledSetup' : 'NoInstalledSetup',
     direction: 'LONG',
     proofTime: '2026-07-19T10:00:00',
     firstSeenTime: '2026-07-19T10:00:00',

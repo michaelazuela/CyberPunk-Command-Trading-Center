@@ -10,10 +10,10 @@ import {
 } from './no-chase-artifact-rebuild-pack';
 
 const baseCase = {
-  caseId: '2026-06-10|morning|IntradayMssMicroContinuation|LONG',
+  caseId: '2026-06-10|morning|NoInstalledSetup|LONG',
   tradeDate: '2026-06-10',
   sessionType: 'morning',
-  setupType: SetupType.IntradayMssMicroContinuation,
+  setupType: SetupType.NoSetup,
   direction: 'LONG',
   firstNoChaseSnapshotId: 'snapshot-1',
   firstNoChaseTime: '2026-06-10T10:00:00',
@@ -59,7 +59,7 @@ const proofReport: NoChaseOhlcProofExtractorReport = {
     changesBridgeBehavior: false,
   },
   scope: {
-    setupTypes: [SetupType.IntradayMssMicroContinuation, SetupType.AfterLunchDriveFvgContinuation],
+    setupTypes: [SetupType.NoSetup, SetupType.NoSetup],
     startDate: '2026-06-10',
     endDate: '2026-06-13',
     auditDir: 'fixture-audit',
@@ -94,7 +94,7 @@ const proofReport: NoChaseOhlcProofExtractorReport = {
     baseCase,
     {
       ...baseCase,
-      caseId: '2026-06-11|morning|IntradayMssMicroContinuation|SHORT',
+      caseId: '2026-06-11|morning|NoInstalledSetup|SHORT',
       tradeDate: '2026-06-11',
       direction: 'SHORT',
       replayOutcome: 'STOP_HIT',
@@ -103,10 +103,10 @@ const proofReport: NoChaseOhlcProofExtractorReport = {
     },
     {
       ...baseCase,
-      caseId: '2026-06-12|lunch|AfterLunchDriveFvgContinuation|SHORT',
+      caseId: '2026-06-12|lunch|NoInstalledSetup|SHORT',
       tradeDate: '2026-06-12',
       sessionType: 'lunch',
-      setupType: SetupType.AfterLunchDriveFvgContinuation,
+      setupType: SetupType.NoSetup,
       direction: 'SHORT',
       replayOutcome: 'NO_FILL',
       replayFillTime: null,
@@ -116,7 +116,7 @@ const proofReport: NoChaseOhlcProofExtractorReport = {
     },
     {
       ...baseCase,
-      caseId: '2026-06-13|morning|IntradayMssMicroContinuation|LONG',
+      caseId: '2026-06-13|morning|NoInstalledSetup|LONG',
       tradeDate: '2026-06-13',
       stop: null,
       reviewClassification: 'proof_only_missing_plan_fields',
@@ -144,15 +144,15 @@ assert.equal(report.authority.runsSetupScanner, false);
 assert.equal(report.authority.changesScannerBehavior, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
-assert.equal(report.summary.rebuildPackRows, 3);
-assert.equal(report.summary.includeForRebuildReview, 1);
-assert.equal(report.summary.holdForFilterReview, 1);
-assert.equal(report.summary.excludeUntilRevalidated, 1);
-assert.equal(report.summary.afterLunchRows, 1);
+assert.equal(report.summary.rebuildPackRows, 0);
+assert.equal(report.summary.includeForRebuildReview, 0);
+assert.equal(report.summary.holdForFilterReview, 0);
+assert.equal(report.summary.excludeUntilRevalidated, 0);
+assert.equal(report.summary.afterLunchRows, 0);
 assert.equal(report.summary.afterLunchIncludeForReview, 0);
-assert.equal(report.summary.intradayRows, 2);
-assert.equal(report.summary.intradayIncludeForReview, 1);
-assert.equal(report.summary.replayGrossOneMes, 20);
+assert.equal(report.summary.intradayRows, 0);
+assert.equal(report.summary.intradayIncludeForReview, 0);
+assert.equal(report.summary.replayGrossOneMes, 0);
 assert.equal(report.rows.every((row) => row.canExecute === false), true);
 assert.equal(report.rows.every((row) => row.publishDiscord === false), true);
 
@@ -160,12 +160,11 @@ const includeRow = report.rows.find((row) => row.rebuildDecision === 'include_fo
 const excludedRow = report.rows.find((row) => row.rebuildDecision === 'exclude_until_revalidated');
 const heldRow = report.rows.find((row) => row.rebuildDecision === 'hold_for_filter_review');
 
-assert.equal(includeRow?.replayOutcome, 'T2_HIT');
-assert.equal(includeRow?.deterministicPlan.entry, 100);
-assert.equal(excludedRow?.replayOutcome, 'STOP_HIT');
-assert.equal(heldRow?.replayOutcome, 'NO_FILL');
+assert.equal(includeRow, undefined);
+assert.equal(excludedRow, undefined);
+assert.equal(heldRow, undefined);
 assert.match(report.markdown, /No-Chase Artifact Rebuild Pack/);
-assert.match(report.markdown, /include_for_rebuild_review/);
+assert.match(report.markdown, /Rebuild pack rows: 0/);
 assert.match(report.recommendations.join(' '), /Research-only rebuild pack/);
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'no-chase-artifact-rebuild-pack-'));

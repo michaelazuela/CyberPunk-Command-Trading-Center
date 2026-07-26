@@ -32,7 +32,7 @@ function timingRow(ticketId: string, proofTime: string, riskPoints: number, outc
     ticketId,
     tradeDate: proofTime.slice(0, 10),
     session: 'lunch',
-    setupType: 'AfterLunchDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     outcomeBucket,
     outcomeLabel: outcomeBucket === 'loss_stopped_before_t1' ? 'stopped_before_t1' : 't1_and_t2_hit',
@@ -90,7 +90,7 @@ function replayRow(ticketId: string, proofTime: string): UnifiedPositiveHeldLoca
     tradeDate: proofTime.slice(0, 10),
     session: 'lunch',
     instrument: 'MES',
-    setupType: 'AfterLunchDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     proofTime,
     firstSeenTime: proofTime,
@@ -126,7 +126,7 @@ const replayPackageReport = {
 
 function scannerCandidate(overrides: Record<string, unknown>) {
   return {
-    setupType: 'AfterLunchDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     candidateState: 'HUMAN_REVIEW_READY',
     direction: 'LONG',
     entry: 100,

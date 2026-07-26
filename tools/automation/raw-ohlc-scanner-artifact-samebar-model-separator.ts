@@ -55,7 +55,7 @@ export interface RawOhlcScannerArtifactSameBarModelSeparatorReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const DEFAULT_SETUP_TYPE = 'OpeningDriveFvgContinuation';
+const DEFAULT_SETUP_TYPE = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);

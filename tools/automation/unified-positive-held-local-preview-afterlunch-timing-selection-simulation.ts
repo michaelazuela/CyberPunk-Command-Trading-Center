@@ -87,7 +87,7 @@ export interface UnifiedPositiveHeldLocalPreviewAfterLunchTimingSelectionSimulat
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SETUP = 'AfterLunchDriveFvgContinuation';
+const SETUP = 'NoInstalledSetup';
 const POSITIVE_BOOST_POINTS = 100;
 const CAUTION_PENALTY_POINTS = 100;
 
@@ -268,7 +268,7 @@ export function buildUnifiedPositiveHeldLocalPreviewAfterLunchTimingSelectionSim
     !fieldMinerReport ? 'missing AfterLunch timing field miner report' : null,
     sourceProofTimingReport && sourceProofTimingReport.status !== 'pass' ? `source/proof timing status ${sourceProofTimingReport.status}` : null,
     fieldMinerReport && fieldMinerReport.status !== 'pass' ? `AfterLunch timing field miner status ${fieldMinerReport.status}` : null,
-    rows.length === 0 ? 'no AfterLunchDriveFvgContinuation source/proof rows found' : null,
+    rows.length === 0 ? 'no NoInstalledSetup source/proof rows found' : null,
     positive.length === 0 && caution.length === 0 ? 'no parseable positive or caution timing candidates found' : null,
   ].filter((item): item is string => Boolean(item));
   const improvesSelection = !blockers.length && typeof delta === 'number' && delta > 0 && changed.length > 0;

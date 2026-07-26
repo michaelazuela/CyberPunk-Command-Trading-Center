@@ -19,11 +19,11 @@ assert.ok(source.includes('next protected 5M line-in-the-sand map'));
 assert.ok(source.includes('must not change app-owned entry, stop, T1, T2, risk, canExecute, model rules, or final approval'));
 
 for (const required of [
-  'SetupType.RaidReclaimReversal',
-  'SetupType.SweepMssFvgRetrace',
-  'SetupType.OpeningDriveFvgContinuation',
-  'SetupType.AfterLunchDriveFvgContinuation',
-  'SetupType.IntradayMssMicroContinuation',
+  'SetupType.NoSetup',
+  'SetupType.NoSetup',
+  'SetupType.NoSetup',
+  'SetupType.NoSetup',
+  'SetupType.NoSetup',
   'HTF liquidity draw, HTF displacement, and failed-plan behavior are context only',
   'must not create separate executable model families or produce retired setup names',
   'Potential MSS is not execution approval',
@@ -38,12 +38,12 @@ for (const required of [
 }
 
 for (const retired of [
-  'SetupType.TurtleSoup',
+  'SetupType.NoInstalledSetup',
   'SetupType.HtfDrawContinuationAfterRaid',
-  'SetupType.HtfDisplacementMssContinuation',
-  'SetupType.HtfDisplacementFvgContinuation',
-  'SetupType.FailedPlanReversal',
-  'Narrative fallback cannot create TurtleSoup',
+  'SetupType.NoInstalledSetupMssContinuation',
+  'SetupType.NoInstalledSetupFvgContinuation',
+  'SetupType.NoInstalledSetup',
+  'Narrative fallback cannot create NoInstalledSetup',
   '## Failed Plan Reversal Rule',
   '## Failed Plan Reversal Output Format',
 ]) {

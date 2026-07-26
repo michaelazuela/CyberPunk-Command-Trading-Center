@@ -28,7 +28,7 @@ const laneValidation = {
   generatedAt: '2026-07-19T00:00:00.000Z',
   status: 'pass',
   authority,
-  source: { freshReplayPackagePath: 'fresh.json', setupType: 'OpeningDriveFvgContinuation' },
+  source: { freshReplayPackagePath: 'fresh.json', setupType: 'NoInstalledSetup' },
   assumptions: {
     readsFreshReplayPackageOnly: true,
     validatesFrozenSelectorOnly: true,
@@ -66,7 +66,7 @@ const freshReplayPackage = {
   generatedAt: '2026-07-19T00:00:00.000Z',
   status: 'pass',
   authority,
-  source: { reportDir: 'reports', setupType: 'OpeningDriveFvgContinuation', samebarReportPaths: [] },
+  source: { reportDir: 'reports', setupType: 'NoInstalledSetup', samebarReportPaths: [] },
   assumptions: {
     savedReportsOnly: true,
     openingDriveOnly: true,

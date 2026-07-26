@@ -213,7 +213,7 @@ function score(row: OutcomeRow, positive: { feature: string; value: string } | n
 }
 
 function isTarget(row: OutcomeRow): boolean {
-  return row.setupType === 'SweepMssFvgRetrace' && row.session === 'lunch' && row.direction === 'LONG';
+  return row.setupType === 'NoInstalledSetup' && row.session === 'lunch' && row.direction === 'LONG';
 }
 
 function groupBySlate(rows: OutcomeRow[]): Map<string, OutcomeRow[]> {
@@ -330,7 +330,7 @@ export function buildRawOhlcScannerArtifactSweepLunchLongFullDayStableSelectionS
     stableFieldMiner && stableFieldMiner.status !== 'pass' ? `stable field miner status ${stableFieldMiner.status}` : null,
     !positive ? 'missing parseable positive candidate' : null,
     !negative ? 'missing parseable negative candidate' : null,
-    targetRows.length === 0 ? 'no SweepMssFvgRetrace lunch LONG full-day rows found' : null,
+    targetRows.length === 0 ? 'no NoInstalledSetup lunch LONG full-day rows found' : null,
     slates.length === 0 ? 'no lunch LONG slates found' : null,
   ].filter((item): item is string => Boolean(item));
   const proposalWorthValidating = !blockers.length && typeof delta === 'number' && delta > 0 && slates.some((slate) => slate.topChanged);

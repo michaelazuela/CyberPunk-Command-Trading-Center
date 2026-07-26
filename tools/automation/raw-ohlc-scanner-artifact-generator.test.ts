@@ -67,7 +67,8 @@ assert.equal(report.summary.eventsDataLimited, 0);
 assert.equal(Object.keys(report.events).length, 2);
 assert.ok(report.events['2026-06-10T12:00:00']);
 assert.ok(report.events['2026-06-10T12:05:00']);
-assert.equal(report.events['2026-06-10T12:05:00'].setupCandidateStatus.statuses.length > 0, true);
+assert.equal(report.events['2026-06-10T12:05:00'].setupCandidateStatus.statuses.length, 0);
+assert.equal(report.events['2026-06-10T12:05:00'].scannerSummary.candidateCount, 0);
 assert.match(report.reportMarkdown, /Research-only local scanner artifact generation/);
 assert.match(report.reportMarkdown, /No Discord posts, Supabase reads\/writes, live bridge reads/);
 

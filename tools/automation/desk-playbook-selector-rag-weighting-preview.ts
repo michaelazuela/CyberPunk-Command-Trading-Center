@@ -155,13 +155,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
 const KNOWN_MODELS = [
-  'IntradayMssMicroContinuation',
-  'IntradayMssMicroContinuation',
-  'SweepMssFvgRetrace',
-  'SweepMssFvgRetrace',
-  'OpeningDriveFvgContinuation',
-  'AfterLunchDriveFvgContinuation',
-  'raidReclaim',
+  'NoInstalledSetup',
+  'NoInstalledSetup',
+  'NoInstalledSetup',
+  'NoInstalledSetup',
+  'NoInstalledSetup',
+  'NoInstalledSetup',
+  'historicalReview',
 ];
 
 function readFlag(args: string[], flag: string): string | null {

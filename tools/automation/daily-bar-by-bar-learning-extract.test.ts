@@ -12,7 +12,7 @@ const fixtureTape = {
       completed5m: { time: '2026-07-09T15:05:00', open: 7585, high: 7586, low: 7582, close: 7583, volume: 1000 },
       setupCandidateStatus: {
         selected: {
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
         },
@@ -69,7 +69,7 @@ assert.equal(extract.candidates[0].outcome, 'T1_HIT');
 assert.equal(extract.candidates[0].outcomeTime, '2026-07-09T16:00:00');
 assert.equal(extract.candidates[0].oneMesGross, 40);
 assert.equal(extract.summary.bestCandidate?.entry, 7582.25);
-assert.match(extract.summary.lessons.join('\n'), /Best reviewed campaign: LONG IntradayMssMicroContinuation/);
+assert.match(extract.summary.lessons.join('\n'), /Best reviewed campaign: LONG NoInstalledSetup/);
 assert.match(extract.cadence.lessonUsage, /do not auto-promote lessons into live rules/i);
 assert.match(extract.cadence.liveRuleBoundary, /canExecute remain deterministic/i);
 

@@ -11,7 +11,7 @@ import type {
   UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport,
 } from './unified-positive-held-local-preview-sweep-penalty-installed-score-comparison';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport,
 } from './unified-positive-held-local-preview-raidReclaim-extreme-risk-companion-filter';
 
 type InstalledRow = UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport['rows'][number];
@@ -180,7 +180,7 @@ function failureClass(args: {
 }
 
 function buildRows(args: {
-  companion: UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport | null;
+  companion: UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport | null;
   installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport | null;
   timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport | null;
   outcome: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport | null;
@@ -255,7 +255,7 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewReplacementBl
 export function buildUnifiedPositiveHeldLocalPreviewReplacementBlockerDrilldownReport(args: {
   reportDir: string;
   companionFilterPath: string | null;
-  companionFilterReport: UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport | null;
+  companionFilterReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport | null;
   installedScoreComparisonPath: string | null;
   installedScoreComparisonReport: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport | null;
   sourceProofTimingPath: string | null;
@@ -362,7 +362,7 @@ export function runUnifiedPositiveHeldLocalPreviewReplacementBlockerDrilldownCli
     reportDir: outDir,
     companionFilterPath,
     companionFilterReport: companionFilterPath && fs.existsSync(companionFilterPath)
-      ? readJson<UnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskCompanionFilterReport>(companionFilterPath)
+      ? readJson<UnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskCompanionFilterReport>(companionFilterPath)
       : null,
     installedScoreComparisonPath,
     installedScoreComparisonReport: installedScoreComparisonPath && fs.existsSync(installedScoreComparisonPath)

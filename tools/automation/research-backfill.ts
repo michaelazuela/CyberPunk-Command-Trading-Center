@@ -487,7 +487,7 @@ function deriveEventsFromBars(bars: NinjaBridgeBar[]): ResearchBackfillEvent[] {
           classification: 'advisory_only',
           drawIdentified: true,
           fvgOrInefficiency: hasThreeBarInefficiency(windowBars),
-          failureReasons: ['Approved Model 1 or Raid Reclaim Reversal gates were not evaluated by research backfill.'],
+          failureReasons: ['Approved no installed model path gates were not evaluated by research backfill.'],
         });
       }
     }
@@ -507,7 +507,7 @@ function deriveEventsFromBars(bars: NinjaBridgeBar[]): ResearchBackfillEvent[] {
           classification: 'advisory_only',
           reachedDrawAfterFact: true,
           failedOrReversed: true,
-          warningPatterns: ['False-run behavior needs sweep/reclaim validation before Raid Reclaim Reversal mapping.'],
+          warningPatterns: ['False-run behavior needs historical reversal pattern validation before no installed model path mapping.'],
         });
       }
     }
@@ -528,7 +528,7 @@ function deriveEventsFromBars(bars: NinjaBridgeBar[]): ResearchBackfillEvent[] {
         accumulationZone: true,
         manipulationLeg: true,
         distributionFollowThrough: true,
-        failureReasons: ['AMD narrative is research-only unless Model 1 or Raid Reclaim Reversal gates independently pass.'],
+        failureReasons: ['AMD narrative is research-only unless no installed model path gates independently pass.'],
       });
     }
 

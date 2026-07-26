@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport,
 } from './unified-positive-held-local-preview-raidReclaim-blocked-reason-drilldown';
 
-type DrilldownCluster = UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport['clusters'][number];
+type DrilldownCluster = UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport['clusters'][number];
 
 interface WordingRow {
   clusterId: string;
@@ -26,8 +26,8 @@ interface WordingRow {
   livePromotionAllowed: false;
 }
 
-export interface UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_review_note_wording_probe';
+export interface UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport {
+  reportType: 'unified_positive_held_local_preview_historicalReview_review_note_wording_probe';
   generatedAt: string;
   status: 'pass' | 'fail';
   authority: {
@@ -98,7 +98,7 @@ function latestMatchingFile(reportDir: string, pattern: RegExp): string | null {
   return matches[0] || null;
 }
 
-function authority(): UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport['authority'] {
+function authority(): UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport['authority'] {
   return {
     readOnly: true,
     localOnly: true,
@@ -121,7 +121,7 @@ function authority(): UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordin
 
 function proposedNote(cluster: DrilldownCluster): string {
   const side = cluster.direction === 'SHORT' ? 'short' : 'long';
-  return `raidReclaim ${side} remains review-only: the liquidity-raid idea is visible, but this cluster lacks full plan-level proof. Require fresh completed 5M entry, protected stop, invalidation, and app targets before treating it as actionable.`;
+  return `historicalReview ${side} remains review-only: the liquidity-raid idea is visible, but this cluster lacks full plan-level proof. Require fresh completed 5M entry, protected stop, invalidation, and app targets before treating it as actionable.`;
 }
 
 function rowFromCluster(cluster: DrilldownCluster): WordingRow {
@@ -149,13 +149,13 @@ function escapeTable(value: string): string {
   return value.replace(/\|/g, '/').replace(/\r?\n/g, ' ');
 }
 
-function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport, 'markdown'>): string {
+function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport, 'markdown'>): string {
   return [
-    '# Unified Positive Held-Local Preview raidReclaim Review Note Wording Probe',
+    '# Unified Positive Held-Local Preview historicalReview Review Note Wording Probe',
     '',
     `Status: ${report.status}`,
     '',
-    'Authority: local-only read-only wording probe. It does not install review notes, suppress tickets, alter ranking, change canExecute, post Discord, write Supabase, read live bridge data, run setupScanner, remove raidReclaim, or change entry/stop/target/risk rules.',
+    'Authority: local-only read-only wording probe. It does not install review notes, suppress tickets, alter ranking, change canExecute, post Discord, write Supabase, read live bridge data, run setupScanner, remove historicalReview, or change entry/stop/target/risk rules.',
     '',
     '## Summary',
     `- Clusters read: ${report.summary.clustersRead}.`,
@@ -180,19 +180,19 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimRe
   ].join('\n');
 }
 
-export function buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport(args: {
+export function buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport(args: {
   reportDir: string;
   blockedReasonDrilldownPath: string | null;
-  blockedReasonDrilldownReport: UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport | null;
-}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport {
+  blockedReasonDrilldownReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport | null;
+}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport {
   const clusters = args.blockedReasonDrilldownReport?.clusters || [];
   const candidateClusters = clusters.filter((cluster) => cluster.reviewNoteCandidate && cluster.reason === 'missing_full_plan_levels');
   const rows = candidateClusters.map(rowFromCluster);
   const blockers = [
-    !args.blockedReasonDrilldownPath ? 'missing raidReclaim blocked reason drilldown path' : null,
-    !args.blockedReasonDrilldownReport ? 'missing raidReclaim blocked reason drilldown report' : null,
-    args.blockedReasonDrilldownReport && args.blockedReasonDrilldownReport.status !== 'pass' ? `raidReclaim blocked reason drilldown status ${args.blockedReasonDrilldownReport.status}` : null,
-    clusters.length === 0 ? 'no raidReclaim blocked reason clusters found' : null,
+    !args.blockedReasonDrilldownPath ? 'missing historicalReview blocked reason drilldown path' : null,
+    !args.blockedReasonDrilldownReport ? 'missing historicalReview blocked reason drilldown report' : null,
+    args.blockedReasonDrilldownReport && args.blockedReasonDrilldownReport.status !== 'pass' ? `historicalReview blocked reason drilldown status ${args.blockedReasonDrilldownReport.status}` : null,
+    clusters.length === 0 ? 'no historicalReview blocked reason clusters found' : null,
     rows.length === 0 ? 'no missing_full_plan_levels review-note candidate clusters found' : null,
     ...rows.flatMap((row) => [
       row.suppressesTicket ? `${row.clusterId} would suppress ticket` : null,
@@ -202,8 +202,8 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWording
       row.livePromotionAllowed ? `${row.clusterId} allows live promotion` : null,
     ]),
   ].filter((item): item is string => Boolean(item));
-  const base: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport, 'markdown'> = {
-    reportType: 'unified_positive_held_local_preview_raidReclaim_review_note_wording_probe',
+  const base: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport, 'markdown'> = {
+    reportType: 'unified_positive_held_local_preview_historicalReview_review_note_wording_probe',
     generatedAt,
     status: blockers.length ? 'fail' : 'pass',
     authority: authority(),
@@ -234,17 +234,17 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWording
     rows,
     blockers,
     recommendations: blockers.length
-      ? ['Do not use raidReclaim review-note wording until the blocked reason drilldown is present and passing.']
+      ? ['Do not use historicalReview review-note wording until the blocked reason drilldown is present and passing.']
       : [
         'Keep this wording as a research-only candidate until a separate approved user-facing wording phase.',
-        'Do not suppress raidReclaim tickets, change ranking, change canExecute, or alter entry/stop/target/risk behavior.',
+        'Do not suppress historicalReview tickets, change ranking, change canExecute, or alter entry/stop/target/risk behavior.',
       ],
   };
   return { ...base, markdown: buildMarkdown(base) };
 }
 
-export function writeUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport(
-  report: UnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport,
+export function writeUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport(
+  report: UnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport,
   outDir = DEFAULT_REPORT_DIR,
 ): { jsonPath: string; markdownPath: string } {
   fs.mkdirSync(outDir, { recursive: true });
@@ -256,18 +256,18 @@ export function writeUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWording
   return { jsonPath, markdownPath };
 }
 
-export function runUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeCli(args = process.argv.slice(2)): void {
+export function runUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeCli(args = process.argv.slice(2)): void {
   const outDir = readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR;
   const blockedReasonDrilldownPath = readFlag(args, '--blocked-reason-drilldown') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-raidReclaim-blocked-reason-drilldown-\d+\.json$/);
-  const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport({
+  const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport({
     reportDir: outDir,
     blockedReasonDrilldownPath,
     blockedReasonDrilldownReport: blockedReasonDrilldownPath && fs.existsSync(blockedReasonDrilldownPath)
-      ? JSON.parse(fs.readFileSync(blockedReasonDrilldownPath, 'utf8')) as UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport
+      ? JSON.parse(fs.readFileSync(blockedReasonDrilldownPath, 'utf8')) as UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport
       : null,
   });
-  const paths = writeUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeReport(report, outDir);
+  const paths = writeUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeReport(report, outDir);
   if (args.includes('--json')) {
     console.log(JSON.stringify({ ...paths, status: report.status, summary: report.summary }, null, 2));
   } else {
@@ -280,7 +280,7 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingPr
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   try {
-    runUnifiedPositiveHeldLocalPreviewraidReclaimReviewNoteWordingProbeCli();
+    runUnifiedPositiveHeldLocalPreviewhistoricalReviewReviewNoteWordingProbeCli();
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

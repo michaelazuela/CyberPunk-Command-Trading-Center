@@ -21,7 +21,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-19-MES-morni
       setupCandidateStatus: {
         selected: {
           direction: 'LONG',
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           executionStatus: 'Review',
         },
       },
@@ -60,7 +60,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-19-MES-morni
       setupCandidateStatus: {
         selected: {
           direction: 'SHORT',
-          setupType: 'raidReclaim',
+          setupType: 'historicalReview',
           executionStatus: 'Watching',
         },
       },
@@ -99,7 +99,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-19-MES-morni
       setupCandidateStatus: {
         selected: {
           direction: 'LONG',
-          setupType: 'raidReclaim',
+          setupType: 'historicalReview',
           executionStatus: 'Conditional',
         },
       },
@@ -138,7 +138,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-19-MES-morni
       setupCandidateStatus: {
         selected: {
           direction: 'LONG',
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           executionStatus: 'Conditional',
         },
       },

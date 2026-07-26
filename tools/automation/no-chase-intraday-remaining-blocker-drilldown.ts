@@ -235,7 +235,7 @@ function candidateAtEvent(args: {
   }) as ChartContext | null;
   if (!context) return null;
   const scan = scanSetupCandidates({ sessionType: sessionType(args.session), chartContext: context, result: analysisForReplay(context) });
-  return scan.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation) || null;
+  return scan.candidates.find((candidate) => candidate.setupType === SetupType.NoSetup) || null;
 }
 
 function snapshot(candidate: SetupCandidate, time: string): CandidateSnapshot {

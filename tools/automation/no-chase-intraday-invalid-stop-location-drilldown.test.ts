@@ -13,7 +13,7 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'invalid-stop-drilldown-')
 fs.writeFileSync(path.join(tempDir, 'fixture-snapshot.json'), `${JSON.stringify({
   normalizedPlan: {
     setupCandidates: [{
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       entry: null,
       stop: 7476,
@@ -28,7 +28,7 @@ fs.writeFileSync(path.join(tempDir, 'fixture-snapshot.json'), `${JSON.stringify(
 
 const dispositionRollup = {
   rows: [{
-    caseId: '2026-06-24|lunch|IntradayMssMicroContinuation|LONG',
+    caseId: '2026-06-24|lunch|NoInstalledSetup|LONG',
     tradeDate: '2026-06-24',
     sessionType: 'lunch',
     direction: 'LONG',
@@ -41,10 +41,10 @@ const dispositionRollup = {
 
 const omissionReport = {
   rows: [{
-    caseId: '2026-06-24|lunch|IntradayMssMicroContinuation|LONG',
+    caseId: '2026-06-24|lunch|NoInstalledSetup|LONG',
     tradeDate: '2026-06-24',
     sessionType: 'lunch',
-    setupType: 'IntradayMssMicroContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     firstNoChaseSnapshotId: 'fixture-snapshot',
     firstNoChaseTime: '2026-06-24T13:20:00.0000000',

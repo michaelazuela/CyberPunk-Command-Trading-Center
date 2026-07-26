@@ -216,11 +216,11 @@ export function buildNoChaseRebuiltReviewApprovalContractReport(args: {
         'npm run test',
       ],
       implementationInvariants: [
-        'Surface only the exact proposal-approved IntradayMssMicroContinuation and AfterLunchDriveFvgContinuation rebuilt rows unless a new proposal expands the set.',
+        'Surface only the exact proposal-approved NoInstalledSetup and NoInstalledSetup rebuilt rows unless a new proposal expands the set.',
         'Preserve canExecute=false and publishDiscord=false until a separate explicit scanner-visible approval phase changes them.',
         'Preserve deterministic 5M entry, protected stop, T1/T2, risk, invalidation, and target-room gates.',
         'HTF context remains support/caution/context only and cannot approve execution.',
-        'Do not broaden to raidReclaim, SweepMssFvgRetrace, OpeningDriveFvgContinuation, failed-plan reversal, or other model families without separate evidence.',
+        'Do not broaden to historicalReview, NoInstalledSetup, NoInstalledSetup, failed-plan reversal, or other model families without separate evidence.',
       ],
       rollbackContract: [
         'Remove only the future no-chase rebuilt review adapter/wiring if rejected.',

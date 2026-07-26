@@ -79,7 +79,7 @@ assert.equal(report.authority.changesTradingRules, false);
 assert.equal(report.authority.changesCanExecute, false);
 assert.match(report.markdown, /Proof-Time Enrichment/);
 assert.ok(report.recommendations.some((line) => line.includes('Do not install')));
-assert.ok(report.decisionNotes.some((line) => line.includes('broader AfterLunchDriveFvgContinuation model family remains positive')));
+assert.ok(report.decisionNotes.some((line) => line.includes('broader NoInstalledSetup model family remains positive')));
 
 const blocked = buildDeskPlaybookAfterLunchProofTimeEnrichmentReport({
   noLookaheadValidationPath: null,

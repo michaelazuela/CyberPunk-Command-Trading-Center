@@ -7,11 +7,11 @@ type BuildArgs = Parameters<typeof buildRawOhlcScannerArtifactOpeningDrivePriori
 
 function slate(date: string, direction: 'LONG' | 'SHORT', resolvedOneMesPl: number | null, rows = 3): NonNullable<BuildArgs['filterSimulation']>['filteredSlateRows'][number] {
   return {
-    slateId: `${date}|lunch|SweepMssFvgRetrace|${direction}`,
+    slateId: `${date}|lunch|NoInstalledSetup|${direction}`,
     rows,
     tradeDate: date,
     session: 'lunch',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction,
     proofTime: `${date}T13:00:00`,
     outcomeStatus: resolvedOneMesPl && resolvedOneMesPl > 0 ? 'resolved' : 'unresolved',
@@ -25,7 +25,7 @@ function outcome(date: string, direction: 'LONG' | 'SHORT', riskPoints: number, 
   return {
     tradeDate: date,
     session: 'lunch',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction,
     proofTime: `${date}T13:00:00`,
     outcomeStatus: resolvedOneMesPl && resolvedOneMesPl > 0 ? 'resolved' : 'unresolved',

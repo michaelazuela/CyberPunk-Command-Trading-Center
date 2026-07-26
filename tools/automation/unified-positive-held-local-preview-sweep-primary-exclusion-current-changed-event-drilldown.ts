@@ -46,7 +46,7 @@ interface ChangedEventDrilldown {
   publishDecisionFields: string[];
   baselineCandidate: CandidateDetail | null;
   simulatedCandidate: CandidateDetail | null;
-  topReplacementIsraidReclaimEntryTriggerMissing: boolean;
+  topReplacementIshistoricalReviewEntryTriggerMissing: boolean;
   canExecuteChanged: boolean;
   tradeMathChanged: boolean;
   runtimeProposalReady: boolean;
@@ -92,7 +92,7 @@ export interface UnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionCurrentChan
     deskTicketFieldEvents: number;
     publishDecisionFieldEvents: number;
     runtimeProposalReadyEvents: number;
-    raidReclaimEntryTriggerMissingReplacementEvents: number;
+    historicalReviewEntryTriggerMissingReplacementEvents: number;
     canExecuteChangedEvents: number;
     tradeMathChangedEvents: number;
     runtimeInstallAllowed: false;
@@ -312,7 +312,7 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewSweepPrimaryE
     `- DeskTicket field events: ${report.summary.deskTicketFieldEvents}.`,
     `- Publish-decision field events: ${report.summary.publishDecisionFieldEvents}.`,
     `- Runtime-proposal-ready events: ${report.summary.runtimeProposalReadyEvents}.`,
-    `- raidReclaim EntryTriggerMissing replacement events: ${report.summary.raidReclaimEntryTriggerMissingReplacementEvents}.`,
+    `- historicalReview EntryTriggerMissing replacement events: ${report.summary.historicalReviewEntryTriggerMissingReplacementEvents}.`,
     `- canExecute changed events: ${report.summary.canExecuteChangedEvents}.`,
     `- Trade math changed events: ${report.summary.tradeMathChangedEvents}.`,
     `- Runtime install allowed: ${report.summary.runtimeInstallAllowed}.`,
@@ -369,7 +369,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionCurrent
       publishDecisionFields,
       baselineCandidate,
       simulatedCandidate,
-      topReplacementIsraidReclaimEntryTriggerMissing: simulatedCandidate?.setupType === 'raidReclaim' &&
+      topReplacementIshistoricalReviewEntryTriggerMissing: simulatedCandidate?.setupType === 'historicalReview' &&
         simulatedCandidate.blockReason === 'EntryTriggerMissing',
       canExecuteChanged: event.canExecuteChanged,
       tradeMathChanged: event.tradeMathChanged,
@@ -421,7 +421,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionCurrent
       deskTicketFieldEvents: changedEvents.filter((event) => event.deskTicketFields.length > 0).length,
       publishDecisionFieldEvents: changedEvents.filter((event) => event.publishDecisionFields.length > 0).length,
       runtimeProposalReadyEvents: changedEvents.filter((event) => event.runtimeProposalReady).length,
-      raidReclaimEntryTriggerMissingReplacementEvents: changedEvents.filter((event) => event.topReplacementIsraidReclaimEntryTriggerMissing).length,
+      historicalReviewEntryTriggerMissingReplacementEvents: changedEvents.filter((event) => event.topReplacementIshistoricalReviewEntryTriggerMissing).length,
       canExecuteChangedEvents: changedEvents.filter((event) => event.canExecuteChanged).length,
       tradeMathChangedEvents: changedEvents.filter((event) => event.tradeMathChanged).length,
       runtimeInstallAllowed: false,

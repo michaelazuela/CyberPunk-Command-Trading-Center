@@ -17,8 +17,8 @@ const readinessSummary = {
     recommendation: 'continue_research_no_live_selector',
   },
   modelRows: [
-    { setupType: 'SweepMssFvgRetrace', evidenceState: 'positive_strict_ready_subset' },
-    { setupType: 'raidReclaim', evidenceState: 'weak_or_mixed_subset' },
+    { setupType: 'NoInstalledSetup', evidenceState: 'positive_strict_ready_subset' },
+    { setupType: 'historicalReview', evidenceState: 'weak_or_mixed_subset' },
   ],
 };
 

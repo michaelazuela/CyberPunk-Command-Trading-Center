@@ -1076,7 +1076,7 @@ export function buildNinjaChartContext({
       sweepThenReclaim: liquidityFacts.liquiditySweeps.some(event => event.reclaimed),
       notes: [
         fvgZones.length ? `Detected ${fvgZones.length} FVG zone(s) from OHLC.` : 'No FVG zones detected from OHLC.',
-        liquidityFacts.liquiditySweeps.length ? `Detected ${liquidityFacts.liquiditySweeps.length} sweep/reclaim event(s).` : 'No sweep/reclaim events detected from OHLC.',
+        liquidityFacts.liquiditySweeps.length ? `Detected ${liquidityFacts.liquiditySweeps.length} historical reversal pattern event(s).` : 'No historical reversal pattern events detected from OHLC.',
       ],
     },
     screenshotQuality: confidence,

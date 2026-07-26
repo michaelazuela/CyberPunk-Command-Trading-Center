@@ -20,7 +20,7 @@ const passReport = buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProof
       {
         tradeDate: '2026-07-06',
         session: 'morning',
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         completedBarTime: '2026-07-06T09:35:00',
         selectorDecision: 'keep_later_sweep_proof',
@@ -29,7 +29,7 @@ const passReport = buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProof
       {
         tradeDate: '2026-07-06',
         session: 'morning',
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         completedBarTime: '2026-07-06T09:40:00',
         selectorDecision: 'keep_later_sweep_proof',
@@ -43,7 +43,7 @@ const passReport = buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProof
       {
         tradeDate: '2026-06-10',
         session: 'morning',
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         proofTime: '2026-06-10T10:05:00',
       },

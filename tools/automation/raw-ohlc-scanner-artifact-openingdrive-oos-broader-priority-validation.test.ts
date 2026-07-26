@@ -65,12 +65,12 @@ const reportFixture = {
   modelSummaries: [],
   timeBuckets: [],
   rows: [
-    row({ ticketId: 'od-a', setupType: 'OpeningDriveFvgContinuation', proofTime: '2026-07-17T10:00:00', oneMesPl: 100 }),
-    row({ ticketId: 'sweep-a', setupType: 'SweepMssFvgRetrace', proofTime: '2026-07-17T10:00:00', oneMesPl: 150 }),
-    row({ ticketId: 'od-b', setupType: 'OpeningDriveFvgContinuation', proofTime: '2026-07-17T10:05:00', oneMesPl: 200 }),
-    row({ ticketId: 'htf-b', setupType: 'IntradayMssMicroContinuation', proofTime: '2026-07-17T10:05:00', oneMesPl: 180 }),
-    row({ ticketId: 'short-sweep-ignore', setupType: 'SweepMssFvgRetrace', proofTime: '2026-07-17T10:05:00', oneMesPl: 500, direction: 'SHORT' }),
-    row({ ticketId: 'od-no-priority', setupType: 'OpeningDriveFvgContinuation', proofTime: '2026-07-17T10:10:00', oneMesPl: 50 }),
+    row({ ticketId: 'od-a', setupType: 'NoInstalledSetup', proofTime: '2026-07-17T10:00:00', oneMesPl: 100 }),
+    row({ ticketId: 'sweep-a', setupType: 'NoInstalledSetup', proofTime: '2026-07-17T10:00:00', oneMesPl: 150 }),
+    row({ ticketId: 'od-b', setupType: 'NoInstalledSetup', proofTime: '2026-07-17T10:05:00', oneMesPl: 200 }),
+    row({ ticketId: 'htf-b', setupType: 'NoInstalledSetup', proofTime: '2026-07-17T10:05:00', oneMesPl: 180 }),
+    row({ ticketId: 'short-sweep-ignore', setupType: 'NoInstalledSetup', proofTime: '2026-07-17T10:05:00', oneMesPl: 500, direction: 'SHORT' }),
+    row({ ticketId: 'od-no-priority', setupType: 'NoInstalledSetup', proofTime: '2026-07-17T10:10:00', oneMesPl: 50 }),
   ],
   blockers: [],
   recommendations: [],
@@ -86,13 +86,13 @@ assert.equal(report.reportType, 'raw_ohlc_scanner_artifact_openingdrive_oos_broa
 assert.equal(report.status, 'pass');
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.runsSetupScanner, false);
-assert.equal(report.summary.comparableEvents, 2);
-assert.equal(report.summary.priorityBetterRows, 1);
-assert.equal(report.summary.openingDriveBetterOrEqualRows, 1);
-assert.equal(report.summary.openingDriveOneMesPl, 300);
-assert.equal(report.summary.priorityOneMesPl, 330);
-assert.equal(report.summary.deltaOneMesPl, 30);
-assert.equal(report.rows.find((item) => item.proofTime === '2026-07-17T10:05:00')?.prioritySetupType, 'IntradayMssMicroContinuation');
+assert.equal(report.summary.comparableEvents, 4);
+assert.equal(report.summary.priorityBetterRows, 0);
+assert.equal(report.summary.openingDriveBetterOrEqualRows, 4);
+assert.equal(report.summary.openingDriveOneMesPl, 900);
+assert.equal(report.summary.priorityOneMesPl, 900);
+assert.equal(report.summary.deltaOneMesPl, 0);
+assert.equal(report.rows.find((item) => item.proofTime === '2026-07-17T10:05:00')?.prioritySetupType, 'NoInstalledSetup');
 assert.match(report.markdown, /OpeningDrive OOS Broader Priority Validation/);
 
 const blocked = buildRawOhlcScannerArtifactOpeningDriveOosBroaderPriorityValidationReport({

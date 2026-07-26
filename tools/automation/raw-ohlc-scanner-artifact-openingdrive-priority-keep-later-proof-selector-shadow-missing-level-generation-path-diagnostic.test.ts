@@ -14,7 +14,7 @@ fs.writeFileSync(path.join(auditDir, 'snapshot-entry-missing.json'), JSON.string
   normalizedPlan: {
     setupCandidates: [
       {
-        setupType: 'raidReclaim',
+        setupType: 'historicalReview',
         direction: 'SHORT',
         stop: 7455.75,
         executionStatus: 'Conditional',
@@ -39,7 +39,7 @@ fs.writeFileSync(path.join(auditDir, 'snapshot-invalid-stop.json'), JSON.stringi
   normalizedPlan: {
     setupCandidates: [
       {
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: 'SHORT',
         stop: 7466.75,
         executionStatus: 'Blocked',
@@ -65,18 +65,18 @@ const blockerDrilldown = {
   status: 'pass',
   rows: [
     {
-      ticketId: '2026-06-23|evening|raidReclaim|SHORT|prefer_replacement|snapshot-entry-missing',
+      ticketId: '2026-06-23|evening|historicalReview|SHORT|prefer_replacement|snapshot-entry-missing',
       tradeDate: '2026-06-23',
       session: 'evening',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'SHORT',
       snapshotId: 'snapshot-entry-missing',
     },
     {
-      ticketId: '2026-06-29|lunch|SweepMssFvgRetrace|SHORT|keep_later_sweep_proof|snapshot-invalid-stop',
+      ticketId: '2026-06-29|lunch|NoInstalledSetup|SHORT|keep_later_sweep_proof|snapshot-invalid-stop',
       tradeDate: '2026-06-29',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       snapshotId: 'snapshot-invalid-stop',
     },
@@ -107,13 +107,13 @@ assert.equal(report.summary.unclassifiedRows, 0);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'keep_blocked_until_fresh_entry_or_valid_stop');
 
-const wait = report.rows.find((row) => row.setupType === 'raidReclaim');
+const wait = report.rows.find((row) => row.setupType === 'historicalReview');
 assert.equal(wait?.pathState, 'waiting_for_entry_trigger');
 assert.equal(wait?.replayUse, 'do_not_replay_until_fresh_entry');
 assert.equal(wait?.requiredTrigger, 'Fresh completed 5M reclaim trigger is required.');
 assert.ok(wait?.activeRulesetBlockers.includes('No chase: wait for completed close.'));
 
-const invalid = report.rows.find((row) => row.setupType === 'SweepMssFvgRetrace');
+const invalid = report.rows.find((row) => row.setupType === 'NoInstalledSetup');
 assert.equal(invalid?.pathState, 'invalidated_without_replayable_entry');
 assert.equal(invalid?.replayUse, 'do_not_replay_stale_invalidated_plan');
 assert.equal(invalid?.decisionQualityHardBlocker, 'InvalidStopLocation');

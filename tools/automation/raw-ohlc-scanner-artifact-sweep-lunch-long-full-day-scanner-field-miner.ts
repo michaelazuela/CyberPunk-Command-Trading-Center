@@ -88,7 +88,7 @@ export interface RawOhlcScannerArtifactSweepLunchLongFullDayScannerFieldMinerRep
     fullDayRollupPath: string | null;
     replayPackagePath: string | null;
     filter: {
-      setupType: 'SweepMssFvgRetrace';
+      setupType: 'NoInstalledSetup';
       session: 'lunch';
       direction: 'LONG';
     };
@@ -201,7 +201,7 @@ function candidateKey(eventTime: string, index: number, setupType: string, direc
 }
 
 function isTarget(row: Pick<OutcomeRow, 'setupType' | 'session' | 'direction'>): boolean {
-  return row.setupType === 'SweepMssFvgRetrace' && row.session === 'lunch' && row.direction === 'LONG';
+  return row.setupType === 'NoInstalledSetup' && row.session === 'lunch' && row.direction === 'LONG';
 }
 
 function isWinner(row: OutcomeRow): boolean {
@@ -397,8 +397,8 @@ export function buildRawOhlcScannerArtifactSweepLunchLongFullDayScannerFieldMine
     fullDayRollup && fullDayRollup.status !== 'pass' ? `full-day rollup status ${fullDayRollup.status}` : null,
     replayPackage && replayPackage.status !== 'pass' ? `replay package status ${replayPackage.status}` : null,
     outcomeRows.length === 0 && !args.joinedRows ? 'full-day rollup has no rows' : null,
-    filteredOutcomeRows.length === 0 && !args.joinedRows ? 'no SweepMssFvgRetrace lunch LONG full-day rows found' : null,
-    joinedRows.length === 0 ? 'no SweepMssFvgRetrace lunch LONG scanner rows joined to full-day outcomes' : null,
+    filteredOutcomeRows.length === 0 && !args.joinedRows ? 'no NoInstalledSetup lunch LONG full-day rows found' : null,
+    joinedRows.length === 0 ? 'no NoInstalledSetup lunch LONG scanner rows joined to full-day outcomes' : null,
   ].filter((item): item is string => Boolean(item));
   const base: Omit<RawOhlcScannerArtifactSweepLunchLongFullDayScannerFieldMinerReport, 'markdown'> = {
     reportType: 'raw_ohlc_scanner_artifact_sweep_lunch_long_full_day_scanner_field_miner',
@@ -410,7 +410,7 @@ export function buildRawOhlcScannerArtifactSweepLunchLongFullDayScannerFieldMine
       fullDayRollupPath,
       replayPackagePath,
       filter: {
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         session: 'lunch',
         direction: 'LONG',
       },

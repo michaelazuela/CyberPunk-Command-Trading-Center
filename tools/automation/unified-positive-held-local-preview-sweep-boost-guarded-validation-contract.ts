@@ -114,7 +114,7 @@ function requirements(feature: string | null): string[] {
 
 function commandTemplate(feature: string | null): string[] {
   return [
-    'npm run diagnostic:held-local-preview-positive-family-boost-validation -- --source-proof-timing <fresh-source-proof-timing.json> --setup-types SweepMssFvgRetrace --json',
+    'npm run diagnostic:held-local-preview-positive-family-boost-validation -- --source-proof-timing <fresh-source-proof-timing.json> --setup-types NoInstalledSetup --json',
     'npm run diagnostic:held-local-preview-sweep-boost-collision-drilldown -- --source-proof-timing <fresh-source-proof-timing.json> --boost-validation <fresh-sweep-boost-validation.json> --json',
     'npm run diagnostic:held-local-preview-sweep-boost-collision-snapshot-guard-miner -- --train-collision <locked-train-collision.json> --train-artifact <locked-train-artifact.json> --test-collision <fresh-collision.json> --test-artifact <fresh-raw-scanner-artifact.json> --json',
     `npm run diagnostic:held-local-preview-sweep-boost-guarded-selection-simulation -- --boost-validation <fresh-sweep-boost-validation.json> --guard-miner <fresh-guard-miner.json> --period test --guard-feature "${feature || '<guard-feature>'}" --json`,

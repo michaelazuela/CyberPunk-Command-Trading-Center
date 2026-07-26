@@ -61,7 +61,7 @@ export interface RawOhlcScannerArtifactSweepLunchLongBlockedCautionPocketDrilldo
     reportDir: string;
     scannerFieldMinerPath: string | null;
     filter: {
-      setupType: 'SweepMssFvgRetrace';
+      setupType: 'NoInstalledSetup';
       session: 'lunch';
       direction: 'LONG';
       cautionPocket: 'hasNoChaseMissingEvidence=true OR htfLineInSandStatus=blocked';
@@ -124,7 +124,7 @@ function round(value: number): number {
 }
 
 function isTarget(row: JoinedRow): boolean {
-  return row.setupType === 'SweepMssFvgRetrace' && row.session === 'lunch' && row.direction === 'LONG';
+  return row.setupType === 'NoInstalledSetup' && row.session === 'lunch' && row.direction === 'LONG';
 }
 
 function isCautionPocket(row: JoinedRow): boolean {
@@ -246,7 +246,7 @@ export function buildRawOhlcScannerArtifactSweepLunchLongBlockedCautionPocketDri
     !scannerFieldMinerPath && !args.scannerFieldMiner ? 'missing scanner field miner path' : null,
     !scannerFieldMiner ? 'missing scanner field miner report' : null,
     scannerFieldMiner && scannerFieldMiner.status !== 'pass' ? `scanner field miner status ${scannerFieldMiner.status}` : null,
-    joinedRows.length === 0 ? 'no SweepMssFvgRetrace lunch LONG joined scanner rows found' : null,
+    joinedRows.length === 0 ? 'no NoInstalledSetup lunch LONG joined scanner rows found' : null,
     cautionRows.length === 0 ? 'no blocked/no-chase caution rows found' : null,
   ].filter((item): item is string => Boolean(item));
   const base: Omit<RawOhlcScannerArtifactSweepLunchLongBlockedCautionPocketDrilldownReport, 'markdown'> = {
@@ -258,7 +258,7 @@ export function buildRawOhlcScannerArtifactSweepLunchLongBlockedCautionPocketDri
       reportDir,
       scannerFieldMinerPath,
       filter: {
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         session: 'lunch',
         direction: 'LONG',
         cautionPocket: 'hasNoChaseMissingEvidence=true OR htfLineInSandStatus=blocked',

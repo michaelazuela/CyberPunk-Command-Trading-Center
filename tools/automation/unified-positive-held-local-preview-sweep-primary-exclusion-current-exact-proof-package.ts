@@ -253,7 +253,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionCurrent
       for (const candidateValue of candidates) {
         if (!candidateValue || typeof candidateValue !== 'object' || Array.isArray(candidateValue)) continue;
         const candidate = candidateValue as Record<string, unknown>;
-        if (text(candidate.setupType) !== 'SweepMssFvgRetrace' || text(candidate.blockReason) !== 'InvalidStopLocation') continue;
+        if (text(candidate.setupType) !== 'NoInstalledSetup' || text(candidate.blockReason) !== 'InvalidStopLocation') continue;
         const direction = text(candidate.direction) || 'UNKNOWN';
         const entry = numberOrNull(candidate.entry);
         const stop = numberOrNull(candidate.stop);

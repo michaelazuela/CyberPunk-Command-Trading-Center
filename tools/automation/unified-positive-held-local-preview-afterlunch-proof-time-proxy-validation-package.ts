@@ -15,7 +15,7 @@ interface PackageRow {
   ticketId: string;
   tradeDate: string;
   session: string;
-  setupType: 'AfterLunchDriveFvgContinuation';
+  setupType: 'NoInstalledSetup';
   direction: string;
   proofTime: string;
   riskPoints: number;

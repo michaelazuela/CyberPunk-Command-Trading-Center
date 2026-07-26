@@ -6,9 +6,9 @@ import { buildUnifiedPositiveScannerDryRunReplayReport } from './unified-positiv
 
 const artifact = buildHeldLocalReviewTicketArtifact({
   ticketId: 'fixture-ticket',
-  setupType: SetupType.RaidReclaimReversal,
+  setupType: SetupType.NoSetup,
   direction: 'LONG',
-  sourceCandidateKey: 'raidReclaim|fixture|LONG|100.00|0',
+  sourceCandidateKey: 'historicalReview|fixture|LONG|100.00|0',
   entry: 100,
   stop: 96,
   target1: 106,
@@ -53,7 +53,7 @@ const adapterReport = {
       ticketId: 'fixture-ticket',
       sourceSnapshotId: 'scanner-fixture',
       session: null,
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       adapterStatus: 'held_local_artifact_created',
       artifact,

@@ -9,7 +9,7 @@ interface AuditRow {
   ticketId: string;
   tradeDate: string;
   session: 'morning';
-  setupType: 'OpeningDriveFvgContinuation';
+  setupType: 'NoInstalledSetup';
   direction: 'SHORT';
   proofTime: string;
   entry: number;
@@ -97,7 +97,7 @@ export interface OpeningDriveOvernightHighRaidDryRunProposalReport {
   };
   proposedLaneContract: {
     laneId: 'overnight_high_raid_bearish_displacement_openingdrive_short';
-    modelFamily: 'OpeningDriveFvgContinuation';
+    modelFamily: 'NoInstalledSetup';
     direction: 'SHORT';
     requiresOvernightHighRaid: true;
     requiresBearishDisplacementBeforeProof: true;
@@ -176,7 +176,7 @@ function deterministicGeometry(row: AuditRow): boolean {
 
 function eligibilityBlockers(row: AuditRow): string[] {
   return [
-    row.setupType !== 'OpeningDriveFvgContinuation' ? 'not OpeningDriveFvgContinuation' : null,
+    row.setupType !== 'NoInstalledSetup' ? 'not NoInstalledSetup' : null,
     row.direction !== 'SHORT' ? 'not short direction' : null,
     !row.raidedOvernightHigh ? 'missing overnight high raid' : null,
     !row.bearishDisplacementBeforeProof ? 'missing bearish displacement before proof' : null,
@@ -308,7 +308,7 @@ export function buildOpeningDriveOvernightHighRaidDryRunProposalReport(args: {
     },
     proposedLaneContract: {
       laneId: 'overnight_high_raid_bearish_displacement_openingdrive_short',
-      modelFamily: 'OpeningDriveFvgContinuation',
+      modelFamily: 'NoInstalledSetup',
       direction: 'SHORT',
       requiresOvernightHighRaid: true,
       requiresBearishDisplacementBeforeProof: true,

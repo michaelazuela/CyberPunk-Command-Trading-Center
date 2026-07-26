@@ -86,7 +86,7 @@ function indexRows(reports: UnifiedPositiveHeldLocalPreviewReplayPackageReport[]
 function cloneRow(row: ReplayRow): ReplayRow {
   return {
     ...row,
-    setupType: 'AfterLunchDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     riskPoints: round(Math.abs(row.entry - row.stop)),
     blockers: [...row.blockers],
   };

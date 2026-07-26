@@ -13,7 +13,7 @@ fs.mkdirSync(auditDir, { recursive: true });
 fs.writeFileSync(path.join(auditDir, 'sweep-countertrend.json'), JSON.stringify({
   normalizedPlan: {
     setupCandidates: [{
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       entry: 7395,
       stop: 7396.75,
@@ -30,7 +30,7 @@ fs.writeFileSync(path.join(auditDir, 'sweep-countertrend.json'), JSON.stringify(
 fs.writeFileSync(path.join(auditDir, 'failed-no-levels.json'), JSON.stringify({
   normalizedPlan: {
     setupCandidates: [{
-      setupType: 'RaidReclaimReversal',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       entry: null,
       stop: null,
@@ -47,7 +47,7 @@ fs.writeFileSync(path.join(auditDir, 'failed-no-levels.json'), JSON.stringify({
 fs.writeFileSync(path.join(auditDir, 'htf-stop-conflict.json'), JSON.stringify({
   normalizedPlan: {
     setupCandidates: [{
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       entry: 7444.5,
       stop: null,
@@ -69,7 +69,7 @@ const carveoutMiner = {
       ticketId: 'sweep',
       tradeDate: '2026-06-12',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       snapshotId: 'sweep-countertrend',
       performanceCarveoutEligible: false,
@@ -79,7 +79,7 @@ const carveoutMiner = {
       ticketId: 'failed',
       tradeDate: '2026-06-24',
       session: 'morning',
-      setupType: 'RaidReclaimReversal',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       snapshotId: 'failed-no-levels',
       performanceCarveoutEligible: false,
@@ -89,7 +89,7 @@ const carveoutMiner = {
       ticketId: 'htf',
       tradeDate: '2026-06-24',
       session: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       snapshotId: 'htf-stop-conflict',
       performanceCarveoutEligible: false,

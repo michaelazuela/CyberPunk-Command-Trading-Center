@@ -123,7 +123,7 @@ export interface UnifiedPositiveHeldLocalPreviewAfterLunchScannerContextLossMine
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SETUP = 'AfterLunchDriveFvgContinuation';
+const SETUP = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -447,11 +447,11 @@ export function buildUnifiedPositiveHeldLocalPreviewAfterLunchScannerContextLoss
       ? [
         'Do not install a rank boost from the rejected proof-time proxy.',
         'Validate a review-note or rank-penalty candidate around target-room obstruction plus HTF line-in-the-sand conflict on a broader OOS package.',
-        'Keep AfterLunchDriveFvgContinuation valid as human-review only; this report does not remove the model or loosen canExecute.',
+        'Keep NoInstalledSetup valid as human-review only; this report does not remove the model or loosen canExecute.',
       ]
       : [
         'Mine additional known-at-proof structural fields before any scanner-visible behavior changes.',
-        'Keep AfterLunchDriveFvgContinuation valid as human-review only until a broader separator survives OOS.',
+        'Keep NoInstalledSetup valid as human-review only until a broader separator survives OOS.',
       ],
   };
   return {

@@ -14,7 +14,7 @@ const researchPack = {
       direction: 'LONG',
       window: '3:00-4:00 NY',
       classification: 'advisory_only',
-      warningFailureReason: 'Approved Model 1 or Raid Reclaim Reversal gates were not evaluated by research backfill.',
+      warningFailureReason: 'Approved no installed model path gates were not evaluated by research backfill.',
       agentInspectionLabel: 'keep_advisory',
       agentConfidence: 'high',
       humanInspectionLabel: 'approved_for_future_model_candidate_review',
@@ -53,7 +53,7 @@ const researchPack = {
       direction: 'SHORT',
       window: 'regular_session',
       classification: 'advisory_only',
-      researchDetectorReason: 'False-run behavior needs sweep/reclaim validation before Raid Reclaim Reversal mapping.',
+      researchDetectorReason: 'False-run behavior needs historical reversal pattern validation before no installed model path mapping.',
       agentInspectionLabel: 'reject',
       agentConfidence: 'medium',
       advisoryOnly: true,
@@ -88,7 +88,7 @@ assert.ok(visualization.rows[0].estimatedGrossContractPnlLabel.includes('Hyp +$4
 assert.equal(visualization.summary.samplesWithChartEvidence, 1);
 assert.equal(visualization.summary.samplesWithEstimatedGrossContractPnl, 1);
 assert.ok(visualization.countBySetupType.some((item) => item.name === 'Time-Window Liquidity Delivery' && item.count === 1));
-assert.ok(visualization.countByBlockReason.some((item) => item.name.includes('Approved Model 1') && item.count === 1));
+assert.ok(visualization.countByBlockReason.some((item) => item.name.includes('Approved no installed model path') && item.count === 1));
 assert.ok(visualization.warnings.some((warning) => warning.includes('research quality score was not present')));
 assert.equal((visualization.rows[0].raw as any).agentApprovalBoundary.agentApprovesTrade, false);
 
@@ -99,7 +99,7 @@ const scannerLikeReview = {
     {
       id: 'scanner-review-001',
       completedCandleTime: '2026-05-29T11:25:00-04:00',
-      setupName: 'Raid Reclaim Reversal LONG',
+      setupName: 'no installed model path LONG',
       direction: 'LONG',
       decision: 'WAIT',
       executionStatus: 'Conditional',

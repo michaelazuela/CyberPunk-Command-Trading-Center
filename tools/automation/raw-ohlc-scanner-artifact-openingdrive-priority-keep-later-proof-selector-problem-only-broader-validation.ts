@@ -322,7 +322,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
       : surviving.length
         ? [
           'Keep surviving combos research-only and validate on fresh scanner artifacts before any scanner-visible penalty.',
-          'Do not remove raidReclaim, Sweep, canExecute, or approved model gates from this evidence.',
+          'Do not remove historicalReview, Sweep, canExecute, or approved model gates from this evidence.',
         ]
         : [
           'Reject current problem-only combos for runtime use; broader validation shows winner/unresolved contamination or unsupported fields.',

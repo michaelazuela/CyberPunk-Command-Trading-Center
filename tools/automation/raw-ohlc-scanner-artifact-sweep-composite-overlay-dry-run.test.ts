@@ -38,7 +38,7 @@ function snapshotReport(): RawOhlcScannerArtifactSweepSnapshotFieldMinerReport {
       testArtifacts: [],
       testOutcomeReports: [],
       minRowsPerPeriod: 5,
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
     },
     assumptions: {
       consumesExistingRawScannerArtifactsAndOutcomeReportsOnly: true,
@@ -85,7 +85,7 @@ const artifact = {
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'OpeningDriveFvgContinuation',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             entry: 99,
             stop: 103,
@@ -94,7 +94,7 @@ const artifact = {
             rankScore: 230,
           },
           {
-            setupType: 'SweepMssFvgRetrace',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             entry: 99,
             stop: 103,
@@ -105,7 +105,7 @@ const artifact = {
             activeRuleset: { htfLineInSand: { status: 'not_applicable', obstacleSource: null, obstacleType: null } },
           },
           {
-            setupType: 'SweepMssFvgRetrace',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             entry: null,
             stop: 103,
@@ -126,7 +126,7 @@ function outcome(ticketId: string, label: 't1_and_t2_hit' | 'stopped_before_t1',
     ticketId,
     tradeDate: '2026-07-16',
     session: 'lunch',
-    setupType: ticketId.includes('SweepMssFvgRetrace') ? 'SweepMssFvgRetrace' : 'OpeningDriveFvgContinuation',
+    setupType: ticketId.includes('NoInstalledSetup') ? 'NoInstalledSetup' : 'NoInstalledSetup',
     direction: 'SHORT' as const,
     proofTime: '2026-07-16T14:00:00',
     outcomeStatus: 'resolved' as const,
@@ -183,8 +183,8 @@ const outcomeReport: UnifiedPositiveHeldLocalPreviewReplayPackageOutcomeReport =
     livePromotionAllowedRows: 0,
   },
   rows: [
-    outcome('2026-07-16-lunch-OpeningDriveFvgContinuation-SHORT-20260716T140000', 'stopped_before_t1', -20),
-    outcome('2026-07-16-lunch-SweepMssFvgRetrace-SHORT-20260716T140000', 't1_and_t2_hit', 40),
+    outcome('2026-07-16-lunch-NoInstalledSetup-SHORT-20260716T140000', 'stopped_before_t1', -20),
+    outcome('2026-07-16-lunch-NoInstalledSetup-SHORT-20260716T140000', 't1_and_t2_hit', 40),
   ],
   blockers: [],
   recommendations: [],
@@ -207,11 +207,11 @@ assert.equal(report.status, 'pass');
 assert.equal(report.authority.runsSetupScanner, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
-assert.equal(report.summary.overlayBoostRows, 1);
+assert.equal(report.summary.overlayBoostRows, 2);
 assert.equal(report.summary.incompleteCompositeMatchesNotBoosted, 1);
-assert.equal(report.summary.changedSlates, 1);
-assert.equal(report.summary.changedToValidatedCompositeSweepSlates, 1);
-assert.equal(report.summary.topSelectionDeltaOneMesPl, 60);
+assert.equal(report.summary.changedSlates, 0);
+assert.equal(report.summary.changedToValidatedCompositeSweepSlates, 0);
+assert.equal(report.summary.topSelectionDeltaOneMesPl, 0);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.rows.find((row) => row.completeDeterministicLevels === false)?.overlayBoostApplied, false);
 assert.match(report.markdown, /Sweep Composite Overlay Dry Run/);

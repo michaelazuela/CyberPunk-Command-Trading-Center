@@ -17,7 +17,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-05-MES-lunch
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'SweepMssFvgRetrace',
+            setupType: 'NoInstalledSetup',
             direction: 'LONG',
             detectedStatus: 'Blocked',
             executionStatus: 'Blocked',
@@ -36,7 +36,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-05-MES-lunch
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'SweepMssFvgRetrace',
+            setupType: 'NoInstalledSetup',
             direction: 'LONG',
             detectedStatus: 'Conditional',
             executionStatus: 'Conditional',
@@ -60,7 +60,7 @@ const geometryDrilldownReport = {
       rowId: 'bad-long',
       tradeDate: '2026-06-05',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       firstSeenTime: '2026-06-05T12:00:00',
       entry: 100,
@@ -74,7 +74,7 @@ const geometryDrilldownReport = {
       rowId: 'missing-tape',
       tradeDate: '2026-06-06',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       firstSeenTime: '2026-06-06T09:30:00',
       entry: 200,

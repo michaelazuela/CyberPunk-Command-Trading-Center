@@ -5,8 +5,8 @@ import {
 
 const validEditableTemplate = {
   rows: [{
-    ticketId: '2026-06-16-morning-raidReclaim-LONG',
-    setupType: 'raidReclaim',
+    ticketId: '2026-06-16-morning-historicalReview-LONG',
+    setupType: 'historicalReview',
     direction: 'LONG',
     visibleInHiddenTab: true,
     reviewOnly: true,
@@ -60,10 +60,10 @@ const badReport = buildUnifiedPositiveHeldLocalPreviewNoteIngestValidatorReport(
 }, '2026-07-16T00:19:00.000Z');
 
 assert.equal(badReport.status, 'fail');
-assert.ok(badReport.blockers.includes('2026-06-16-morning-raidReclaim-LONG: unsupported disposition promote_live'));
-assert.ok(badReport.blockers.includes('2026-06-16-morning-raidReclaim-LONG: boundary reminder missing no-execution language'));
-assert.ok(badReport.blockers.includes('2026-06-16-morning-raidReclaim-LONG: boundary reminder missing no-Supabase-write language'));
-assert.ok(badReport.blockers.includes('2026-06-16-morning-raidReclaim-LONG: boundary reminder missing no-Discord-post language'));
+assert.ok(badReport.blockers.includes('2026-06-16-morning-historicalReview-LONG: unsupported disposition promote_live'));
+assert.ok(badReport.blockers.includes('2026-06-16-morning-historicalReview-LONG: boundary reminder missing no-execution language'));
+assert.ok(badReport.blockers.includes('2026-06-16-morning-historicalReview-LONG: boundary reminder missing no-Supabase-write language'));
+assert.ok(badReport.blockers.includes('2026-06-16-morning-historicalReview-LONG: boundary reminder missing no-Discord-post language'));
 
 const missingReport = buildUnifiedPositiveHeldLocalPreviewNoteIngestValidatorReport({
   editableTemplatePath: null,

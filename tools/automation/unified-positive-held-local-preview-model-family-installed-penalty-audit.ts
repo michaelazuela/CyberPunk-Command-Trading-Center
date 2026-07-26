@@ -211,7 +211,7 @@ function candidateKey(row: ReplayRow, intake: IntakeRow | undefined, index: numb
 }
 
 function isInvalidStopSweep(row: ReplayRow, intake: IntakeRow | undefined): boolean {
-  return row.setupType === 'SweepMssFvgRetrace' &&
+  return row.setupType === 'NoInstalledSetup' &&
     (intake?.executionStatus || '') === 'Blocked' &&
     (intake?.blockReason || '') === 'InvalidStopLocation';
 }
@@ -248,7 +248,7 @@ function buildAudit(args: {
       validRows: rows.length - invalidRows.length,
       primaryRowId: primary?.sourceCandidate.scenarioLabel || null,
       primarySetupType: primary?.setupType || null,
-      primaryInvalidStopSweep: Boolean(primary && primary.setupType === SetupType.SweepMssFvgRetrace && primary.sourceCandidate.blockReason === NoTradeReason.InvalidStopLocation),
+      primaryInvalidStopSweep: Boolean(primary && primary.setupType === SetupType.NoSetup && primary.sourceCandidate.blockReason === NoTradeReason.InvalidStopLocation),
     });
     rows.forEach((row, index) => {
       const intake = intakeById.get(row.rowId);

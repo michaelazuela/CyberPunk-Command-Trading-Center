@@ -2,13 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimRankSimulationReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewRankSimulationReport,
 } from './unified-positive-held-local-preview-raidReclaim-rank-simulation';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport,
 } from './unified-positive-held-local-preview-raidReclaim-replay-package';
 
-type PackageRow = UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport['rows'][number];
+type PackageRow = UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport['rows'][number];
 
 interface ReasonCluster {
   clusterId: string;
@@ -23,8 +23,8 @@ interface ReasonCluster {
   reviewNoteCandidate: boolean;
 }
 
-export interface UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_blocked_reason_drilldown';
+export interface UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport {
+  reportType: 'unified_positive_held_local_preview_historicalReview_blocked_reason_drilldown';
   generatedAt: string;
   status: 'pass' | 'fail';
   authority: {
@@ -47,8 +47,8 @@ export interface UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldow
   };
   source: {
     reportDir: string;
-    raidReclaimReplayPackagePath: string | null;
-    raidReclaimRankSimulationPath: string | null;
+    historicalReviewReplayPackagePath: string | null;
+    historicalReviewRankSimulationPath: string | null;
   };
   assumptions: {
     drilldownIsResearchOnly: true;
@@ -98,7 +98,7 @@ function latestMatchingFile(reportDir: string, pattern: RegExp): string | null {
   return matches[0] || null;
 }
 
-function authority(): UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport['authority'] {
+function authority(): UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport['authority'] {
   return {
     readOnly: true,
     localOnly: true,
@@ -170,7 +170,7 @@ function recommendedAction(args: {
   clusters: ReasonCluster[];
   blockedRows: number;
   rankPenaltyRejectedByPriorSimulation: boolean;
-}): UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport['summary']['recommendedAction'] {
+}): UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport['summary']['recommendedAction'] {
   if (!args.blockedRows) return 'no_action';
   if (args.rankPenaltyRejectedByPriorSimulation && args.clusters.some((cluster) => cluster.reviewNoteCandidate)) {
     return 'draft_review_note_wording_only';
@@ -182,9 +182,9 @@ function escapeTable(value: string): string {
   return value.replace(/\|/g, '/').replace(/\r?\n/g, ' ');
 }
 
-function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport, 'markdown'>): string {
+function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport, 'markdown'>): string {
   return [
-    '# Unified Positive Held-Local Preview raidReclaim Blocked Reason Drilldown',
+    '# Unified Positive Held-Local Preview historicalReview Blocked Reason Drilldown',
     '',
     `Status: ${report.status}`,
     '',
@@ -214,44 +214,44 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimBl
   ].join('\n');
 }
 
-export function buildUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport(args: {
+export function buildUnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport(args: {
   reportDir: string;
-  raidReclaimReplayPackagePath: string | null;
-  raidReclaimReplayPackageReport: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport | null;
-  raidReclaimRankSimulationPath: string | null;
-  raidReclaimRankSimulationReport: UnifiedPositiveHeldLocalPreviewraidReclaimRankSimulationReport | null;
-}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport {
-  const packageRows = args.raidReclaimReplayPackageReport?.rows || [];
+  historicalReviewReplayPackagePath: string | null;
+  historicalReviewReplayPackageReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport | null;
+  historicalReviewRankSimulationPath: string | null;
+  historicalReviewRankSimulationReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewRankSimulationReport | null;
+}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport {
+  const packageRows = args.historicalReviewReplayPackageReport?.rows || [];
   const blockedRows = packageRows.filter((row) => row.group === 'blocked_protected_stop');
   const blockedSummary = summarize(blockedRows);
   const clusters = buildClusters(blockedRows);
-  const rankPenaltyRejectedByPriorSimulation = args.raidReclaimRankSimulationReport?.summary.recommendation === 'reject_rank_penalty';
+  const rankPenaltyRejectedByPriorSimulation = args.historicalReviewRankSimulationReport?.summary.recommendation === 'reject_rank_penalty';
   const action = recommendedAction({
     clusters,
     blockedRows: blockedRows.length,
     rankPenaltyRejectedByPriorSimulation,
   });
   const blockers = [
-    !args.raidReclaimReplayPackagePath ? 'missing raidReclaim replay package path' : null,
-    !args.raidReclaimReplayPackageReport ? 'missing raidReclaim replay package report' : null,
-    args.raidReclaimReplayPackageReport && args.raidReclaimReplayPackageReport.status !== 'pass' ? `raidReclaim replay package status ${args.raidReclaimReplayPackageReport.status}` : null,
-    !args.raidReclaimRankSimulationPath ? 'missing raidReclaim rank simulation path' : null,
-    !args.raidReclaimRankSimulationReport ? 'missing raidReclaim rank simulation report' : null,
-    args.raidReclaimRankSimulationReport && args.raidReclaimRankSimulationReport.status !== 'pass' ? `raidReclaim rank simulation status ${args.raidReclaimRankSimulationReport.status}` : null,
-    packageRows.length === 0 ? 'no raidReclaim package rows found' : null,
+    !args.historicalReviewReplayPackagePath ? 'missing historicalReview replay package path' : null,
+    !args.historicalReviewReplayPackageReport ? 'missing historicalReview replay package report' : null,
+    args.historicalReviewReplayPackageReport && args.historicalReviewReplayPackageReport.status !== 'pass' ? `historicalReview replay package status ${args.historicalReviewReplayPackageReport.status}` : null,
+    !args.historicalReviewRankSimulationPath ? 'missing historicalReview rank simulation path' : null,
+    !args.historicalReviewRankSimulationReport ? 'missing historicalReview rank simulation report' : null,
+    args.historicalReviewRankSimulationReport && args.historicalReviewRankSimulationReport.status !== 'pass' ? `historicalReview rank simulation status ${args.historicalReviewRankSimulationReport.status}` : null,
+    packageRows.length === 0 ? 'no historicalReview package rows found' : null,
   ].filter((item): item is string => Boolean(item));
   const sampleReviewNote = action === 'draft_review_note_wording_only'
-    ? 'raidReclaim remains valid, but this candidate is review-only because the protected-stop/plan proof is incomplete or blocked; require fresh completed 5M entry and protected-stop confirmation before treating it as actionable.'
+    ? 'historicalReview remains valid, but this candidate is review-only because the protected-stop/plan proof is incomplete or blocked; require fresh completed 5M entry and protected-stop confirmation before treating it as actionable.'
     : null;
-  const base: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport, 'markdown'> = {
-    reportType: 'unified_positive_held_local_preview_raidReclaim_blocked_reason_drilldown',
+  const base: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport, 'markdown'> = {
+    reportType: 'unified_positive_held_local_preview_historicalReview_blocked_reason_drilldown',
     generatedAt,
     status: blockers.length ? 'fail' : 'pass',
     authority: authority(),
     source: {
       reportDir: args.reportDir,
-      raidReclaimReplayPackagePath: args.raidReclaimReplayPackagePath,
-      raidReclaimRankSimulationPath: args.raidReclaimRankSimulationPath,
+      historicalReviewReplayPackagePath: args.historicalReviewReplayPackagePath,
+      historicalReviewRankSimulationPath: args.historicalReviewRankSimulationPath,
     },
     assumptions: {
       drilldownIsResearchOnly: true,
@@ -278,11 +278,11 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDril
     sampleReviewNote,
     blockers,
     recommendations: blockers.length
-      ? ['Do not use blocked reason drilldown until the raidReclaim package and rank simulation are present and passing.']
+      ? ['Do not use blocked reason drilldown until the historicalReview package and rank simulation are present and passing.']
       : action === 'draft_review_note_wording_only'
         ? [
           'Draft review-note wording only; do not install a rank penalty or hard block.',
-          'Keep raidReclaim enabled and keep blocked protected-stop winners visible for manual review.',
+          'Keep historicalReview enabled and keep blocked protected-stop winners visible for manual review.',
         ]
         : action === 'manual_case_review_only'
           ? ['Use manual case review only; evidence is not clean enough for reusable note wording.']
@@ -291,8 +291,8 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDril
   return { ...base, markdown: buildMarkdown(base) };
 }
 
-export function writeUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport(
-  report: UnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport,
+export function writeUnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport(
+  report: UnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport,
   outDir = DEFAULT_REPORT_DIR,
 ): { jsonPath: string; markdownPath: string } {
   fs.mkdirSync(outDir, { recursive: true });
@@ -304,24 +304,24 @@ export function writeUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDril
   return { jsonPath, markdownPath };
 }
 
-export function runUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownCli(args = process.argv.slice(2)): void {
+export function runUnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownCli(args = process.argv.slice(2)): void {
   const outDir = readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR;
-  const raidReclaimReplayPackagePath = readFlag(args, '--raidReclaim-replay-package') ||
+  const historicalReviewReplayPackagePath = readFlag(args, '--historicalReview-replay-package') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-raidReclaim-replay-package-\d+\.json$/);
-  const raidReclaimRankSimulationPath = readFlag(args, '--raidReclaim-rank-simulation') ||
+  const historicalReviewRankSimulationPath = readFlag(args, '--historicalReview-rank-simulation') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-raidReclaim-rank-simulation-\d+\.json$/);
-  const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport({
+  const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport({
     reportDir: outDir,
-    raidReclaimReplayPackagePath,
-    raidReclaimReplayPackageReport: raidReclaimReplayPackagePath && fs.existsSync(raidReclaimReplayPackagePath)
-      ? JSON.parse(fs.readFileSync(raidReclaimReplayPackagePath, 'utf8')) as UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport
+    historicalReviewReplayPackagePath,
+    historicalReviewReplayPackageReport: historicalReviewReplayPackagePath && fs.existsSync(historicalReviewReplayPackagePath)
+      ? JSON.parse(fs.readFileSync(historicalReviewReplayPackagePath, 'utf8')) as UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport
       : null,
-    raidReclaimRankSimulationPath,
-    raidReclaimRankSimulationReport: raidReclaimRankSimulationPath && fs.existsSync(raidReclaimRankSimulationPath)
-      ? JSON.parse(fs.readFileSync(raidReclaimRankSimulationPath, 'utf8')) as UnifiedPositiveHeldLocalPreviewraidReclaimRankSimulationReport
+    historicalReviewRankSimulationPath,
+    historicalReviewRankSimulationReport: historicalReviewRankSimulationPath && fs.existsSync(historicalReviewRankSimulationPath)
+      ? JSON.parse(fs.readFileSync(historicalReviewRankSimulationPath, 'utf8')) as UnifiedPositiveHeldLocalPreviewhistoricalReviewRankSimulationReport
       : null,
   });
-  const paths = writeUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport(report, outDir);
+  const paths = writeUnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport(report, outDir);
   if (args.includes('--json')) {
     console.log(JSON.stringify({ ...paths, status: report.status, summary: report.summary }, null, 2));
   } else {
@@ -334,7 +334,7 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilld
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   try {
-    runUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownCli();
+    runUnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownCli();
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

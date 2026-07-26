@@ -2193,8 +2193,8 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -2303,8 +2303,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -2366,8 +2366,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -2608,8 +2608,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -2866,8 +2866,8 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -2976,8 +2976,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -3039,8 +3039,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -3281,8 +3281,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -3811,8 +3811,8 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -3921,8 +3921,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -3984,8 +3984,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -4226,8 +4226,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -4484,8 +4484,8 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -4594,8 +4594,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -4657,8 +4657,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -4899,8 +4899,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -5423,8 +5423,8 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -5531,8 +5531,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -5592,8 +5592,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -5834,8 +5834,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -6096,8 +6096,8 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -6204,8 +6204,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -6265,8 +6265,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -6507,8 +6507,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -7084,8 +7084,8 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -7194,8 +7194,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -7256,8 +7256,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -7503,8 +7503,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -7770,8 +7770,8 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -7880,8 +7880,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -7942,8 +7942,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -8189,8 +8189,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -8770,8 +8770,8 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -8881,8 +8881,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -8943,8 +8943,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -9190,8 +9190,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -9452,8 +9452,8 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -9563,8 +9563,8 @@
                 "filteredOutReason": "EntryTriggerPending"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -9625,8 +9625,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -9872,8 +9872,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -10154,8 +10154,8 @@
             "filteredOutReason": null
           },
           "bestShortPlan": {
-            "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-            "setupType": "RaidReclaimReversal",
+            "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+            "setupType": "HistoricalReviewReversal",
             "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
             "direction": "SHORT",
             "detectedStatus": "Conditional",
@@ -10345,8 +10345,8 @@
             "shortBias": {
               "direction": "SHORT",
               "state": "secondary",
-              "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-              "setupType": "RaidReclaimReversal",
+              "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+              "setupType": "HistoricalReviewReversal",
               "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
               "rankScore": 259,
               "decisionQualityScore": 92,
@@ -10552,8 +10552,8 @@
                 "filteredOutReason": null
               },
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -10604,8 +10604,8 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -10666,8 +10666,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -10913,8 +10913,8 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -11076,8 +11076,8 @@
               "filteredOutReason": null
             },
             "bestShortPlan": {
-              "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-              "setupType": "RaidReclaimReversal",
+              "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+              "setupType": "HistoricalReviewReversal",
               "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
               "direction": "SHORT",
               "detectedStatus": "Conditional",
@@ -11189,8 +11189,8 @@
             },
             "filteredOutCandidates": [
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -11241,8 +11241,8 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|scenario|Conditional",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|scenario|Conditional",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": null,
                 "direction": "LONG",
                 "detectedStatus": "Possible",
@@ -11303,8 +11303,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|OPPOSITE_SIDE_RETEST_PENDING",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -11550,8 +11550,8 @@
                 "filteredOutReason": "T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -11667,7 +11667,7 @@
         "instrument": "MES",
         "session": "morning",
         "alertType": "trade",
-        "candidateSetupType": "RaidReclaimReversal",
+        "candidateSetupType": "HistoricalReviewReversal",
         "direction": "SHORT",
         "scannerState": "Approved",
         "selectedCandidateDirection": "SHORT",
@@ -11832,8 +11832,8 @@
             "filteredOutReason": "InvalidStopLocation"
           },
           "bestShortPlan": {
-            "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-            "setupType": "RaidReclaimReversal",
+            "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+            "setupType": "HistoricalReviewReversal",
             "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
             "direction": "SHORT",
             "detectedStatus": "Conditional",
@@ -11894,8 +11894,8 @@
             "filteredOutReason": null
           },
           "selectedCandidate": {
-            "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-            "setupType": "RaidReclaimReversal",
+            "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+            "setupType": "HistoricalReviewReversal",
             "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
             "direction": "SHORT",
             "detectedStatus": "Conditional",
@@ -12031,8 +12031,8 @@
             "shortBias": {
               "direction": "SHORT",
               "state": "countertrend_review",
-              "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-              "setupType": "RaidReclaimReversal",
+              "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+              "setupType": "HistoricalReviewReversal",
               "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
               "rankScore": 199,
               "decisionQualityScore": 90,
@@ -12199,8 +12199,8 @@
             "candidateCount": 9,
             "createdCandidates": [
               {
-                "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
                 "direction": "SHORT",
                 "detectedStatus": "Conditional",
@@ -12325,8 +12325,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -12623,8 +12623,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",
@@ -12776,8 +12776,8 @@
               "filteredOutReason": "InvalidStopLocation"
             },
             "bestShortPlan": {
-              "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-              "setupType": "RaidReclaimReversal",
+              "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+              "setupType": "HistoricalReviewReversal",
               "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
               "direction": "SHORT",
               "detectedStatus": "Conditional",
@@ -12837,10 +12837,10 @@
               "selected": true,
               "filteredOutReason": null
             },
-            "selectedCandidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+            "selectedCandidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
             "selectedCandidate": {
-              "candidateKey": "RaidReclaimReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
-              "setupType": "RaidReclaimReversal",
+              "candidateKey": "HistoricalReviewReversal|SHORT|Bearish Raid Reclaim Reversal Reversal|Executable",
+              "setupType": "HistoricalReviewReversal",
               "scenarioLabel": "Bearish Raid Reclaim Reversal Reversal",
               "direction": "SHORT",
               "detectedStatus": "Conditional",
@@ -12966,8 +12966,8 @@
                 "filteredOutReason": "EntryTriggerMissing"
               },
               {
-                "candidateKey": "RaidReclaimReversal|LONG|Raid Reclaim Reversal|FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|LONG|Raid Reclaim Reversal|FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "Raid Reclaim Reversal",
                 "direction": "LONG",
                 "detectedStatus": "Conditional",
@@ -13264,8 +13264,8 @@
                 "filteredOutReason": "Candidate direction is NO TRADE."
               },
               {
-                "candidateKey": "RaidReclaimReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
-                "setupType": "RaidReclaimReversal",
+                "candidateKey": "HistoricalReviewReversal|NO TRADE|HTF Context Continuation After Raid/Reclaim|NO_QUALIFIED_STATE",
+                "setupType": "HistoricalReviewReversal",
                 "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
                 "direction": "NO TRADE",
                 "detectedStatus": "NotDetected",

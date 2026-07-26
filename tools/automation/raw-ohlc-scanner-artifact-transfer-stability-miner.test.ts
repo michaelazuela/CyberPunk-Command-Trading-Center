@@ -91,7 +91,7 @@ function report(rows: ReturnType<typeof row>[]): RawOhlcScannerArtifactSameBarSe
 
 const stableWinners = Array.from({ length: 6 }, (_, index) => row({
   id: `stable-win-${index}`,
-  setupType: 'AfterLunchDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
   session: 'lunch',
   direction: 'LONG',
   riskPoints: 3,
@@ -101,7 +101,7 @@ const stableWinners = Array.from({ length: 6 }, (_, index) => row({
 
 const trainOnlyWinners = Array.from({ length: 6 }, (_, index) => row({
   id: `train-only-win-${index}`,
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
   session: 'morning',
   direction: 'SHORT',
   riskPoints: 6,
@@ -114,7 +114,7 @@ const testReport = report([
   ...stableWinners.map((item, index) => ({ ...item, ticketId: `stable-test-win-${index}` })),
   ...Array.from({ length: 6 }, (_, index) => row({
     id: `train-only-test-loss-${index}`,
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     session: 'morning',
     direction: 'SHORT',
     riskPoints: 6,
@@ -144,9 +144,9 @@ assert.equal(mined.summary.testRows, 12);
 assert.equal(mined.summary.livePromotionAllowedRows, 0);
 assert.equal(mined.summary.stablePositiveBuckets > 0, true);
 assert.equal(mined.summary.zeroLossStablePositiveBuckets > 0, true);
-assert.equal(mined.stablePositiveBuckets.some((bucket) => bucket.key.includes('AfterLunchDriveFvgContinuation')), true);
+assert.equal(mined.stablePositiveBuckets.some((bucket) => bucket.key.includes('NoInstalledSetup')), true);
 assert.equal(mined.zeroLossStablePositiveBuckets.every((bucket) => bucket.train.losses === 0 && bucket.test.losses === 0), true);
-assert.equal(mined.unstableBuckets.some((bucket) => bucket.key.includes('OpeningDriveFvgContinuation') && bucket.verdict === 'train_positive_test_failed'), true);
+assert.equal(mined.unstableBuckets.some((bucket) => bucket.key.includes('NoInstalledSetup') && bucket.verdict === 'train_positive_test_failed'), true);
 assert.match(mined.markdown, /Raw-OHLC Transfer Stability Miner/);
 
 const parsed = parseRawOhlcScannerArtifactTransferStabilityMinerArgs([

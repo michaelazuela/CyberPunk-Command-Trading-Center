@@ -39,7 +39,7 @@ const manifest = {
       cardId: 'morning-htf',
       date: '2026-07-22',
       session: 'morning' as const,
-      model: 'SweepMssFvgRetrace',
+      model: 'NoInstalledSetup',
       direction: 'LONG' as const,
       proofTime: '2026-07-22T09:10:00',
       entry: 7519.5,
@@ -51,7 +51,7 @@ const manifest = {
       cardId: 'lunch-intraday',
       date: '2026-07-22',
       session: 'lunch' as const,
-      model: 'IntradayMssMicroContinuation',
+      model: 'NoInstalledSetup',
       direction: 'LONG' as const,
       proofTime: '2026-07-22T15:45:00',
       entry: 7540,
@@ -112,7 +112,7 @@ assert.equal(receipt.summary.tradingLogicChangedRows, 0);
 assert.equal(receipt.summary.automatedOrderRows, 0);
 assert.equal(receipt.summary.blockedRows, 0);
 assert.equal(receipt.summary.recommendation, 'ready_for_disabled_runtime_gate_validation');
-assert.equal(receipt.selectedCandidates[0]?.model, 'SweepMssFvgRetrace');
+assert.equal(receipt.selectedCandidates[0]?.model, 'NoInstalledSetup');
 assert.match(receipt.markdown, /disabled runtime-gate contract only/i);
 
 const missingIdempotency = buildUnifiedDeskOutputRuntimeGateManifestReceipt({

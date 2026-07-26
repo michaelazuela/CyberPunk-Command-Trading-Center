@@ -798,8 +798,8 @@
       }
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-04-07",
-      "sourceBucket": "RAID_RECLAIM_overlap_samples",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-04-07",
+      "sourceBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "window": "AM 10:00-11:00 NY",
       "symbol": "MES",
       "dateTime": "2025-04-07 10:00-11:00",
@@ -819,8 +819,8 @@
       }
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-10-27",
-      "sourceBucket": "RAID_RECLAIM_overlap_samples",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-10-27",
+      "sourceBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "window": "AM 10:00-11:00 NY",
       "symbol": "MES",
       "dateTime": "2025-10-27 10:00-11:00",
@@ -840,8 +840,8 @@
       }
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-04-15",
-      "sourceBucket": "RAID_RECLAIM_overlap_samples",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-04-15",
+      "sourceBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "window": "AM 10:00-11:00 NY",
       "symbol": "MES",
       "dateTime": "2025-04-15 10:00-11:00",
@@ -861,8 +861,8 @@
       }
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2023-11-24",
-      "sourceBucket": "RAID_RECLAIM_overlap_samples",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2023-11-24",
+      "sourceBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "window": "AM 10:00-11:00 NY",
       "symbol": "MES",
       "dateTime": "2023-11-24 10:00-11:00",
@@ -882,8 +882,8 @@
       }
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-09-23",
-      "sourceBucket": "RAID_RECLAIM_overlap_samples",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-09-23",
+      "sourceBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "window": "AM 10:00-11:00 NY",
       "symbol": "MES",
       "dateTime": "2025-09-23 10:00-11:00",
@@ -903,8 +903,8 @@
       }
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2024-01-23",
-      "sourceBucket": "RAID_RECLAIM_overlap_samples",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2024-01-23",
+      "sourceBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "window": "AM 10:00-11:00 NY",
       "symbol": "MES",
       "dateTime": "2024-01-23 10:00-11:00",
@@ -924,8 +924,8 @@
       }
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-02-17",
-      "sourceBucket": "RAID_RECLAIM_overlap_samples",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-02-17",
+      "sourceBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "window": "AM 10:00-11:00 NY",
       "symbol": "MES",
       "dateTime": "2025-02-17 10:00-11:00",
@@ -945,8 +945,8 @@
       }
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2024-05-22",
-      "sourceBucket": "RAID_RECLAIM_overlap_samples",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2024-05-22",
+      "sourceBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "window": "AM 10:00-11:00 NY",
       "symbol": "MES",
       "dateTime": "2024-05-22 10:00-11:00",
@@ -966,8 +966,8 @@
       }
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-07-08",
-      "sourceBucket": "RAID_RECLAIM_overlap_samples",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-07-08",
+      "sourceBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "window": "AM 10:00-11:00 NY",
       "symbol": "MES",
       "dateTime": "2025-07-08 10:00-11:00",
@@ -987,8 +987,8 @@
       }
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-08-25",
-      "sourceBucket": "RAID_RECLAIM_overlap_samples",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-08-25",
+      "sourceBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "window": "AM 10:00-11:00 NY",
       "symbol": "MES",
       "dateTime": "2025-08-25 10:00-11:00",
@@ -1136,16 +1136,16 @@
       "model_1_overlap_samples-am_liquidity_delivery_window-2023-11-06",
       "model_1_overlap_samples-am_liquidity_delivery_window-2025-04-09",
       "model_1_overlap_samples-am_liquidity_delivery_window-2025-06-26",
-      "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-04-07",
-      "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-10-27",
-      "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-04-15",
-      "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2023-11-24",
-      "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-09-23",
-      "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2024-01-23",
-      "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-02-17",
-      "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2024-05-22",
-      "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-07-08",
-      "RAID_RECLAIM_overlap_samples-am_liquidity_delivery_window-2025-08-25"
+      "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-04-07",
+      "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-10-27",
+      "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-04-15",
+      "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2023-11-24",
+      "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-09-23",
+      "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2024-01-23",
+      "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-02-17",
+      "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2024-05-22",
+      "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-07-08",
+      "HISTORICAL_REVERSAL_overlap_samples-am_liquidity_delivery_window-2025-08-25"
     ],
     "note": "Chart-evidence recommendations were applied as research-only human review labels. This does not approve trades, models, alerts, or execution.",
     "boundary": "research_only_not_execution_authority"

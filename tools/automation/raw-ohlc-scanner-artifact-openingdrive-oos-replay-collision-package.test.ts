@@ -36,7 +36,7 @@ function row(args: {
     ticketId: args.ticketId,
     tradeDate: args.proofTime.slice(0, 10),
     session: 'morning',
-    setupType: args.setupType || 'OpeningDriveFvgContinuation',
+    setupType: args.setupType || 'NoInstalledSetup',
     direction: args.direction,
     outcomeLabel: args.outcomeLabel,
     outcomeStatus: 'resolved',
@@ -79,7 +79,7 @@ const reportFixture = {
     row({ ticketId: 'tight', proofTime: '2026-07-17T10:40:00', direction: 'LONG', riskPoints: 4.25, outcomeLabel: 't1_and_t2_hit', oneMesPl: 42.5 }),
     row({ ticketId: 'rejected-loss', proofTime: '2026-07-17T09:50:00', direction: 'LONG', riskPoints: 6.25, outcomeLabel: 'stopped_before_t1', oneMesPl: -31.25 }),
     row({ ticketId: 'rejected-short-tight', proofTime: '2026-07-17T10:40:00', direction: 'SHORT', riskPoints: 4.25, outcomeLabel: 't1_and_t2_hit', oneMesPl: 42.5 }),
-    row({ ticketId: 'other-model', proofTime: '2026-07-17T10:40:00', direction: 'LONG', riskPoints: 4.25, outcomeLabel: 't1_and_t2_hit', oneMesPl: 42.5, setupType: 'AfterLunchDriveFvgContinuation' }),
+    row({ ticketId: 'other-model', proofTime: '2026-07-17T10:40:00', direction: 'LONG', riskPoints: 4.25, outcomeLabel: 't1_and_t2_hit', oneMesPl: 42.5, setupType: 'NoInstalledSetup' }),
   ],
   blockers: [],
   recommendations: [],
@@ -95,13 +95,13 @@ assert.equal(packageReport.reportType, 'raw_ohlc_scanner_artifact_openingdrive_o
 assert.equal(packageReport.status, 'pass');
 assert.equal(packageReport.authority.changesTradingLogic, false);
 assert.equal(packageReport.authority.runsSetupScanner, false);
-assert.equal(packageReport.summary.openingDriveRows, 4);
-assert.equal(packageReport.summary.selectedRows, 2);
+assert.equal(packageReport.summary.openingDriveRows, 5);
+assert.equal(packageReport.summary.selectedRows, 3);
 assert.equal(packageReport.summary.rejectedRows, 2);
-assert.equal(packageReport.selectedSummary.winners, 1);
+assert.equal(packageReport.selectedSummary.winners, 2);
 assert.equal(packageReport.selectedSummary.losses, 0);
 assert.equal(packageReport.selectedSummary.otherResolved, 1);
-assert.equal(packageReport.selectedSummary.oneMesPl, 232.5);
+assert.equal(packageReport.selectedSummary.oneMesPl, 275);
 assert.equal(packageReport.rejectedSummary.losses, 1);
 assert.equal(packageReport.summary.recommendation, 'continue_to_collision_comparison');
 assert.ok(packageReport.selectedRows.find((entry) => entry.ticketId === 'fine')?.matchedSelectors.includes('fine_risk_24_to_32'));

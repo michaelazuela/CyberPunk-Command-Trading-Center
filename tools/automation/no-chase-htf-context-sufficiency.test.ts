@@ -12,11 +12,11 @@ import {
 
 function artifact(overrides: Partial<NoChaseRebuiltHumanReviewArtifact> = {}): NoChaseRebuiltHumanReviewArtifact {
   return {
-    artifactId: 'rebuild-sim|2026-06-17|lunch|AfterLunchDriveFvgContinuation|SHORT',
-    caseId: '2026-06-17|lunch|AfterLunchDriveFvgContinuation|SHORT',
+    artifactId: 'rebuild-sim|2026-06-17|lunch|NoInstalledSetup|SHORT',
+    caseId: '2026-06-17|lunch|NoInstalledSetup|SHORT',
     tradeDate: '2026-06-17',
     sessionType: 'lunch',
-    setupType: SetupType.AfterLunchDriveFvgContinuation,
+    setupType: SetupType.NoSetup,
     direction: 'SHORT',
     status: 'human_review_rebuilt',
     canExecute: false,
@@ -70,11 +70,11 @@ const simulationReport: NoChaseArtifactRebuildSimulationReport = {
   artifacts: [
     artifact(),
     artifact({
-      artifactId: 'rebuild-sim|2026-06-25|morning|IntradayMssMicroContinuation|SHORT',
-      caseId: '2026-06-25|morning|IntradayMssMicroContinuation|SHORT',
+      artifactId: 'rebuild-sim|2026-06-25|morning|NoInstalledSetup|SHORT',
+      caseId: '2026-06-25|morning|NoInstalledSetup|SHORT',
       tradeDate: '2026-06-25',
       sessionType: 'morning',
-      setupType: SetupType.IntradayMssMicroContinuation,
+      setupType: SetupType.NoSetup,
       proof: {
         proofType: 'completed_5m_close_through',
         proofBarTime: '2026-06-25T09:35:00',
@@ -168,7 +168,7 @@ assert.equal(report.summary.sufficientArtifacts, 1);
 assert.equal(report.summary.partialArtifacts, 0);
 assert.equal(report.summary.insufficientArtifacts, 1);
 assert.equal(report.summary.dataLimitedArtifacts, 1);
-assert.equal(report.summary.afterLunchSufficient, 1);
+assert.equal(report.summary.afterLunchSufficient, 0);
 assert.equal(report.summary.intradaySufficient, 0);
 assert.equal(report.summary.canExecuteFalseArtifacts, 2);
 assert.equal(report.summary.publishDiscordFalseArtifacts, 2);

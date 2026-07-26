@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
 import {
-  buildUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport,
+  buildUnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport,
 } from './unified-positive-held-local-preview-raidReclaim-blocked-reason-drilldown';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimRankSimulationReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewRankSimulationReport,
 } from './unified-positive-held-local-preview-raidReclaim-rank-simulation';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport,
 } from './unified-positive-held-local-preview-raidReclaim-replay-package';
 
-type PackageRow = UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport['rows'][number];
+type PackageRow = UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport['rows'][number];
 
 function packageRow(id: string, group: PackageRow['group'], outcomeBucket: PackageRow['outcomeBucket'], pl: number | null): PackageRow {
   return {
@@ -34,13 +34,13 @@ function packageRow(id: string, group: PackageRow['group'], outcomeBucket: Packa
 }
 
 const rows = [
-  packageRow('2026-06-17-morning-raidReclaim-LONG-blocked-loss-1', 'blocked_protected_stop', 'loss', -100),
-  packageRow('2026-06-17-morning-raidReclaim-LONG-blocked-loss-2', 'blocked_protected_stop', 'loss', -80),
-  packageRow('2026-06-18-morning-raidReclaim-LONG-blocked-loss-3', 'blocked_protected_stop', 'loss', -70),
-  packageRow('2026-06-19-morning-raidReclaim-LONG-blocked-win-1', 'blocked_protected_stop', 'winner', 40),
-  packageRow('2026-06-19-morning-raidReclaim-SHORT-blocked-win-1', 'blocked_protected_stop', 'winner', 120),
-  packageRow('2026-06-19-morning-raidReclaim-SHORT-blocked-win-2', 'blocked_protected_stop', 'winner', 80),
-  packageRow('2026-06-20-lunch-raidReclaim-SHORT-clean-win-1', 'conditional_protected_stop_clean', 'winner', 120),
+  packageRow('2026-06-17-morning-historicalReview-LONG-blocked-loss-1', 'blocked_protected_stop', 'loss', -100),
+  packageRow('2026-06-17-morning-historicalReview-LONG-blocked-loss-2', 'blocked_protected_stop', 'loss', -80),
+  packageRow('2026-06-18-morning-historicalReview-LONG-blocked-loss-3', 'blocked_protected_stop', 'loss', -70),
+  packageRow('2026-06-19-morning-historicalReview-LONG-blocked-win-1', 'blocked_protected_stop', 'winner', 40),
+  packageRow('2026-06-19-morning-historicalReview-SHORT-blocked-win-1', 'blocked_protected_stop', 'winner', 120),
+  packageRow('2026-06-19-morning-historicalReview-SHORT-blocked-win-2', 'blocked_protected_stop', 'winner', 80),
+  packageRow('2026-06-20-lunch-historicalReview-SHORT-clean-win-1', 'conditional_protected_stop_clean', 'winner', 120),
 ];
 
 const authority = {
@@ -62,8 +62,8 @@ const authority = {
   changesAppRuntime: false,
 } as const;
 
-const packageReport: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport = {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_replay_package',
+const packageReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport = {
+  reportType: 'unified_positive_held_local_preview_historicalReview_replay_package',
   generatedAt: '2026-07-17T00:00:00.000Z',
   status: 'pass',
   authority,
@@ -82,10 +82,10 @@ const packageReport: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepo
   },
   summary: {
     sourceRows: rows.length,
-    raidReclaimRows: rows.length,
+    historicalReviewRows: rows.length,
     conditionalProtectedStopCleanRows: 1,
     blockedProtectedStopRows: 6,
-    otherraidReclaimStateRows: 0,
+    otherhistoricalReviewStateRows: 0,
     groupSummaries: 3,
     daySessionSummaries: 5,
     replayQuestion: 'candidate_for_broader_replay',
@@ -100,14 +100,14 @@ const packageReport: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepo
 };
 
 const rankSimulationReport = {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_rank_simulation',
+  reportType: 'unified_positive_held_local_preview_historicalReview_rank_simulation',
   generatedAt: '2026-07-17T00:00:00.000Z',
   status: 'pass',
   authority,
   source: {
     reportDir: 'diagnostic-reports',
-    raidReclaimReplayPackagePath: 'package.json',
-    raidReclaimRankPenaltyValidationPath: 'validation.json',
+    historicalReviewReplayPackagePath: 'package.json',
+    historicalReviewRankPenaltyValidationPath: 'validation.json',
   },
   assumptions: {
     simulationIsResearchOnly: true,
@@ -143,17 +143,17 @@ const rankSimulationReport = {
   blockers: [],
   recommendations: [],
   markdown: '',
-} satisfies UnifiedPositiveHeldLocalPreviewraidReclaimRankSimulationReport;
+} satisfies UnifiedPositiveHeldLocalPreviewhistoricalReviewRankSimulationReport;
 
-const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport({
+const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport({
   reportDir: 'diagnostic-reports',
-  raidReclaimReplayPackagePath: 'package.json',
-  raidReclaimReplayPackageReport: packageReport,
-  raidReclaimRankSimulationPath: 'rank-simulation.json',
-  raidReclaimRankSimulationReport: rankSimulationReport,
+  historicalReviewReplayPackagePath: 'package.json',
+  historicalReviewReplayPackageReport: packageReport,
+  historicalReviewRankSimulationPath: 'rank-simulation.json',
+  historicalReviewRankSimulationReport: rankSimulationReport,
 }, '2026-07-17T00:01:00.000Z');
 
-assert.equal(report.reportType, 'unified_positive_held_local_preview_raidReclaim_blocked_reason_drilldown');
+assert.equal(report.reportType, 'unified_positive_held_local_preview_historicalReview_blocked_reason_drilldown');
 assert.equal(report.status, 'pass');
 assert.equal(report.authority.readOnly, true);
 assert.equal(report.authority.changesTradingLogic, false);
@@ -167,18 +167,18 @@ assert.equal(report.summary.reviewNoteCandidateClusters, 2);
 assert.equal(report.summary.recommendedAction, 'draft_review_note_wording_only');
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.clusters.find((cluster) => cluster.clusterId === 'missing_full_plan_levels|morning|SHORT')?.reviewNoteCandidate, true);
-assert.match(report.sampleReviewNote ?? '', /raidReclaim remains valid/);
+assert.match(report.sampleReviewNote ?? '', /historicalReview remains valid/);
 assert.match(report.markdown, /Blocked Reason Drilldown/);
 
-const missing = buildUnifiedPositiveHeldLocalPreviewraidReclaimBlockedReasonDrilldownReport({
+const missing = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewBlockedReasonDrilldownReport({
   reportDir: 'diagnostic-reports',
-  raidReclaimReplayPackagePath: null,
-  raidReclaimReplayPackageReport: null,
-  raidReclaimRankSimulationPath: null,
-  raidReclaimRankSimulationReport: null,
+  historicalReviewReplayPackagePath: null,
+  historicalReviewReplayPackageReport: null,
+  historicalReviewRankSimulationPath: null,
+  historicalReviewRankSimulationReport: null,
 }, '2026-07-17T00:02:00.000Z');
 
 assert.equal(missing.status, 'fail');
-assert.ok(missing.blockers.includes('missing raidReclaim replay package path'));
+assert.ok(missing.blockers.includes('missing historicalReview replay package path'));
 
-console.log('unified positive held-local raidReclaim blocked reason drilldown verified.');
+console.log('unified positive held-local historicalReview blocked reason drilldown verified.');

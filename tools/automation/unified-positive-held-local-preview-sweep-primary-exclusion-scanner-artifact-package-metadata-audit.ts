@@ -247,7 +247,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionScanner
         for (const candidateValue of candidatesFromEvent(event)) {
           if (!candidateValue || typeof candidateValue !== 'object' || Array.isArray(candidateValue)) continue;
           const candidate = candidateValue as Record<string, unknown>;
-          if (text(candidate.setupType) !== 'SweepMssFvgRetrace' || text(candidate.direction) !== slate.direction) continue;
+          if (text(candidate.setupType) !== 'NoInstalledSetup' || text(candidate.direction) !== slate.direction) continue;
           packageRowsMatched += 1;
           slate.packageMatches += 1;
           const fileName = path.basename(file);

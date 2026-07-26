@@ -52,9 +52,10 @@ write(root, 'tools/automation/discord-scheduler.ts', [
   'const note = "scheduler fixture";',
 ].join('\n'));
 write(root, 'tools/automation/nt-scanner-alert.test.ts', [
-  'SCANNER-DESK-PLAY-CANONICAL-LINE-FIXTURE',
-  'SCANNER-DESK-PLAY-MISMATCH-FIXTURE',
-  'Canonical DeskPublishDecision held this Desk Play local.',
+  'nt-scanner-alert-blank',
+  'Blank-slate mode: no trading models are installed.',
+  'assert.equal(deskState.deskTicket, null)',
+  'assert.equal(publishDecision.shouldPost, false)',
 ].join('\n'));
 
 const formatterOwnershipReport = buildDeskPublishContractAudit(root);

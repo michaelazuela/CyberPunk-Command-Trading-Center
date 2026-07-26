@@ -97,7 +97,7 @@ export interface UnifiedPositiveHeldLocalPreviewSweepSegmentFilterReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SWEEP_SETUP = 'SweepMssFvgRetrace';
+const SWEEP_SETUP = 'NoInstalledSetup';
 
 const SEGMENTS: SweepSegment[] = [
   {
@@ -376,7 +376,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepSegmentFilterReport(arg
     !args.sourceProofTimingReport ? 'missing source/proof timing report' : null,
     args.sourceProofTimingReport && args.sourceProofTimingReport.status !== 'pass' ? `source/proof timing status ${args.sourceProofTimingReport.status}` : null,
     sourceRows.length === 0 ? 'no source/proof timing rows found' : null,
-    sweepRows.length === 0 ? 'no SweepMssFvgRetrace rows found' : null,
+    sweepRows.length === 0 ? 'no NoInstalledSetup rows found' : null,
   ].filter((item): item is string => Boolean(item));
   const base: Omit<UnifiedPositiveHeldLocalPreviewSweepSegmentFilterReport, 'markdown'> = {
     reportType: 'unified_positive_held_local_preview_sweep_segment_filter',

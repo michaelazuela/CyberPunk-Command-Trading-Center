@@ -20,7 +20,7 @@ interface BuilderPreviewRow {
   riskPoints: number | null;
   movement: string;
   primaryLane: string;
-  supportingModels: string[];
+  contextLabels: string[];
   publishHasCompletePlan: boolean;
   publishShouldPost: boolean;
   publishCanExecute: boolean;
@@ -61,7 +61,7 @@ interface DisabledRuntimeCard {
   context: {
     movement: string | null;
     primaryLane: string | null;
-    supportingModels: string[];
+    contextLabels: string[];
   };
   visibleText: {
     headline: string | null;
@@ -226,7 +226,7 @@ function cardForRow(row: BuilderPreviewRow): DisabledRuntimeCard {
     context: {
       movement: state === 'SILENT_INTERNAL' ? null : row.movement,
       primaryLane: state === 'SILENT_INTERNAL' ? null : row.primaryLane,
-      supportingModels: state === 'SILENT_INTERNAL' ? [] : [...row.supportingModels],
+      contextLabels: state === 'SILENT_INTERNAL' ? [] : [...row.contextLabels],
     },
     visibleText: visible,
     disabledRuntime: true,

@@ -38,7 +38,7 @@ const intakeTriageReport = {
       tradeDate: '2026-06-17',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       firstSeenTime: '2026-06-17T09:30:00',
       entry: 100,
@@ -54,7 +54,7 @@ const intakeTriageReport = {
       tradeDate: '2026-06-18',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       firstSeenTime: '2026-06-18T09:30:00',
       entry: 200,
@@ -70,7 +70,7 @@ const intakeTriageReport = {
       tradeDate: '2026-06-19',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       firstSeenTime: '2026-06-19T12:00:00',
       entry: 300,
@@ -86,7 +86,7 @@ const intakeTriageReport = {
       tradeDate: '2026-06-20',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'SHORT',
       firstSeenTime: '2026-06-20T12:00:00',
       entry: 400,
@@ -120,14 +120,14 @@ assert.equal(report.summary.winners, 2);
 assert.equal(report.summary.losses, 2);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
-const intraday = report.capRows.find((row) => row.setupType === 'IntradayMssMicroContinuation');
+const intraday = report.capRows.find((row) => row.setupType === 'NoInstalledSetup');
 assert.equal(intraday?.decision, 'candidate_for_more_research');
 assert.equal(intraday?.keptWinners, 1);
 assert.equal(intraday?.keptLosses, 0);
 assert.equal(intraday?.rejectedLosses, 1);
 assert.equal(intraday?.falseRejectWinnerRows, 0);
 
-const turtle = report.capRows.find((row) => row.setupType === 'raidReclaim');
+const turtle = report.capRows.find((row) => row.setupType === 'historicalReview');
 assert.equal(turtle?.decision, 'rejected_for_now');
 assert.equal(turtle?.falseRejectWinnerRows, 1);
 assert.match(report.markdown, /Broad Risk-Cap Validation/);

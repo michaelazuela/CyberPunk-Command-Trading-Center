@@ -35,7 +35,7 @@ export interface UnifiedPositiveCandidateRebuildAuditRow {
   outcomeNoFillsOrUnresolved: number;
   hasPlanGeometry: boolean;
   fiveMinuteProofStatus: UnifiedDeskCandidateBookItem['fiveMinuteProofStatus'] | null;
-  htfSupport: UnifiedDeskCandidateBookItem['htfSupport'] | null;
+  htfContextAlignment: UnifiedDeskCandidateBookItem['htfContextAlignment'] | null;
   existingPlan: {
     entry: number | null;
     stop: number | null;
@@ -310,7 +310,7 @@ export function buildUnifiedPositiveCandidateRebuildAuditReport(args: {
       outcomeNoFillsOrUnresolved: row.outcomeOverlay.noFillsOrUnresolved,
       hasPlanGeometry: item ? directionallyValidPlan(item) : false,
       fiveMinuteProofStatus: item?.fiveMinuteProofStatus || null,
-      htfSupport: item?.htfSupport || null,
+      htfContextAlignment: item?.htfContextAlignment || null,
       existingPlan: {
         entry: item?.entry ?? null,
         stop: item?.stop ?? null,

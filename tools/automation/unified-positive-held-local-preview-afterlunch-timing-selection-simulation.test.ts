@@ -27,7 +27,7 @@ function row(id: string, overrides: Partial<UnifiedPositiveHeldLocalPreviewRepla
     ticketId: id,
     tradeDate: id.slice(0, 10),
     session: 'lunch',
-    setupType: 'AfterLunchDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     outcomeBucket: 'winner_t1_t2',
     outcomeLabel: 't1_and_t2_hit',

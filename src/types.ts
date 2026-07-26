@@ -24,11 +24,6 @@ export enum BiasDirection {
 }
 
 export enum SetupType {
-  RaidReclaimReversal = 'RaidReclaimReversal',
-  SweepMssFvgRetrace = 'SweepMssFvgRetrace',
-  OpeningDriveFvgContinuation = 'OpeningDriveFvgContinuation',
-  AfterLunchDriveFvgContinuation = 'AfterLunchDriveFvgContinuation',
-  IntradayMssMicroContinuation = 'IntradayMssMicroContinuation',
   NoSetup = 'NoSetup',
 }
 
@@ -756,7 +751,7 @@ export interface ChartContext {
 
 export type TradingPlanCandidateState =
   | 'HTF_DRAW_DETECTED'
-  | 'RAID_RECLAIM_DEVELOPING'
+  | 'NO_MODEL_CONTEXT_DEVELOPING'
   | 'MSS_TRIGGER_PENDING'
   | 'MSS_TRIGGER_CONFIRMED'
   | 'MSS_HOLD_TRIGGER_PENDING'
@@ -812,7 +807,7 @@ export interface ActiveCampaign {
   htfRelationship: ActiveCampaignHtfRelationship;
   confidenceAdjustment: number;
   evidenceLayers: ActiveCampaignEvidenceLayer[];
-  htfSupportTimeframes: Array<'60M' | '120M' | '240M'>;
+  htfContextAlignmentTimeframes: Array<'60M' | '120M' | '240M'>;
   htfConflictTimeframes: Array<'60M' | '120M' | '240M'>;
   obstacleMap: {
     lineInSand: number | null;
@@ -912,7 +907,7 @@ export interface HtfLiquidityDrawCandidateState {
   externalLiquidityTarget?: string;
   classification:
     | 'HTF_DRAW_DETECTED'
-    | 'RAID_RECLAIM_DEVELOPING'
+    | 'NO_MODEL_CONTEXT_DEVELOPING'
     | 'MSS_TRIGGER_PENDING'
     | 'MSS_TRIGGER_CONFIRMED'
     | 'MSS_HOLD_TRIGGER_PENDING'

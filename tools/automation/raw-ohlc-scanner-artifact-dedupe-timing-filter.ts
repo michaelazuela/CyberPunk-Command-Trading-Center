@@ -252,7 +252,7 @@ function rowDecision(row: OutcomeRow, minutes: number | null, allowSameBarModels
   if (row.outcomeStatus !== 'resolved') {
     return { timingDecision: 'blocked_or_unresolved', decisionReasons: [`outcome status ${row.outcomeStatus}`] };
   }
-  if (row.setupType === 'SweepMssFvgRetrace' && minutes !== null && minutes > STALE_SWEEP_THRESHOLD_MINUTES) {
+  if (row.setupType === 'NoInstalledSetup' && minutes !== null && minutes > STALE_SWEEP_THRESHOLD_MINUTES) {
     return {
       timingDecision: 'isolated_stale_sweep',
       decisionReasons: [`Sweep proof-to-entry ${minutes}m exceeds ${STALE_SWEEP_THRESHOLD_MINUTES}m research threshold`],

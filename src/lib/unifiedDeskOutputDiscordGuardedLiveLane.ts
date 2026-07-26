@@ -30,7 +30,7 @@ export interface UnifiedDeskOutputDiscordGuardedLiveLaneContract {
     requiresFreshIdempotencyKey: true;
     refusesDuplicateIdempotencyKey: true;
     requiresExplicitApprovalForProductionSend: true;
-    suppressesSupportingModelDuplicateTickets: true;
+    suppressesContextModelDuplicateTickets: true;
   };
   authority: {
     localOnly: true;
@@ -93,7 +93,7 @@ export function buildUnifiedDeskOutputDiscordGuardedLiveLaneContract(
       requiresFreshIdempotencyKey: true,
       refusesDuplicateIdempotencyKey: true,
       requiresExplicitApprovalForProductionSend: true,
-      suppressesSupportingModelDuplicateTickets: true,
+      suppressesContextModelDuplicateTickets: true,
     },
     authority: {
       localOnly: true,

@@ -27,7 +27,7 @@ interface StructuralRow {
   htfDataLimited: boolean | null;
   htfReliability: string | null;
   htfConflict: boolean | null;
-  htfSupported: boolean | null;
+  htfContextAligned: boolean | null;
   countertrend: boolean | null;
   confidenceBucket: string;
   hasLineInSand: boolean;
@@ -259,7 +259,7 @@ function buildRow(row: EnrichedRow, intake: IntakeRow | null, auditDir: string):
     htfDataLimited: boolOrNull(htfState.htfContextDataLimited) ?? boolOrNull(htfSufficiency.dataLimited),
     htfReliability: stringOrNull(htfState.classificationReliability),
     htfConflict: boolOrNull(selected.htfConflict),
-    htfSupported: boolOrNull(selected.htfSupported),
+    htfContextAligned: boolOrNull(selected.htfContextAligned),
     countertrend: boolOrNull(selected.countertrend),
     confidenceBucket: confidenceBucket(numberOrNull(confidence.score)),
     hasLineInSand: selected.lineInSand !== null && selected.lineInSand !== undefined,
@@ -285,7 +285,7 @@ function fieldIds(row: StructuralRow): string[] {
     `htfDataLimited=${row.htfDataLimited ?? 'unknown'}`,
     `htfReliability=${row.htfReliability ?? 'unknown'}`,
     `htfConflict=${row.htfConflict ?? 'unknown'}`,
-    `htfSupported=${row.htfSupported ?? 'unknown'}`,
+    `htfContextAligned=${row.htfContextAligned ?? 'unknown'}`,
     `countertrend=${row.countertrend ?? 'unknown'}`,
     `confidenceBucket=${row.confidenceBucket}`,
     `hasLineInSand=${row.hasLineInSand}`,

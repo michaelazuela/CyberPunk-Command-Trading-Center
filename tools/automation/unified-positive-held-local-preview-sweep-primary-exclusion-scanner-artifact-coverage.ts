@@ -213,7 +213,7 @@ function matchesSlate(row: Record<string, unknown>, slate: SlateCoverage): boole
   const direction = normalizeDirection(row.direction);
   return tradeDate === slate.tradeDate &&
     session === slate.session &&
-    setupType === 'SweepMssFvgRetrace' &&
+    setupType === 'NoInstalledSetup' &&
     direction === slate.baselineDirection;
 }
 
@@ -222,7 +222,7 @@ function toScannerMatch(filePath: string, row: Record<string, unknown>): Scanner
   const session = stringValue(row.session);
   const setupType = stringValue(row.setupType);
   const direction = normalizeDirection(row.direction);
-  if (!tradeDate || !session || setupType !== 'SweepMssFvgRetrace' || !direction) return null;
+  if (!tradeDate || !session || setupType !== 'NoInstalledSetup' || !direction) return null;
   const entry = finiteNumber(row.entry);
   const stop = finiteNumber(row.stop);
   const hasGeometry = entry !== null && stop !== null;

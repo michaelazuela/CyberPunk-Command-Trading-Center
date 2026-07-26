@@ -7,7 +7,7 @@ type AuditWindowCode = 'LONDON' | 'AM' | 'PM';
 type HumanReviewLabel =
   | 'strong_advisory_candidate'
   | 'covered_by_model_1'
-  | 'covered_by_RAID_RECLAIM'
+  | 'covered_by_uninstalled_context'
   | 'weak_or_noisy'
   | 'needs_chart_review'
   | 'reject_time_window_standalone';
@@ -17,7 +17,7 @@ type ChartReviewRecommendation =
   | 'downgrade_to_weak_or_noisy'
   | 'reject_time_window_standalone'
   | 'covered_by_model_1'
-  | 'covered_by_RAID_RECLAIM';
+  | 'covered_by_uninstalled_context';
 
 interface ReviewedSample {
   sampleId: string;
@@ -59,7 +59,7 @@ interface CuratedSample {
   sweepRaidPlusReclaimPresent: boolean;
   deliveryStatus: 'achieved' | 'failed' | 'not_observed';
   modelOneOverlap: boolean;
-  raidReclaimOverlap: boolean;
+  historicalReversalOverlap: boolean;
   advisoryOnly: boolean;
   chartPath: string | null;
   reportPath: string | null;
@@ -133,7 +133,7 @@ interface ChartEvidenceRecord {
   drawReachedBeforeWindow: 'yes' | 'no' | 'not_recorded';
   drawValidDuringWindow: 'yes' | 'no' | 'not_recorded';
   modelOneOverlap: boolean;
-  raidReclaimOverlap: boolean;
+  historicalReversalOverlap: boolean;
   remainsAdvisoryOnly: boolean;
   sourceChartPath: string | null;
   sourceReportPath: string | null;
@@ -203,7 +203,7 @@ const RECOMMENDATIONS: ChartReviewRecommendation[] = [
   'downgrade_to_weak_or_noisy',
   'reject_time_window_standalone',
   'covered_by_model_1',
-  'covered_by_RAID_RECLAIM',
+  'covered_by_uninstalled_context',
 ];
 const SAFETY_FIELDS: ReviewSafetyFields = {
   activatesModel: false,
@@ -285,8 +285,8 @@ function triState(value: boolean | undefined): 'yes' | 'no' | 'not_recorded' {
 function advisoryOnlyReason(sample: CuratedSample | undefined): string {
   if (!sample) return 'Curated sample details were not available; preserve needs-chart-review status until manually inspected.';
   if (sample.advisoryOnly) return 'Curated as advisory-only time-window research, not an executable model label.';
-  if (sample.modelOneOverlap) return 'Curated as possible Model 1 overlap; do not duplicate Model 1 under TWLD.';
-  if (sample.raidReclaimOverlap) return 'Curated as possible Raid Reclaim Reversal overlap; do not duplicate Raid Reclaim Reversal under TWLD.';
+  if (sample.modelOneOverlap) return 'Curated as possible no installed model path overlap; do not duplicate no installed model path under TWLD.';
+  if (sample.historicalReversalOverlap) return 'Curated as possible no installed model path overlap; do not duplicate no installed model path under TWLD.';
   return 'Curated for research review only.';
 }
 
@@ -301,13 +301,13 @@ function recommendationFor(sample: CuratedSample | undefined, audit: AuditCandid
   if (sample.modelOneOverlap) {
     return {
       recommendation: 'covered_by_model_1',
-      reasons: ['Curated evidence marks this as possible Model 1 overlap. Keep TWLD advisory-only and route through existing Model 1 review.'],
+      reasons: ['Curated evidence marks this as possible no installed model path overlap. Keep TWLD advisory-only and route through existing no installed model path review.'],
     };
   }
-  if (sample.raidReclaimOverlap) {
+  if (sample.historicalReversalOverlap) {
     return {
-      recommendation: 'covered_by_RAID_RECLAIM',
-      reasons: ['Curated evidence marks this as possible Raid Reclaim Reversal overlap. Keep TWLD advisory-only and route through existing Raid Reclaim Reversal review.'],
+      recommendation: 'covered_by_uninstalled_context',
+      reasons: ['Curated evidence marks this as possible no installed model path overlap. Keep TWLD advisory-only and route through existing no installed model path review.'],
     };
   }
   if (audit?.priceAlreadyReachedDrawBeforeSetup === true) {
@@ -378,7 +378,7 @@ export function buildTimeWindowLiquidityDeliveryChartEvidenceReport(options: Cha
         drawReachedBeforeWindow: triState(auditCandidate?.priceAlreadyReachedDrawBeforeSetup),
         drawValidDuringWindow: triState(auditCandidate ? auditCandidate.cleanDrawObserved === true && auditCandidate.priceAlreadyReachedDrawBeforeSetup !== true : undefined),
         modelOneOverlap: curatedSample?.modelOneOverlap ?? false,
-        raidReclaimOverlap: curatedSample?.raidReclaimOverlap ?? false,
+        historicalReversalOverlap: curatedSample?.historicalReversalOverlap ?? false,
         remainsAdvisoryOnly: curatedSample?.advisoryOnly ?? true,
         sourceChartPath: curatedSample?.chartPath || null,
         sourceReportPath: curatedSample?.reportPath || null,
@@ -442,8 +442,8 @@ function renderRecordDetails(record: ChartEvidenceRecord): string[] {
     `- FVG/Inefficiency Respected: ${record.fvgOrInefficiencyRespected}`,
     `- Draw Reached Before Window: ${record.drawReachedBeforeWindow}`,
     `- Draw Valid During Window: ${record.drawValidDuringWindow}`,
-    `- Model 1 Overlap: ${yesNo(record.modelOneOverlap)}`,
-    `- Raid Reclaim Reversal Overlap: ${yesNo(record.raidReclaimOverlap)}`,
+    `- no installed model path Overlap: ${yesNo(record.modelOneOverlap)}`,
+    `- no installed model path Overlap: ${yesNo(record.historicalReversalOverlap)}`,
     `- Remains Advisory-Only: ${yesNo(record.remainsAdvisoryOnly)}`,
     `- Why Chart Review Was Needed: ${record.chartReviewReason}`,
     `- Advisory-Only Reason: ${record.advisoryOnlyReason}`,
@@ -482,10 +482,10 @@ export function renderTimeWindowLiquidityDeliveryChartEvidenceMarkdown(report: T
     ...RECOMMENDATIONS.map((recommendation) => `- ${recommendation}: ${report.summary.recommendationCounts[recommendation]}`),
     '',
     '## Chart Evidence Records',
-    '| Sample ID | Date | Draw Type | Draw Level | FVG | MSS | Sweep/Reclaim | Delivery | FVG Respected | Draw Reached Before Window | Draw Valid During Window | Model 1 Overlap | Raid Reclaim Reversal Overlap | Recommendation | Chart/Report Path |',
+    '| Sample ID | Date | Draw Type | Draw Level | FVG | MSS | Sweep/Reclaim | Delivery | FVG Respected | Draw Reached Before Window | Draw Valid During Window | no installed model path Overlap | no installed model path Overlap | Recommendation | Chart/Report Path |',
     '|---|---|---|---:|---:|---:|---:|---|---|---|---|---:|---:|---|---|',
     ...report.records.map((record) =>
-      `| ${record.sampleId} | ${record.date} | ${record.drawType} | ${formatDrawLevel(record.drawLevel)} | ${yesNo(record.fvgOrInefficiencyPresent)} | ${yesNo(record.marketStructureShiftPresent)} | ${yesNo(record.sweepRaidPlusReclaimPresent)} | ${record.deliveryStatus} | ${record.fvgOrInefficiencyRespected} | ${record.drawReachedBeforeWindow} | ${record.drawValidDuringWindow} | ${yesNo(record.modelOneOverlap)} | ${yesNo(record.raidReclaimOverlap)} | ${record.recommendation} | ${record.sourceChartPath || record.sourceReportPath || record.generatedEvidenceReportPath} |`
+      `| ${record.sampleId} | ${record.date} | ${record.drawType} | ${formatDrawLevel(record.drawLevel)} | ${yesNo(record.fvgOrInefficiencyPresent)} | ${yesNo(record.marketStructureShiftPresent)} | ${yesNo(record.sweepRaidPlusReclaimPresent)} | ${record.deliveryStatus} | ${record.fvgOrInefficiencyRespected} | ${record.drawReachedBeforeWindow} | ${record.drawValidDuringWindow} | ${yesNo(record.modelOneOverlap)} | ${yesNo(record.historicalReversalOverlap)} | ${record.recommendation} | ${record.sourceChartPath || record.sourceReportPath || record.generatedEvidenceReportPath} |`
     ),
     '',
     '## Per-Sample Notes',

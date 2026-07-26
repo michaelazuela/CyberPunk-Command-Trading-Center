@@ -8,7 +8,7 @@ function row(overrides: Record<string, unknown>): Record<string, unknown> {
     ticketId: 'selector',
     tradeDate: '2026-07-20',
     session: 'morning',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'SHORT',
     proofTime: '2026-07-20T10:00:00',
     entry: 100,
@@ -16,7 +16,7 @@ function row(overrides: Record<string, unknown>): Record<string, unknown> {
     t1: 82,
     t2: 76,
     riskPoints: 12,
-    methodKey: 'SweepMssFvgRetrace|morning|SHORT|risk_8_to_16',
+    methodKey: 'NoInstalledSetup|morning|SHORT|risk_8_to_16',
     riskBand: 'risk_8_to_16',
     sessionOutcomeBucket: 'winner',
     sessionOutcomeLabel: 't1_and_t2_hit',
@@ -69,8 +69,8 @@ const report = buildUnifiedPositiveHeldLocalPreviewScannerOwnedSelectorDryRunCon
       }),
       row({
         ticketId: 'collision',
-        setupType: 'OpeningDriveFvgContinuation',
-        methodKey: 'OpeningDriveFvgContinuation|morning|SHORT|risk_16_to_24',
+        setupType: 'NoInstalledSetup',
+        methodKey: 'NoInstalledSetup|morning|SHORT|risk_16_to_24',
         proofTime: '2026-07-20T10:08:00',
         entry: 99,
         stop: 115,
@@ -96,7 +96,7 @@ assert.equal(report.summary.dryRunWinRateResolved, 0.67);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'advance_to_scanner_owned_local_preview_contract');
 assert.equal(report.selectedSlates[0].collisionRows, 1);
-assert.equal(report.collisionMethodCounts[0].methodKey, 'OpeningDriveFvgContinuation|morning|SHORT|risk_16_to_24');
+assert.equal(report.collisionMethodCounts[0].methodKey, 'NoInstalledSetup|morning|SHORT|risk_16_to_24');
 
 const missing = buildUnifiedPositiveHeldLocalPreviewScannerOwnedSelectorDryRunContractReport({
   sessionBoundedReportPath: null,

@@ -9,7 +9,7 @@ const outcomeJoin = {
     {
       tradeDate: '2026-06-11',
       sessionType: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       selectorDecision: 'keep_later_sweep_proof',
       shadowRows: 2,
@@ -20,7 +20,7 @@ const outcomeJoin = {
     {
       tradeDate: '2026-06-12',
       sessionType: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       selectorDecision: 'keep_later_sweep_proof',
       shadowRows: 17,
@@ -31,7 +31,7 @@ const outcomeJoin = {
     {
       tradeDate: '2026-06-10',
       sessionType: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'SHORT',
       selectorDecision: 'prefer_replacement',
       shadowRows: 8,
@@ -57,7 +57,7 @@ assert.equal(report.summary.unmatchedShadowRowsQueued, 25);
 assert.equal(report.summary.wouldChangePrimaryRowsQueued, 25);
 assert.equal(report.summary.keepLaterSweepProofGroups, 1);
 assert.equal(report.summary.preferReplacementGroups, 1);
-assert.equal(report.summary.topPriorityKey, '2026-06-12|lunch|SweepMssFvgRetrace|SHORT|keep_later_sweep_proof');
+assert.equal(report.summary.topPriorityKey, '2026-06-12|lunch|NoInstalledSetup|SHORT|keep_later_sweep_proof');
 assert.equal(report.summary.recommendation, 'build_missing_outcome_replay_package');
 assert.equal(report.rows[0].shadowRows, 17);
 assert.match(report.markdown, /OpeningDrive Keep-Later-Proof Selector Shadow Coverage Queue/);

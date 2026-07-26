@@ -149,11 +149,11 @@
   },
   "setupDetection": {
     "candidateDetected": true,
-    "setupType": "RaidReclaimReversal",
+    "setupType": "HistoricalReviewReversal",
     "label": "HTF Context Continuation After Raid/Reclaim",
     "direction": "SHORT",
     "candidate": {
-      "setupType": "RaidReclaimReversal",
+      "setupType": "HistoricalReviewReversal",
       "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
       "pathway": "intraday_mss_micro_continuation",
       "direction": "SHORT",
@@ -200,7 +200,7 @@
       "noTradeReason": "NoApprovedSetup",
       "finalPlan": {
         "direction": "NO TRADE",
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "entry": null,
         "stop": null,
         "target1": null,

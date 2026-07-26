@@ -58,7 +58,7 @@ assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.assumptions.checkpointOnly, true);
 assert.equal(report.assumptions.noRuntimeChangeInstalled, true);
 assert.equal(report.assumptions.scannerVisibleInstallAllowedByThisReport, false);
-assert.equal(report.proposedRuntimeScope.modelScope, 'SweepMssFvgRetrace');
+assert.equal(report.proposedRuntimeScope.modelScope, 'NoInstalledSetup');
 assert.ok(report.proposedRuntimeScope.likelyFilesToModify.includes('src/lib/setupScanner.ts'));
 assert.ok(report.proposedRuntimeScope.filesExplicitlyOutOfScope.includes('src/lib/tradeDecisionPipeline.ts'));
 assert.ok(report.proposedRuntimeScope.forbiddenBehaviorChanges.includes('Do not loosen canExecute.'));

@@ -13,7 +13,7 @@ const outcome = {
     grossResolvedOneMesPl: 276.25,
     modelGroups: [
       {
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         rows: 4,
         resolvedRows: 4,
         unresolvedRows: 0,
@@ -21,7 +21,7 @@ const outcome = {
         grossResolvedOneMesPl: 318.75,
       },
       {
-        setupType: 'raidReclaim',
+        setupType: 'historicalReview',
         rows: 3,
         resolvedRows: 1,
         unresolvedRows: 2,
@@ -39,9 +39,9 @@ const blockerDrilldown = {
     blockedRows: 3,
   },
   rows: [
-    { setupType: 'raidReclaim' },
-    { setupType: 'SweepMssFvgRetrace' },
-    { setupType: 'SweepMssFvgRetrace' },
+    { setupType: 'historicalReview' },
+    { setupType: 'NoInstalledSetup' },
+    { setupType: 'NoInstalledSetup' },
   ],
 };
 
@@ -53,9 +53,9 @@ const levelPathDiagnostic = {
     invalidatedWithoutReplayableEntryRows: 1,
   },
   rows: [
-    { setupType: 'raidReclaim', pathState: 'waiting_for_entry_trigger' },
-    { setupType: 'SweepMssFvgRetrace', pathState: 'waiting_for_entry_trigger' },
-    { setupType: 'SweepMssFvgRetrace', pathState: 'invalidated_without_replayable_entry' },
+    { setupType: 'historicalReview', pathState: 'waiting_for_entry_trigger' },
+    { setupType: 'NoInstalledSetup', pathState: 'waiting_for_entry_trigger' },
+    { setupType: 'NoInstalledSetup', pathState: 'invalidated_without_replayable_entry' },
   ],
 };
 
@@ -86,8 +86,8 @@ assert.equal(report.summary.invalidatedRows, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'continue_research_no_live_selector');
 
-const sweep = report.modelRows.find((row) => row.setupType === 'SweepMssFvgRetrace');
-const turtle = report.modelRows.find((row) => row.setupType === 'raidReclaim');
+const sweep = report.modelRows.find((row) => row.setupType === 'NoInstalledSetup');
+const turtle = report.modelRows.find((row) => row.setupType === 'historicalReview');
 assert.equal(sweep?.evidenceState, 'positive_strict_ready_subset');
 assert.equal(sweep?.grossResolvedOneMesPl, 318.75);
 assert.equal(sweep?.blockedRows, 2);

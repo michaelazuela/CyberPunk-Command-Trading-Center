@@ -138,11 +138,11 @@ const replayPackageReport: UnifiedPositiveHeldLocalPreviewReplayPackageReport = 
   },
   rows: [
     {
-      ticketId: '2026-06-16-morning-OpeningDriveFvgContinuation-LONG',
+      ticketId: '2026-06-16-morning-NoInstalledSetup-LONG',
       tradeDate: '2026-06-16',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-06-16T10:00:00.0000000',
       firstSeenTime: '2026-06-16T10:00:00.0000000',
@@ -167,11 +167,11 @@ const replayPackageReport: UnifiedPositiveHeldLocalPreviewReplayPackageReport = 
       blockers: [],
     },
     {
-      ticketId: '2026-06-17-lunch-AfterLunchDriveFvgContinuation-SHORT',
+      ticketId: '2026-06-17-lunch-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-17',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofTime: '2026-06-17T13:00:00.0000000',
       firstSeenTime: '2026-06-17T13:00:00.0000000',
@@ -196,11 +196,11 @@ const replayPackageReport: UnifiedPositiveHeldLocalPreviewReplayPackageReport = 
       blockers: [],
     },
     {
-      ticketId: '2026-06-18-morning-IntradayMssMicroContinuation-LONG',
+      ticketId: '2026-06-18-morning-NoInstalledSetup-LONG',
       tradeDate: '2026-06-18',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-06-18T10:00:00.0000000',
       firstSeenTime: '2026-06-18T10:00:00.0000000',
@@ -225,11 +225,11 @@ const replayPackageReport: UnifiedPositiveHeldLocalPreviewReplayPackageReport = 
       blockers: [],
     },
     {
-      ticketId: '2026-06-19-morning-SweepMssFvgRetrace-LONG',
+      ticketId: '2026-06-19-morning-NoInstalledSetup-LONG',
       tradeDate: '2026-06-19',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-06-16T10:00:00.0000000',
       firstSeenTime: '2026-06-16T10:00:00.0000000',
@@ -284,7 +284,7 @@ assert.equal(report.summary.grossResolvedOneMesPl, -5);
 assert.equal(report.summary.daySessionModelGroups.length, 4);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
-const longRow = report.rows.find((row) => row.ticketId === '2026-06-16-morning-OpeningDriveFvgContinuation-LONG');
+const longRow = report.rows.find((row) => row.ticketId === '2026-06-16-morning-NoInstalledSetup-LONG');
 assert.equal(longRow?.outcomeLabel, 't1_and_t2_hit');
 assert.equal(longRow?.entryHitTime, '2026-06-16T10:00:00');
 assert.equal(longRow?.t1HitTime, '2026-06-16T10:05:00');
@@ -292,18 +292,18 @@ assert.equal(longRow?.t2HitTime, '2026-06-16T10:10:00');
 assert.equal(longRow?.resolvedOneMesPl, 20);
 assert.equal(longRow?.resolvedR, 2);
 
-const shortRow = report.rows.find((row) => row.ticketId === '2026-06-17-lunch-AfterLunchDriveFvgContinuation-SHORT');
+const shortRow = report.rows.find((row) => row.ticketId === '2026-06-17-lunch-NoInstalledSetup-SHORT');
 assert.equal(shortRow?.outcomeLabel, 'stopped_before_t1');
 assert.equal(shortRow?.stopHitTime, '2026-06-17T13:05:00');
 assert.equal(shortRow?.resolvedOneMesPl, -25);
 assert.equal(shortRow?.resolvedR, -1);
 
-const noFillRow = report.rows.find((row) => row.ticketId === '2026-06-18-morning-IntradayMssMicroContinuation-LONG');
+const noFillRow = report.rows.find((row) => row.ticketId === '2026-06-18-morning-NoInstalledSetup-LONG');
 assert.equal(noFillRow?.outcomeStatus, 'unresolved');
 assert.equal(noFillRow?.outcomeLabel, 'no_fill');
 assert.equal(noFillRow?.resolvedOneMesPl, null);
 
-const invalidStopRow = report.rows.find((row) => row.ticketId === '2026-06-19-morning-SweepMssFvgRetrace-LONG');
+const invalidStopRow = report.rows.find((row) => row.ticketId === '2026-06-19-morning-NoInstalledSetup-LONG');
 assert.equal(invalidStopRow?.outcomeStatus, 'blocked');
 assert.equal(invalidStopRow?.outcomeLabel, 'blocked');
 assert.equal(invalidStopRow?.resolvedOneMesPl, null);

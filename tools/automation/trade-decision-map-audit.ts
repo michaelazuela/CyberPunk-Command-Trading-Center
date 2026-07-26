@@ -29,7 +29,7 @@ export interface Phase9ATradeDecisionMapAuditReport {
     registryEntries: number;
     auditedEntries: number;
     primaryModels: number;
-    supportingEvidence: number;
+    contextNotes: number;
     deprecatedModels: number;
     humanReviewOnly: number;
     executionEligible: number;
@@ -128,15 +128,13 @@ function buildFindings(): TradeDecisionMapAuditFinding[] {
     if (entry.role === 'deprecated' && (entry.discordEligible || entry.executionEligible || entry.planEligible)) {
       findings.push(finding('role_boundary', 'Deprecated setup is incorrectly eligible for plan/Discord/execution.', [entry.setupType]));
     }
-    if (entry.role === 'supporting_evidence' && (entry.planEligible || entry.discordEligible || entry.executionEligible)) {
-      findings.push(finding('role_boundary', 'Supporting evidence entry is incorrectly eligible for plan/Discord/execution.', [entry.setupType]));
-    }
     if (entry.humanReviewOnly && entry.executionEligible) {
       findings.push(finding('execution_boundary', 'Human-review-only setup is execution eligible.', [entry.setupType]));
     }
   }
 
-  if (!audit.entries.some((entry) => entry.role === 'primary_model')) {
+  const blankSlateActive = SETUP_REGISTRY.length === 0 && audit.entries.length === 0;
+  if (!blankSlateActive && !audit.entries.some((entry) => entry.role === 'primary_model')) {
     findings.push(finding('role_coverage', 'No primary models found in audit.', []));
   }
   return findings;
@@ -148,7 +146,7 @@ function buildSummary(): Phase9ATradeDecisionMapAuditReport['summary'] {
     registryEntries: SETUP_REGISTRY.length,
     auditedEntries: entries.length,
     primaryModels: entries.filter((entry) => entry.role === 'primary_model').length,
-    supportingEvidence: entries.filter((entry) => entry.role === 'supporting_evidence').length,
+    contextNotes: 0,
     deprecatedModels: entries.filter((entry) => entry.role === 'deprecated').length,
     humanReviewOnly: entries.filter((entry) => entry.humanReviewOnly).length,
     executionEligible: entries.filter((entry) => entry.executionEligible).length,
@@ -164,11 +162,12 @@ function buildMarkdown(report: Omit<Phase9ATradeDecisionMapAuditReport, 'markdow
     'Authority: read-only audit. It does not post Discord, write Supabase, change scanner behavior, change trading logic, change canExecute, or change entry/stop/target math.',
     '',
     `Coverage: ${report.summary.auditedEntries}/${report.summary.registryEntries} setup registry entries.`,
-    `Primary models: ${report.summary.primaryModels}; supporting evidence: ${report.summary.supportingEvidence}; deprecated: ${report.summary.deprecatedModels}; human-review-only: ${report.summary.humanReviewOnly}; execution-eligible metadata: ${report.summary.executionEligible}.`,
+    report.summary.registryEntries === 0 ? 'Blank-slate mode: no trading models or context-only labels are registered.' : null,
+    `Primary models: ${report.summary.primaryModels}; context-only labels: ${report.summary.contextNotes}; deprecated: ${report.summary.deprecatedModels}; human-review-only: ${report.summary.humanReviewOnly}; execution-eligible metadata: ${report.summary.executionEligible}.`,
     '',
     'Checks:',
     ...report.checks.map((check) => `- ${check}`),
-  ];
+  ].filter((line): line is string => line !== null);
   if (report.findings.length) {
     lines.push('', 'Findings:');
     for (const item of report.findings) lines.push(`- ${item.checkId}: ${item.reason}`);
@@ -194,7 +193,7 @@ export function buildPhase9ATradeDecisionMapAudit(
       'Every SETUP_REGISTRY entry appears in buildTradeDecisionMapAudit output.',
       'Every audit entry includes model name, session windows, required evidence, rank weight, eligibility flags, canExecute relationship, and known suppression paths.',
       'Retired/deprecated setups are absent from the active registry.',
-      'Supporting evidence labels are absent from the active registry and remain context-only where generated outside setup approval.',
+      'context-only labels labels are absent from the active registry and remain context-only where generated outside setup approval.',
       'Human-review-only models remain executionEligible=false.',
       'The audit remains metadata only and reports tradingLogicChanged=false.',
     ],

@@ -84,7 +84,7 @@ export interface RawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSelecto
   assumptions: {
     savedReportsOnly: true;
     baselineIsHighestSavedStrictReadyScoreByDateSession: true;
-    proposedSelectorScope: 'SweepMssFvgRetrace_keep_later_sweep_proof_only';
+    proposedSelectorScope: 'NoInstalledSetup_keep_later_sweep_proof_only';
     noLiveSelectorInstalled: true;
     livePromotionAllowed: false;
   };
@@ -209,7 +209,7 @@ function deterministicLevelsValid(row: StrictReplayRow): boolean {
 }
 
 function isSweepScope(row: StrictReplayRow): boolean {
-  return row.setupType === 'SweepMssFvgRetrace' &&
+  return row.setupType === 'NoInstalledSetup' &&
     selectorDecision(row.ticketId) === 'keep_later_sweep_proof' &&
     row.outcomeInputStatus === 'ready_for_read_only_outcome_replay' &&
     row.proofState.includes('keep_later_sweep_proof') &&
@@ -256,7 +256,7 @@ function buildSlates(args: {
       proposedSelectorDecision: proposed ? selectorDecision(proposed.ticketId) : null,
       proposedScore: proposed ? proposedScore(proposed) : null,
       selectedCandidateChanged,
-      changeReason: selectedCandidateChanged ? 'SweepMssFvgRetrace keep-later-proof candidate outranks baseline within saved strict-ready slate.' : null,
+      changeReason: selectedCandidateChanged ? 'NoInstalledSetup keep-later-proof candidate outranks baseline within saved strict-ready slate.' : null,
       proposedStrictReadySourceProofPositive,
       proposedDeterministicLevelsValid,
       proposedOutcomeLabel: proposedOutcome?.outcomeLabel || null,
@@ -346,7 +346,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
   const sweepScopeRows = (args.strictReplayPackage?.rows || []).filter(isSweepScope).length;
   const missingOutcomeRows = changed.filter((row) => row.proposedOutcomeLabel === null).length;
   const invalidProposedRows = changed.filter((row) => !row.proposedStrictReadySourceProofPositive || !row.proposedDeterministicLevelsValid).length;
-  const nonSweepChangedRows = changed.filter((row) => row.proposedSetupType !== 'SweepMssFvgRetrace').length;
+  const nonSweepChangedRows = changed.filter((row) => row.proposedSetupType !== 'NoInstalledSetup').length;
   const blockedCarveoutRowsRemain = args.adjustedReadiness?.summary.adjustedBlockedRowsExcluded || args.adjustedReadiness?.summary.blockedRowsExcluded || 0;
   const grossChanged = pnlRows
     .map((row) => row.grossResolvedOneMesPl)
@@ -364,9 +364,9 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
     args.adjustedReadiness && args.adjustedReadiness.status !== 'pass' ? `adjusted readiness status ${args.adjustedReadiness.status}` : null,
     args.adjustedReadiness && args.adjustedReadiness.summary.recommendation !== 'prepare_sweep_only_guarded_proposal' ? `adjusted readiness recommendation is ${args.adjustedReadiness.summary.recommendation}` : null,
     blockedCarveoutRowsRemain > 0 ? `${blockedCarveoutRowsRemain} blocked carveout rows remain` : null,
-    sweepScopeRows === 0 ? 'no SweepMssFvgRetrace keep-later-proof strict-ready rows found' : null,
+    sweepScopeRows === 0 ? 'no NoInstalledSetup keep-later-proof strict-ready rows found' : null,
     invalidProposedRows > 0 ? `${invalidProposedRows} changed proposed rows failed strict/source/level validation` : null,
-    nonSweepChangedRows > 0 ? `${nonSweepChangedRows} changed proposed rows are not SweepMssFvgRetrace` : null,
+    nonSweepChangedRows > 0 ? `${nonSweepChangedRows} changed proposed rows are not NoInstalledSetup` : null,
     missingOutcomeRows > 0 ? `${missingOutcomeRows} changed proposed rows lack outcome evidence` : null,
   ].filter((item): item is string => Boolean(item));
   const recommendation = blockers.length ? 'reject_dry_run'
@@ -386,7 +386,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
     assumptions: {
       savedReportsOnly: true,
       baselineIsHighestSavedStrictReadyScoreByDateSession: true,
-      proposedSelectorScope: 'SweepMssFvgRetrace_keep_later_sweep_proof_only',
+      proposedSelectorScope: 'NoInstalledSetup_keep_later_sweep_proof_only',
       noLiveSelectorInstalled: true,
       livePromotionAllowed: false,
     },

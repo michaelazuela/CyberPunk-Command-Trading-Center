@@ -29,10 +29,10 @@ export interface ResearchBackfillEvent {
   direction: ResearchBackfillDirection;
   window?: string | null;
   summary: string;
-  classification?: 'model1_overlap' | 'RAID_RECLAIM_overlap' | 'advisory_only';
+  classification?: 'model1_overlap' | 'HISTORICAL_REVERSAL_overlap' | 'advisory_only';
   model1Overlap?: boolean;
-  raidReclaimOverlap?: boolean;
-  trueSweepReclaim?: boolean;
+  historicalReversalOverlap?: boolean;
+  historicalReversalReclaim?: boolean;
   drawIdentified?: boolean;
   fvgOrInefficiency?: boolean;
   cleanLiquidityDraw?: boolean;
@@ -117,12 +117,12 @@ export interface HistoricalResearchConceptReport {
   dataGaps: string[];
   classificationCounts: {
     model1Overlap: number;
-    raidReclaimOverlap: number;
+    historicalReversalOverlap: number;
     advisoryOnly: number;
   };
   approvedModelOverlaps: {
     model1: number;
-    raidReclaim: number;
+    historicalReview: number;
   };
   advisoryOnlyCount: number;
   commonReasons: string[];
@@ -132,7 +132,7 @@ export interface HistoricalResearchConceptReport {
     direction: ResearchBackfillDirection;
     window: string | null;
     summary: string;
-    classification: 'model1_overlap' | 'RAID_RECLAIM_overlap' | 'advisory_only';
+    classification: 'model1_overlap' | 'HISTORICAL_REVERSAL_overlap' | 'advisory_only';
   }>;
   sampleThreshold: {
     minimum: number;
@@ -151,7 +151,7 @@ export interface ResearchCandidateEvent {
   concept: ResearchBackfillConceptId;
   direction: ResearchBackfillDirection;
   window: string | null;
-  classification: 'model1_overlap' | 'RAID_RECLAIM_overlap' | 'advisory_only';
+  classification: 'model1_overlap' | 'HISTORICAL_REVERSAL_overlap' | 'advisory_only';
   advisoryOnly: true;
   summary: string;
   detectorReason: string;
@@ -164,14 +164,14 @@ export interface ResearchCandidateEvent {
   observationWindowSource?: string;
   observationWindowDataQualityNotes?: string[];
   possibleModel1Overlap: boolean;
-  possibleraidReclaimOverlap: boolean;
+  possiblehistoricalReversalOverlap: boolean;
   sourceSessionMetadata: {
     session: string | null;
     selectedConcept: ResearchBackfillConceptSelector;
     dateRange: { from: string; to: string };
   };
   researchOnlySignals: {
-    trueSweepReclaim?: boolean;
+    historicalReversalReclaim?: boolean;
     drawIdentified?: boolean;
     fvgOrInefficiency?: boolean;
     cleanLiquidityDraw?: boolean;
@@ -209,7 +209,7 @@ export interface HistoricalResearchBackfillReport {
   fullCandidateEvents?: ResearchCandidateEvent[];
   approvedModelOverlap: {
     model1: number;
-    raidReclaim: number;
+    historicalReview: number;
     total: number;
   };
   advisoryOnlyFindings: string[];
@@ -246,10 +246,10 @@ const CONCEPT_ORDER: ResearchBackfillConceptId[] = [
   'final_hour_liquidity_draw',
 ];
 
-function classificationFor(event: ResearchBackfillEvent): 'model1_overlap' | 'RAID_RECLAIM_overlap' | 'advisory_only' {
+function classificationFor(event: ResearchBackfillEvent): 'model1_overlap' | 'HISTORICAL_REVERSAL_overlap' | 'advisory_only' {
   if (event.classification) return event.classification;
   if (event.model1Overlap) return 'model1_overlap';
-  if (event.raidReclaimOverlap || event.trueSweepReclaim) return 'RAID_RECLAIM_overlap';
+  if (event.historicalReversalOverlap || event.historicalReversalReclaim) return 'HISTORICAL_REVERSAL_overlap';
   return 'advisory_only';
 }
 
@@ -286,7 +286,7 @@ function buildMetrics(conceptId: ResearchBackfillConceptId, events: ResearchBack
       countWithDrawIdentified: events.filter((event) => event.drawIdentified).length,
       countWithFvgOrInefficiency: events.filter((event) => event.fvgOrInefficiency).length,
       countWithModel1Overlap: events.filter((event) => event.model1Overlap).length,
-      countWithraidReclaimOverlap: events.filter((event) => event.raidReclaimOverlap || event.trueSweepReclaim).length,
+      countWithhistoricalReversalOverlap: events.filter((event) => event.historicalReversalOverlap || event.historicalReversalReclaim).length,
       countAdvisoryOnly: events.filter((event) => classificationFor(event) === 'advisory_only').length,
     };
   }
@@ -294,8 +294,8 @@ function buildMetrics(conceptId: ResearchBackfillConceptId, events: ResearchBack
   if (conceptId === 'false_run_liquidity_fade') {
     return {
       majorHighFalseRunCandidates: events.length,
-      trueSweepReclaimCount: events.filter((event) => event.trueSweepReclaim).length,
-      raidReclaimMappedCount: events.filter((event) => event.raidReclaimOverlap || event.trueSweepReclaim).length,
+      historicalReversalReclaimCount: events.filter((event) => event.historicalReversalReclaim).length,
+      historicalReviewMappedCount: events.filter((event) => event.historicalReversalOverlap || event.historicalReversalReclaim).length,
       advisoryOnlyCount: events.filter((event) => classificationFor(event) === 'advisory_only').length,
       reachedSellSideDrawAfterFactCount: events.filter((event) => event.reachedDrawAfterFact).length,
       failedOrReversedCount: events.filter((event) => event.failedOrReversed).length,
@@ -311,7 +311,7 @@ function buildMetrics(conceptId: ResearchBackfillConceptId, events: ResearchBack
       bullishCases: events.filter((event) => event.direction === 'LONG').length,
       bearishCases: events.filter((event) => event.direction === 'SHORT').length,
       countWithModel1Overlap: events.filter((event) => event.model1Overlap).length,
-      countWithraidReclaimOverlap: events.filter((event) => event.raidReclaimOverlap || event.trueSweepReclaim).length,
+      countWithhistoricalReversalOverlap: events.filter((event) => event.historicalReversalOverlap || event.historicalReversalReclaim).length,
       countAdvisoryOnly: events.filter((event) => classificationFor(event) === 'advisory_only').length,
     };
   }
@@ -322,7 +322,7 @@ function buildMetrics(conceptId: ResearchBackfillConceptId, events: ResearchBack
     footholdCount: events.filter((event) => event.footholdPresent || event.fvgOrInefficiency).length,
     htfConflictCount: events.filter((event) => event.htfConflict).length,
     advisoryOnlyCount: events.filter((event) => classificationFor(event) === 'advisory_only').length,
-    currentApprovedModelOverlapCount: events.filter((event) => event.model1Overlap || event.raidReclaimOverlap || event.trueSweepReclaim).length,
+    currentApprovedModelOverlapCount: events.filter((event) => event.model1Overlap || event.historicalReversalOverlap || event.historicalReversalReclaim).length,
     countByDirection,
   };
 }
@@ -335,7 +335,7 @@ function buildConceptReport(
   const classifications = events.map(classificationFor);
   const reasons = events.flatMap((event) => [...(event.failureReasons || []), ...(event.warningPatterns || [])]);
   const model1Overlap = classifications.filter((value) => value === 'model1_overlap').length;
-  const raidReclaimOverlap = classifications.filter((value) => value === 'RAID_RECLAIM_overlap').length;
+  const historicalReversalOverlap = classifications.filter((value) => value === 'HISTORICAL_REVERSAL_overlap').length;
   const advisoryOnly = classifications.filter((value) => value === 'advisory_only').length;
   const recommendation: HistoricalResearchConceptReport['recommendation'] =
     events.length >= 30
@@ -352,12 +352,12 @@ function buildConceptReport(
     dataGaps: input.dataWarnings || [],
     classificationCounts: {
       model1Overlap,
-      raidReclaimOverlap,
+      historicalReversalOverlap,
       advisoryOnly,
     },
     approvedModelOverlaps: {
       model1: model1Overlap,
-      raidReclaim: raidReclaimOverlap,
+      historicalReview: historicalReversalOverlap,
     },
     advisoryOnlyCount: advisoryOnly,
     commonReasons: topStrings(reasons),
@@ -489,14 +489,14 @@ function toResearchCandidateEvent(event: ResearchBackfillEvent, input: Historica
     observationWindowSource: observationWindow.observationWindowSource,
     observationWindowDataQualityNotes: observationWindow.observationWindowDataQualityNotes,
     possibleModel1Overlap: classification === 'model1_overlap' || Boolean(event.model1Overlap),
-    possibleraidReclaimOverlap: classification === 'RAID_RECLAIM_overlap' || Boolean(event.raidReclaimOverlap || event.trueSweepReclaim),
+    possiblehistoricalReversalOverlap: classification === 'HISTORICAL_REVERSAL_overlap' || Boolean(event.historicalReversalOverlap || event.historicalReversalReclaim),
     sourceSessionMetadata: {
       session: event.window || null,
       selectedConcept: input.selectedConcept || 'all',
       dateRange: { from: input.from, to: input.to },
     },
     researchOnlySignals: {
-      trueSweepReclaim: event.trueSweepReclaim,
+      historicalReversalReclaim: event.historicalReversalReclaim,
       drawIdentified: event.drawIdentified,
       fvgOrInefficiency: event.fvgOrInefficiency,
       cleanLiquidityDraw: event.cleanLiquidityDraw,
@@ -597,8 +597,8 @@ function renderConceptMarkdown(index: number, report: HistoricalResearchConceptR
     `- Total candidates: ${report.totalCandidates}`,
     `- Dates reviewed: ${report.datesReviewed.from} to ${report.datesReviewed.to}`,
     `- Data gaps: ${listOrNone(report.dataGaps).join(' | ')}`,
-    `- Model 1 overlaps: ${report.approvedModelOverlaps.model1}`,
-    `- Raid Reclaim Reversal overlaps: ${report.approvedModelOverlaps.raidReclaim}`,
+    `- no installed model path overlaps: ${report.approvedModelOverlaps.model1}`,
+    `- no installed model path overlaps: ${report.approvedModelOverlaps.historicalReview}`,
     `- Advisory-only: ${report.advisoryOnlyCount}`,
     `- 20-30 sample threshold met: ${report.sampleThreshold.met ? 'yes' : 'no'} (${report.sampleThreshold.current}/${report.sampleThreshold.minimum})`,
     `- Recommendation: ${report.recommendation}`,
@@ -671,8 +671,8 @@ export function renderHistoricalResearchBackfillMarkdown(report: Omit<Historical
     renderConceptMarkdown(6, conceptMap.get('final_hour_liquidity_draw') || emptyConcept('final_hour_liquidity_draw', report.from, report.to)),
     '',
     '## 7. Approved Model Overlap',
-    `- Model 1: ${report.approvedModelOverlap.model1}`,
-    `- Raid Reclaim Reversal: ${report.approvedModelOverlap.raidReclaim}`,
+    `- no installed model path: ${report.approvedModelOverlap.model1}`,
+    `- no installed model path: ${report.approvedModelOverlap.historicalReview}`,
     `- Total approved-model overlaps: ${report.approvedModelOverlap.total}`,
     '- Overlaps are historical classification context only. They do not approve new trades.',
     '',
@@ -735,7 +735,7 @@ export function runHistoricalResearchBackfill(input: HistoricalResearchBackfillI
     events.filter((event) => event.concept === conceptId),
   ));
   const model1 = conceptReports.reduce((sum, concept) => sum + concept.approvedModelOverlaps.model1, 0);
-  const raidReclaim = conceptReports.reduce((sum, concept) => sum + concept.approvedModelOverlaps.raidReclaim, 0);
+  const historicalReview = conceptReports.reduce((sum, concept) => sum + concept.approvedModelOverlaps.historicalReview, 0);
   const advisoryOnlyTotal = conceptReports.reduce((sum, concept) => sum + concept.advisoryOnlyCount, 0);
   const zeroCandidateExplanation = events.length === 0 ? explainZeroCandidates(input, detectorAudit) : [];
   const repeatedReasons = topStrings(events.flatMap((event) => event.failureReasons || []));
@@ -773,8 +773,8 @@ export function runHistoricalResearchBackfill(input: HistoricalResearchBackfillI
     fullCandidateEvents,
     approvedModelOverlap: {
       model1,
-      raidReclaim,
-      total: model1 + raidReclaim,
+      historicalReview,
+      total: model1 + historicalReview,
     },
     advisoryOnlyFindings: conceptReports
       .filter((concept) => concept.advisoryOnlyCount > 0)
@@ -795,7 +795,7 @@ export function runHistoricalResearchBackfill(input: HistoricalResearchBackfillI
     ],
     recommendedNextSteps: [
       'Continue collecting completed-bar examples until each concept reaches 20-30 reviewed samples.',
-      'Use Model 1 and Raid Reclaim Reversal only when their existing approved gates independently pass.',
+      'Use no installed model path and no installed model path only when their existing approved gates independently pass.',
       'Keep research concepts advisory-only unless a separate human approval process changes the rules.',
     ],
     approvalBoundary: {

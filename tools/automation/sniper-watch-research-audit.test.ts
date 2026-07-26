@@ -21,7 +21,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-21-MES-eveni
       setupCandidateStatus: {
         selected: {
           direction: 'LONG',
-          setupType: 'raidReclaim',
+          setupType: 'historicalReview',
           executionStatus: 'Conditional',
           entry: 7533.75,
           stop: 7525.75,
@@ -62,7 +62,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-21-MES-eveni
       setupCandidateStatus: {
         selected: {
           direction: 'SHORT',
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           executionStatus: 'Conditional',
           entry: 7525,
           stop: 7533,
@@ -87,7 +87,7 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-21-MES-eveni
       setupCandidateStatus: {
         selected: {
           direction: 'LONG',
-          setupType: 'raidReclaim',
+          setupType: 'historicalReview',
           executionStatus: 'Executable',
           entry: 7551,
           stop: 7546,

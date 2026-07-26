@@ -31,7 +31,7 @@ function candidate(direction: Direction, overrides: Partial<SetupCandidate> = {}
   const target1 = direction === 'SHORT' ? 7462 : 7468.25;
   const target2 = direction === 'SHORT' ? 7457.25 : 7472.25;
   return {
-    setupType: direction === 'SHORT' ? SetupType.AfterLunchDriveFvgContinuation : SetupType.IntradayMssMicroContinuation,
+    setupType: direction === 'SHORT' ? SetupType.NoSetup : SetupType.NoSetup,
     scenarioLabel: `${direction} lifecycle fixture`,
     direction,
     detectedStatus: SetupCandidateStatus.Detected,

@@ -9,7 +9,7 @@ const overlaySimulation: BuildArgs['overlaySimulation'] = {
   status: 'pass',
   overlayRows: [
     {
-      slateId: '2026-07-01|morning|SweepMssFvgRetrace|LONG',
+      slateId: '2026-07-01|morning|NoInstalledSetup|LONG',
       tradeDate: '2026-07-01',
       session: 'morning',
       direction: 'LONG',
@@ -32,7 +32,7 @@ const overlaySimulation: BuildArgs['overlaySimulation'] = {
       overlayReason: 'not in positive-lane union',
     },
     {
-      slateId: '2026-07-02|morning|SweepMssFvgRetrace|LONG',
+      slateId: '2026-07-02|morning|NoInstalledSetup|LONG',
       tradeDate: '2026-07-02',
       session: 'morning',
       direction: 'LONG',
@@ -55,7 +55,7 @@ const overlaySimulation: BuildArgs['overlaySimulation'] = {
       overlayReason: 'not in positive-lane union',
     },
     {
-      slateId: '2026-07-03|morning|SweepMssFvgRetrace|SHORT',
+      slateId: '2026-07-03|morning|NoInstalledSetup|SHORT',
       tradeDate: '2026-07-03',
       session: 'morning',
       direction: 'SHORT',

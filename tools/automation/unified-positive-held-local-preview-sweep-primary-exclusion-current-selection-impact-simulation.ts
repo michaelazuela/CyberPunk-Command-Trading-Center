@@ -280,7 +280,7 @@ function buildRows(dir: string, proofKeys: Set<string>): { filesRead: number; ro
           canExecute: Boolean((candidate as { humanReview?: { canExecute?: unknown } }).humanReview?.canExecute),
           exactInvalidStopSweep: false,
         };
-        row.exactInvalidStopSweep = setupType === 'SweepMssFvgRetrace' &&
+        row.exactInvalidStopSweep = setupType === 'NoInstalledSetup' &&
           blockReason === 'InvalidStopLocation' &&
           proofKeys.has(exactProofKeyForCandidate(row));
         byKey.set(row.candidateKey, row);

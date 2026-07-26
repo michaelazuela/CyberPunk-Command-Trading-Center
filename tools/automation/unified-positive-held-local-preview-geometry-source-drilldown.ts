@@ -331,7 +331,7 @@ export function buildUnifiedPositiveHeldLocalPreviewGeometrySourceDrilldownRepor
       ? ['Do not use geometry-source drilldown until source reports are present.']
       : [
         'Fix scanner candidate geometry before using these Sweep/FVG rows as rank replacements.',
-        'Do not install raidReclaim penalties or replacement ranking from rows whose source tape has inverted entry/stop geometry.',
+        'Do not install historicalReview penalties or replacement ranking from rows whose source tape has inverted entry/stop geometry.',
       ],
   };
   return { ...base, markdown: buildMarkdown(base) };

@@ -22,7 +22,7 @@ await fs.writeFile(liveAuditPath, `${JSON.stringify({
   instrument: 'MES',
   planVersionId: 'MORNING-20260602-140348',
   candidate: {
-    setupType: 'raidReclaim',
+    setupType: 'historicalReview',
     direction: 'LONG',
     entry: 7603.25,
     stop: 7599,
@@ -66,7 +66,7 @@ await fs.writeFile(staleAuditPath, `${JSON.stringify({
   instrument: 'MES',
   planVersionId: 'MORNING-20260602-140348-STALE',
   candidate: {
-    setupType: 'raidReclaim',
+    setupType: 'historicalReview',
     direction: 'LONG',
     entry: 7603.25,
     stop: 7599,

@@ -8,19 +8,19 @@ const decisionSummary = {
   rows: [
     {
       ticketId: 'ticket-complete',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       decisionAction: 'queue_for_replay_research',
     },
     {
       ticketId: 'ticket-missing-proof',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       decisionAction: 'queue_for_replay_research',
     },
     {
       ticketId: 'ticket-held',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'SHORT',
       decisionAction: 'hold_for_manual_review',
     },
@@ -32,13 +32,13 @@ const replayQueue = {
   rows: [
     {
       ticketId: 'ticket-complete',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       replayStatus: 'ready_for_read_only_outcome_replay',
     },
     {
       ticketId: 'ticket-missing-proof',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       replayStatus: 'ready_for_read_only_outcome_replay',
     },
@@ -50,14 +50,14 @@ const ohlcOutcome = {
   rows: [
     {
       ticketId: 'ticket-complete',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       outcomeStatus: 'resolved',
       resolvedOneMesPl: 50,
     },
     {
       ticketId: 'ticket-missing-proof',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeStatus: 'resolved',
       resolvedOneMesPl: 100,
@@ -70,7 +70,7 @@ const sourceProof = {
   rows: [
     {
       rowId: 'ticket-complete',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       decision: 'accepted_for_research_validation',
     },

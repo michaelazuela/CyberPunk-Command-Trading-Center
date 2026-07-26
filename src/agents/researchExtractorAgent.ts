@@ -99,7 +99,7 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Price stops going lower': {
     plainEnglishMeaning: 'Downside continuation stalls before the late-day move attempts to draw higher.',
-    whyItMayMatterFor6K: 'May overlap with reversal context, but 6K still requires approved 5M gates for execution.',
+    whyItMayMatterFor6K: 'May overlap with reversal context, but 6K still requires future approved 5M gates for execution.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -111,7 +111,7 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'IFVG / FVG / order block support': {
     plainEnglishMeaning: 'A fair value gap, inverse FVG, or order block acts as the proposed foothold for the move.',
-    whyItMayMatterFor6K: 'FVG and breaker/order-block facts exist as supporting context, but not as standalone approval.',
+    whyItMayMatterFor6K: 'FVG and breaker/order-block facts exist as context only, but not as standalone approval.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -147,13 +147,13 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Fading run toward all-time high / major buy-side liquidity': {
     plainEnglishMeaning: 'Price aggressively moves toward ATH, high of day, or major buy-side liquidity, then fails to sustain the run.',
-    whyItMayMatterFor6K: 'It may identify a research-only bearish fade context without replacing Raid Reclaim Reversal sweep/reclaim requirements.',
+    whyItMayMatterFor6K: 'It may identify a research-only bearish fade context without replacing no installed model path historical reversal pattern requirements.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
   'Judas Swing / false run logic as a source concept, with taxonomy caution': {
     plainEnglishMeaning: 'A false move concept that must be labeled carefully because strict Judas Swing has a specific session-open definition.',
-    whyItMayMatterFor6K: 'It can help taxonomy, but should route true sweep/reclaim events through existing Raid Reclaim Reversal.',
+    whyItMayMatterFor6K: 'It can help taxonomy, but should route true historical reversal pattern events through existing no installed model path.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -297,7 +297,7 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'FVG / inefficiency as draw or entry framework': {
     plainEnglishMeaning: 'An imbalance may provide context for delivery or repricing.',
-    whyItMayMatterFor6K: 'FVG facts already support Model 1 context, but do not approve trades by themselves.',
+    whyItMayMatterFor6K: 'FVG facts already support no installed model path context, but do not approve trades by themselves.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -321,13 +321,13 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'FVG forms inside the 60-minute window': {
     plainEnglishMeaning: 'The imbalance appears during the studied window.',
-    whyItMayMatterFor6K: 'May become a research tag, but current Model 1/Raid Reclaim Reversal gates still decide.',
+    whyItMayMatterFor6K: 'May become a research tag, but current no installed model path gates still decide.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
   'Market structure shift plus FVG as setup component': {
     plainEnglishMeaning: 'A structure shift and imbalance may support a setup component.',
-    whyItMayMatterFor6K: 'Partially overlaps Model 1, but Model 1 remains the approval path.',
+    whyItMayMatterFor6K: 'Partially overlaps no installed model path, but no installed model path remains the approval path.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -363,7 +363,7 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Manipulation immediately after the opening price': {
     plainEnglishMeaning: 'Price runs one side of the opening range or nearby liquidity before reversing.',
-    whyItMayMatterFor6K: 'May overlap Raid Reclaim Reversal only when a true sweep/raid plus reclaim occurs.',
+    whyItMayMatterFor6K: 'May overlap no installed model path only when a true historical reversal pattern occurs.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -393,13 +393,13 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Bullish AMD: buying near/below open after sell-side engineering': {
     plainEnglishMeaning: 'A bullish research case studies a sell-side run below open/old low followed by expansion higher.',
-    whyItMayMatterFor6K: 'Routes through Raid Reclaim Reversal if sweep + reclaim qualifies; otherwise remains advisory context.',
+    whyItMayMatterFor6K: 'Routes through no installed model path if historical reversal pattern qualifies; otherwise remains advisory context.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
   'Bearish AMD: selling near/above open after buy-side engineering': {
     plainEnglishMeaning: 'A bearish research case studies a buy-side run above open/old high followed by expansion lower.',
-    whyItMayMatterFor6K: 'Routes through Raid Reclaim Reversal if sweep + reclaim qualifies; otherwise remains advisory context.',
+    whyItMayMatterFor6K: 'Routes through no installed model path if historical reversal pattern qualifies; otherwise remains advisory context.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -423,13 +423,13 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Run below old low to engineer sell-side liquidity in bullish context': {
     plainEnglishMeaning: 'A bullish research case watches a run below an old low before potential higher delivery.',
-    whyItMayMatterFor6K: 'If it is a true sweep plus reclaim, evaluate through Raid Reclaim Reversal.',
+    whyItMayMatterFor6K: 'If it is a true historical reversal pattern, evaluate through no installed model path.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
   'Run above old high to engineer buy-side liquidity in bearish context': {
     plainEnglishMeaning: 'A bearish research case watches a run above an old high before potential lower delivery.',
-    whyItMayMatterFor6K: 'If it is a true sweep plus reclaim, evaluate through Raid Reclaim Reversal.',
+    whyItMayMatterFor6K: 'If it is a true historical reversal pattern, evaluate through no installed model path.',
     currentCoverage: 'partially_covered',
     watchlistOnly: true,
   },
@@ -471,7 +471,7 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Avoid treating the concept as an entry model without approved 6K gates': {
     plainEnglishMeaning: 'AMD is a lens, not an app-approved entry model.',
-    whyItMayMatterFor6K: 'Directly protects Model 1, Raid Reclaim Reversal, risk, and scanner selection authority.',
+    whyItMayMatterFor6K: 'Directly protects no installed model path, no installed model path, risk, and scanner selection authority.',
     currentCoverage: 'already_covered',
     watchlistOnly: true,
   },
@@ -568,55 +568,55 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
 
   const comparisonToExistingRules = input.currentModelComparisonTargets.map((target) => {
     const lower = target.toLowerCase();
-    if (amdResearch && lower.includes('model 1')) {
+    if (amdResearch && lower.includes('no installed model path')) {
       return {
         target,
         comparison: 'partially_covered' as const,
-        note: 'AMD context may overlap Model 1 only when current Model 1 gates independently pass.',
+        note: 'AMD context may overlap no installed model path only when current no installed model path gates independently pass.',
       };
     }
-    if (amdResearch && lower.includes('raid reclaim')) {
+    if (amdResearch && lower.includes('no installed reversal path')) {
       return {
         target,
         comparison: 'partially_covered' as const,
-        note: 'AMD manipulation may overlap Raid Reclaim Reversal when the manipulation leg creates a true sweep/raid plus reclaim as a sweep/reclaim event.',
+        note: 'AMD manipulation may overlap no installed model path when the manipulation leg creates a true historical reversal pattern as a historical reversal pattern event.',
       };
     }
-    if (timeWindowResearch && lower.includes('model 1')) {
+    if (timeWindowResearch && lower.includes('no installed model path')) {
       return {
         target,
         comparison: 'partially_covered' as const,
-        note: 'Time-window FVG/inefficiency plus liquidity draw may overlap with Model 1 components, but only current Model 1 gates can approve.',
+        note: 'Time-window FVG/inefficiency plus liquidity draw may overlap with no installed model path components, but only current no installed model path gates can approve.',
       };
     }
-    if (timeWindowResearch && lower.includes('raid reclaim')) {
+    if (timeWindowResearch && lower.includes('no installed reversal path')) {
       return {
         target,
         comparison: 'partially_covered' as const,
-        note: 'A true sweep/reclaim should be evaluated through existing Raid Reclaim Reversal; time-window context cannot approve by itself.',
+        note: 'A true historical reversal pattern should be evaluated through existing no installed model path; time-window context cannot approve by itself.',
       };
     }
-    if (falseRunResearch && lower.includes('raid reclaim')) {
+    if (falseRunResearch && lower.includes('no installed reversal path')) {
       return {
         target,
         comparison: 'partially_covered' as const,
-        note: 'A true sweep/reclaim should be evaluated through existing Raid Reclaim Reversal; false-run behavior without true sweep + reclaim remains research-only context.',
+        note: 'A true historical reversal pattern should be evaluated through existing no installed model path; false-run behavior without true historical reversal pattern remains research-only context.',
       };
     }
-    if (lower.includes('model 1')) {
+    if (lower.includes('no installed model path')) {
       return {
         target,
         comparison: 'partially_covered' as const,
         note: falseRunResearch
-          ? 'Model 1 gates cannot be bypassed by MMSM/Judas Swing narrative or a false-run read.'
-          : 'Model 1 already requires approved sweep/reclaim/displacement/MSS/FVG gates; the final-hour draw idea cannot bypass those gates.',
+          ? 'no installed model path gates cannot be bypassed by MMSM/Judas Swing narrative or a false-run read.'
+          : 'no installed model path already requires future approved model gates; the final-hour draw idea cannot bypass those gates.',
       };
     }
-    if (lower.includes('raid reclaim')) {
+    if (lower.includes('no installed reversal path')) {
       return {
         target,
         comparison: 'partially_covered' as const,
-        note: 'Raid Reclaim Reversal already handles sweep/reclaim reversals; final-hour liquidity draw remains context only unless approved 5M gates confirm.',
+        note: 'no installed model path already handles historical reversal pattern reversals; final-hour liquidity draw remains context only unless future approved 5M gates confirm.',
       };
     }
     if (lower.includes('watchlist') || lower.includes('fvg')) {
@@ -646,7 +646,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
         status: 'research_only',
         candidateName: 'Accumulation–Manipulation–Distribution Range Model Watchlist',
         primaryIdea: 'Study open-based accumulation, liquidity manipulation, and later distribution behavior.',
-        taxonomyNote: 'If Model 1 or Raid Reclaim Reversal gates pass, classify through existing approved models; otherwise keep as advisory research.',
+        taxonomyNote: 'If no installed model path gates pass, classify through no installed models; otherwise keep as advisory research.',
         recommendedNextStep: 'Collect 20-30 bridge-backed examples before any rule review.',
         ruleChange: 'none',
         approvalBoundarySummary: 'Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.',
@@ -658,7 +658,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
         status: 'research_only',
         candidateName: 'Time-Window Liquidity Delivery Watchlist',
         primaryIdea: 'Study FVG/inefficiency delivery toward liquidity during defined market windows.',
-        taxonomyNote: 'If Model 1 or Raid Reclaim Reversal gates pass, classify through existing approved models; otherwise keep as advisory research.',
+        taxonomyNote: 'If no installed model path gates pass, classify through no installed models; otherwise keep as advisory research.',
         recommendedNextStep: 'Collect 20-30 bridge-backed examples per window before any rule review.',
         ruleChange: 'none',
         approvalBoundarySummary: 'Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.',
@@ -670,7 +670,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
         status: 'research_only',
         candidateName: 'False-Run Liquidity Fade Near Highs Watchlist',
         primaryIdea: 'Fade a run toward ATH or major buy-side liquidity when price fails to sustain and begins drawing toward sell-side liquidity.',
-        taxonomyNote: 'If sweep + reclaim exists, evaluate through existing Raid Reclaim Reversal; otherwise keep as advisory research.',
+        taxonomyNote: 'If historical reversal pattern exists, evaluate through existing no installed model path; otherwise keep as advisory research.',
         recommendedNextStep: 'Collect 20-30 bridge-backed examples before any rule review.',
         ruleChange: 'none',
         approvalBoundarySummary: 'Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.',
@@ -731,8 +731,8 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
             'No clear opening reference.',
             'No clear accumulation.',
             'No liquidity run/manipulation.',
-            'No true sweep + reclaim if attempting to map to Raid Reclaim Reversal.',
-            'No Model 1 gates if attempting to map to Model 1.',
+            'No true historical reversal pattern if attempting to map to no installed model path.',
+            'No no installed model path gates if attempting to map to no installed model path.',
             'Larger-timeframe context conflicts.',
             'Price already reached the likely distribution target.',
             'Risk would be too wide under current approved rules.',
@@ -761,7 +761,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
             'FVG is not respected.',
             'Price is too extended to chase.',
             'Risk would be too wide under current approved rules.',
-            'The condition does not satisfy current Model 1 or Raid Reclaim Reversal gates.',
+            'The condition does not satisfy current no installed model path gates.',
           ],
         }
       : falseRunResearch
@@ -789,7 +789,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
             'Price already reached sell-side target.',
             'Move is too extended to chase.',
             'Risk would be too wide under current approved rules.',
-            'No true sweep + reclaim exists, meaning it cannot be treated as Raid Reclaim Reversal.',
+            'No true historical reversal pattern exists, meaning it cannot be treated as no installed model path.',
           ],
         }
       : {
@@ -824,9 +824,9 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Define an opening reference for the test session.',
           'Identify accumulation around the opening reference.',
           'Identify manipulation through nearby old high/low or equal high/low.',
-          'Determine whether the manipulation produced a true sweep/raid plus reclaim.',
-          'If sweep + reclaim exists, classify through Raid Reclaim Reversal gates.',
-          'Determine whether Model 1 gates independently passed.',
+          'Determine whether the manipulation produced a true historical reversal pattern.',
+          'If historical reversal pattern exists, classify through no installed model path gates.',
+          'Determine whether no installed model path gates independently passed.',
           'If approved gates do not pass, classify as advisory-only AMD research.',
           'Track the later distribution direction as after-action context only.',
           'Track 20-30 examples before any rule approval discussion.',
@@ -840,7 +840,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Identify FVG/inefficiency inside the window.',
           'Identify whether MSS occurred.',
           'Identify whether bodies respected the FVG.',
-          'Determine whether current Model 1 or Raid Reclaim Reversal gates actually passed.',
+          'Determine whether current no installed model path gates actually passed.',
           'If approved gates do not pass, classify as advisory-only time-window research.',
           'Track 20-30 examples per window before any rule approval discussion.',
         ]
@@ -851,8 +851,8 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Focus on sessions where price runs toward ATH / HOD / buy-side liquidity.',
           'Identify whether price actually swept/raided established liquidity.',
           'Identify whether price reclaimed after the sweep.',
-          'If sweep + reclaim exists, classify through current Raid Reclaim Reversal gates.',
-          'If no sweep + reclaim exists, classify as advisory-only false-run / liquidity-fade context.',
+          'If historical reversal pattern exists, classify through current no installed model path gates.',
+          'If no historical reversal pattern exists, classify as advisory-only false-run / liquidity-fade context.',
           'Identify bearish FVG/SIBI/IFVG/order block/premium wick structures.',
           'Identify whether bodies stayed below the relevant midpoint.',
           'Identify downside sell-side liquidity target.',
@@ -872,19 +872,19 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Track 20-30 examples before any rule approval discussion.',
         ],
     advisoryDiscordDraft: amdResearch
-      ? 'Accumulation-Manipulation-Distribution range behavior forming. Watch only - price may be engineering liquidity around the opening reference. Evaluate only through current 6K Model 1 or Raid Reclaim Reversal rules. Do not chase.'
+      ? 'Accumulation-Manipulation-Distribution range behavior forming. Watch only - price may be engineering liquidity around the opening reference. Evaluate only through current 6K no installed model path rules. Do not chase.'
       : timeWindowResearch
-      ? 'Time-Window Liquidity Delivery candidate forming. Watch only - a draw on liquidity and FVG/inefficiency may be aligning inside a defined market window. Evaluate only through current 6K Model 1 or Raid Reclaim Reversal rules. Do not chase.'
+      ? 'Time-Window Liquidity Delivery candidate forming. Watch only - a draw on liquidity and FVG/inefficiency may be aligning inside a defined market window. Evaluate only through current 6K no installed model path rules. Do not chase.'
       : falseRunResearch
-      ? 'False-Run Liquidity Fade Near Highs candidate forming. Watch only - price ran toward major buy-side liquidity / ATH and may be drawing back toward sell-side liquidity. If a true sweep + reclaim forms, evaluate through current Raid Reclaim Reversal rules. Otherwise, keep this as research-only context. Do not chase.'
+      ? 'False-Run Liquidity Fade Near Highs candidate forming. Watch only - price ran toward major buy-side liquidity / ATH and may be drawing back toward sell-side liquidity. If a true historical reversal pattern forms, evaluate through current no installed model path rules. Otherwise, keep this as research-only context. Do not chase.'
       : 'Final-Hour Liquidity Draw forming. Watch only - price may be drawing toward clean buy-side liquidity during the 3:15-3:45 macro. Wait for current approved 6K rules to confirm. Do not chase.',
     guardrails: amdResearch
       ? [
           'This is not an approved executable model.',
           'Do not create entries, stops, T1/T2, or outcome buttons.',
-          'Do not override Model 1 or Raid Reclaim Reversal.',
+          'Do not override no installed model path.',
           'Do not allow this to approve trades.',
-          'Do not duplicate Model 1 or Raid Reclaim Reversal under an AMD label.',
+          'Do not duplicate no installed model path under an AMD label.',
           'Do not use later distribution success to retroactively validate an invalid setup.',
           'Collect 20-30 examples first.',
         ]
@@ -892,9 +892,9 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
       ? [
           'This is not an approved executable model.',
           'Do not create entries, stops, T1/T2, or outcome buttons.',
-          'Do not override Model 1 or Raid Reclaim Reversal.',
+          'Do not override no installed model path.',
           'Do not allow this to approve trades.',
-          'Do not duplicate Model 1 or Raid Reclaim Reversal under a time-window label.',
+          'Do not duplicate no installed model path under a time-window label.',
           'Do not use later target delivery to retroactively validate an invalid setup.',
           'Collect 20-30 examples per window first.',
         ]
@@ -902,16 +902,16 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
       ? [
           'This is not an approved executable model.',
           'Do not create entries, stops, T1/T2, or outcome buttons.',
-          'Do not override Model 1 or Raid Reclaim Reversal.',
+          'Do not override no installed model path.',
           'Do not allow this to approve trades.',
-          'Do not duplicate Raid Reclaim Reversal under a new Judas Swing or false-run label.',
+          'Do not duplicate no installed model path under a new Judas Swing or false-run label.',
           'Do not use later downside delivery to retroactively validate an invalid setup.',
           'Collect 20-30 examples first.',
         ]
       : [
           'This is not an approved executable model.',
           'Do not create entries, stops, T1/T2, or outcome buttons.',
-          'Do not override Model 1 or Raid Reclaim Reversal.',
+          'Do not override no installed model path.',
           'Do not allow this to approve trades.',
           'Do not use later success to retroactively validate an invalid setup.',
           'Collect 20-30 examples first.',

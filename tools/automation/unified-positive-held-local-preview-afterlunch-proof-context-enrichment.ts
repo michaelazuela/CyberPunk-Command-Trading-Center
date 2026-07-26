@@ -276,7 +276,7 @@ export function buildUnifiedPositiveHeldLocalPreviewAfterLunchProofContextEnrich
   const sourceProofTimingPath = args.sourceProofTimingPath ?? latestMatchingFile(reportDir, 'unified-positive-held-local-preview-replay-package-source-proof-timing-');
   const queueReport = args.queueReport ?? readJson<UnifiedPositiveHeldLocalPreviewAfterLunchProofContextQueueReport>(queuePath);
   const sourceProofTimingReport = args.sourceProofTimingReport ?? readJson<UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport>(sourceProofTimingPath);
-  const timingRows = (sourceProofTimingReport?.rows || []).filter((row) => row.setupType === 'AfterLunchDriveFvgContinuation');
+  const timingRows = (sourceProofTimingReport?.rows || []).filter((row) => row.setupType === 'NoInstalledSetup');
   const rows = buildRows(queueReport?.rows || [], timingRows);
   const changedFirst = rows.filter((row) => row.changedSlateBaselineTop);
   const changedReplacementTop = rows.filter((row) => row.changedSlateSimulatedTop);

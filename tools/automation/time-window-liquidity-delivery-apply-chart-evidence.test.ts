@@ -43,7 +43,7 @@ function sample(sampleId: string, index: number) {
     sweepRaidPlusReclaimPresent: false,
     deliveryStatus: 'failed',
     modelOneOverlap: false,
-    raidReclaimOverlap: false,
+    historicalReversalOverlap: false,
     advisoryOnly: true,
     suggestedReviewLabels: ['strong_advisory_candidate', 'needs_chart_review', 'reject_time_window_standalone'],
     chartPath: null,
@@ -169,7 +169,7 @@ assert.equal(applied.summary.labelCounts.needs_chart_review, 1);
 assert.equal(applied.summary.labelCounts.weak_or_noisy, 2);
 assert.equal(applied.summary.labelCounts.reject_time_window_standalone, 7);
 assert.equal(applied.summary.labelCounts.covered_by_model_1, 0);
-assert.equal(applied.summary.labelCounts.covered_by_RAID_RECLAIM, 0);
+assert.equal(applied.summary.labelCounts.covered_by_uninstalled_context, 0);
 assert.equal(applied.chartEvidenceApplication?.samplesUpdated.length, 8);
 assert.equal(applied.chartEvidenceApplication?.beforeSummary.labelCounts.needs_chart_review, 8);
 assert.equal(applied.chartEvidenceApplication?.afterSummary.labelCounts.reject_time_window_standalone, 7);

@@ -268,7 +268,7 @@ function buildRows(dir: string, proofKeys: Set<string>): { filesRead: number; ro
           session,
           eventTime,
           canExecute: Boolean((candidate as { humanReview?: { canExecute?: unknown } }).humanReview?.canExecute),
-          exactInvalidStopSweep: setupType === 'SweepMssFvgRetrace' &&
+          exactInvalidStopSweep: setupType === 'NoInstalledSetup' &&
             blockReason === 'InvalidStopLocation' &&
             proofKeys.has(rowProofKey),
           hasCompletePlan: entry !== null && stop !== null && target1 !== null && target2 !== null,
@@ -417,7 +417,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPrimaryExclusionComplet
       completeReplacementEvents === 0
         ? 'Do not install a runtime Sweep primary-selection exclusion from the current raw package evidence; no exact invalid-stop Sweep top event has a complete same-slate replacement.'
         : 'Investigate complete replacements with scanner-owned DeskState/DeskPublishDecision snapshots before any runtime proposal.',
-      'Keep SweepMssFvgRetrace active; this miner only evaluates invalid-stop row contamination, not model removal.',
+      'Keep NoInstalledSetup active; this miner only evaluates invalid-stop row contamination, not model removal.',
       'Continue research on source geometry repair or complete-plan replacement evidence before touching scanner-visible behavior.',
     ],
   };

@@ -38,7 +38,7 @@ const intakeTriageReport = {
       tradeDate: '2026-06-17',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       firstSeenTime: '2026-06-17T12:00:00',
       entry: 100,
@@ -54,7 +54,7 @@ const intakeTriageReport = {
       tradeDate: '2026-06-18',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       firstSeenTime: '2026-06-18T12:00:00',
       entry: 200,
@@ -70,7 +70,7 @@ const intakeTriageReport = {
       tradeDate: '2026-06-19',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       firstSeenTime: '2026-06-19T12:00:00',
       entry: 300,
@@ -86,7 +86,7 @@ const intakeTriageReport = {
       tradeDate: '2026-06-20',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       firstSeenTime: '2026-06-20T09:30:00',
       entry: 400,
@@ -102,7 +102,7 @@ const intakeTriageReport = {
       tradeDate: '2026-06-20',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       firstSeenTime: '2026-06-20T09:30:00',
       entry: 400,
@@ -121,7 +121,7 @@ const report = buildUnifiedPositiveHeldLocalPreviewModelFamilyBroadReplayReport(
   intakeTriagePath: 'triage.json',
   intakeTriageReport,
   auditDir,
-  setupTypes: ['SweepMssFvgRetrace', 'AfterLunchDriveFvgContinuation'],
+  setupTypes: ['NoInstalledSetup', 'NoInstalledSetup'],
 }, '2026-07-20T00:00:00.000Z');
 
 assert.equal(report.reportType, 'unified_positive_held_local_preview_model_family_broad_replay');
@@ -138,12 +138,12 @@ assert.equal(report.summary.losses, 1);
 assert.equal(report.summary.blockedRows, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
-const sweep = report.modelGroups.find((row) => row.setupType === 'SweepMssFvgRetrace');
+const sweep = report.modelGroups.find((row) => row.setupType === 'NoInstalledSetup');
 assert.equal(sweep?.rows, 2);
 assert.equal(sweep?.blocked, 1);
 assert.equal(sweep?.grossResolvedOneMesPl, 30);
 
-const afterLunch = report.modelGroups.find((row) => row.setupType === 'AfterLunchDriveFvgContinuation');
+const afterLunch = report.modelGroups.find((row) => row.setupType === 'NoInstalledSetup');
 assert.equal(afterLunch?.rows, 2);
 assert.equal(afterLunch?.winners, 1);
 assert.equal(afterLunch?.losses, 1);
@@ -156,7 +156,7 @@ const missing = buildUnifiedPositiveHeldLocalPreviewModelFamilyBroadReplayReport
   intakeTriagePath: null,
   intakeTriageReport: null,
   auditDir,
-  setupTypes: ['SweepMssFvgRetrace'],
+  setupTypes: ['NoInstalledSetup'],
 }, '2026-07-20T00:01:00.000Z');
 
 assert.equal(missing.status, 'fail');

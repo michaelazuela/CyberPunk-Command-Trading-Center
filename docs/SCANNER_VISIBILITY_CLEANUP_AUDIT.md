@@ -128,10 +128,10 @@ Scope inspected:
 
 | File / Function | Reason To Defer |
 | --- | --- |
-| `src/agents/scannerPlanSelectionAgent.ts` fallback candidate selection | It is live candidate lifecycle logic and already covered by regression tests for stale/chase, Raid Reclaim Reversal watch, Intraday MSS watch, failed-plan reversal, and early-move review. Deleting or collapsing it would risk changing scanner behavior. |
+| `src/agents/scannerPlanSelectionAgent.ts` fallback candidate selection | It is live candidate lifecycle logic and already covered by regression tests for stale/chase, no installed model path watch, Intraday MSS watch, failed-plan reversal, and early-move review. Deleting or collapsing it would risk changing scanner behavior. |
 | `tools/automation/discord-scheduler.ts` scheduled session selection | It still builds scheduled Morning/Lunch summaries and has provenance checks. It may duplicate scanner-like selection, but it is a live scheduled-report path, not proven obsolete. |
 | `tools/automation/discord-alert-format.ts` status mapping | It independently maps status to compact Discord wording, but this is formatting behavior with test coverage and can still consume scanner visibility metadata in a later UI/Discord phase. No deletion in Phase 8.45. |
-| Deprecated setup registry entries | Deprecated entries are already excluded from `getPrimarySetupRegistry`. They remain as supporting compatibility metadata and tests assert legacy labels normalize to generic ICT setup. No active deletion. |
+| Deprecated setup registry entries | Deprecated entries are already excluded from `getPrimarySetupRegistry`. They remain as blank-slate compatibility metadata and tests assert legacy labels normalize to generic ICT setup. No active deletion. |
 | Replay diagnostics under `tools/automation/replay-diagnostics` | Historical artifacts contain old status language, but they are immutable diagnostics, not live scanner behavior. No cleanup required. |
 | Historical research docs and generated research artifacts with `approved model/setup` phrasing | They describe research taxonomy or immutable generated samples, not live scanner/Discord authority. | Deferred to avoid rewriting historical evidence and test fixtures unrelated to live DeskState visibility. |
 

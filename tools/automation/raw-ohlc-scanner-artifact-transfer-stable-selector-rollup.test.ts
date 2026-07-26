@@ -56,13 +56,13 @@ const selectorReport: RawOhlcScannerArtifactTransferStableSelectorSimulationRepo
       tradeDate: '2026-07-15',
       session: 'lunch',
       proofTime: '2026-07-15T12:15:00',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       riskPoints: 6,
       outcomeLabel: 't1_and_t2_hit',
       outcomeStatus: 'resolved',
       oneMesPl: 75,
-      matchedZeroLossBuckets: ['setup_session_risk_time:AfterLunchDriveFvgContinuation|lunch|risk_4_to_8|12:00-12:59'],
+      matchedZeroLossBuckets: ['setup_session_risk_time:NoInstalledSetup|lunch|risk_4_to_8|12:00-12:59'],
     },
     {
       rankScore: 100,
@@ -70,13 +70,13 @@ const selectorReport: RawOhlcScannerArtifactTransferStableSelectorSimulationRepo
       tradeDate: '2026-07-15',
       session: 'lunch',
       proofTime: '2026-07-15T12:20:00',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       riskPoints: 6,
       outcomeLabel: 't1_and_t2_hit',
       outcomeStatus: 'resolved',
       oneMesPl: 75,
-      matchedZeroLossBuckets: ['setup_session_risk_time:AfterLunchDriveFvgContinuation|lunch|risk_4_to_8|12:00-12:59'],
+      matchedZeroLossBuckets: ['setup_session_risk_time:NoInstalledSetup|lunch|risk_4_to_8|12:00-12:59'],
     },
     {
       rankScore: 90,
@@ -84,13 +84,13 @@ const selectorReport: RawOhlcScannerArtifactTransferStableSelectorSimulationRepo
       tradeDate: '2026-07-16',
       session: 'lunch',
       proofTime: '2026-07-16T12:15:00',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       riskPoints: 6,
       outcomeLabel: 'no_target_or_stop_hit',
       outcomeStatus: 'unresolved',
       oneMesPl: null,
-      matchedZeroLossBuckets: ['setup_session_risk_time:SweepMssFvgRetrace|lunch|risk_4_to_8|12:00-12:59'],
+      matchedZeroLossBuckets: ['setup_session_risk_time:NoInstalledSetup|lunch|risk_4_to_8|12:00-12:59'],
     },
   ],
   blockers: [],
@@ -114,7 +114,7 @@ assert.equal(rollup.summary.winners, 2);
 assert.equal(rollup.summary.losses, 0);
 assert.equal(rollup.summary.unresolved, 1);
 assert.equal(rollup.summary.recommendation, 'investigate_unresolved_rows');
-assert.equal(rollup.byModel.length, 2);
+assert.equal(rollup.byModel.length, 1);
 assert.equal(rollup.unresolvedRows[0].ticketId, 'unresolved-1');
 assert.match(rollup.markdown, /Transfer-Stable Selector Rollup/);
 

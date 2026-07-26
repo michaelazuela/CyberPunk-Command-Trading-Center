@@ -32,7 +32,7 @@ function collision(ticketId: string, bucket: 'improved' | 'worsened' | 'same', d
     topChanged: true,
     before: {
       ticketId: 'before',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       outcomeBucket: 'winner_t1_t2',
       resolvedOneMesPl: bucket === 'worsened' ? 100 : 25,
       direction: 'SHORT',
@@ -47,7 +47,7 @@ function collision(ticketId: string, bucket: 'improved' | 'worsened' | 'same', d
     },
     after: {
       ticketId,
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       outcomeBucket: bucket === 'improved' ? 'winner_t1_t2' : 'loss_stopped_before_t1',
       resolvedOneMesPl: bucket === 'improved' ? 80 : -90,
       direction: 'SHORT',
@@ -74,7 +74,7 @@ function report(row: UnifiedPositiveHeldLocalPreviewSweepBoostCollisionDrilldown
       reportDir: 'reports',
       sourceProofTimingPath: 'timing.json',
       boostValidationPath: 'boost.json',
-      selectedSetupTypes: ['SweepMssFvgRetrace'],
+      selectedSetupTypes: ['NoInstalledSetup'],
     },
     assumptions: {
       savedReportsOnly: true,
@@ -121,7 +121,7 @@ function artifact(ticketId: string, text: string) {
         session,
         setupCandidateStatus: {
           statuses: [{
-            setupType: 'SweepMssFvgRetrace',
+            setupType: 'NoInstalledSetup',
             direction,
             confidence: 'High',
             riskPoints: 7,
@@ -144,9 +144,9 @@ function artifact(ticketId: string, text: string) {
   };
 }
 
-const trainTicket = '2026-07-09-morning-SweepMssFvgRetrace-SHORT-20260709T093500';
-const testTicket = '2026-07-10-morning-SweepMssFvgRetrace-SHORT-20260710T093500';
-const improvedTicket = '2026-07-11-morning-SweepMssFvgRetrace-SHORT-20260711T093500';
+const trainTicket = '2026-07-09-morning-NoInstalledSetup-SHORT-20260709T093500';
+const testTicket = '2026-07-10-morning-NoInstalledSetup-SHORT-20260710T093500';
+const improvedTicket = '2026-07-11-morning-NoInstalledSetup-SHORT-20260711T093500';
 
 const mined = buildUnifiedPositiveHeldLocalPreviewSweepBoostCollisionSnapshotGuardMinerReport({
   reportDir: 'reports',

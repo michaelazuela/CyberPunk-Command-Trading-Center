@@ -8,7 +8,7 @@ function row(overrides: Record<string, unknown>): Record<string, unknown> {
     ticketId: 'ticket',
     tradeDate: '2026-07-20',
     session: 'morning',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'SHORT',
     proofTime: '2026-07-20T10:00:00',
     entry: 100,
@@ -16,7 +16,7 @@ function row(overrides: Record<string, unknown>): Record<string, unknown> {
     t1: 82,
     t2: 76,
     riskPoints: 12,
-    methodKey: 'SweepMssFvgRetrace|morning|SHORT|risk_8_to_16',
+    methodKey: 'NoInstalledSetup|morning|SHORT|risk_8_to_16',
     riskBand: 'risk_8_to_16',
     sessionOutcomeBucket: 'winner',
     sessionOutcomeLabel: 't1_and_t2_hit',
@@ -50,16 +50,16 @@ const losingRows = Array.from({ length: 3 }, (_, index) => row({
 }));
 const nonTargetWinnerRows = Array.from({ length: 8 }, (_, index) => row({
   ticketId: `non-target-win-${index}`,
-  setupType: 'OpeningDriveFvgContinuation',
-  methodKey: 'OpeningDriveFvgContinuation|morning|SHORT|risk_16_to_24',
+  setupType: 'NoInstalledSetup',
+  methodKey: 'NoInstalledSetup|morning|SHORT|risk_16_to_24',
   riskBand: 'risk_16_to_24',
   riskPoints: 18,
   sessionResolvedOneMesPl: 90,
 }));
 const blockedRows = Array.from({ length: 5 }, (_, index) => row({
   ticketId: `blocked-${index}`,
-  setupType: 'IntradayMssMicroContinuation',
-  methodKey: 'IntradayMssMicroContinuation|morning|SHORT|risk_8_to_16',
+  setupType: 'NoInstalledSetup',
+  methodKey: 'NoInstalledSetup|morning|SHORT|risk_8_to_16',
   sessionOutcomeBucket: 'blocked',
   sessionOutcomeLabel: 'blocked',
   sessionResolvedOneMesPl: null,

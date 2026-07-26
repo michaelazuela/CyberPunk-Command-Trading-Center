@@ -14,7 +14,7 @@ fs.writeFileSync(path.join(auditDir, 'snapshot-missing-levels.json'), JSON.strin
   normalizedPlan: {
     setupCandidates: [
       {
-        setupType: 'raidReclaim',
+        setupType: 'historicalReview',
         direction: 'SHORT',
         stop: 7455.75,
         executionStatus: 'Conditional',
@@ -22,7 +22,7 @@ fs.writeFileSync(path.join(auditDir, 'snapshot-missing-levels.json'), JSON.strin
         blockReason: 'EntryTriggerMissing',
       },
       {
-        setupType: 'raidReclaim',
+        setupType: 'historicalReview',
         direction: 'LONG',
         entry: 7442.5,
         stop: 7438.5,
@@ -39,7 +39,7 @@ fs.writeFileSync(path.join(auditDir, 'snapshot-invalid-stop.json'), JSON.stringi
   normalizedPlan: {
     setupCandidates: [
       {
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         entry: 7442.5,
         stop: 7450,
@@ -50,7 +50,7 @@ fs.writeFileSync(path.join(auditDir, 'snapshot-invalid-stop.json'), JSON.stringi
         blockReason: 'InvalidStopLocation',
       },
       {
-        setupType: 'OpeningDriveFvgContinuation',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         entry: 7443,
         stop: 7436,
@@ -71,11 +71,11 @@ const strictReplayPackage = {
   },
   rows: [
     {
-      ticketId: '2026-06-23|evening|raidReclaim|SHORT|prefer_replacement|snapshot-missing-levels',
+      ticketId: '2026-06-23|evening|historicalReview|SHORT|prefer_replacement|snapshot-missing-levels',
       tradeDate: '2026-06-23',
       session: 'evening',
       instrument: 'MES',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'SHORT',
       proofTime: '2026-06-23T19:55:00',
       firstSeenTime: '2026-06-23T19:55:00',
@@ -100,11 +100,11 @@ const strictReplayPackage = {
       blockers: ['nonpositive entry placeholder', 'nonpositive T1 placeholder', 'nonpositive T2 placeholder'],
     },
     {
-      ticketId: '2026-06-29|evening|SweepMssFvgRetrace|LONG|keep_later_sweep_proof|snapshot-invalid-stop',
+      ticketId: '2026-06-29|evening|NoInstalledSetup|LONG|keep_later_sweep_proof|snapshot-invalid-stop',
       tradeDate: '2026-06-29',
       session: 'evening',
       instrument: 'MES',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-06-29T19:55:00',
       firstSeenTime: '2026-06-29T19:55:00',
@@ -133,7 +133,7 @@ const strictReplayPackage = {
       tradeDate: '2026-06-29',
       session: 'evening',
       instrument: 'MES',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofTime: '2026-06-29T19:55:00',
       firstSeenTime: '2026-06-29T19:55:00',
@@ -184,13 +184,13 @@ assert.equal(report.summary.missingMatchingCandidateRows, 0);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'inspect_matching_side_level_generation');
 
-const missing = report.rows.find((row) => row.setupType === 'raidReclaim');
+const missing = report.rows.find((row) => row.setupType === 'historicalReview');
 assert.equal(missing?.likelyCause, 'matching_side_missing_levels');
 assert.equal(missing?.validSameSetupOppositeDirectionCandidates, 1);
 assert.equal(missing?.validExecutableCandidates, 1);
 assert.equal(missing?.matchingCandidates[0].geometryState, 'placeholder_or_missing');
 
-const invalid = report.rows.find((row) => row.setupType === 'SweepMssFvgRetrace');
+const invalid = report.rows.find((row) => row.setupType === 'NoInstalledSetup');
 assert.equal(invalid?.likelyCause, 'matching_side_invalid_entry_stop');
 assert.equal(invalid?.validDifferentSetupSameDirectionCandidates, 1);
 assert.equal(invalid?.matchingCandidates[0].geometryState, 'complete_invalid');

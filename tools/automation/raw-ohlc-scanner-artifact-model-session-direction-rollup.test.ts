@@ -6,7 +6,7 @@ const report = buildRawOhlcScannerArtifactModelSessionDirectionRollupReport({
     status: 'pass',
     rows: [
       ...Array.from({ length: 12 }, () => ({
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         session: 'morning',
         direction: 'LONG' as const,
         outcomeStatus: 'resolved' as const,
@@ -14,7 +14,7 @@ const report = buildRawOhlcScannerArtifactModelSessionDirectionRollupReport({
         resolvedOneMesPl: -50,
       })),
       ...Array.from({ length: 8 }, () => ({
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         session: 'morning',
         direction: 'LONG' as const,
         outcomeStatus: 'resolved' as const,
@@ -22,7 +22,7 @@ const report = buildRawOhlcScannerArtifactModelSessionDirectionRollupReport({
         resolvedOneMesPl: 100,
       })),
       ...Array.from({ length: 20 }, () => ({
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         session: 'lunch',
         direction: 'SHORT' as const,
         outcomeStatus: 'resolved' as const,
@@ -36,7 +36,7 @@ const report = buildRawOhlcScannerArtifactModelSessionDirectionRollupReport({
 assert.equal(report.status, 'pass');
 assert.equal(report.summary.outcomeRows, 40);
 assert.equal(report.summary.groups, 2);
-assert.equal(report.summary.weakestGroupId, 'SweepMssFvgRetrace|morning|LONG');
+assert.equal(report.summary.weakestGroupId, 'NoInstalledSetup|morning|LONG');
 assert.equal(report.summary.weakestProblemRate, 0.6);
 assert.equal(report.summary.recommendation, 'focus_weakest_model_session_direction');
 assert.equal(report.rollupRows[0].researchPriority, 'weak_pocket');

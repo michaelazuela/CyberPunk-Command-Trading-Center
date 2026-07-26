@@ -12,8 +12,8 @@ const artifact = {
       completed5m: { time: '2026-07-06T09:35:00' },
       setupCandidateStatus: {
         statuses: [
-          { setupType: 'OpeningDriveFvgContinuation', direction: 'LONG', entry: 7557.5, stop: 7551.75, target1: 7566.25, target2: 7569, riskPoints: 5.75 },
-          { setupType: 'SweepMssFvgRetrace', direction: 'LONG', entry: 7557.5, stop: 7551.75, target1: 7566.25, target2: 7569, riskPoints: 5.75 },
+          { setupType: 'NoInstalledSetup', direction: 'LONG', entry: 7557.5, stop: 7551.75, target1: 7566.25, target2: 7569, riskPoints: 5.75 },
+          { setupType: 'NoInstalledSetup', direction: 'LONG', entry: 7557.5, stop: 7551.75, target1: 7566.25, target2: 7569, riskPoints: 5.75 },
         ],
       },
     },

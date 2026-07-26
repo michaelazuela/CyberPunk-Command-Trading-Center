@@ -138,7 +138,7 @@ export interface UnifiedPositiveHeldLocalPreviewSweepSlateEdgeAuditReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const TARGET_MODEL = 'SweepMssFvgRetrace';
+const TARGET_MODEL = 'NoInstalledSetup';
 const COLLISION_WINDOW_MINUTES = 10;
 
 function readFlag(args: string[], flag: string): string | null {
@@ -246,8 +246,8 @@ function buildSlate(key: string, rows: SessionBoundedRow[], allRows: SessionBoun
     rawRowsInSlate: sorted.length,
     duplicateRowsSuppressed: Math.max(0, sorted.length - 1),
     hasCollision: collisionMethodKeys.length > 0,
-    hasOpeningDriveCollision: collisionMethodKeys.some((item) => item.startsWith('OpeningDriveFvgContinuation|')),
-    hasHtfCollision: collisionMethodKeys.some((item) => item.startsWith('HtfDisplacement')),
+    hasOpeningDriveCollision: collisionMethodKeys.some((item) => item.startsWith('NoInstalledSetup|')),
+    hasHtfCollision: collisionMethodKeys.some((item) => item.startsWith('NoInstalledSetup')),
     collisionMethodKeys,
   };
 }
@@ -360,7 +360,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepSlateEdgeAuditReport(ar
     !args.sessionBoundedReportPath ? 'missing session-bounded report path' : null,
     !args.sessionBoundedReport ? 'missing session-bounded report' : null,
     rows.length === 0 ? 'session-bounded report has no rows' : null,
-    sweepRows.length === 0 ? 'session-bounded report has no SweepMssFvgRetrace rows' : null,
+    sweepRows.length === 0 ? 'session-bounded report has no NoInstalledSetup rows' : null,
   ].filter((item): item is string => Boolean(item));
   const recommendation: Recommendation = blockers.length
     ? 'fix_missing_session_bounded_report'

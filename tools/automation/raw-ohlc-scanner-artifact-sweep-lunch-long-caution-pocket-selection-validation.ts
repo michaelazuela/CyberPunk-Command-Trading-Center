@@ -141,7 +141,7 @@ function matches(row: JoinedRow, candidate: { feature: string; value: string } |
 }
 
 function isTarget(row: JoinedRow): boolean {
-  return row.setupType === 'SweepMssFvgRetrace' && row.session === 'lunch' && row.direction === 'LONG';
+  return row.setupType === 'NoInstalledSetup' && row.session === 'lunch' && row.direction === 'LONG';
 }
 
 function isCautionPocket(row: JoinedRow): boolean {
@@ -279,7 +279,7 @@ export function buildRawOhlcScannerArtifactSweepLunchLongCautionPocketSelectionV
     cautionPocketDrilldown && cautionPocketDrilldown.status !== 'pass' ? `caution pocket drilldown status ${cautionPocketDrilldown.status}` : null,
     !positive ? 'missing parseable positive candidate' : null,
     !caution ? 'missing parseable caution candidate' : null,
-    joinedRows.length === 0 ? 'no SweepMssFvgRetrace lunch LONG joined scanner rows found' : null,
+    joinedRows.length === 0 ? 'no NoInstalledSetup lunch LONG joined scanner rows found' : null,
     slates.length === 0 ? 'no lunch LONG slates found' : null,
   ].filter((item): item is string => Boolean(item));
   const proposalWorthValidating = !blockers.length && typeof delta === 'number' && delta > 0 && changed.length > 0;

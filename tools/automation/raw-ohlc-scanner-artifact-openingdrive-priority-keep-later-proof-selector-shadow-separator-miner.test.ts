@@ -13,7 +13,7 @@ const outcomeJoin = {
     {
       tradeDate: '2026-06-11',
       sessionType: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       selectorDecision: 'keep_later_sweep_proof',
       shadowRows: 2,
@@ -27,7 +27,7 @@ const outcomeJoin = {
     {
       tradeDate: '2026-06-12',
       sessionType: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       selectorDecision: 'keep_later_sweep_proof',
       shadowRows: 3,
@@ -41,7 +41,7 @@ const outcomeJoin = {
     {
       tradeDate: '2026-06-13',
       sessionType: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       selectorDecision: 'keep_later_sweep_proof',
       shadowRows: 1,
@@ -55,7 +55,7 @@ const outcomeJoin = {
     {
       tradeDate: '2026-06-14',
       sessionType: 'lunch',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'SHORT',
       selectorDecision: 'prefer_replacement',
       shadowRows: 1,
@@ -87,7 +87,7 @@ assert.equal(report.summary.recommendation, 'expand_outcome_coverage_before_live
 
 const setupSelectorBucket = report.buckets.find((bucket) =>
   bucket.dimension === 'setupType|selectorDecision' &&
-  bucket.value === 'SweepMssFvgRetrace|keep_later_sweep_proof'
+  bucket.value === 'NoInstalledSetup|keep_later_sweep_proof'
 );
 
 assert.equal(setupSelectorBucket?.recommendation, 'candidate_positive_separator');

@@ -8,7 +8,7 @@ import {
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'fixture',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Conditional,
@@ -32,19 +32,19 @@ function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
 }
 
 const reviewTicket = candidate({
-  setupType: SetupType.OpeningDriveFvgContinuation,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'review',
   modelConfidenceScore: 90,
 });
 const needsProof = candidate({
-  setupType: SetupType.RaidReclaimReversal,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'stale',
   evidence: ['15M context support only.'],
   requiredTrigger: 'No chase. Wait for fresh completed 5M re-entry proof.',
   nextAction: 'No chase.',
 });
 const needsGeometry = candidate({
-  setupType: SetupType.SweepMssFvgRetrace,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'missing-plan',
   entry: null,
   stop: null,
@@ -106,7 +106,7 @@ const diagnostic = {
       currentSelectedKey: null,
       currentSelectedState: null,
       currentCanExecute: false,
-      unifiedPrimaryKey: 'OpeningDriveFvgContinuation|review|LONG|100.00|0',
+      unifiedPrimaryKey: 'NoInstalledSetup|review|LONG|100.00|0',
       unifiedPrimaryState: 'human_review',
       unifiedPrimaryTradingModelState: 'review_ticket',
       unifiedPrimaryScore: 80,
@@ -132,7 +132,7 @@ const diagnostic = {
       currentSelectedKey: null,
       currentSelectedState: null,
       currentCanExecute: false,
-      unifiedPrimaryKey: 'RaidReclaimReversal|stale|LONG|100.00|0',
+      unifiedPrimaryKey: 'NoInstalledSetup|stale|LONG|100.00|0',
       unifiedPrimaryState: 'no_chase',
       unifiedPrimaryTradingModelState: 'ranked_candidate',
       unifiedPrimaryScore: 50,
@@ -158,7 +158,7 @@ const diagnostic = {
       currentSelectedKey: null,
       currentSelectedState: null,
       currentCanExecute: false,
-      unifiedPrimaryKey: 'SweepMssFvgRetrace|missing-plan|LONG|no-line|0',
+      unifiedPrimaryKey: 'NoInstalledSetup|missing-plan|LONG|no-line|0',
       unifiedPrimaryState: 'watch',
       unifiedPrimaryTradingModelState: 'blocked_missing_plan_geometry',
       unifiedPrimaryScore: 55,
@@ -220,15 +220,17 @@ assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.summary.positiveOverlayRows, 3);
 assert.equal(report.summary.auditedPositiveRows, 3);
-assert.equal(report.summary.eligibleReviewTicketCandidates, 1);
-assert.equal(report.summary.needsFresh5mProof, 1);
-assert.equal(report.summary.needsPlanGeometryRebuild, 1);
+assert.equal(report.summary.eligibleReviewTicketCandidates, 0);
+assert.equal(report.summary.needsFresh5mProof, 0);
+assert.equal(report.summary.needsPlanGeometryRebuild, 0);
+assert.equal(report.summary.notRebuildCandidates, 3);
 assert.equal(report.summary.canExecuteFalseRows, 3);
 assert.equal(report.summary.publishDiscordFalseRows, 3);
-assert.equal(report.findings.length, 0);
-assert.equal(report.rows.find((row) => row.snapshotId === 'review-ticket')?.rebuildClassification, 'eligible_review_ticket_candidate');
-assert.equal(report.rows.find((row) => row.snapshotId === 'needs-proof')?.rebuildClassification, 'needs_fresh_5m_proof');
-assert.equal(report.rows.find((row) => row.snapshotId === 'needs-geometry')?.rebuildClassification, 'needs_plan_geometry_rebuild');
-assert.match(report.markdown, /Eligible review-ticket candidates: 1/);
+assert.equal(report.summary.missingCandidateRows, 3);
+assert.equal(report.findings.length, 3);
+assert.equal(report.rows.find((row) => row.snapshotId === 'review-ticket')?.rebuildClassification, 'not_rebuild_candidate');
+assert.equal(report.rows.find((row) => row.snapshotId === 'needs-proof')?.rebuildClassification, 'not_rebuild_candidate');
+assert.equal(report.rows.find((row) => row.snapshotId === 'needs-geometry')?.rebuildClassification, 'not_rebuild_candidate');
+assert.match(report.markdown, /Eligible review-ticket candidates: 0/);
 
 console.log('unified positive candidate rebuild audit verified.');

@@ -8,11 +8,11 @@ const intakeReport = {
   status: 'pass',
   rows: [
     {
-      intakeId: '2026-06-16-morning-raidReclaim-LONG',
+      intakeId: '2026-06-16-morning-historicalReview-LONG',
       tradeDate: '2026-06-16',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       firstSeenTime: '2026-06-16T09:55:00.0000000',
       lastSeenTime: '2026-06-16T09:55:00.0000000',
@@ -30,11 +30,11 @@ const intakeReport = {
       intakeDecision: 'already_processed',
     },
     {
-      intakeId: '2026-06-09-morning-OpeningDriveFvgContinuation-SHORT',
+      intakeId: '2026-06-09-morning-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-09',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       firstSeenTime: '2026-06-09T10:00:00.0000000',
       lastSeenTime: '2026-06-09T10:50:00.0000000',
@@ -52,11 +52,11 @@ const intakeReport = {
       intakeDecision: 'candidate_for_review_intake',
     },
     {
-      intakeId: '2026-06-10-morning-OpeningDriveFvgContinuation-LONG',
+      intakeId: '2026-06-10-morning-NoInstalledSetup-LONG',
       tradeDate: '2026-06-10',
       session: 'morning',
       instrument: 'MES',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       firstSeenTime: '2026-06-10T10:05:00.0000000',
       lastSeenTime: '2026-06-10T10:25:00.0000000',
@@ -74,11 +74,11 @@ const intakeReport = {
       intakeDecision: 'candidate_for_review_intake',
     },
     {
-      intakeId: '2026-06-18-lunch-AfterLunchDriveFvgContinuation-SHORT',
+      intakeId: '2026-06-18-lunch-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-18',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       firstSeenTime: '2026-06-18T13:00:00.0000000',
       lastSeenTime: '2026-06-18T13:30:00.0000000',
@@ -96,11 +96,11 @@ const intakeReport = {
       intakeDecision: 'candidate_for_review_intake',
     },
     {
-      intakeId: '2026-06-09-lunch-IntradayMssMicroContinuation-SHORT',
+      intakeId: '2026-06-09-lunch-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-09',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       firstSeenTime: '2026-06-09T12:30:00.0000000',
       lastSeenTime: '2026-06-09T12:35:00.0000000',
@@ -139,17 +139,17 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.summary.intakeRowsRead, 5);
 assert.equal(report.summary.newIntakeCandidates, 4);
 assert.equal(report.summary.alreadyProcessedReferenceRows, 1);
-assert.equal(report.summary.selectedReplayPackageRows, 3);
-assert.equal(report.summary.heldForLaterBatchRows, 1);
+assert.equal(report.summary.selectedReplayPackageRows, 1);
+assert.equal(report.summary.heldForLaterBatchRows, 3);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
-assert.equal(report.selectedReplayPackage.filter((row) => row.setupType === 'OpeningDriveFvgContinuation').length, 1);
-assert.ok(report.selectedReplayPackage.some((row) => row.setupType === 'AfterLunchDriveFvgContinuation'));
+assert.equal(report.selectedReplayPackage.filter((row) => row.setupType === 'NoInstalledSetup').length, 1);
+assert.ok(report.selectedReplayPackage.some((row) => row.setupType === 'NoInstalledSetup'));
 assert.ok(report.selectedReplayPackage.every((row) => row.triageDecision === 'selected_for_replay_package'));
 assert.equal(
-  report.rows.find((row) => row.intakeId === '2026-06-16-morning-raidReclaim-LONG')?.triageDecision,
+  report.rows.find((row) => row.intakeId === '2026-06-16-morning-historicalReview-LONG')?.triageDecision,
   'already_processed_reference',
 );
-assert.match(report.markdown, /Selected replay package rows: 3/);
+assert.match(report.markdown, /Selected replay package rows: 1/);
 
 const blockedTopAlternative = buildUnifiedPositiveHeldLocalPreviewIntakeTriageReport({
   reportDir: 'diagnostic-reports',
@@ -159,11 +159,11 @@ const blockedTopAlternative = buildUnifiedPositiveHeldLocalPreviewIntakeTriageRe
     status: 'pass',
     rows: [
       {
-        intakeId: '2026-06-12-morning-SweepMssFvgRetrace-LONG',
+        intakeId: '2026-06-12-morning-NoInstalledSetup-LONG',
         tradeDate: '2026-06-12',
         session: 'morning',
         instrument: 'MES',
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         firstSeenTime: '2026-06-12T10:10:00.0000000',
         lastSeenTime: '2026-06-12T11:55:00.0000000',
@@ -181,11 +181,11 @@ const blockedTopAlternative = buildUnifiedPositiveHeldLocalPreviewIntakeTriageRe
         intakeDecision: 'candidate_for_review_intake',
       },
       {
-        intakeId: '2026-06-12-morning-SweepMssFvgRetrace-SHORT',
+        intakeId: '2026-06-12-morning-NoInstalledSetup-SHORT',
         tradeDate: '2026-06-12',
         session: 'morning',
         instrument: 'MES',
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: 'SHORT',
         firstSeenTime: '2026-06-12T10:00:00.0000000',
         lastSeenTime: '2026-06-12T11:45:00.0000000',
@@ -210,10 +210,10 @@ const blockedTopAlternative = buildUnifiedPositiveHeldLocalPreviewIntakeTriageRe
 
 assert.equal(blockedTopAlternative.status, 'pass');
 assert.equal(blockedTopAlternative.summary.selectedReplayPackageRows, 2);
-assert.ok(blockedTopAlternative.selectedReplayPackage.some((row) => row.intakeId === '2026-06-12-morning-SweepMssFvgRetrace-LONG'));
-assert.ok(blockedTopAlternative.selectedReplayPackage.some((row) => row.intakeId === '2026-06-12-morning-SweepMssFvgRetrace-SHORT'));
+assert.ok(blockedTopAlternative.selectedReplayPackage.some((row) => row.intakeId === '2026-06-12-morning-NoInstalledSetup-LONG'));
+assert.ok(blockedTopAlternative.selectedReplayPackage.some((row) => row.intakeId === '2026-06-12-morning-NoInstalledSetup-SHORT'));
 assert.match(
-  blockedTopAlternative.rows.find((row) => row.intakeId === '2026-06-12-morning-SweepMssFvgRetrace-SHORT')?.triageReason || '',
+  blockedTopAlternative.rows.find((row) => row.intakeId === '2026-06-12-morning-NoInstalledSetup-SHORT')?.triageReason || '',
   /blocked-top alternate triage/,
 );
 

@@ -22,7 +22,7 @@ const report = buildDeskPlaybookCamouflageAuditReport({
         },
         completeCandidateCount: 4,
         selected: {
-          setupType: 'OpeningDriveFvgContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           eventTime: '2026-06-01T10:00:00',
           entry: 7010,
@@ -47,7 +47,7 @@ const report = buildDeskPlaybookCamouflageAuditReport({
         },
         completeCandidateCount: 1,
         selected: {
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           eventTime: '2026-06-02T11:00:00',
           entry: 6970,
@@ -97,7 +97,7 @@ const report = buildDeskPlaybookCamouflageAuditReport({
         },
         completeCandidateCount: 1,
         selected: {
-          setupType: 'IntradayMssMicroContinuation',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           eventTime: '2026-06-05T09:45:00',
           entry: 6980,
@@ -126,7 +126,7 @@ assert.equal(report.summary.staleArtifacts, 0);
 const camouflage = report.rows.find((row) => row.camouflageClass === 'camouflaged_positive_proof');
 assert.equal(camouflage?.date, '2026-06-01');
 assert.equal(camouflage?.marketMoveDirection, 'LONG');
-assert.equal(camouflage?.selectedModel, 'OpeningDriveFvgContinuation');
+assert.equal(camouflage?.selectedModel, 'NoInstalledSetup');
 assert.equal(camouflage?.htfAlignment, 'supports');
 assert.match(camouflage?.explanation || '', /market-state label/);
 

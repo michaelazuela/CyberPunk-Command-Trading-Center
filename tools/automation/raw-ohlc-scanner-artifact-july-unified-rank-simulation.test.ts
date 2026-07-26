@@ -81,8 +81,8 @@ const samebarReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
   modelSummaries: [],
   timeBuckets: [],
   rows: [
-    row({ id: 'good-sweep', setupType: 'SweepMssFvgRetrace', direction: 'LONG', riskPoints: 6, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
-    row({ id: 'bad-open', setupType: 'OpeningDriveFvgContinuation', direction: 'SHORT', riskPoints: 18, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -70 }),
+    row({ id: 'good-sweep', setupType: 'NoInstalledSetup', direction: 'LONG', riskPoints: 6, outcomeLabel: 't1_and_t2_hit', resolvedOneMesPl: 90 }),
+    row({ id: 'bad-open', setupType: 'NoInstalledSetup', direction: 'SHORT', riskPoints: 18, outcomeLabel: 'stopped_before_t1', resolvedOneMesPl: -70 }),
   ],
   blockers: [],
   recommendations: [],
@@ -119,7 +119,7 @@ const separatorReport: RawOhlcScannerArtifactJulyUnifiedSeparatorReport = {
   topPositiveBuckets: [
     {
       kind: 'session_direction_setup',
-      key: 'lunch|LONG|SweepMssFvgRetrace',
+      key: 'lunch|LONG|NoInstalledSetup',
       rows: 10,
       winners: 9,
       losses: 0,
@@ -137,7 +137,7 @@ const separatorReport: RawOhlcScannerArtifactJulyUnifiedSeparatorReport = {
   topCautionBuckets: [
     {
       kind: 'risk_setup',
-      key: 'risk_16_to_24|OpeningDriveFvgContinuation',
+      key: 'risk_16_to_24|NoInstalledSetup',
       rows: 6,
       winners: 1,
       losses: 5,

@@ -96,22 +96,22 @@ const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
 
 const PROPOSED_PRIORITY: Record<SessionName, string[]> = {
   morning: [
-    'OpeningDriveFvgContinuation',
-    'SweepMssFvgRetrace',
-    'IntradayMssMicroContinuation',
-    'RaidReclaimReversal',
-    'IntradayMssMicroContinuation',
-    'SweepMssFvgRetrace',
-    'raidReclaim',
+    'NoInstalledSetup',
+    'NoInstalledSetup',
+    'NoInstalledSetup',
+    'NoInstalledSetup',
+    'NoInstalledSetup',
+    'NoInstalledSetup',
+    'historicalReview',
   ],
   lunch: [
-    'AfterLunchDriveFvgContinuation',
-    'SweepMssFvgRetrace',
-    'IntradayMssMicroContinuation',
-    'RaidReclaimReversal',
-    'IntradayMssMicroContinuation',
-    'SweepMssFvgRetrace',
-    'raidReclaim',
+    'NoInstalledSetup',
+    'NoInstalledSetup',
+    'NoInstalledSetup',
+    'NoInstalledSetup',
+    'NoInstalledSetup',
+    'NoInstalledSetup',
+    'historicalReview',
   ],
 };
 

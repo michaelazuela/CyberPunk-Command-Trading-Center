@@ -100,7 +100,7 @@ const chartContext: Partial<ChartContext> = {
 };
 
 const candidate: SetupCandidate = {
-  setupType: SetupType.SweepMssFvgRetrace,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'Sweep -> MSS -> FVG Retrace',
   direction: 'LONG',
   detectedStatus: SetupCandidateStatus.Possible,
@@ -295,8 +295,8 @@ try {
   ];
   const june10Candidate: SetupCandidate = {
     ...candidate,
-    setupType: SetupType.RaidReclaimReversal,
-    scenarioLabel: 'Bullish Raid Reclaim Reversal Reversal - normalized plan not executable',
+    setupType: SetupType.NoSetup,
+    scenarioLabel: 'Bullish no installed model path - normalized plan not executable',
     direction: 'LONG',
     entry: 7366.5,
     stop: 7335,

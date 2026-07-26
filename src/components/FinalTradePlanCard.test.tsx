@@ -35,7 +35,7 @@ describe('FinalTradePlanCard HTF draw model display', () => {
       noTradeReason: NoTradeReason.EntryTriggerPending,
       hasConditionalPlans: true,
       setupCandidates: [{
-        setupType: SetupType.IntradayMssMicroContinuation,
+        setupType: SetupType.NoSetup,
         scenarioLabel: 'HTF Context Continuation After Raid/Reclaim',
         candidateState: 'REVERSAL_DELIVERY_PLAN_CANDIDATE',
         pathway: 'intraday_mss_micro_continuation',
@@ -141,7 +141,7 @@ describe('FinalTradePlanCard HTF draw model display', () => {
       invalidation: 'Invalid below protected structure.',
       source: 'app_rule_engine',
       canExecute: false,
-      setupName: 'Failed Breakout Reversal',
+      setupName: 'no installed model path',
       decisionStatus: TradeDecisionStatus.ApprovedTrade,
       noTradeReason: NoTradeReason.EntryTriggerPending,
       hasConditionalPlans: true,

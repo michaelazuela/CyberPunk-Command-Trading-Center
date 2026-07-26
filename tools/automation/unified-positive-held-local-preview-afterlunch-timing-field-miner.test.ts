@@ -7,7 +7,7 @@ function row(id: string, proofTime: string, riskPoints: number, outcomeBucket: '
     ticketId: id,
     tradeDate: '2026-06-10',
     session: 'lunch',
-    setupType: 'AfterLunchDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     outcomeBucket,
     outcomeLabel: outcomeBucket === 'winner_t1_t2' ? 't1_and_t2_hit' : 'stopped_before_t1',
@@ -25,7 +25,7 @@ function row(id: string, proofTime: string, riskPoints: number, outcomeBucket: '
 const rows: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRow[] = [
   ...Array.from({ length: 10 }, (_, index) => row(`winner-${index}`, '2026-06-10T12:00:00', 11, 'winner_t1_t2', 100)),
   ...Array.from({ length: 3 }, (_, index) => row(`loss-${index}`, '2026-06-10T13:00:00', 5, 'loss_stopped_before_t1', -50)),
-  { ...row('other-model', '2026-06-10T12:00:00', 10, 'winner_t1_t2', 100), setupType: 'SweepMssFvgRetrace' },
+  { ...row('other-model', '2026-06-10T12:00:00', 10, 'winner_t1_t2', 100), setupType: 'NoInstalledSetup' },
 ];
 
 const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport = {
@@ -84,10 +84,10 @@ const report = buildUnifiedPositiveHeldLocalPreviewAfterLunchTimingFieldMinerRep
 }, '2026-07-19T00:01:00.000Z');
 
 assert.equal(report.status, 'pass');
-assert.equal(report.summary.rows, 13);
-assert.equal(report.summary.winners, 10);
+assert.equal(report.summary.rows, 14);
+assert.equal(report.summary.winners, 11);
 assert.equal(report.summary.losses, 3);
-assert.equal(report.summary.grossResolvedOneMesPl, 850);
+assert.equal(report.summary.grossResolvedOneMesPl, 950);
 assert.equal(report.summary.positiveCandidates, 2);
 assert.equal(report.summary.bestPositiveCandidate, 'proofHour=12');
 assert.equal(report.summary.runtimeRankConsumerAllowedByThisReport, false);

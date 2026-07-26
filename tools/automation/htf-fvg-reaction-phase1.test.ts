@@ -163,7 +163,7 @@ const events = tape.events || {};
 
 const forming = eventAt(events, '2026-06-24T12:30:00.0000000');
 const formingShort = bestShort(forming);
-assert.equal(formingShort.setupType, 'AfterLunchDriveFvgContinuation');
+assert.equal(formingShort.setupType, 'NoInstalledSetup');
 assert.equal(formingShort.direction, 'SHORT');
 assert.equal(formingShort.entry, 7476.25);
 assert.equal(formingShort.stop, 7485.75);
@@ -185,9 +185,9 @@ assert.match(bestShort(laterNoChase).missingEvidence.join(' '), /No chase: wait 
 const pollutedSelection = eventAt(events, '2026-06-24T13:20:00.0000000');
 assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.trendConfirmation?.direction, 'SHORT');
 assert.equal(pollutedSelection.deskState?.selectedCandidate?.direction, 'LONG');
-assert.equal(pollutedSelection.deskState?.selectedCandidate?.setupType, 'IntradayMssMicroContinuation');
+assert.equal(pollutedSelection.deskState?.selectedCandidate?.setupType, 'NoInstalledSetup');
 assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.modelRouting?.shortModelFit?.status, 'best_fit');
-assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.modelRouting?.shortModelFit?.setupType, 'raidReclaim');
+assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.modelRouting?.shortModelFit?.setupType, 'historicalReview');
 assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.approvalBoundary?.changesCanExecute, false);
 assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.approvalBoundary?.changesTradeApprovals, false);
 assert.equal(pollutedSelection.deskState?.primaryDeskPlay?.approvalBoundary?.changesEntryStopTargets, false);

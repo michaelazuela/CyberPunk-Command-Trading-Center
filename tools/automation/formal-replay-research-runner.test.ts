@@ -35,7 +35,7 @@ writeTape('2026-06-01', 'morning', {
       t2: 104,
       canExecute: true,
     },
-    setupCandidateStatus: { selected: { setupType: 'raidReclaim', direction: 'LONG', requiredTrigger: 'completed 5M close above 100' } },
+    setupCandidateStatus: { selected: { setupType: 'historicalReview', direction: 'LONG', requiredTrigger: 'completed 5M close above 100' } },
     visibility: { visibilityMode: 'POST_PLAN' },
   },
   t1: {
@@ -54,7 +54,7 @@ writeTape('2026-06-01', 'lunch', {
     deskState: { dataQualityStatus: 'partial', htfContextStatus: 'sufficient' },
     setupCandidateStatus: {
       selected: {
-        setupType: 'IntradayMssMicroContinuation',
+        setupType: 'NoInstalledSetup',
         direction: 'SHORT',
         detectedStatus: 'Conditional',
         entry: 110,
@@ -101,7 +101,7 @@ assert.equal(strict.trades[0].outcome, 'T2_HIT');
 assert.equal(strict.summary.grossOneMes, 20);
 assert.equal(dominant.summary.trades, 2);
 assert.equal(report.gapAnalysis.nonStrictHumanReviewTrades, 1);
-assert.equal(report.gapAnalysis.bySetup.IntradayMssMicroContinuation.count, 1);
+assert.equal(report.gapAnalysis.bySetup.NoInstalledSetup.count, 1);
 assert.match(report.reportMarkdown, /Research-only replay/);
 assert.match(report.reportMarkdown, /Strict executable/);
 

@@ -148,7 +148,7 @@ export interface UnifiedPositiveHeldLocalPreviewScannerOwnedSelectorDryRunContra
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const DEFAULT_SELECTOR_KEY = 'SweepMssFvgRetrace|morning|SHORT|risk_8_to_16';
+const DEFAULT_SELECTOR_KEY = 'NoInstalledSetup|morning|SHORT|risk_8_to_16';
 const DEFAULT_STALE_MINUTES = 20;
 const DEFAULT_COLLISION_WINDOW_MINUTES = 10;
 

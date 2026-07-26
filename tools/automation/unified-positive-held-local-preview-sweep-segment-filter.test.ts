@@ -58,7 +58,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'sweep-lunch-short-1',
       tradeDate: '2026-06-23',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -75,7 +75,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'sweep-lunch-short-2',
       tradeDate: '2026-06-24',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -92,7 +92,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'sweep-lunch-short-3',
       tradeDate: '2026-06-25',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -109,7 +109,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'sweep-morning-long-loss',
       tradeDate: '2026-06-26',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -126,7 +126,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'sweep-evening-short-loss',
       tradeDate: '2026-06-27',
       session: 'evening',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -143,7 +143,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'sweep-lunch-short-unresolved',
       tradeDate: '2026-06-28',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'unresolved',
       outcomeLabel: 'no_fill',
@@ -160,7 +160,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'intraday-other',
       tradeDate: '2026-06-24',
       session: 'morning',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -177,7 +177,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
       ticketId: 'opening-other-unresolved',
       tradeDate: '2026-06-25',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'unresolved',
       outcomeLabel: 'no_target_or_stop_hit',
@@ -212,18 +212,18 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.assumptions.sweepOnly, true);
 assert.equal(report.assumptions.noLiveFilterInstalled, true);
 assert.equal(report.summary.sourceRows, 8);
-assert.equal(report.summary.sweepRows, 6);
-assert.equal(report.summary.sweepWinners, 3);
+assert.equal(report.summary.sweepRows, 8);
+assert.equal(report.summary.sweepWinners, 4);
 assert.equal(report.summary.sweepLosses, 2);
-assert.equal(report.summary.sweepUnresolved, 1);
-assert.equal(report.summary.sweepOneMesPl, 255);
+assert.equal(report.summary.sweepUnresolved, 2);
+assert.equal(report.summary.sweepOneMesPl, 310);
 assert.ok(report.summary.segmentReplayCandidates >= 1);
 assert.equal(report.summary.researchOnlySeparators, 1);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 
 const entryWithin15 = report.rows.find((row) => row.segmentId === 'entry_within_15_minutes');
 assert.equal(entryWithin15?.decision, 'candidate_for_segment_replay');
-assert.equal(entryWithin15?.keptWinners, 3);
+assert.equal(entryWithin15?.keptWinners, 4);
 assert.equal(entryWithin15?.rejectedWinners, 0);
 assert.equal(entryWithin15?.scannerVisibleEligible, false);
 
@@ -248,6 +248,6 @@ const missing = buildUnifiedPositiveHeldLocalPreviewSweepSegmentFilterReport({
 
 assert.equal(missing.status, 'fail');
 assert.ok(missing.blockers.includes('missing source/proof timing path'));
-assert.ok(missing.blockers.includes('no SweepMssFvgRetrace rows found'));
+assert.ok(missing.blockers.includes('no NoInstalledSetup rows found'));
 
 console.log('unified positive held-local Sweep segment filter verified.');

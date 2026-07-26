@@ -59,7 +59,7 @@ Model-Candidate Advisory Evidence:
 - Human Approval Rate: 100%
 - Agent Assessment Summary: agrees=0; partial=1; disagrees=0; unclear=0
 - Chart/Report Evidence: chart evidence=1; exact PNG=1; exact report=1; missing=0; unknown=0; withheld=0
-- Estimated Gross Contract P/L Summary: MES; samples with P/L 1; missing 0; avg hypothetical +$40.00 gross; avg MFE +$56.25 gross; avg MAE -$8.75 gross; status available; supporting research/audit evidence only
+- Estimated Gross Contract P/L Summary: MES; samples with P/L 1; missing 0; avg hypothetical +$40.00 gross; avg MFE +$56.25 gross; avg MAE -$8.75 gross; status available; context research/audit evidence only
 - Missing Data Warnings: 3
 - Adverse-First Contradictions: 0
 - Boundary: research_only_not_execution_authority

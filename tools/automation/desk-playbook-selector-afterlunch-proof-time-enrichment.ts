@@ -217,7 +217,7 @@ export function buildDeskPlaybookAfterLunchProofTimeEnrichmentReport(args: {
       ? 'The proof-time enrichment selector underperformed earliest completed 5M proof in the OOS slate comparison, so it should not be installed as a rank boost.'
       : 'The proof-time enrichment selector did not show a negative OOS delta in the saved comparison.',
     broadReplayPositive
-      ? 'The broader AfterLunchDriveFvgContinuation model family remains positive in saved replay, so the model should not be removed or buried.'
+      ? 'The broader NoInstalledSetup model family remains positive in saved replay, so the model should not be removed or buried.'
       : 'The saved broad replay is not strong enough by itself to justify model-family promotion.',
     camouflagePromisingButThin
       ? 'The camouflage AfterLunch HTF+raid lane is promising but sample-thin, so it is not enough for live behavior.'
@@ -227,7 +227,7 @@ export function buildDeskPlaybookAfterLunchProofTimeEnrichmentReport(args: {
   const recommendations = recommendation === 'stop_proof_time_enrichment'
     ? [
         'Do not install the AfterLunch proof-time enrichment as a runtime boost or publish rule.',
-        'Keep AfterLunchDriveFvgContinuation available for research and review because the broad model-family replay remains positive.',
+        'Keep NoInstalledSetup available for research and review because the broad model-family replay remains positive.',
         'If continuing, study why earliest completed 5M proof beats the enriched proxy; do not add more filters until that is explained.',
       ]
     : [

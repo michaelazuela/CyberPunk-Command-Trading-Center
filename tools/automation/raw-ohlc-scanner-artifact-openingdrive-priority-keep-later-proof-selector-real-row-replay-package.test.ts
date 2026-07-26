@@ -25,7 +25,7 @@ const report = buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSele
         candidateKey: 'ready',
         tradeDate: '2026-07-06',
         session: 'morning',
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         completedBarTime: '2026-07-06T09:35:00',
         selectorDecision: 'keep_later_sweep_proof',
@@ -37,7 +37,7 @@ const report = buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSele
       {
         tradeDate: '2026-07-06',
         session: 'morning',
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         direction: 'LONG',
         completedBarTime: '2026-07-06T09:35:00',
         selectorDecision: 'keep_later_sweep_proof',

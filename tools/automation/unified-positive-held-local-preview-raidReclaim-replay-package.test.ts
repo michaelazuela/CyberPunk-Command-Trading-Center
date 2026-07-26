@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {
-  buildUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport,
+  buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport,
 } from './unified-positive-held-local-preview-raidReclaim-replay-package';
 import type {
   UnifiedPositiveHeldLocalPreviewStructuredSnapshotMinerReport,
@@ -14,7 +14,7 @@ type SnapshotRow = UnifiedPositiveHeldLocalPreviewStructuredSnapshotMinerReport[
 function row(id: string, outcomeBucket: SnapshotRow['outcomeBucket'], status: string, protectedStopEvidence: boolean, pl: number): SnapshotRow {
   return {
     rowId: id,
-    setupType: 'raidReclaim',
+    setupType: 'historicalReview',
     session: id.includes('lunch') ? 'lunch' : 'morning',
     direction: 'LONG',
     outcomeBucket,
@@ -22,7 +22,7 @@ function row(id: string, outcomeBucket: SnapshotRow['outcomeBucket'], status: st
     proofTime: '2026-06-17T09:30:00',
     eventTime: '2026-06-17T09:30:00',
     sourceFile: 'tape.json',
-    selectedSetupType: 'raidReclaim',
+    selectedSetupType: 'historicalReview',
     selectedDirection: 'LONG',
     selectedRankScore: 100,
     selectedDecisionQualityScore: 80,
@@ -62,12 +62,12 @@ function row(id: string, outcomeBucket: SnapshotRow['outcomeBucket'], status: st
 }
 
 const rows = [
-  row('2026-06-17-morning-raidReclaim-LONG-a', 'winner', 'Conditional', false, 100),
-  row('2026-06-18-lunch-raidReclaim-LONG-a', 'winner', 'Conditional', false, 80),
-  row('2026-06-19-morning-raidReclaim-LONG-a', 'loss', 'Blocked', true, -60),
-  row('2026-06-20-lunch-raidReclaim-LONG-a', 'loss', 'Blocked', true, -50),
-  row('2026-06-21-morning-raidReclaim-LONG-a', 'unresolved', 'Conditional', true, 0),
-  { ...row('2026-06-22-morning-IntradayMssMicroContinuation-LONG-a', 'winner', 'Conditional', false, 50), setupType: 'IntradayMssMicroContinuation' },
+  row('2026-06-17-morning-historicalReview-LONG-a', 'winner', 'Conditional', false, 100),
+  row('2026-06-18-lunch-historicalReview-LONG-a', 'winner', 'Conditional', false, 80),
+  row('2026-06-19-morning-historicalReview-LONG-a', 'loss', 'Blocked', true, -60),
+  row('2026-06-20-lunch-historicalReview-LONG-a', 'loss', 'Blocked', true, -50),
+  row('2026-06-21-morning-historicalReview-LONG-a', 'unresolved', 'Conditional', true, 0),
+  { ...row('2026-06-22-morning-NoInstalledSetup-LONG-a', 'winner', 'Conditional', false, 50), setupType: 'NoInstalledSetup' },
 ];
 
 const authority = {
@@ -145,7 +145,7 @@ const validationReport: UnifiedPositiveHeldLocalPreviewStructuredSnapshotValidat
   markdown: '',
 };
 
-const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport({
+const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport({
   reportDir: 'diagnostic-reports',
   structuredSnapshotMinerPath: 'miner.json',
   structuredSnapshotMinerReport: minerReport,
@@ -153,7 +153,7 @@ const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepor
   structuredSnapshotValidationReport: validationReport,
 }, '2026-07-17T00:01:00.000Z');
 
-assert.equal(report.reportType, 'unified_positive_held_local_preview_raidReclaim_replay_package');
+assert.equal(report.reportType, 'unified_positive_held_local_preview_historicalReview_replay_package');
 assert.equal(report.status, 'pass');
 assert.equal(report.authority.readOnly, true);
 assert.equal(report.authority.writesSupabase, false);
@@ -162,7 +162,7 @@ assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.assumptions.noRankPenaltyInstalled, true);
 assert.equal(report.assumptions.noModelRemoved, true);
 assert.equal(report.summary.sourceRows, 6);
-assert.equal(report.summary.raidReclaimRows, 5);
+assert.equal(report.summary.historicalReviewRows, 5);
 assert.equal(report.summary.conditionalProtectedStopCleanRows, 2);
 assert.equal(report.summary.blockedProtectedStopRows, 3);
 assert.equal(report.summary.replayQuestion, 'candidate_for_broader_replay');
@@ -172,9 +172,9 @@ const clean = report.groups.find((group) => group.group === 'conditional_protect
 const blocked = report.groups.find((group) => group.group === 'blocked_protected_stop');
 assert.equal(clean?.oneMesPl, 180);
 assert.equal(blocked?.oneMesPl, -110);
-assert.match(report.markdown, /raidReclaim Replay Package/);
+assert.match(report.markdown, /historicalReview Replay Package/);
 
-const missing = buildUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport({
+const missing = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport({
   reportDir: 'diagnostic-reports',
   structuredSnapshotMinerPath: null,
   structuredSnapshotMinerReport: null,
@@ -185,4 +185,4 @@ const missing = buildUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepo
 assert.equal(missing.status, 'fail');
 assert.ok(missing.blockers.includes('missing structured snapshot miner path'));
 
-console.log('unified positive held-local raidReclaim replay package verified.');
+console.log('unified positive held-local historicalReview replay package verified.');

@@ -222,7 +222,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPenaltyScannerArtifactC
     scannerBehaviorChangedRows !== 0 ? 'one or more scanner artifact rows changed live behavior flags' : null,
     installedValidSweepLeadRowsPenalized !== 0 ? 'installed score comparison penalized valid Sweep lead rows' : null,
   ].filter((item): item is string => Boolean(item));
-  const hasSweepScannerArtifactRows = rows.some((row) => row.setupType === 'SweepMssFvgRetrace');
+  const hasSweepScannerArtifactRows = rows.some((row) => row.setupType === 'NoInstalledSetup');
   const recommendation = blockers.length
     ? 'reject_scanner_artifact_path'
     : hasSweepScannerArtifactRows && scannerRowsMissingInstalledScore === 0

@@ -94,8 +94,8 @@ const DEFAULT_BRIDGE_URL = 'http://127.0.0.1:8765';
 const OLD_PRICE_ACTION_BUTTONS = new Set([
   'Keep Advisory',
   'Reject',
-  'Model 1 Review',
-  'Raid Reclaim Reversal Review',
+  'no installed model path Review',
+  'no installed model path Review',
   'Human Rule Review Queue',
   'New Model Candidate',
   'Insufficient Context',

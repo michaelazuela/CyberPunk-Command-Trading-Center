@@ -79,7 +79,7 @@ try {
       {
         ticketId: 'preview-ticket',
         sourceSnapshotId: 'scanner-preview',
-        setupType: 'raidReclaim',
+        setupType: 'historicalReview',
         direction: 'LONG',
         pngPath,
         status: 'signed_off',

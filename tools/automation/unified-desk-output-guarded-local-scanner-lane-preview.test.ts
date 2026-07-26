@@ -59,7 +59,7 @@ const report = buildUnifiedDeskOutputGuardedScannerLanePreview({
         date: '2026-07-22',
         session: 'morning',
         state: 'APPROVED_DESK_PLAN',
-        model: 'OpeningDriveFvgContinuation',
+        model: 'NoInstalledSetup',
         direction: 'LONG',
         proofTime: '2026-07-22T10:00:00',
         entry: 100,

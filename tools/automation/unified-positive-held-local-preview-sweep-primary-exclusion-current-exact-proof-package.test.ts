@@ -41,7 +41,7 @@ const packageJson = {
       eventTime: '2026-07-20T09:35:00',
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           executionStatus: 'Conditional',
           blockReason: 'InvalidStopLocation',
@@ -50,7 +50,7 @@ const packageJson = {
           riskPoints: 33.5,
           rankScore: 97,
         }, {
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'SHORT',
           executionStatus: 'Conditional',
           blockReason: 'EntryTriggerPending',
@@ -63,7 +63,7 @@ const packageJson = {
       eventTime: '2026-07-20T12:35:00',
       setupCandidateStatus: {
         statuses: [{
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           direction: 'LONG',
           executionStatus: 'Conditional',
           blockReason: 'InvalidStopLocation',

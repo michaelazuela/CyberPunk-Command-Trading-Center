@@ -52,7 +52,7 @@ const inventoryReport: UnifiedPositiveHeldLocalPreviewStructuralFieldInventoryRe
   rows: [
     ...['win-1', 'win-2', 'win-3'].map((rowId) => ({
       rowId,
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       session: 'morning',
       direction: 'LONG',
       outcomeBucket: 'winner' as const,
@@ -68,7 +68,7 @@ const inventoryReport: UnifiedPositiveHeldLocalPreviewStructuralFieldInventoryRe
       htfDataLimited: false,
       htfReliability: 'structural',
       htfConflict: false,
-      htfSupported: true,
+      htfContextAligned: true,
       countertrend: false,
       confidenceBucket: 'confidence_65_to_79',
       hasLineInSand: true,
@@ -85,7 +85,7 @@ const inventoryReport: UnifiedPositiveHeldLocalPreviewStructuralFieldInventoryRe
     })),
     ...['loss-1', 'loss-2'].map((rowId) => ({
       rowId,
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       session: 'lunch',
       direction: 'LONG',
       outcomeBucket: 'loss' as const,
@@ -101,7 +101,7 @@ const inventoryReport: UnifiedPositiveHeldLocalPreviewStructuralFieldInventoryRe
       htfDataLimited: false,
       htfReliability: 'structural',
       htfConflict: false,
-      htfSupported: true,
+      htfContextAligned: true,
       countertrend: false,
       confidenceBucket: 'confidence_lt_50',
       hasLineInSand: false,

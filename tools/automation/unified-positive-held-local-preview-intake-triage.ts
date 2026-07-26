@@ -98,13 +98,7 @@ const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
 const DEFAULT_MAX_REPLAY_PACKAGE_ROWS = 24;
 const DEFAULT_MAX_ROWS_PER_MODEL = 4;
 
-const MODEL_PRIORITY: Record<string, number> = {
-  OpeningDriveFvgContinuation: 100,
-  AfterLunchDriveFvgContinuation: 95,
-  IntradayMssMicroContinuation: 90,
-  SweepMssFvgRetrace: 78,
-  RaidReclaimReversal: 76,
-};
+const MODEL_PRIORITY: Record<string, number> = {};
 
 const PROOF_PRIORITY: Record<string, number> = {
   human_review_ready: 100,

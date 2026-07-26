@@ -4,7 +4,7 @@ import { ExecutionStatus, SetupCandidateStatus, SetupType, type SetupCandidate }
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.SweepMssFvgRetrace,
+    setupType: SetupType.NoSetup,
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,
     confidence: 'High',

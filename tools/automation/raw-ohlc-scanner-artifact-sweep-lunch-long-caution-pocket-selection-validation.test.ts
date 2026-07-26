@@ -6,7 +6,7 @@ function row(id: string, proofTime: string, fields: Record<string, string>, reso
     ticketId: id,
     tradeDate: '2026-06-10',
     session: 'lunch',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG' as const,
     proofTime,
     outcomeStatus: 'resolved' as const,

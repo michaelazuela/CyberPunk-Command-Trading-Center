@@ -47,7 +47,7 @@ function fixturePack(): ResearchSampleReviewPack {
       summary: 'Research-only sample.',
       whyAdvisoryOnly: 'Research-only. Existing gates did not independently pass.',
       model1Overlap: false,
-      raidReclaimOverlap: false,
+      historicalReversalOverlap: false,
       researchDetectorReason: 'fixture',
       warningFailureReason: 'fixture',
       dataQualityNotes: [],
@@ -317,14 +317,14 @@ assert.ok(!/"entry"|"stop"|"target"|"canExecute"/.test(JSON.stringify(reviewed00
 
 const model1StatePath = join(realPackTempDir, 'discord-review-state-model1.json');
 writeStateForSample(model1StatePath, realPackTempPath, 'time_window_liquidity_delivery-005', 'packhash005');
-const model1Review005 = clickSample005(model1StatePath, 'possible_model1_mapping_review');
+const model1Review005 = clickSample005(model1StatePath, 'historical_mapping_review');
 assert.equal(model1Review005.ok, false);
 assert.ok(model1Review005.responseContent.includes('label is not allowed'));
 assert.equal(existsSync(join(realPackTempDir, 'research-sample-review-MES-all-2026-05-29.reviewed.json')), true);
 
 const turtleStatePath = join(realPackTempDir, 'discord-review-state-turtle.json');
 writeStateForSample(turtleStatePath, realPackTempPath, 'time_window_liquidity_delivery-005', 'packhash005');
-const turtleReview005 = clickSample005(turtleStatePath, 'possible_RAID_RECLAIM_mapping_review');
+const turtleReview005 = clickSample005(turtleStatePath, 'historical_reversal_mapping_review');
 assert.equal(turtleReview005.ok, false);
 assert.ok(turtleReview005.responseContent.includes('label is not allowed'));
 

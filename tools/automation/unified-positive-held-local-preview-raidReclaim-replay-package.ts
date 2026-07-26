@@ -9,7 +9,7 @@ import type {
 } from './unified-positive-held-local-preview-structured-snapshot-validation';
 
 type SnapshotRow = UnifiedPositiveHeldLocalPreviewStructuredSnapshotMinerReport['rows'][number];
-type PackageGroup = 'conditional_protected_stop_clean' | 'blocked_protected_stop' | 'other_RAID_RECLAIM_state';
+type PackageGroup = 'conditional_protected_stop_clean' | 'blocked_protected_stop' | 'other_uninstalled_context_state';
 
 interface ReplayPackageRow {
   rowId: string;
@@ -53,8 +53,8 @@ interface DaySessionSummary {
   oneMesPl: number | null;
 }
 
-export interface UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_replay_package';
+export interface UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport {
+  reportType: 'unified_positive_held_local_preview_historicalReview_replay_package';
   generatedAt: string;
   status: 'pass' | 'fail';
   authority: {
@@ -90,10 +90,10 @@ export interface UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport {
   };
   summary: {
     sourceRows: number;
-    raidReclaimRows: number;
+    historicalReviewRows: number;
     conditionalProtectedStopCleanRows: number;
     blockedProtectedStopRows: number;
-    otherraidReclaimStateRows: number;
+    otherhistoricalReviewStateRows: number;
     groupSummaries: number;
     daySessionSummaries: number;
     replayQuestion: 'candidate_for_broader_replay' | 'insufficient_separation';
@@ -127,7 +127,7 @@ function latestMatchingFile(reportDir: string, pattern: RegExp): string | null {
   return matches[0] || null;
 }
 
-function authority(): UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport['authority'] {
+function authority(): UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport['authority'] {
   return {
     readOnly: true,
     localOnly: true,
@@ -164,7 +164,7 @@ function tradeDate(row: SnapshotRow): string {
 function groupFor(row: SnapshotRow): PackageGroup {
   if (row.modelCandidateExecutionStatus === 'Conditional' && !row.protectedStopEvidence) return 'conditional_protected_stop_clean';
   if (row.modelCandidateExecutionStatus === 'Blocked' || row.protectedStopEvidence) return 'blocked_protected_stop';
-  return 'other_RAID_RECLAIM_state';
+  return 'other_uninstalled_context_state';
 }
 
 function toPackageRow(row: SnapshotRow): ReplayPackageRow {
@@ -217,7 +217,7 @@ function daySessionSummaries(rows: ReplayPackageRow[]): DaySessionSummary[] {
 }
 
 function groupSummaries(rows: ReplayPackageRow[], daySessions: DaySessionSummary[]): GroupSummary[] {
-  const groups: PackageGroup[] = ['conditional_protected_stop_clean', 'blocked_protected_stop', 'other_RAID_RECLAIM_state'];
+  const groups: PackageGroup[] = ['conditional_protected_stop_clean', 'blocked_protected_stop', 'other_uninstalled_context_state'];
   return groups.map((group) => {
     const groupRows = rows.filter((row) => row.group === group);
     const ds = daySessions.filter((row) => row.group === group && row.oneMesPl !== null);
@@ -230,7 +230,7 @@ function groupSummaries(rows: ReplayPackageRow[], daySessions: DaySessionSummary
   });
 }
 
-function replayQuestion(groups: GroupSummary[]): UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport['summary']['replayQuestion'] {
+function replayQuestion(groups: GroupSummary[]): UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport['summary']['replayQuestion'] {
   const clean = groups.find((group) => group.group === 'conditional_protected_stop_clean');
   const blocked = groups.find((group) => group.group === 'blocked_protected_stop');
   return clean && blocked &&
@@ -246,20 +246,20 @@ function escapeTable(value: string): string {
   return value.replace(/\|/g, '/').replace(/\r?\n/g, ' ');
 }
 
-function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport, 'markdown'>): string {
+function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport, 'markdown'>): string {
   return [
-    '# Unified Positive Held-Local Preview raidReclaim Replay Package',
+    '# Unified Positive Held-Local Preview historicalReview Replay Package',
     '',
     `Status: ${report.status}`,
     '',
-    'Authority: local-only read-only raidReclaim replay package from prior diagnostic rows. It does not post Discord, write Supabase, read live bridge data, run setupScanner, change scanner behavior, change trading logic, change canExecute, or change entry/stop/target/risk math.',
+    'Authority: local-only read-only historicalReview replay package from prior diagnostic rows. It does not post Discord, write Supabase, read live bridge data, run setupScanner, change scanner behavior, change trading logic, change canExecute, or change entry/stop/target/risk math.',
     '',
     '## Summary',
     `- Source rows: ${report.summary.sourceRows}.`,
-    `- raidReclaim rows: ${report.summary.raidReclaimRows}.`,
+    `- historicalReview rows: ${report.summary.historicalReviewRows}.`,
     `- Conditional/protected-stop-clean rows: ${report.summary.conditionalProtectedStopCleanRows}.`,
     `- Blocked protected-stop rows: ${report.summary.blockedProtectedStopRows}.`,
-    `- Other raidReclaim state rows: ${report.summary.otherraidReclaimStateRows}.`,
+    `- Other historicalReview state rows: ${report.summary.otherhistoricalReviewStateRows}.`,
     `- Replay question: ${report.summary.replayQuestion}.`,
     '',
     '## Groups',
@@ -275,15 +275,15 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimRe
   ].join('\n');
 }
 
-export function buildUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport(args: {
+export function buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport(args: {
   reportDir: string;
   structuredSnapshotMinerPath: string | null;
   structuredSnapshotMinerReport: UnifiedPositiveHeldLocalPreviewStructuredSnapshotMinerReport | null;
   structuredSnapshotValidationPath: string | null;
   structuredSnapshotValidationReport: UnifiedPositiveHeldLocalPreviewStructuredSnapshotValidationReport | null;
-}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport {
+}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport {
   const sourceRows = args.structuredSnapshotMinerReport?.rows || [];
-  const rows = sourceRows.filter((row) => row.setupType === 'raidReclaim').map(toPackageRow);
+  const rows = sourceRows.filter((row) => row.setupType === 'historicalReview').map(toPackageRow);
   const daySessions = daySessionSummaries(rows);
   const groups = groupSummaries(rows, daySessions);
   const blockers = [
@@ -293,11 +293,11 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepo
     !args.structuredSnapshotValidationPath ? 'missing structured snapshot validation path' : null,
     !args.structuredSnapshotValidationReport ? 'missing structured snapshot validation report' : null,
     args.structuredSnapshotValidationReport && args.structuredSnapshotValidationReport.status !== 'pass' ? `structured snapshot validation status ${args.structuredSnapshotValidationReport.status}` : null,
-    rows.length === 0 ? 'no raidReclaim rows found in structured snapshot miner output' : null,
+    rows.length === 0 ? 'no historicalReview rows found in structured snapshot miner output' : null,
   ].filter((item): item is string => Boolean(item));
   const question = replayQuestion(groups);
-  const base: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport, 'markdown'> = {
-    reportType: 'unified_positive_held_local_preview_raidReclaim_replay_package',
+  const base: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport, 'markdown'> = {
+    reportType: 'unified_positive_held_local_preview_historicalReview_replay_package',
     generatedAt,
     status: blockers.length ? 'fail' : 'pass',
     authority: authority(),
@@ -316,10 +316,10 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepo
     },
     summary: {
       sourceRows: sourceRows.length,
-      raidReclaimRows: rows.length,
+      historicalReviewRows: rows.length,
       conditionalProtectedStopCleanRows: rows.filter((row) => row.group === 'conditional_protected_stop_clean').length,
       blockedProtectedStopRows: rows.filter((row) => row.group === 'blocked_protected_stop').length,
-      otherraidReclaimStateRows: rows.filter((row) => row.group === 'other_RAID_RECLAIM_state').length,
+      otherhistoricalReviewStateRows: rows.filter((row) => row.group === 'other_uninstalled_context_state').length,
       groupSummaries: groups.length,
       daySessionSummaries: daySessions.length,
       replayQuestion: question,
@@ -334,15 +334,15 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepo
       : question === 'candidate_for_broader_replay'
         ? [
           'Use this package for broader replay validation only; do not install a live rank penalty yet.',
-          'Keep raidReclaim enabled. The research question is blocked protected-stop state, not model removal.',
+          'Keep historicalReview enabled. The research question is blocked protected-stop state, not model removal.',
         ]
         : ['Do not advance to scanner-visible behavior; separation is not strong enough in this package.'],
   };
   return { ...base, markdown: buildMarkdown(base) };
 }
 
-export function writeUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport(
-  report: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport,
+export function writeUnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport(
+  report: UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport,
   outDir = DEFAULT_REPORT_DIR,
 ): { jsonPath: string; markdownPath: string } {
   fs.mkdirSync(outDir, { recursive: true });
@@ -354,13 +354,13 @@ export function writeUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageRepo
   return { jsonPath, markdownPath };
 }
 
-export function runUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageCli(args = process.argv.slice(2)): void {
+export function runUnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageCli(args = process.argv.slice(2)): void {
   const outDir = readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR;
   const structuredSnapshotMinerPath = readFlag(args, '--structured-snapshot-miner') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-structured-snapshot-miner-\d+\.json$/);
   const structuredSnapshotValidationPath = readFlag(args, '--structured-snapshot-validation') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-structured-snapshot-validation-\d+\.json$/);
-  const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport({
+  const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport({
     reportDir: outDir,
     structuredSnapshotMinerPath,
     structuredSnapshotMinerReport: structuredSnapshotMinerPath && fs.existsSync(structuredSnapshotMinerPath)
@@ -371,7 +371,7 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageCli(ar
       ? JSON.parse(fs.readFileSync(structuredSnapshotValidationPath, 'utf8')) as UnifiedPositiveHeldLocalPreviewStructuredSnapshotValidationReport
       : null,
   });
-  const paths = writeUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport(report, outDir);
+  const paths = writeUnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport(report, outDir);
   if (args.includes('--json')) {
     console.log(JSON.stringify({ ...paths, status: report.status, summary: report.summary }, null, 2));
   } else {
@@ -384,7 +384,7 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageCli(ar
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   try {
-    runUnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageCli();
+    runUnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageCli();
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

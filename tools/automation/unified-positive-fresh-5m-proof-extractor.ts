@@ -116,7 +116,7 @@ const DEFAULT_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const DEFAULT_OUT_DIR = path.join(__dirname, 'diagnostic-reports');
 const DEFAULT_INSTRUMENT = 'MES';
 const DEFAULT_TOLERANCE_POINTS = 0.25;
-const TARGET_SETUPS = new Set(['raidReclaim', 'SweepMssFvgRetrace']);
+const TARGET_SETUPS = new Set(['historicalReview', 'NoInstalledSetup']);
 const SESSIONS: Array<'morning' | 'lunch' | 'evening'> = ['morning', 'lunch', 'evening'];
 const SESSION_WINDOWS: Record<ReplaySession, { start: number; end: number }> = {
   morning: { start: 9 * 60 + 15, end: 12 * 60 },
@@ -376,7 +376,7 @@ function recommendationFor(row: Pick<UnifiedPositiveFresh5mProofRow, 'proofStatu
   if (row.proofStatus === 'missing_future_bars') return 'No later completed 5M bars were available in the local research source for this session.';
   if (row.proofStatus === 'missing_snapshot') return 'The source scanner snapshot was not found, so completed-bar cutoff cannot be trusted.';
   if (row.proofStatus === 'missing_plan_geometry') return 'Deterministic entry/stop/T1/T2 geometry is missing or invalid; do not infer levels from outcome hindsight.';
-  if (row.proofStatus === 'not_in_scope') return 'Not part of the raidReclaim/Sweep positive proof-capture phase.';
+  if (row.proofStatus === 'not_in_scope') return 'Not part of the historicalReview/Sweep positive proof-capture phase.';
   return 'Positive overlay remains blocked because no fresh completed 5M proof appeared after the stale/no-chase point.';
 }
 
@@ -387,7 +387,7 @@ function blockersFor(status: FreshProofStatus): string[] {
   if (status === 'missing_future_bars') return ['missing future completed 5M bars'];
   if (status === 'missing_snapshot') return ['missing source scanner snapshot'];
   if (status === 'missing_plan_geometry') return ['missing or invalid deterministic plan geometry'];
-  if (status === 'not_in_scope') return ['row not in raidReclaim/Sweep proof scope'];
+  if (status === 'not_in_scope') return ['row not in historicalReview/Sweep proof scope'];
   return ['no fresh completed 5M proof after stale/no-chase point'];
 }
 

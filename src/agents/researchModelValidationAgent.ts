@@ -32,7 +32,7 @@ export interface ResearchConceptValidation {
   researchValidationLabel: ResearchValidationLabel;
   confidence: ResearchValidationConfidence;
   rationale: string;
-  supportingEvidence: string[];
+  contextNotes: string[];
   concerns: string[];
   requiredBeforeNextPhase: string[];
   outcomeMetrics: {
@@ -205,7 +205,7 @@ function validationForConcept(
     medianMaePoints: conceptSummary.medianMaePoints,
   };
 
-  const supportingEvidence = [
+  const contextNotes = [
     `Evaluated candidates: ${conceptSummary.evaluatedCandidates}/${conceptSummary.totalCandidates}.`,
     `Threshold-two touch rate: ${thresholdTwo ?? 'n/a'}.`,
     `Adverse threshold touch rate: ${adverse ?? 'n/a'}.`,
@@ -281,10 +281,10 @@ function validationForConcept(
       confidence = 'medium';
       rationale = 'Outcome math is promising and enough human-reviewed samples exist for human-only model-design discussion.';
       if (humanRuleQueue > 0) {
-        supportingEvidence.push(`${humanRuleQueue} human-reviewed sample(s) were queued for future rule discussion.`);
+        contextNotes.push(`${humanRuleQueue} human-reviewed sample(s) were queued for future rule discussion.`);
       }
       if (newModelCandidateReview > 0) {
-        supportingEvidence.push(`${newModelCandidateReview} human-reviewed sample(s) were marked as distinct research model candidates.`);
+        contextNotes.push(`${newModelCandidateReview} human-reviewed sample(s) were marked as distinct research model candidates.`);
       }
       concerns.push('Human model-design discussion is not execution approval.');
     } else {
@@ -306,7 +306,7 @@ function validationForConcept(
     researchValidationLabel: label,
     confidence,
     rationale,
-    supportingEvidence,
+    contextNotes,
     concerns,
     requiredBeforeNextPhase,
     outcomeMetrics,
@@ -386,7 +386,7 @@ export function renderResearchModelValidationMarkdown(report: Omit<ResearchModel
     '- Continue collecting outcome data and review samples before any rule discussion.',
     '',
     '## 10. Do-Not-Change-Yet Items',
-    '- Do not change Model 1 or Raid Reclaim Reversal gates.',
+    '- Do not change no installed model path gates.',
     '- Do not promote research concepts.',
     '- Do not add entries, stops, targets, alerts, outcome buttons, or RAG writes.',
     '',

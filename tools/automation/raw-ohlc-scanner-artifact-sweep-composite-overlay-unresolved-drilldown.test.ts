@@ -29,7 +29,7 @@ function row(ticketId: string, overrides: Partial<UnifiedPositiveHeldLocalPrevie
     ticketId,
     tradeDate: '2026-07-16',
     session: 'lunch',
-    setupType: 'IntradayMssMicroContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     proofTime: '2026-07-16T14:00:00',
     outcomeStatus: 'unresolved',

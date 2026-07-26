@@ -28,7 +28,7 @@ export interface DiagnosticFvgBound {
 }
 
 export interface DiagnosticGateReview {
-  model: 'Model 1 Sweep -> MSS -> FVG Retrace' | 'Raid Reclaim Reversal Reversal' | 'Other approved primary model';
+  model: 'no installed model path' | 'no installed model path' | 'Other approved primary model';
   passedGates: string[];
   failedGates: string[];
   missingRequiredConditions: string[];
@@ -429,7 +429,7 @@ function candidatePool(input: BridgeDiagnosticReplayInput): SetupCandidate[] {
 
 function candidateIsApprovedExecutable(candidate: SetupCandidate): boolean {
   return (
-    (candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.RaidReclaimReversal) &&
+    (candidate.setupType === SetupType.NoSetup || candidate.setupType === SetupType.NoSetup) &&
     candidate.executionStatus === ExecutionStatus.Executable &&
     candidate.direction !== 'NO TRADE' &&
     !candidate.blockReason
@@ -454,8 +454,8 @@ function buildGateReview(
   htf: DiagnosticConfirmation,
 ): DiagnosticGateReview[] {
   const candidates = candidatePool(input);
-  const model1 = candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
-  const turtle = candidates.find((candidate) => candidate.setupType === SetupType.RaidReclaimReversal);
+  const model1 = candidates.find((candidate) => candidate.setupType === SetupType.NoSetup);
+  const turtle = candidates.find((candidate) => candidate.setupType === SetupType.NoSetup);
   const reviewFor = (
     model: DiagnosticGateReview['model'],
     candidate: SetupCandidate | undefined,
@@ -472,7 +472,7 @@ function buildGateReview(
     };
   };
   return [
-    reviewFor('Model 1 Sweep -> MSS -> FVG Retrace', model1, [
+    reviewFor('no installed model path', model1, [
       'Liquidity sweep/raid',
       'Reclaim after sweep',
       'Displacement',
@@ -480,7 +480,7 @@ function buildGateReview(
       'FVG retrace',
       'Valid risk and minimum target room',
     ]),
-    reviewFor('Raid Reclaim Reversal Reversal', turtle, [
+    reviewFor('no installed model path', turtle, [
       'Swept swing/session level',
       'Reclaim back inside level',
       'Stop beyond sweep wick',
@@ -820,7 +820,7 @@ function auditSummary(classification: BridgeDiagnosticClassification, events: Di
     if (suppressed) return `scannerAuditStatus: present. Audit history shows suppression/block reason: ${suppressed.suppressionOrBlockReason}.`;
     return 'scannerAuditStatus: present. Audit files exist, but no trade alert send evidence was found.';
   }
-  return `scannerAuditStatus: present. Events found: trade=${tradeEvents.length}, watchlist=${watchlistEvents.length}, health=${healthEvents.length}. Audit context is supporting evidence only.`;
+  return `scannerAuditStatus: present. Events found: trade=${tradeEvents.length}, watchlist=${watchlistEvents.length}, health=${healthEvents.length}. Audit context is context-only labels only.`;
 }
 
 function phase9FCheck(status: Phase9FReplayCheckStatus, summary: string): Phase9FReplayCheck {

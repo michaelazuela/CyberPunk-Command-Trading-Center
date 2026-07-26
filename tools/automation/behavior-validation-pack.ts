@@ -148,48 +148,27 @@ function finding(checkId: string, reason: string, evidence: string[] = []): Beha
 
 function failedHighBreakdownCandidate(): SetupCandidate {
   return {
-    setupType: SetupType.RaidReclaimReversal,
-    scenarioLabel: '5M failed-high line-in-the-sand breakdown',
-    direction: 'SHORT',
-    detectedStatus: SetupCandidateStatus.Conditional,
-    confidence: 'High',
-    priority: 94,
-    entry: 7608,
-    stop: 7626.5,
-    target1: 7607.25,
-    target2: 7603.25,
-    riskPoints: 18.5,
-    rankScore: 91,
-    decisionQualityScore: 88,
-    invalidation: 'Invalid above protected 5M failed-high swing at 7626.50.',
-    evidence: [
-      '9:40 ET high created the protected failed-high reference.',
-      '10:20 ET retest failed to break the high.',
-      'Completed 10:25 ET 5M close confirmed the line-in-the-sand breakdown.',
-    ],
-    missingEvidence: [],
-    executionStatus: ExecutionStatus.Conditional,
+    setupType: SetupType.NoSetup,
+    scenarioLabel: 'Blank-slate no-model fixture',
+    direction: 'NO TRADE',
+    detectedStatus: SetupCandidateStatus.Blocked,
+    confidence: 'Low',
+    priority: 0,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    rankScore: 0,
+    decisionQualityScore: 0,
+    invalidation: null,
+    evidence: [],
+    missingEvidence: ['Blank-slate mode: no trading models are installed.'],
+    executionStatus: ExecutionStatus.Blocked,
     blockReason: null,
-    requiredTrigger: 'SHORT only after completed 5M close below 7618.75.',
-    nextAction: 'Human-review short ticket; canExecute remains internal and false.',
+    requiredTrigger: null,
+    nextAction: 'Install a newly approved model definition before scanner publishing can resume.',
     reducedRiskPlan: null,
-    activeRuleset: {
-      htfLineInSand: {
-        applied: true,
-        status: 'passed',
-        required: 'completed_5m_or_15m_close_beyond_htf_line',
-        appliesToAllModels: true,
-        affectsExecution: false,
-        direction: 'SHORT',
-        lineInSand: 7618.75,
-        lineReason: '7618.75 is the completed 5M failed-high breakdown line after the 10:20 ET rejection.',
-        requiredClose: 'Completed 5M close below 7618.75 confirms the short review path.',
-        obstacleType: 'resistance',
-        obstacleSource: 'ninjatrader',
-        evidence: ['Named line comes from structured NinjaTrader 5M failed-high breakdown evidence.'],
-        blockers: [],
-      },
-    },
   };
 }
 
@@ -198,10 +177,10 @@ function failedHighBreakdownPublishDecision(): DeskPublishDecision {
   const window = resolveScannerWindow(new Date('2026-07-15T10:25:00-04:00'));
   const alertDecision = {
     shouldSend: false,
-    reason: 'Behavior validation fixture: complete human-review short ticket remains visible even with canExecute=false.',
+    reason: 'Blank-slate mode: no model publish.',
   };
   const visibilityMetadata = classifyScannerVisibility({
-    state: 'Conditional',
+    state: 'Blocked',
     candidate,
     window,
     alertDecision,
@@ -209,23 +188,23 @@ function failedHighBreakdownPublishDecision(): DeskPublishDecision {
   });
   const candidateLifecycleTrace = buildCandidateLifecycleTrace({
     candidates: [candidate],
-    selectedCandidate: candidate,
-    state: 'Conditional',
+    selectedCandidate: null,
+    state: 'Blocked',
     window,
     alertDecision,
     canExecute: false,
   });
   const deskState = buildDeskState({
-    state: 'Conditional',
+    state: 'Blocked',
     candidate,
     visibilityMetadata,
     candidateLifecycleTrace,
-    currentPrice: 7608,
+    currentPrice: null,
     canExecute: false,
   });
   return buildDeskPublishDecision({
     deskState,
-    currentPrice: 7608,
+    currentPrice: null,
     completed5mTime: '2026-07-15T10:25:00-04:00',
   });
 }
@@ -238,36 +217,28 @@ function classifyDiscordDecision(decision: DeskPublishDecision): BehaviorValidat
 }
 
 function validateFailedHighFixture(decision: DeskPublishDecision): BehaviorValidationFinding[] {
-  const expected = {
-    direction: 'SHORT',
-    lineInSand: 7618.75,
-    entry: 7608,
-    stop: 7626.5,
-    t1: 7607.25,
-    t2: 7603.25,
-  } as const;
   const findings: BehaviorValidationFinding[] = [];
-  if (decision.direction !== expected.direction) findings.push(finding('failed_high_fixture', 'Fixture direction drifted.', [`direction=${decision.direction}`]));
-  if (decision.lineInSand !== expected.lineInSand) findings.push(finding('failed_high_fixture', 'Fixture line in the sand drifted.', [`line=${decision.lineInSand}`]));
-  if (decision.entry !== expected.entry) findings.push(finding('failed_high_fixture', 'Fixture entry drifted.', [`entry=${decision.entry}`]));
-  if (decision.stop !== expected.stop) findings.push(finding('failed_high_fixture', 'Fixture stop drifted.', [`stop=${decision.stop}`]));
-  if (decision.t1 !== expected.t1) findings.push(finding('failed_high_fixture', 'Fixture T1 drifted.', [`t1=${decision.t1}`]));
-  if (decision.t2 !== expected.t2) findings.push(finding('failed_high_fixture', 'Fixture T2 drifted.', [`t2=${decision.t2}`]));
-  if (!decision.shouldPost || decision.discordAction !== 'post_conditional') {
-    findings.push(finding('failed_high_fixture', 'Complete failed-high breakdown ticket did not remain Discord-visible as conditional review.', [
+  if (decision.direction !== 'WAIT') findings.push(finding('blank_slate_fixture', 'Blank-slate fixture produced a non-neutral direction.', [`direction=${decision.direction}`]));
+  if (decision.lineInSand !== null) findings.push(finding('blank_slate_fixture', 'Blank-slate fixture produced a line in the sand.', [`line=${decision.lineInSand}`]));
+  if (decision.entry !== null) findings.push(finding('blank_slate_fixture', 'Blank-slate fixture produced an entry.', [`entry=${decision.entry}`]));
+  if (decision.stop !== null) findings.push(finding('blank_slate_fixture', 'Blank-slate fixture produced a stop.', [`stop=${decision.stop}`]));
+  if (decision.t1 !== null) findings.push(finding('blank_slate_fixture', 'Blank-slate fixture produced T1.', [`t1=${decision.t1}`]));
+  if (decision.t2 !== null) findings.push(finding('blank_slate_fixture', 'Blank-slate fixture produced T2.', [`t2=${decision.t2}`]));
+  if (decision.shouldPost || decision.discordAction !== 'hold') {
+    findings.push(finding('blank_slate_fixture', 'Blank-slate fixture did not hold Discord local.', [
       `shouldPost=${decision.shouldPost}`,
       `discordAction=${decision.discordAction}`,
       decision.reason,
     ]));
   }
   if (decision.canExecute !== false || decision.approvalBoundary.changesCanExecute !== false) {
-    findings.push(finding('failed_high_fixture', 'Fixture changed canExecute authority boundary.', [
+    findings.push(finding('blank_slate_fixture', 'Fixture changed canExecute authority boundary.', [
       `canExecute=${decision.canExecute}`,
       `changesCanExecute=${decision.approvalBoundary.changesCanExecute}`,
     ]));
   }
-  if (!decision.hasCompletePlan || decision.displaySource !== 'selected_candidate') {
-    findings.push(finding('failed_high_fixture', 'Fixture did not publish from a complete scanner-owned selected candidate.', [
+  if (decision.hasCompletePlan || decision.displaySource !== 'none') {
+    findings.push(finding('blank_slate_fixture', 'Blank-slate fixture exposed a complete display source.', [
       `hasCompletePlan=${decision.hasCompletePlan}`,
       `displaySource=${decision.displaySource}`,
     ]));
@@ -362,13 +333,14 @@ export function buildBehaviorValidationPackReport(args: {
       fixtureT1: decision.t1,
       fixtureT2: decision.t2,
       fixtureCanExecute: decision.canExecute,
-      fixtureAgreement: decision.shouldPost &&
-        decision.direction === 'SHORT' &&
-        decision.lineInSand === 7618.75 &&
-        decision.entry === 7608 &&
-        decision.stop === 7626.5 &&
-        decision.t1 === 7607.25 &&
-        decision.t2 === 7603.25,
+      fixtureAgreement: !decision.shouldPost &&
+        decision.discordAction === 'hold' &&
+        decision.direction === 'WAIT' &&
+        decision.lineInSand === null &&
+        decision.entry === null &&
+        decision.stop === null &&
+        decision.t1 === null &&
+        decision.t2 === null,
       fixtureSuppressionReason: decision.shouldPost ? null : decision.reason,
     },
     commandResults,

@@ -16,7 +16,7 @@ function bar(time: string, open: number, high: number, low: number, close: numbe
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.SweepMssFvgRetrace,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'App-owned executable setup',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,
@@ -227,7 +227,7 @@ function performanceRecord(
 }
 
 const smallPerformanceInput = [
-  performanceRecord(0, { laterValidSetupFormed: true, laterSetupType: 'SweepMssFvgRetrace', laterOutcome: 'later_valid_setup_formed' }),
+  performanceRecord(0, { laterValidSetupFormed: true, laterSetupType: 'NoInstalledSetup', laterOutcome: 'later_valid_setup_formed' }),
   performanceRecord(1, { laterOutcome: 'ran_without_fresh_entry', reviewNotes: 'Price ran without fresh entry.' }),
   performanceRecord(2, { laterOutcome: 'reversed_or_failed', reviewNotes: 'Move reversed.' }),
   performanceRecord(3),
@@ -256,7 +256,7 @@ assert.equal('executionStatus' in smallReview, false);
 assert.equal(JSON.stringify(smallPerformanceInput), smallPerformanceBefore);
 
 const largePerformanceInput = Array.from({ length: 24 }, (_, index) => {
-  if (index < 8) return performanceRecord(index, { laterValidSetupFormed: true, laterSetupType: 'raidReclaim', laterOutcome: 'valid_setup' });
+  if (index < 8) return performanceRecord(index, { laterValidSetupFormed: true, laterSetupType: 'historicalReview', laterOutcome: 'valid_setup' });
   if (index < 14) return performanceRecord(index, { laterOutcome: 'ran_without_pullback', reviewNotes: 'Ran without pullback.' });
   if (index < 18) return performanceRecord(index, { laterOutcome: 'failed', reviewNotes: 'Failed and reversed.' });
   return performanceRecord(index);

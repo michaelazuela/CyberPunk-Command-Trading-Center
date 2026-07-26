@@ -45,7 +45,7 @@ export interface RawOhlcScannerArtifactOpeningDriveCombinedCleanPocketLivePropos
     approvalContractPath: string;
   };
   proposedBehavior: {
-    model: 'OpeningDriveFvgContinuation';
+    model: 'NoInstalledSetup';
     overlayName: 'openingdrive_combined_clean_pocket_preference';
     scannerVisibleInstallAllowedNow: false;
     requiredFutureApproval: true;
@@ -196,11 +196,11 @@ export function buildRawOhlcScannerArtifactOpeningDriveCombinedCleanPocketLivePr
       approvalContractPath: args.approvalContractPath,
     },
     proposedBehavior: {
-      model: 'OpeningDriveFvgContinuation',
+      model: 'NoInstalledSetup',
       overlayName: 'openingdrive_combined_clean_pocket_preference',
       scannerVisibleInstallAllowedNow: false,
       requiredFutureApproval: true,
-      rankingIntent: 'Prefer OpeningDriveFvgContinuation review candidates that match the approved combined clean-pocket package after existing deterministic candidate construction and proof gates have already succeeded.',
+      rankingIntent: 'Prefer NoInstalledSetup review candidates that match the approved combined clean-pocket package after existing deterministic candidate construction and proof gates have already succeeded.',
       selectors: [
         'fine_risk_24_to_32',
         'tight_long_risk_4_to_8 rows matching live-usable zero-loss bucket criteria from the approval chain',

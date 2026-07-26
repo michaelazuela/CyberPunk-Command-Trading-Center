@@ -143,7 +143,7 @@ function scanPackages(dir: string, tradeDate: string, session: string): {
       for (const candidateValue of candidates) {
         if (!candidateValue || typeof candidateValue !== 'object' || Array.isArray(candidateValue)) continue;
         const candidate = candidateValue as Record<string, unknown>;
-        if (text(candidate.setupType) !== 'SweepMssFvgRetrace') continue;
+        if (text(candidate.setupType) !== 'NoInstalledSetup') continue;
         sweepCandidates += 1;
         increment(directionCounts, text(candidate.direction));
         increment(executionStatusCounts, text(candidate.executionStatus));

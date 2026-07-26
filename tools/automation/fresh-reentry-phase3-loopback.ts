@@ -16,7 +16,7 @@ import {
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Phase 3 loopback HTF FVG reaction with missed entry',
     direction: 'SHORT',
     detectedStatus: SetupCandidateStatus.Detected,

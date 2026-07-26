@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {
-  buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport,
+  buildUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport,
 } from './unified-positive-held-local-preview-raidReclaim-extreme-risk-rank-simulation';
 import type {
   UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport,
@@ -60,10 +60,10 @@ const installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCompar
   },
   rows: [
     {
-      ticketId: '2026-06-01-morning-raidReclaim-LONG',
+      ticketId: '2026-06-01-morning-historicalReview-LONG',
       tradeDate: '2026-06-01',
       session: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -80,10 +80,10 @@ const installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCompar
       riskPreserved: true,
     },
     {
-      ticketId: '2026-06-01-morning-SweepMssFvgRetrace-SHORT',
+      ticketId: '2026-06-01-morning-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-01',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -100,10 +100,10 @@ const installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCompar
       riskPreserved: true,
     },
     {
-      ticketId: '2026-06-02-lunch-raidReclaim-LONG',
+      ticketId: '2026-06-02-lunch-historicalReview-LONG',
       tradeDate: '2026-06-02',
       session: 'lunch',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -157,10 +157,10 @@ const timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRepor
   modelTiming: [],
   rows: [
     {
-      ticketId: '2026-06-01-morning-raidReclaim-LONG',
+      ticketId: '2026-06-01-morning-historicalReview-LONG',
       tradeDate: '2026-06-01',
       session: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -174,10 +174,10 @@ const timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRepor
       issueTags: [],
     },
     {
-      ticketId: '2026-06-01-morning-SweepMssFvgRetrace-SHORT',
+      ticketId: '2026-06-01-morning-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-01',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -191,10 +191,10 @@ const timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRepor
       issueTags: [],
     },
     {
-      ticketId: '2026-06-02-lunch-raidReclaim-LONG',
+      ticketId: '2026-06-02-lunch-historicalReview-LONG',
       tradeDate: '2026-06-02',
       session: 'lunch',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -244,7 +244,7 @@ const separator = {
   topPositiveBuckets: [],
   topCautionBuckets: [{
     kind: 'setupRiskBucket',
-    key: 'raidReclaim|risk_extreme_over_15',
+    key: 'historicalReview|risk_extreme_over_15',
     rows: 3,
     winners: 1,
     losses: 2,
@@ -260,7 +260,7 @@ const separator = {
   markdown: '',
 } satisfies UnifiedPositiveHeldLocalPreviewValidReviewSeparatorDiagnosticReport;
 
-const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport({
+const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport({
   reportDir: 'reports',
   installedScoreComparisonPath: 'installed.json',
   installedScoreComparisonReport: installed,
@@ -286,10 +286,10 @@ assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.authority.changesEntryStopTargets, false);
-assert.equal(report.rows.find((row) => row.ticketId === '2026-06-01-morning-raidReclaim-LONG')?.penaltyApplied, true);
-assert.equal(report.rows.find((row) => row.ticketId === '2026-06-02-lunch-raidReclaim-LONG')?.penaltyApplied, false);
+assert.equal(report.rows.find((row) => row.ticketId === '2026-06-01-morning-historicalReview-LONG')?.penaltyApplied, true);
+assert.equal(report.rows.find((row) => row.ticketId === '2026-06-02-lunch-historicalReview-LONG')?.penaltyApplied, false);
 
-const blocked = buildUnifiedPositiveHeldLocalPreviewraidReclaimExtremeRiskRankSimulationReport({
+const blocked = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewExtremeRiskRankSimulationReport({
   reportDir: 'reports',
   installedScoreComparisonPath: null,
   installedScoreComparisonReport: null,
@@ -303,4 +303,4 @@ assert.equal(blocked.status, 'fail');
 assert.equal(blocked.summary.recommendation, 'reject_missing_source');
 assert.ok(blocked.blockers.some((item) => item.includes('missing installed-score comparison path')));
 
-console.log('unified positive held-local raidReclaim extreme-risk rank simulation verified.');
+console.log('unified positive held-local historicalReview extreme-risk rank simulation verified.');

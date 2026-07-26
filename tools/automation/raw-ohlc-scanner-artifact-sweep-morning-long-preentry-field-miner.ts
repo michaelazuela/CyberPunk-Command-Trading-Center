@@ -91,7 +91,7 @@ export interface RawOhlcScannerArtifactSweepMorningLongPreentryFieldMinerReport 
     replayPackagePath: string | null;
     outcomePath: string | null;
     filter: {
-      setupType: 'SweepMssFvgRetrace';
+      setupType: 'NoInstalledSetup';
       session: 'morning';
       direction: 'LONG';
     };
@@ -204,7 +204,7 @@ function candidateKey(eventTime: string, index: number, setupType: string, direc
 }
 
 function isFiltered(row: Pick<OutcomeRow, 'setupType' | 'session' | 'direction'>): boolean {
-  return row.setupType === 'SweepMssFvgRetrace' && row.session === 'morning' && row.direction === 'LONG';
+  return row.setupType === 'NoInstalledSetup' && row.session === 'morning' && row.direction === 'LONG';
 }
 
 function isWinner(row: OutcomeRow): boolean {
@@ -400,8 +400,8 @@ export function buildRawOhlcScannerArtifactSweepMorningLongPreentryFieldMinerRep
     outcome && outcome.status !== 'pass' ? `outcome report status ${outcome.status}` : null,
     replayPackage && replayPackage.status !== 'pass' ? `replay package status ${replayPackage.status}` : null,
     outcomeRows.length === 0 && !args.joinedRows ? 'outcome report has no rows' : null,
-    filteredOutcomeRows.length === 0 && !args.joinedRows ? 'no SweepMssFvgRetrace morning LONG outcome rows found' : null,
-    joinedRows.length === 0 ? 'no SweepMssFvgRetrace morning LONG scanner rows joined to outcomes' : null,
+    filteredOutcomeRows.length === 0 && !args.joinedRows ? 'no NoInstalledSetup morning LONG outcome rows found' : null,
+    joinedRows.length === 0 ? 'no NoInstalledSetup morning LONG scanner rows joined to outcomes' : null,
   ].filter((item): item is string => Boolean(item));
   const base: Omit<RawOhlcScannerArtifactSweepMorningLongPreentryFieldMinerReport, 'markdown'> = {
     reportType: 'raw_ohlc_scanner_artifact_sweep_morning_long_preentry_field_miner',
@@ -413,7 +413,7 @@ export function buildRawOhlcScannerArtifactSweepMorningLongPreentryFieldMinerRep
       replayPackagePath,
       outcomePath,
       filter: {
-        setupType: 'SweepMssFvgRetrace',
+        setupType: 'NoInstalledSetup',
         session: 'morning',
         direction: 'LONG',
       },

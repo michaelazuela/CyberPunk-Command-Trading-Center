@@ -461,7 +461,7 @@ async function main() {
     const scan = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: analysis });
     const normalized = normalizeTradePlan(analysis, instrument, 'replay_morning');
     const candidate = scan.candidates.find((item) =>
-      item.setupType === SetupType.OpeningDriveFvgContinuation &&
+      item.setupType === SetupType.NoSetup &&
       item.detectedStatus !== 'NotDetected'
     );
     if (!candidate) continue;
@@ -520,7 +520,7 @@ async function main() {
       enabled: true,
       scope: 'Phase 5A + 5B audit only',
       activeModelChanged: false,
-      supportingLayerOnly: true,
+      contextLayerOnly: true,
     },
     coverage: loaded.map((item) => ({
       timeframe: item.timeframe,

@@ -78,7 +78,7 @@ function row(overrides: Partial<RawOhlcScannerArtifactOpeningDrivePriorityKeepLa
     eventTime: '2026-07-06T09:30:00',
     tradeDate: '2026-07-06',
     session: 'morning',
-    setupType: 'SweepMssFvgRetrace' as RawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSelectorRealMetadataReplayAuditReport['rows'][number]['setupType'],
+    setupType: 'NoInstalledSetup' as RawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSelectorRealMetadataReplayAuditReport['rows'][number]['setupType'],
     direction: 'LONG',
     completedBarTime: '2026-07-06T09:30:00',
     selectorDecision: 'keep_later_sweep_proof',

@@ -183,13 +183,13 @@ function classify(args: {
   activeRulesetBlockers: string[];
 }): UnresolvedClass {
   const text = [...args.missingEvidence, ...args.evidence, ...args.activeRulesetBlockers].join(' | ');
-  if (args.setupType === 'SweepMssFvgRetrace' && /Countertrend|opposing completed 5M|opposing completed HTF|Structure signal conflicts/i.test(text)) {
+  if (args.setupType === 'NoInstalledSetup' && /Countertrend|opposing completed 5M|opposing completed HTF|Structure signal conflicts/i.test(text)) {
     return 'countertrend_opposing_mss_conditional';
   }
-  if (args.setupType === 'RaidReclaimReversal' && (!numberOrNull(args.candidate?.entry) || !numberOrNull(args.candidate?.stop))) {
+  if (args.setupType === 'NoInstalledSetup' && (!numberOrNull(args.candidate?.entry) || !numberOrNull(args.candidate?.stop))) {
     return 'raid_reclaim_reversal_no_deterministic_levels';
   }
-  if (args.setupType === 'IntradayMssMicroContinuation' && /Protected 5M MSS swing stop blocked|Protected 5M structure stop|opposing completed 5M/i.test(text)) {
+  if (args.setupType === 'NoInstalledSetup' && /Protected 5M MSS swing stop blocked|Protected 5M structure stop|opposing completed 5M/i.test(text)) {
     return 'htf_mss_protected_stop_conflict';
   }
   return 'manual_inspection_required';

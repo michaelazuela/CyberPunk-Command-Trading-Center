@@ -57,10 +57,10 @@ const installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCompar
   },
   rows: [
     {
-      ticketId: '2026-06-12-morning-SweepMssFvgRetrace-SHORT',
+      ticketId: '2026-06-12-morning-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-12',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -77,10 +77,10 @@ const installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCompar
       riskPreserved: true,
     },
     {
-      ticketId: '2026-06-12-morning-raidReclaim-LONG',
+      ticketId: '2026-06-12-morning-historicalReview-LONG',
       tradeDate: '2026-06-12',
       session: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -97,10 +97,10 @@ const installed: UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCompar
       riskPreserved: true,
     },
     {
-      ticketId: '2026-06-13-lunch-OpeningDriveFvgContinuation-LONG',
+      ticketId: '2026-06-13-lunch-NoInstalledSetup-LONG',
       tradeDate: '2026-06-13',
       session: 'lunch',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       executionStatus: 'Conditional',
       blockReason: 'EntryTriggerPending',
@@ -154,10 +154,10 @@ const timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRepor
   modelTiming: [],
   rows: [
     {
-      ticketId: '2026-06-12-morning-SweepMssFvgRetrace-SHORT',
+      ticketId: '2026-06-12-morning-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-12',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
@@ -171,10 +171,10 @@ const timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRepor
       issueTags: [],
     },
     {
-      ticketId: '2026-06-12-morning-raidReclaim-LONG',
+      ticketId: '2026-06-12-morning-historicalReview-LONG',
       tradeDate: '2026-06-12',
       session: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -188,10 +188,10 @@ const timing: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingRepor
       issueTags: [],
     },
     {
-      ticketId: '2026-06-13-lunch-OpeningDriveFvgContinuation-LONG',
+      ticketId: '2026-06-13-lunch-NoInstalledSetup-LONG',
       tradeDate: '2026-06-13',
       session: 'lunch',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeBucket: 'loss_stopped_before_t1',
       outcomeLabel: 'stopped_before_t1',
@@ -226,7 +226,7 @@ assert.equal(report.summary.winners, 1);
 assert.equal(report.summary.losses, 1);
 assert.equal(report.summary.grossResolvedOneMesPl, 125);
 assert.equal(report.summary.canExecuteFalseRows, 2);
-assert.equal(report.rows.some((row) => row.ticketId === '2026-06-12-morning-raidReclaim-LONG'), false);
+assert.equal(report.rows.some((row) => row.ticketId === '2026-06-12-morning-historicalReview-LONG'), false);
 assert.equal(report.rows.every((row) => row.livePromotionAllowed === false), true);
 assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.writesSupabase, false);

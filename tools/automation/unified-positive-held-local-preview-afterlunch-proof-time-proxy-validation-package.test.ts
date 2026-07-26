@@ -37,7 +37,7 @@ function enrichedRow(id: string, riskPoints: number, outcomeBucket: EnrichedRow[
     slateId: '2026-06-29|lunch',
     tradeDate: '2026-06-29',
     session: 'lunch',
-    setupType: 'AfterLunchDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     direction: 'LONG',
     proofTime: '2026-06-29T13:15:00',
     proofRankInSlate: 1,

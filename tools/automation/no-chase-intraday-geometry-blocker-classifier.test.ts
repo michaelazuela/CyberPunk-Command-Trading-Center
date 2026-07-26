@@ -11,7 +11,7 @@ import type { NoChaseProtectedGeometryOmissionDiagnosticReport } from './no-chas
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Intraday MSS Micro Continuation',
     candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
     direction: 'LONG',
@@ -108,7 +108,7 @@ const omissionReport: NoChaseProtectedGeometryOmissionDiagnosticReport = {
     caseId: id,
     tradeDate: '2026-06-10',
     sessionType: 'morning',
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     direction: 'LONG',
     firstNoChaseSnapshotId: id,
     firstNoChaseTime: '2026-06-10T10:00:00',

@@ -30,7 +30,7 @@ function timingRow(id: string, overrides: Partial<UnifiedPositiveHeldLocalPrevie
     ticketId: id,
     tradeDate: id.slice(0, 10),
     session: 'morning',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: id.includes('SHORT') ? 'SHORT' : 'LONG',
     outcomeBucket: 'loss_stopped_before_t1',
     outcomeLabel: 'stopped_before_t1',
@@ -52,7 +52,7 @@ function intakeRow(id: string, overrides: Partial<UnifiedPositiveHeldLocalPrevie
     tradeDate: id.slice(0, 10),
     session: 'morning',
     instrument: 'MES',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: id.includes('SHORT') ? 'SHORT' : 'LONG',
     firstSeenTime: `${id.slice(0, 10)}T09:30:00.0000000`,
     lastSeenTime: `${id.slice(0, 10)}T09:35:00.0000000`,
@@ -80,8 +80,8 @@ function intakeRow(id: string, overrides: Partial<UnifiedPositiveHeldLocalPrevie
   };
 }
 
-const leadId = '2026-06-01-morning-SweepMssFvgRetrace-LONG';
-const badIds = Array.from({ length: 10 }, (_, index) => `2026-06-${String(index + 2).padStart(2, '0')}-morning-SweepMssFvgRetrace-SHORT`);
+const leadId = '2026-06-01-morning-NoInstalledSetup-LONG';
+const badIds = Array.from({ length: 10 }, (_, index) => `2026-06-${String(index + 2).padStart(2, '0')}-morning-NoInstalledSetup-SHORT`);
 
 const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport = {
   reportType: 'unified_positive_held_local_preview_replay_package_source_proof_timing',

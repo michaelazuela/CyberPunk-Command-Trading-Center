@@ -31,7 +31,7 @@ function sample(index: number, overrides: Record<string, unknown> = {}) {
     sweepRaidPlusReclaimPresent: false,
     deliveryStatus: 'achieved',
     modelOneOverlap: index !== 1,
-    raidReclaimOverlap: false,
+    historicalReversalOverlap: false,
     advisoryOnly: index === 1,
     suggestedReviewLabels: index === 1 ? ['strong_advisory_candidate', 'needs_chart_review'] : ['covered_by_model_1', 'needs_chart_review'],
     chartPath: null,
@@ -297,7 +297,7 @@ assert.equal(pmSecondLabel.summary.unreviewedSamples, 2);
 assert.equal(pmSecondLabel.summary.labelCounts.needs_chart_review, 2);
 assert.equal(pmSecondLabel.summary.labelCounts.strong_advisory_candidate, 0);
 assert.equal(pmSecondLabel.summary.labelCounts.covered_by_model_1, 0);
-assert.equal(pmSecondLabel.summary.labelCounts.covered_by_RAID_RECLAIM, 0);
+assert.equal(pmSecondLabel.summary.labelCounts.covered_by_uninstalled_context, 0);
 assert.equal(pmSecondLabel.summary.labelCounts.weak_or_noisy, 0);
 assert.equal(pmSecondLabel.summary.labelCounts.reject_time_window_standalone, 0);
 assert.deepEqual(

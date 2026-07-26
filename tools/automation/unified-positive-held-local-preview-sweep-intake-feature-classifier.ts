@@ -112,7 +112,7 @@ export interface UnifiedPositiveHeldLocalPreviewSweepIntakeFeatureClassifierRepo
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SWEEP_SETUP = 'SweepMssFvgRetrace';
+const SWEEP_SETUP = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -307,7 +307,7 @@ function buildClassifier(featureName: string, featureValue: string, rows: Joined
     keptOneMesPl,
   });
   return {
-    classifierId: `SweepMssFvgRetrace_${featureName}_${featureValue}`,
+    classifierId: `NoInstalledSetup_${featureName}_${featureValue}`,
     featureName,
     featureValue,
     evaluatedRows: rows.length,
@@ -401,7 +401,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepIntakeFeatureClassifier
     !args.intakeTriagePath ? 'missing intake triage path' : null,
     !args.intakeTriageReport ? 'missing intake triage report' : null,
     timingRows.length === 0 ? 'no source/proof timing rows found' : null,
-    joinedRows.length === 0 ? 'no SweepMssFvgRetrace rows joined' : null,
+    joinedRows.length === 0 ? 'no NoInstalledSetup rows joined' : null,
     joinedRows.some((row) => !row.intakeFound) ? 'one or more Sweep rows did not join to intake triage' : null,
   ].filter((item): item is string => Boolean(item));
   const base: Omit<UnifiedPositiveHeldLocalPreviewSweepIntakeFeatureClassifierReport, 'markdown'> = {

@@ -313,7 +313,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPenaltyFreshScannerArti
       ? `fresh scanner-artifact package status ${args.freshScannerArtifactPackageReport.status}`
       : null,
     artifactRows.length === 0 ? 'no fresh scanner artifacts found' : null,
-    selection.rows.some((row) => row.setupType !== 'SweepMssFvgRetrace') ? 'non-Sweep row entered Sweep selection comparison' : null,
+    selection.rows.some((row) => row.setupType !== 'NoInstalledSetup') ? 'non-Sweep row entered Sweep selection comparison' : null,
     selection.rows.some((row) => row.shouldPost !== false) ? 'one or more rows would post scanner output' : null,
     selection.rows.some((row) => row.publishDiscord !== false) ? 'one or more rows would publish Discord output' : null,
     selection.rows.some((row) => row.canExecute !== false) ? 'one or more rows changed canExecute away from false' : null,

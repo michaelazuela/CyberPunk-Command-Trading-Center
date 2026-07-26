@@ -8,7 +8,7 @@ This report proves candidate creation stays separate from executable approval. I
 
 ### riskTooWide
 - Description: HTF/MSS-valid candidate with RiskTooWide remains non-executable.
-- Scan Candidate: RaidReclaimReversal
+- Scan Candidate: ArchivedSetupPath
 - Candidate Execution: Conditional
 - Candidate Blocker: RiskTooWide
 - Pipeline Status: NoTrade
@@ -17,7 +17,7 @@ This report proves candidate creation stays separate from executable approval. I
 
 ### missingEntry
 - Description: HTF/MSS-valid candidate with missing entry remains non-executable.
-- Scan Candidate: RaidReclaimReversal
+- Scan Candidate: ArchivedSetupPath
 - Candidate Execution: Conditional
 - Candidate Blocker: None
 - Pipeline Status: ConditionalTrade
@@ -26,7 +26,7 @@ This report proves candidate creation stays separate from executable approval. I
 
 ### missingStop
 - Description: HTF/MSS-valid candidate with missing stop remains non-executable.
-- Scan Candidate: RaidReclaimReversal
+- Scan Candidate: ArchivedSetupPath
 - Candidate Execution: Conditional
 - Candidate Blocker: None
 - Pipeline Status: NoTrade
@@ -35,7 +35,7 @@ This report proves candidate creation stays separate from executable approval. I
 
 ### missingTarget
 - Description: HTF/MSS-valid state without external target does not create the HTF reversal-delivery candidate.
-- Scan Candidate: RaidReclaimReversal
+- Scan Candidate: ArchivedSetupPath
 - Candidate Execution: NotDetected
 - Candidate Blocker: None
 - Pipeline Status: NoTrade
@@ -44,7 +44,7 @@ This report proves candidate creation stays separate from executable approval. I
 
 ### missingTrigger
 - Description: 5M pending MSS cannot create a reversal-delivery candidate.
-- Scan Candidate: RaidReclaimReversal
+- Scan Candidate: ArchivedSetupPath
 - Candidate Execution: NotDetected
 - Candidate Blocker: None
 - Pipeline Status: NoTrade
@@ -53,7 +53,7 @@ This report proves candidate creation stays separate from executable approval. I
 
 ### outsideWindow
 - Description: Outside active setup scan window remains non-executable.
-- Scan Candidate: RaidReclaimReversal
+- Scan Candidate: ArchivedSetupPath
 - Candidate Execution: NotDetected
 - Candidate Blocker: None
 - Pipeline Status: NoTrade
@@ -62,7 +62,7 @@ This report proves candidate creation stays separate from executable approval. I
 
 ### scannerReady
 - Description: All scanner candidate fields are present; final replay shell still reports whether deterministic final pipeline approved.
-- Scan Candidate: RaidReclaimReversal
+- Scan Candidate: ArchivedSetupPath
 - Candidate Execution: Executable
 - Candidate Blocker: None
 - Pipeline Status: NoTrade

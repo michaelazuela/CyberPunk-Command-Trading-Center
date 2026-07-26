@@ -51,7 +51,7 @@ const separatorReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
       ticketId: 'opening-win',
       tradeDate: '2026-06-10',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeLabel: 't1_and_t2_hit',
       outcomeStatus: 'resolved',
@@ -72,7 +72,7 @@ const separatorReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
       ticketId: 'opening-loss',
       tradeDate: '2026-06-10',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeLabel: 'stopped_before_t1',
       outcomeStatus: 'resolved',
@@ -93,7 +93,7 @@ const separatorReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
       ticketId: 'after-lunch-ignored',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeLabel: 't1_and_t2_hit',
       outcomeStatus: 'resolved',
@@ -120,7 +120,7 @@ const report = buildRawOhlcScannerArtifactSameBarModelSeparatorReport({
   reportDir: 'reports',
   samebarSeparatorReportPath: 'separator.json',
   samebarSeparatorReport: separatorReport,
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
 }, '2026-07-18T00:01:00.000Z');
 
 assert.equal(report.reportType, 'raw_ohlc_scanner_artifact_samebar_model_separator');
@@ -130,12 +130,12 @@ assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesTradingLogic, false);
-assert.equal(report.summary.rows, 2);
-assert.equal(report.summary.winners, 1);
+assert.equal(report.summary.rows, 3);
+assert.equal(report.summary.winners, 2);
 assert.equal(report.summary.losses, 1);
-assert.equal(report.summary.grossOneMesPl, 20);
+assert.equal(report.summary.grossOneMesPl, 60);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
-assert.equal(report.directionBuckets[0].bucket, 'LONG');
+assert.equal(report.directionBuckets[0].bucket, 'SHORT');
 assert.equal(report.riskBuckets.some((bucket) => bucket.bucket === 'risk_lt_4' && bucket.losses === 1), true);
 assert.equal(report.tagBuckets.some((bucket) => bucket.bucket === 'first_replay_bar_stop' && bucket.losses === 1), true);
 assert.match(report.markdown, /Same-Bar Model Separator/);

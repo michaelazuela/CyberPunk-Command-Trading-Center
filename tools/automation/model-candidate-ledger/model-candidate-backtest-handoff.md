@@ -67,7 +67,7 @@ This report is a research-only handoff package. It does not approve models for l
 | Position Sizing | missing |
 | Session Filter | missing |
 
-### Supporting Samples
+### Context Samples
 | Sample ID | Human Label | Agent Assessment | Chart Report | Estimated Gross P/L |
 |---|---|---|---|---|
 | final_hour_liquidity_draw-030 | approved_for_future_model_candidate_review | partially_agrees_with_human | C:\Users\Mike\Documents\New project\tools\automation\research-review-charts\research-review-chart-report-MES-2026-01-01-to-2026-05-30.md | MES +$40.00 gross |
@@ -120,7 +120,7 @@ This report is a research-only handoff package. It does not approve models for l
 | Position Sizing | missing |
 | Session Filter | missing |
 
-### Supporting Samples
+### Context Samples
 | Sample ID | Human Label | Agent Assessment | Chart Report | Estimated Gross P/L |
 |---|---|---|---|---|
 | Not recorded | Not recorded | Not recorded | Not recorded | Not recorded |

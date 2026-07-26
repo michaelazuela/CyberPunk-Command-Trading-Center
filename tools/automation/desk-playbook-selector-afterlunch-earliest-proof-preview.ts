@@ -90,7 +90,7 @@ interface PreviewTicket {
   ticketId: string;
   tradeDate: string;
   session: 'lunch';
-  model: 'AfterLunchDriveFvgContinuation';
+  model: 'NoInstalledSetup';
   direction: Direction;
   proofTime: string;
   entryHitTime: string | null;
@@ -158,7 +158,7 @@ export interface DeskPlaybookAfterLunchEarliestProofPreviewReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SETUP = 'AfterLunchDriveFvgContinuation';
+const SETUP = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -287,7 +287,7 @@ function buildMarkdown(report: Omit<DeskPlaybookAfterLunchEarliestProofPreviewRe
     '',
     `Generated: ${report.generatedAt}`,
     '',
-    'Authority: dry-run local preview from saved reports. It selects the earliest completed 5M AfterLunchDriveFvgContinuation proof per lunch slate. It does not run setupScanner, post Discord, write Supabase, read the bridge, change canExecute, or change entry/stop/target/risk behavior.',
+    'Authority: dry-run local preview from saved reports. It selects the earliest completed 5M NoInstalledSetup proof per lunch slate. It does not run setupScanner, post Discord, write Supabase, read the bridge, change canExecute, or change entry/stop/target/risk behavior.',
     '',
     '## Summary',
     `- Preview tickets: ${report.summary.previewTickets}.`,
@@ -340,7 +340,7 @@ export function buildDeskPlaybookAfterLunchEarliestProofPreviewReport(args: {
     !replayPackageReport ? 'missing replay package report for preview geometry' : null,
     replayPackageReport && replayPackageReport.status !== 'pass' ? `replay package status ${replayPackageReport.status}` : null,
     reviewedCaseIntakeReport && reviewedCaseIntakeReport.status !== 'pass' ? `reviewed-case intake status ${reviewedCaseIntakeReport.status}` : null,
-    afterLunchRows.length === 0 ? 'no AfterLunchDriveFvgContinuation lunch source/proof rows found' : null,
+    afterLunchRows.length === 0 ? 'no NoInstalledSetup lunch source/proof rows found' : null,
     tickets.length === 0 ? 'no earliest-proof preview tickets produced' : null,
   ].filter((item): item is string => Boolean(item));
   const enoughPreview = tickets.length >= 15 && resolved >= 10 && oneMesPl !== null && oneMesPl > 0 && winners > losses;

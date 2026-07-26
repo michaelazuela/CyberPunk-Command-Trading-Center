@@ -48,7 +48,7 @@ export interface Phase10PortfolioHealthReport {
     charliePortfolioE2EContract: 'ready' | 'risk';
   };
   primaryModelCount: number;
-  supportingEvidenceCount: number;
+  contextLabelCount: number;
   deprecatedCount: number;
   entries: Phase10ModelHealthEntry[];
   findings: string[];
@@ -94,7 +94,7 @@ export function buildPhase10ModelHealthReport(
   audit: TradeDecisionMapAudit = buildTradeDecisionMapAudit(registry),
 ): Phase10PortfolioHealthReport {
   const primaryEntries = registry.filter((entry) => entry.role === 'primary_model');
-  const supportingEvidenceCount = registry.filter((entry) => entry.role === 'supporting_evidence').length;
+  const contextLabelCount = 0;
   const deprecatedCount = registry.filter((entry) => entry.role === 'deprecated').length;
 
   const entries = primaryEntries.map((entry): Phase10ModelHealthEntry => {
@@ -141,19 +141,21 @@ export function buildPhase10ModelHealthReport(
     entry.staleDataPolicy.canInventMissingBars ||
     entry.staleDataPolicy.canApproveExecution
   );
-  const portfolioRisk = findings.length > 0 ||
-    entries.length === 0 ||
-    entries.some((entry) => REQUIRED_PHASE_10_STAGES.some((stage) => !entry.stages.includes(stage)));
+  const blankSlateActive = entries.length === 0 && contextLabelCount === 0 && deprecatedCount === 0 && findings.length === 0;
+  const portfolioRisk = !blankSlateActive && (
+    findings.length > 0 ||
+    entries.some((entry) => REQUIRED_PHASE_10_STAGES.some((stage) => !entry.stages.includes(stage)))
+  );
 
   return {
     sourceOfTruth: 'scanner_phase_10_model_e2e_health',
     phases: {
-      alphaPerModelHealthMatrix: entries.length > 0 && entries.every((entry) => entry.findings.length === 0) ? 'ready' : 'risk',
+      alphaPerModelHealthMatrix: blankSlateActive || entries.every((entry) => entry.findings.length === 0) ? 'ready' : 'risk',
       bravoStaleDataCoverage: staleCoverageRisk ? 'risk' : 'ready',
       charliePortfolioE2EContract: portfolioRisk ? 'risk' : 'ready',
     },
     primaryModelCount: entries.length,
-    supportingEvidenceCount,
+    contextLabelCount,
     deprecatedCount,
     entries,
     findings,
@@ -165,9 +167,10 @@ export function buildPhase10ModelHealthReport(
       changesDiscordHardBlockers: false,
     },
     notes: [
+      ...(blankSlateActive ? ['Blank-slate mode is active: no primary or installed trading models are registered.'] : []),
       'Phase 10 health is a validation contract only; it does not approve, reject, rank, or suppress trades.',
       'Every primary model must retain a DeskState/visibility route and a stale-data/data-quality route before live Discord/RAG consumers rely on it.',
-      'Supporting-evidence and deprecated registry entries remain outside active execution authority.',
+      'Context-evidence and deprecated registry entries remain outside active execution authority.',
     ],
   };
 }

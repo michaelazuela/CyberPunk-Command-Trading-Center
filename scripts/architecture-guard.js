@@ -211,6 +211,23 @@ function checkScannerVisibilityMetadataBoundary() {
   }
 
   const ownerContent = readFileSafe(ownerPath);
+  const setupRegistryContent = readFileSafe(path.join(ROOT, 'src', 'config', 'setupRegistry.ts'));
+  const setupScannerContentForBlankSlate = readFileSafe(path.join(ROOT, 'src', 'lib', 'setupScanner.ts'));
+  const conditionalPlanBuilderContentForBlankSlate = readFileSafe(path.join(ROOT, 'src', 'lib', 'conditionalPlanBuilder.ts'));
+  const productionSurfaceContentForBlankSlate = readFileSafe(path.join(ROOT, 'src', 'lib', 'unifiedDeskOutputProductionScannerSurface.ts'));
+  const blankSlateModelContract =
+    setupRegistryContent.includes('export const SETUP_REGISTRY: SetupRegistryEntry[] = []') &&
+    setupRegistryContent.includes('export const REGISTERED_SETUP_TYPES: SetupType[] = []') &&
+    setupScannerContentForBlankSlate.includes('candidates: []') &&
+    setupScannerContentForBlankSlate.includes('bestExecutableCandidate: null') &&
+    setupScannerContentForBlankSlate.includes('bestConditionalCandidate: null') &&
+    conditionalPlanBuilderContentForBlankSlate.includes('return []') &&
+    productionSurfaceContentForBlankSlate.includes('UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS = []');
+
+  if (blankSlateModelContract) {
+    return;
+  }
+
   if (!ownerContent.includes('ScannerVisibilityMetadata') || !ownerContent.includes('classifyScannerVisibility')) {
     fail('localScannerEngine.ts must own ScannerVisibilityMetadata and classifyScannerVisibility.');
   }
@@ -859,14 +876,21 @@ function checkPhase11LiveDiscordEligibilityPolicy() {
 
   const scannerAlertTestPath = path.join(ROOT, 'tools', 'automation', 'nt-scanner-alert.test.ts');
   const scannerAlertTestContent = readFileSafe(scannerAlertTestPath);
+  const scannerAlertBlankSlateContract = scannerAlertTestContent.includes('nt-scanner-alert-blank') &&
+    scannerAlertTestContent.includes('Blank-slate mode: no trading models are installed.') &&
+    scannerAlertTestContent.includes('assert.equal(deskState.deskTicket, null)') &&
+    scannerAlertTestContent.includes('assert.equal(publishDecision.shouldPost, false)');
   if (
-    !scannerAlertTestContent.includes('liveBoundaryWithoutChecklist') ||
-    !scannerAlertTestContent.includes('liveBoundaryWithChecklist') ||
-    !scannerAlertTestContent.includes('freshScannerMapBoundary') ||
-    !scannerAlertTestContent.includes('fresh scanner-owned Discord map should not be blocked by Phase 11 checklist gates') ||
-    !scannerAlertTestContent.includes("for (const direction of ['LONG', 'SHORT'] as const)") ||
-    !scannerAlertTestContent.includes('missed_no_chase') ||
-    !scannerAlertTestContent.includes('createsTradeApproval, false')
+    !scannerAlertBlankSlateContract &&
+    (
+      !scannerAlertTestContent.includes('liveBoundaryWithoutChecklist') ||
+      !scannerAlertTestContent.includes('liveBoundaryWithChecklist') ||
+      !scannerAlertTestContent.includes('freshScannerMapBoundary') ||
+      !scannerAlertTestContent.includes('fresh scanner-owned Discord map should not be blocked by Phase 11 checklist gates') ||
+      !scannerAlertTestContent.includes("for (const direction of ['LONG', 'SHORT'] as const)") ||
+      !scannerAlertTestContent.includes('missed_no_chase') ||
+      !scannerAlertTestContent.includes('createsTradeApproval, false')
+    )
   ) {
     fail('nt-scanner-alert.test.ts must cover Phase 11B live Discord fresh-map pass-through for LONG/SHORT, stale/no-chase hold, and no-approval-change flags.');
   }

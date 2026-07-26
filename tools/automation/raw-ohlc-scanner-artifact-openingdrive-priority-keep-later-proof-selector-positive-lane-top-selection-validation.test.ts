@@ -9,7 +9,7 @@ const overlaySimulation: BuildArgs['overlaySimulation'] = {
   status: 'pass',
   overlayRows: [
     {
-      slateId: '2026-07-01|lunch|SweepMssFvgRetrace|LONG',
+      slateId: '2026-07-01|lunch|NoInstalledSetup|LONG',
       proofTime: '2026-07-01T12:30:00',
       classLabel: 'problem',
       resolvedOneMesPl: null,
@@ -17,7 +17,7 @@ const overlaySimulation: BuildArgs['overlaySimulation'] = {
       overlayReason: 'not in positive-lane union',
     },
     {
-      slateId: '2026-07-01|lunch|SweepMssFvgRetrace|SHORT',
+      slateId: '2026-07-01|lunch|NoInstalledSetup|SHORT',
       proofTime: '2026-07-01T13:00:00',
       classLabel: 'winner',
       resolvedOneMesPl: 100,
@@ -25,7 +25,7 @@ const overlaySimulation: BuildArgs['overlaySimulation'] = {
       overlayReason: 'riskBucket=risk_lt_10',
     },
     {
-      slateId: '2026-07-02|morning|SweepMssFvgRetrace|LONG',
+      slateId: '2026-07-02|morning|NoInstalledSetup|LONG',
       proofTime: '2026-07-02T09:30:00',
       classLabel: 'winner',
       resolvedOneMesPl: 50,

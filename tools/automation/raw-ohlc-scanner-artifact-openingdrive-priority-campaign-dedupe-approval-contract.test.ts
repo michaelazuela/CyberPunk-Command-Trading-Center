@@ -24,7 +24,7 @@ const simulation: RawOhlcScannerArtifactOpeningDrivePriorityCampaignReentrySimul
     changesDiscordPosting: false,
     changesAppRuntime: false,
   },
-  source: { replayPackageOutcome: 'outcome.json', setupType: 'SweepMssFvgRetrace' },
+  source: { replayPackageOutcome: 'outcome.json', setupType: 'NoInstalledSetup' },
   assumptions: {
     consumesSavedReplayOutcomeOnly: true,
     campaignKeyUsesExactModelDirectionAndLevels: true,
@@ -49,10 +49,10 @@ const simulation: RawOhlcScannerArtifactOpeningDrivePriorityCampaignReentrySimul
   },
   campaigns: [
     {
-      campaignId: '2026-07-10|morning|SweepMssFvgRetrace|LONG|1|2|3|4',
+      campaignId: '2026-07-10|morning|NoInstalledSetup|LONG|1|2|3|4',
       tradeDate: '2026-07-10',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       entry: 1,
       stop: 2,

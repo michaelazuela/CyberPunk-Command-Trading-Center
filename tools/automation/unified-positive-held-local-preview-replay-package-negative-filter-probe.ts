@@ -86,32 +86,32 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
 const POSITIVE_FAMILY_SETUPS = new Set([
-  'AfterLunchDriveFvgContinuation',
-  'SweepMssFvgRetrace',
-  'OpeningDriveFvgContinuation',
-  'IntradayMssMicroContinuation',
+  'NoInstalledSetup',
+  'NoInstalledSetup',
+  'NoInstalledSetup',
+  'NoInstalledSetup',
 ]);
 
 const FILTERS: FilterProbe[] = [
   {
     filterId: 'intraday_mss_micro_risk_lte_7',
-    description: 'IntradayMssMicroContinuation target rows must have entry-to-stop risk <= 7 points.',
-    targetSetupTypes: ['IntradayMssMicroContinuation'],
+    description: 'NoInstalledSetup target rows must have entry-to-stop risk <= 7 points.',
+    targetSetupTypes: ['NoInstalledSetup'],
     keep: (row) => row.riskPoints <= 7,
   },
   {
-    filterId: 'RAID_RECLAIM_risk_lte_10',
-    description: 'raidReclaim target rows must have entry-to-stop risk <= 10 points.',
-    targetSetupTypes: ['raidReclaim'],
+    filterId: 'uninstalled_context_risk_lte_10',
+    description: 'historicalReview target rows must have entry-to-stop risk <= 10 points.',
+    targetSetupTypes: ['historicalReview'],
     keep: (row) => row.riskPoints <= 10,
   },
   {
     filterId: 'intraday_turtle_model_specific_risk_caps',
-    description: 'Combined model-specific risk caps: IntradayMssMicroContinuation <= 7 points and raidReclaim <= 10 points.',
-    targetSetupTypes: ['IntradayMssMicroContinuation', 'raidReclaim'],
+    description: 'Combined model-specific risk caps: NoInstalledSetup <= 7 points and historicalReview <= 10 points.',
+    targetSetupTypes: ['NoInstalledSetup', 'historicalReview'],
     keep: (row) => (
-      row.setupType === 'IntradayMssMicroContinuation' ? row.riskPoints <= 7 :
-        row.setupType === 'raidReclaim' ? row.riskPoints <= 10 :
+      row.setupType === 'NoInstalledSetup' ? row.riskPoints <= 7 :
+        row.setupType === 'historicalReview' ? row.riskPoints <= 10 :
           true
     ),
   },

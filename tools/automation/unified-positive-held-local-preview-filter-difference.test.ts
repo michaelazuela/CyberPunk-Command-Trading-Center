@@ -36,9 +36,9 @@ const formalReplay = {
           session: 'morning',
           source: 'selectedCandidate',
           direction: 'SHORT',
-          setupType: 'raidReclaim',
+          setupType: 'historicalReview',
           state: 'Conditional',
-          trigger: 'Bearish Raid Reclaim Reversal sweep and reclaim.',
+          trigger: 'Bearish no installed model path historical reversal pattern.',
           entry: 100,
           stop: 104,
           confidence: 0,
@@ -51,7 +51,7 @@ const formalReplay = {
           session: 'morning',
           source: 'selectedCandidate',
           direction: 'SHORT',
-          setupType: 'SweepMssFvgRetrace',
+          setupType: 'NoInstalledSetup',
           state: 'Conditional',
           trigger: 'Sweep MSS FVG retrace.',
           entry: 200,
@@ -90,8 +90,8 @@ const ohlcOutcome: UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport = {
     unresolvedRows: 0,
     blockedRows: 0,
     grossResolvedOneMesPl: 90,
-    raidReclaimResolvedOneMesPl: 30,
-    sweepMssFvgRetraceResolvedOneMesPl: 60,
+    historicalReviewResolvedOneMesPl: 30,
+    NoInstalledSetupResolvedOneMesPl: 60,
     livePromotionAllowedRows: 0,
   },
   rows: [
@@ -99,7 +99,7 @@ const ohlcOutcome: UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport = {
       ticketId: 'turtle-1',
       tradeDate: '2026-06-16',
       session: 'morning',
-      setupType: 'raidReclaim',
+      setupType: 'historicalReview',
       direction: 'LONG',
       sourceSnapshotId: 'snap-1',
       proofTime: '2026-06-16T10:05:00',
@@ -128,7 +128,7 @@ const ohlcOutcome: UnifiedPositiveHeldLocalPreviewOhlcOutcomeReport = {
       ticketId: 'sweep-1',
       tradeDate: '2026-06-26',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       sourceSnapshotId: 'snap-2',
       proofTime: '2026-06-26T10:00:00',
@@ -163,8 +163,8 @@ const modelDecision = {
   reportType: 'unified_positive_held_local_preview_model_decision',
   status: 'pass',
   rows: [
-    { setupType: 'raidReclaim', removeModel: false, broadenLiveBehavior: false, changeCanExecute: false },
-    { setupType: 'SweepMssFvgRetrace', removeModel: false, broadenLiveBehavior: false, changeCanExecute: false },
+    { setupType: 'historicalReview', removeModel: false, broadenLiveBehavior: false, changeCanExecute: false },
+    { setupType: 'NoInstalledSetup', removeModel: false, broadenLiveBehavior: false, changeCanExecute: false },
   ],
 } as UnifiedPositiveHeldLocalPreviewModelDecisionReport;
 
@@ -211,8 +211,8 @@ assert.equal(report.summary.candidateFilterFindings, 2);
 assert.equal(report.summary.removeModelRecommendations, 0);
 assert.equal(report.summary.broadenLiveBehaviorRecommendations, 0);
 assert.equal(report.summary.changeCanExecuteRecommendations, 0);
-assert.equal(report.rows.find((row) => row.setupType === 'raidReclaim')?.formalLosing.completedRetestProofCount, 0);
-assert.equal(report.rows.find((row) => row.setupType === 'raidReclaim')?.reviewedWinning.completedRetestProofCount, 1);
+assert.equal(report.rows.find((row) => row.setupType === 'historicalReview')?.formalLosing.completedRetestProofCount, 0);
+assert.equal(report.rows.find((row) => row.setupType === 'historicalReview')?.reviewedWinning.completedRetestProofCount, 1);
 assert.match(report.rows[0].recommendation, /scanner-owned held-local proof/);
 assert.match(report.markdown, /does not post Discord/);
 

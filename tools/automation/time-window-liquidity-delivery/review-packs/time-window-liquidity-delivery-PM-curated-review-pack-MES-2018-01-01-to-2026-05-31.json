@@ -22,7 +22,7 @@
     "best_clean_draw_delivery_achieved_samples": 0,
     "clean_draw_failed_delivery_samples": 6,
     "model_1_overlap_samples": 10,
-    "RAID_RECLAIM_overlap_samples": 10
+    "HISTORICAL_REVERSAL_overlap_samples": 10
   },
   "allAdvisoryOnlySamplesIncluded": true,
   "selectionLogic": [
@@ -49,7 +49,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -81,7 +81,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -114,7 +114,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -147,7 +147,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -182,7 +182,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -215,7 +215,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -248,7 +248,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -280,7 +280,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -313,7 +313,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -345,7 +345,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -377,7 +377,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -410,7 +410,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -443,7 +443,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -476,7 +476,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -508,7 +508,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -541,7 +541,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -574,7 +574,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -607,7 +607,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -639,7 +639,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -672,7 +672,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -704,7 +704,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -736,7 +736,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -769,7 +769,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -800,7 +800,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -832,7 +832,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -865,7 +865,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -898,7 +898,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -931,7 +931,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -964,7 +964,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -997,7 +997,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1030,7 +1030,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1062,7 +1062,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1095,7 +1095,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1128,7 +1128,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1161,7 +1161,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1193,7 +1193,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1226,7 +1226,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1259,7 +1259,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1291,7 +1291,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1324,7 +1324,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1356,7 +1356,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1388,7 +1388,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1422,7 +1422,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1455,7 +1455,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1487,7 +1487,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1520,7 +1520,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1552,7 +1552,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1585,7 +1585,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1617,7 +1617,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1650,7 +1650,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1682,7 +1682,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1715,7 +1715,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1748,7 +1748,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1780,7 +1780,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1813,7 +1813,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1845,7 +1845,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1877,7 +1877,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "not_observed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "strong_advisory_candidate",
@@ -1910,7 +1910,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -1945,7 +1945,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -1980,7 +1980,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -2014,7 +2014,7 @@
       "sweepRaidPlusReclaimPresent": false,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": true,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -2048,7 +2048,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -2082,7 +2082,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "weak_or_noisy",
@@ -2115,7 +2115,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2150,7 +2150,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2185,7 +2185,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2219,7 +2219,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2253,7 +2253,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2287,7 +2287,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2321,7 +2321,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2355,7 +2355,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2389,7 +2389,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2423,7 +2423,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": true,
-      "raidReclaimOverlap": false,
+      "historicalReversalOverlap": false,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_model_1",
@@ -2443,13 +2443,13 @@
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2024-02-08",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2024-02-08",
       "sourceCandidateId": "pm_liquidity_delivery_window-2024-02-08",
       "date": "2024-02-08",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "RAID_RECLAIM_overlap_samples",
+      "classificationBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "drawType": "previous_week_low",
       "drawLevel": 5396.25,
       "fvgOrInefficiencyPresent": true,
@@ -2457,7 +2457,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_RAID_RECLAIM",
@@ -2477,13 +2477,13 @@
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2023-12-28",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2023-12-28",
       "sourceCandidateId": "pm_liquidity_delivery_window-2023-12-28",
       "date": "2023-12-28",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "RAID_RECLAIM_overlap_samples",
+      "classificationBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "drawType": "previous_week_low",
       "drawLevel": 5273.5,
       "fvgOrInefficiencyPresent": false,
@@ -2491,7 +2491,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_RAID_RECLAIM",
@@ -2511,13 +2511,13 @@
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2024-12-05",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2024-12-05",
       "sourceCandidateId": "pm_liquidity_delivery_window-2024-12-05",
       "date": "2024-12-05",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "RAID_RECLAIM_overlap_samples",
+      "classificationBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "drawType": "previous_week_low",
       "drawLevel": 6316.5,
       "fvgOrInefficiencyPresent": false,
@@ -2525,7 +2525,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "failed",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_RAID_RECLAIM",
@@ -2544,13 +2544,13 @@
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-03-06",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-03-06",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-03-06",
       "date": "2025-03-06",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "RAID_RECLAIM_overlap_samples",
+      "classificationBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "drawType": "equal_highs",
       "drawLevel": 6027.63,
       "fvgOrInefficiencyPresent": true,
@@ -2558,7 +2558,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_RAID_RECLAIM",
@@ -2577,13 +2577,13 @@
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-20",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-11-20",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-11-20",
       "date": "2025-11-20",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "RAID_RECLAIM_overlap_samples",
+      "classificationBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "drawType": "previous_day_low",
       "drawLevel": 6721.75,
       "fvgOrInefficiencyPresent": false,
@@ -2591,7 +2591,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_RAID_RECLAIM",
@@ -2610,13 +2610,13 @@
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-21",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-11-21",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-11-21",
       "date": "2025-11-21",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "RAID_RECLAIM_overlap_samples",
+      "classificationBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "drawType": "equal_highs",
       "drawLevel": 6751.38,
       "fvgOrInefficiencyPresent": true,
@@ -2624,7 +2624,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_RAID_RECLAIM",
@@ -2643,13 +2643,13 @@
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-03-05",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-03-05",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-03-05",
       "date": "2025-03-05",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "RAID_RECLAIM_overlap_samples",
+      "classificationBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "drawType": "previous_week_low",
       "drawLevel": 6127,
       "fvgOrInefficiencyPresent": true,
@@ -2657,7 +2657,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_RAID_RECLAIM",
@@ -2676,13 +2676,13 @@
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-12-04",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-12-04",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-12-04",
       "date": "2025-12-04",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "RAID_RECLAIM_overlap_samples",
+      "classificationBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "drawType": "previous_session_low",
       "drawLevel": 6953.5,
       "fvgOrInefficiencyPresent": true,
@@ -2690,7 +2690,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_RAID_RECLAIM",
@@ -2709,13 +2709,13 @@
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2025-11-18",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2025-11-18",
       "sourceCandidateId": "pm_liquidity_delivery_window-2025-11-18",
       "date": "2025-11-18",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "RAID_RECLAIM_overlap_samples",
+      "classificationBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "drawType": "equal_highs",
       "drawLevel": 6775.25,
       "fvgOrInefficiencyPresent": true,
@@ -2723,7 +2723,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_RAID_RECLAIM",
@@ -2742,13 +2742,13 @@
       "boundary": "research_only_not_execution_authority"
     },
     {
-      "sampleId": "RAID_RECLAIM_overlap_samples-pm_liquidity_delivery_window-2026-02-05",
+      "sampleId": "HISTORICAL_REVERSAL_overlap_samples-pm_liquidity_delivery_window-2026-02-05",
       "sourceCandidateId": "pm_liquidity_delivery_window-2026-02-05",
       "date": "2026-02-05",
       "window": "PM 2:00-3:00 NY",
       "nyTime": "2:00-3:00",
       "symbol": "MES",
-      "classificationBucket": "RAID_RECLAIM_overlap_samples",
+      "classificationBucket": "HISTORICAL_REVERSAL_overlap_samples",
       "drawType": "equal_highs",
       "drawLevel": 6902.88,
       "fvgOrInefficiencyPresent": true,
@@ -2756,7 +2756,7 @@
       "sweepRaidPlusReclaimPresent": true,
       "deliveryStatus": "achieved",
       "modelOneOverlap": false,
-      "raidReclaimOverlap": true,
+      "historicalReversalOverlap": true,
       "advisoryOnly": false,
       "suggestedReviewLabels": [
         "covered_by_RAID_RECLAIM",
@@ -2798,8 +2798,8 @@
     "pmAdvisoryOnly": 57,
     "amModelOneOverlap": 503,
     "pmModelOneOverlap": 140,
-    "amraidReclaimOverlap": 196,
-    "pmraidReclaimOverlap": 60,
+    "amhistoricalReversalOverlap": 196,
+    "pmhistoricalReversalOverlap": 60,
     "amRejectionPosture": "After TWLD-5, AM remains research-only/advisory-only: strong=1, needs_chart_review=1, rejected_standalone=7.",
     "comparisonRead": "too_early_to_tell",
     "note": "PM has separate research evidence, but no promotion decision is made. PM requires human review before any standalone interpretation."

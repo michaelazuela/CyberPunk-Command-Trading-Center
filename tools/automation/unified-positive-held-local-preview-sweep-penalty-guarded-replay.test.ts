@@ -79,9 +79,9 @@ function intakeRow(id: string, setupType: string, executionStatus: string, block
   };
 }
 
-const invalidSweepId = '2026-06-01-morning-SweepMssFvgRetrace-SHORT';
-const leadSweepId = '2026-06-01-morning-SweepMssFvgRetrace-LONG';
-const alternateId = '2026-06-01-morning-raidReclaim-LONG';
+const invalidSweepId = '2026-06-01-morning-NoInstalledSetup-SHORT';
+const leadSweepId = '2026-06-01-morning-NoInstalledSetup-LONG';
+const alternateId = '2026-06-01-morning-historicalReview-LONG';
 
 const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimingReport = {
   reportType: 'unified_positive_held_local_preview_replay_package_source_proof_timing',
@@ -111,9 +111,9 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
   },
   modelTiming: [],
   rows: [
-    timingRow(invalidSweepId, 'SweepMssFvgRetrace', -35),
-    timingRow(leadSweepId, 'SweepMssFvgRetrace', 80),
-    timingRow(alternateId, 'raidReclaim', 90),
+    timingRow(invalidSweepId, 'NoInstalledSetup', -35),
+    timingRow(leadSweepId, 'NoInstalledSetup', 80),
+    timingRow(alternateId, 'historicalReview', 90),
   ],
   blockers: [],
   recommendations: [],
@@ -138,9 +138,9 @@ const intakeReport: UnifiedPositiveHeldLocalPreviewIntakeTriageReport = {
   },
   groups: [],
   rows: [
-    intakeRow(invalidSweepId, 'SweepMssFvgRetrace', 'Blocked', 'InvalidStopLocation', 90),
-    intakeRow(leadSweepId, 'SweepMssFvgRetrace', 'Conditional', 'EntryTriggerPending', 78),
-    intakeRow(alternateId, 'raidReclaim', 'Conditional', 'EntryTriggerPending', 76),
+    intakeRow(invalidSweepId, 'NoInstalledSetup', 'Blocked', 'InvalidStopLocation', 90),
+    intakeRow(leadSweepId, 'NoInstalledSetup', 'Conditional', 'EntryTriggerPending', 78),
+    intakeRow(alternateId, 'historicalReview', 'Conditional', 'EntryTriggerPending', 76),
   ],
   selectedReplayPackage: [],
   blockers: [],

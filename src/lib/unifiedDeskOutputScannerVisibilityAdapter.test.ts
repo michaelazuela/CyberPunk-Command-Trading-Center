@@ -5,11 +5,11 @@ import {
 } from './unifiedDeskOutputScannerVisibilityAdapter';
 
 const candidate = {
-  cardId: 'unified|2026-07-22|morning|OpeningDriveFvgContinuation|SHORT',
+  cardId: 'unified|2026-07-22|morning|NoInstalledSetup|SHORT',
   date: '2026-07-22',
   session: 'morning',
   state: 'APPROVED_DESK_PLAN',
-  model: 'OpeningDriveFvgContinuation',
+  model: 'NoInstalledSetup',
   direction: 'SHORT',
   proofTime: '2026-07-22T09:45:00',
   entry: 100,
@@ -41,10 +41,10 @@ const readinessReport = {
     candidate,
     {
       ...candidate,
-      cardId: 'unified|2026-07-22|lunch|AfterLunchDriveFvgContinuation|LONG',
+      cardId: 'unified|2026-07-22|lunch|NoInstalledSetup|LONG',
       session: 'lunch',
       state: 'FORMING_DESK_READ',
-      model: 'AfterLunchDriveFvgContinuation',
+      model: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-07-22T12:35:00',
     },

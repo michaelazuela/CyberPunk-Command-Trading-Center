@@ -19,7 +19,7 @@ const FORMAL_BACKTEST_RESEARCH_CONTRACT = {
     adverseFirstGate: 'required',
     chartEvidenceGate: 'required',
     agentAssessmentGate: 'required',
-    pnlSupportSignal: 'supporting_context_only',
+    pnlSupportSignal: 'context_context_only',
   },
   approvalBoundary: {
     recommendationApprovesExecution: false,
@@ -37,7 +37,7 @@ assert.equal(
   FORMAL_BACKTEST_RESEARCH_CONTRACT.allowedRecommendationText,
   'Move to formal model-candidate review/backtest. Human final decision required.',
 );
-assert.equal(FORMAL_BACKTEST_RESEARCH_CONTRACT.gateRequirements.pnlSupportSignal, 'supporting_context_only');
+assert.equal(FORMAL_BACKTEST_RESEARCH_CONTRACT.gateRequirements.pnlSupportSignal, 'context_context_only');
 assert.equal(FORMAL_BACKTEST_RESEARCH_CONTRACT.approvalBoundary.recommendationApprovesExecution, false);
 assert.equal(FORMAL_BACKTEST_RESEARCH_CONTRACT.approvalBoundary.estimatedPnlCanPromoteAlone, false);
 assert.equal(FORMAL_BACKTEST_RESEARCH_CONTRACT.approvalBoundary.canExecute, false);
@@ -45,7 +45,7 @@ assert.equal(FORMAL_BACKTEST_RESEARCH_CONTRACT.approvalBoundary.canExecute, fals
 const safeReportText = [
   FORMAL_BACKTEST_RESEARCH_CONTRACT.allowedRecommendationText,
   'Research-only evidence. Not approved for live execution.',
-  'Estimated gross contract P/L is supporting context only.',
+  'Estimated gross contract P/L is context context only.',
 ].join('\n');
 
 for (const phrase of FORMAL_BACKTEST_RESEARCH_CONTRACT.prohibitedWording) {

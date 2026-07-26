@@ -7,7 +7,7 @@ function bar(time: string, open: number, high: number, low: number, close: numbe
 
 const baseSlate = {
   slateKey: 'clean-stop',
-  selectedTicketId: '2026-06-17-morning-OpeningDriveFvgContinuation-SHORT-20260617T100500',
+  selectedTicketId: '2026-06-17-morning-NoInstalledSetup-SHORT-20260617T100500',
   tradeDate: '2026-06-17',
   proofTime: '2026-06-17T10:05:00',
   direction: 'SHORT' as const,
@@ -32,7 +32,7 @@ const report = buildOpeningDrivePathOrderDrilldownReport({
       {
         ...baseSlate,
         slateKey: 'winner',
-        selectedTicketId: '2026-06-17-morning-OpeningDriveFvgContinuation-SHORT-20260617T104000',
+        selectedTicketId: '2026-06-17-morning-NoInstalledSetup-SHORT-20260617T104000',
         proofTime: '2026-06-17T10:40:00',
         outcomeBucket: 'winner',
         outcomeLabel: 't1_and_t2_hit',

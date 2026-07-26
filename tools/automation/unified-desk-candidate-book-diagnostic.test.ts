@@ -15,7 +15,7 @@ import {
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'fixture',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Conditional,
@@ -38,7 +38,7 @@ function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
 }
 
 const executable = candidate({
-  setupType: SetupType.RaidReclaimReversal,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'strict',
   confidence: 'High',
   priority: 99,
@@ -48,7 +48,7 @@ const executable = candidate({
 });
 
 const noChase = candidate({
-  setupType: SetupType.OpeningDriveFvgContinuation,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'late',
   confidence: 'High',
   priority: 100,
@@ -59,7 +59,7 @@ const noChase = candidate({
 });
 
 const humanReview = candidate({
-  setupType: SetupType.IntradayMssMicroContinuation,
+  setupType: SetupType.NoSetup,
   scenarioLabel: 'fresh-retest',
   priority: 85,
   modelConfidenceScore: 82,
@@ -75,7 +75,7 @@ const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
     completedBarTime: '2026-07-01T10:00:00',
     candidates: [executable],
     currentSelectedCandidateIndex: 0,
-    currentCanExecute: true,
+    currentCanExecute: false,
   },
   {
     snapshotId: 'unified-improves-no-chase',
@@ -109,12 +109,13 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.authority.changesEntryStopTargets, false);
 assert.equal(report.authority.changesRiskRules, false);
 assert.equal(report.summary.snapshotsAudited, 3);
-assert.equal(report.summary.samePrimaryCount, 1);
-assert.equal(report.summary.unifiedDifferentPrimaryCount, 1);
-assert.equal(report.summary.currentMissingCount, 1);
-assert.equal(report.summary.executableCurrentSelectionsPreserved, 1);
-assert.equal(report.summary.tradingModelStateCounts.execution_ready, 1);
-assert.equal(report.summary.tradingModelStateCounts.review_ticket, 2);
+assert.equal(report.summary.samePrimaryCount, 0);
+assert.equal(report.summary.unifiedDifferentPrimaryCount, 0);
+assert.equal(report.summary.currentMissingCount, 0);
+assert.equal(report.summary.noCandidateCount, 3);
+assert.equal(report.summary.executableCurrentSelectionsPreserved, 0);
+assert.equal(report.summary.tradingModelStateCounts.execution_ready, 0);
+assert.equal(report.summary.tradingModelStateCounts.review_ticket, 0);
 assert.equal(report.summary.outcomeOverlayRecordsLoaded, 0);
 assert.equal(report.summary.outcomeOverlayMatchedRows, 0);
 assert.equal(report.summary.findingsCount, 0);
@@ -123,17 +124,17 @@ const sameRow = report.rows.find((row) => row.snapshotId === 'same-executable');
 const improvedRow = report.rows.find((row) => row.snapshotId === 'unified-improves-no-chase');
 const missingRow = report.rows.find((row) => row.snapshotId === 'missing-current-selection');
 
-assert.equal(sameRow?.currentSelectedState, 'executable');
-assert.equal(sameRow?.unifiedPrimaryState, 'executable');
-assert.equal(sameRow?.unifiedPrimaryTradingModelState, 'execution_ready');
-assert.equal(sameRow?.comparison, 'same_primary');
-assert.equal(improvedRow?.comparison, 'unified_promotes_different');
-assert.equal(improvedRow?.unifiedPrimaryState, 'human_review');
-assert.equal(improvedRow?.unifiedPrimaryTradingModelState, 'review_ticket');
-assert.match(improvedRow?.recommendation || '', /possible human-review improvement/);
-assert.equal(missingRow?.comparison, 'current_missing');
+assert.equal(sameRow?.currentSelectedState, 'blocked');
+assert.equal(sameRow?.unifiedPrimaryState, null);
+assert.equal(sameRow?.unifiedPrimaryTradingModelState, null);
+assert.equal(sameRow?.comparison, 'no_candidates');
+assert.equal(improvedRow?.comparison, 'no_candidates');
+assert.equal(improvedRow?.unifiedPrimaryState, null);
+assert.equal(improvedRow?.unifiedPrimaryTradingModelState, null);
+assert.match(improvedRow?.recommendation || '', /No candidate book decision/);
+assert.equal(missingRow?.comparison, 'no_candidates');
 assert.match(report.markdown, /does not post Discord/);
-assert.match(report.markdown, /Unified different primary: 1/);
+assert.match(report.markdown, /Unified different primary: 0/);
 assert.match(report.markdown, /Trading model states:/);
 assert.match(report.markdown, /Outcome\/RAG overlay:/);
 
@@ -149,7 +150,7 @@ fs.writeFileSync(outcomePath, `${JSON.stringify({
     {
       tradeDate: '2026-07-01',
       sessionType: 'morning',
-      setupType: SetupType.IntradayMssMicroContinuation,
+      setupType: SetupType.NoSetup,
       direction: 'LONG',
       replayOutcome: 'T2_HIT',
       replayOneMesGross: 125,
@@ -157,7 +158,7 @@ fs.writeFileSync(outcomePath, `${JSON.stringify({
     {
       tradeDate: '2026-07-01',
       sessionType: 'morning',
-      setupType: SetupType.OpeningDriveFvgContinuation,
+      setupType: SetupType.NoSetup,
       direction: 'LONG',
       replayOutcome: 'NO_FILL',
       replayOneMesGross: 0,
@@ -172,12 +173,13 @@ const overlayReport = buildUnifiedDeskCandidateDiagnosticReport(snapshots, '2026
 });
 const overlayImprovedRow = overlayReport.rows.find((row) => row.snapshotId === 'unified-improves-no-chase');
 assert.equal(overlayReport.summary.outcomeOverlayRecordsLoaded, 2);
-assert.equal(overlayReport.summary.outcomeOverlayMatchedRows, 1);
-assert.equal(overlayReport.summary.outcomeOverlayPositiveRows, 1);
+assert.equal(overlayReport.summary.outcomeOverlayMatchedRows, 0);
+assert.equal(overlayReport.summary.outcomeOverlayPositiveRows, 0);
 assert.equal(overlayReport.summary.outcomeOverlayNegativeRows, 0);
-assert.equal(overlayImprovedRow?.outcomeOverlay.classification, 'positive');
-assert.ok((overlayImprovedRow?.outcomeOverlayAdjustedScore || 0) > (overlayImprovedRow?.unifiedPrimaryScore || 0));
-assert.match(overlayImprovedRow?.recommendation || '', /supports this review ticket/);
+assert.equal(overlayImprovedRow?.outcomeOverlay.classification, 'no_evidence');
+assert.equal(overlayImprovedRow?.outcomeOverlayAdjustedScore, null);
+assert.equal(overlayImprovedRow?.unifiedPrimaryScore, null);
+assert.match(overlayImprovedRow?.recommendation || '', /No candidate book decision/);
 
 const noFillOverlayReport = buildUnifiedDeskCandidateDiagnosticReport([
   {
@@ -190,11 +192,12 @@ const noFillOverlayReport = buildUnifiedDeskCandidateDiagnosticReport([
     currentCanExecute: false,
   },
 ], '2026-07-16T00:02:00.000Z', { outcomeOverlayRecords: overlayRecords });
-assert.equal(noFillOverlayReport.summary.outcomeOverlayNegativeRows, 1);
-assert.equal(noFillOverlayReport.summary.outcomeOverlayNoFillOrUnresolvedRows, 1);
-assert.equal(noFillOverlayReport.rows[0].outcomeOverlay.classification, 'negative');
-assert.ok((noFillOverlayReport.rows[0].outcomeOverlayAdjustedScore || 0) < (noFillOverlayReport.rows[0].unifiedPrimaryScore || 0));
-assert.match(noFillOverlayReport.rows[0].recommendation, /penalizes this primary/);
+assert.equal(noFillOverlayReport.summary.outcomeOverlayNegativeRows, 0);
+assert.equal(noFillOverlayReport.summary.outcomeOverlayNoFillOrUnresolvedRows, 0);
+assert.equal(noFillOverlayReport.rows[0].outcomeOverlay.classification, 'no_evidence');
+assert.equal(noFillOverlayReport.rows[0].outcomeOverlayAdjustedScore, null);
+assert.equal(noFillOverlayReport.rows[0].unifiedPrimaryScore, null);
+assert.match(noFillOverlayReport.rows[0].recommendation, /No candidate book decision/);
 
 const paths = writeUnifiedDeskCandidateDiagnosticReport(report, root);
 assert.equal(fs.existsSync(paths.jsonPath), true);
@@ -228,8 +231,9 @@ const directorySnapshots = loadUnifiedDeskCandidateDiagnosticSnapshotsFromDir(ro
 assert.equal(directorySnapshots.length, 1);
 const directoryReport = buildUnifiedDeskCandidateDiagnosticReport(directorySnapshots, '2026-07-16T00:05:00.000Z');
 assert.equal(directoryReport.summary.snapshotsAudited, 1);
-assert.equal(directoryReport.summary.samePrimaryCount, 1);
+assert.equal(directoryReport.summary.samePrimaryCount, 0);
+assert.equal(directoryReport.summary.noCandidateCount, 1);
 assert.equal(directoryReport.rows[0].sessionType, 'evening');
-assert.equal(directoryReport.rows[0].unifiedPrimaryTradingModelState, 'review_ticket');
+assert.equal(directoryReport.rows[0].unifiedPrimaryTradingModelState, null);
 
 console.log('unified desk candidate-book diagnostic verified.');

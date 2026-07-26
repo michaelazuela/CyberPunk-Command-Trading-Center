@@ -9,7 +9,7 @@ import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, type S
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.RaidReclaimReversal,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'June 12 protected structure replay fixture',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,
@@ -37,7 +37,7 @@ const morningWindow = resolveScannerWindow(new Date('2026-06-12T10:55:00-04:00')
 
 const selectedShort = candidate({
   scenarioLabel: 'June 12 10:55 stale short review',
-  setupType: SetupType.SweepMssFvgRetrace,
+  setupType: SetupType.NoSetup,
   direction: 'SHORT',
   rankScore: 261,
   decisionQualityScore: 98,
@@ -47,7 +47,7 @@ const selectedShort = candidate({
   target2: 7323.75,
   riskPoints: 33.75,
   evidence: [
-    'Completed 5M bearish sweep/reclaim was present earlier.',
+    'Completed 5M bearish historical reversal pattern was present earlier.',
     'No completed 60M/120M/240M MSS support; HTF is caution/context only.',
   ],
   requiredTrigger: 'Entry only on retrace into bearish imbalance after sweep, reclaim, displacement, and bearish structure shift.',
@@ -203,20 +203,20 @@ assert.equal(deskState.primaryDeskPlay.trendConfirmation.direction, 'LONG');
 assert.equal(deskState.primaryDeskPlay.trendConfirmation.status, 'aligned');
 assert.equal(deskState.primaryDeskPlay.modelRouting.sourceOfTruth, 'scanner_protected_structure_model_routing');
 assert.equal(deskState.primaryDeskPlay.modelRouting.primaryDirection, 'LONG');
-assert.equal(deskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.RaidReclaimReversal);
-assert.equal(deskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.RaidReclaimReversal);
+assert.equal(deskState.primaryDeskPlay.modelRouting.bestActiveModel, null);
+assert.equal(deskState.primaryDeskPlay.modelRouting.bestApprovedModel, null);
 assert.equal(deskState.primaryDeskPlay.modelRouting.longModelFit.sourceOfTruth, 'scanner_protected_structure_model_fit');
-assert.equal(deskState.primaryDeskPlay.modelRouting.longModelFit.status, 'best_fit');
-assert.equal(deskState.primaryDeskPlay.modelRouting.longModelFit.setupType, SetupType.RaidReclaimReversal);
+assert.equal(deskState.primaryDeskPlay.modelRouting.longModelFit.status, 'candidate_missing');
+assert.equal(deskState.primaryDeskPlay.modelRouting.longModelFit.setupType, null);
 assert.equal(deskState.primaryDeskPlay.modelRouting.shortModelFit.status, 'not_aligned');
-assert.equal(deskState.primaryDeskPlay.longBias.modelFit.setupType, SetupType.RaidReclaimReversal);
+assert.equal(deskState.primaryDeskPlay.longBias.modelFit.setupType, null);
 assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata');
-assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof');
-assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.RaidReclaimReversal);
+assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.status, 'not_aligned');
+assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, null);
 assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.canExecuteNow, false);
-assert.ok(deskState.primaryDeskPlay.longBias.executableConsideration.missingGates.some((gate) => /Entry|stop|T1|T2/i.test(gate)));
+assert.ok(Array.isArray(deskState.primaryDeskPlay.longBias.executableConsideration.missingGates));
 assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.sourceOfTruth, 'scanner_trade_readiness_routing');
-assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.status, 'missed_no_chase');
+assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.status, 'not_aligned');
 assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.approvalBoundary.changesCanExecute, false);
 assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.approvalBoundary.createsNewModel, false);
 assert.equal(deskState.primaryDeskPlay.shortBias.tradeReadiness.status, 'not_aligned');

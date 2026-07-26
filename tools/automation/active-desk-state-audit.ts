@@ -92,7 +92,7 @@ function sourceFiles(rootDir: string): string[] {
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.SweepMssFvgRetrace,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'Active DeskState audit conditional plan',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,

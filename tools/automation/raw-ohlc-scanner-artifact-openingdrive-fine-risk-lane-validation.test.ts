@@ -56,7 +56,7 @@ const freshReplayPackage: RawOhlcScannerArtifactOpeningDriveFreshReplayPackageRe
   authority,
   source: {
     reportDir: 'reports',
-    setupType: 'OpeningDriveFvgContinuation',
+    setupType: 'NoInstalledSetup',
     samebarReportPaths: ['reports/source.json'],
   },
   assumptions: {
@@ -125,7 +125,7 @@ assert.equal(report.summary.validationDecision, 'validated_for_research_proposal
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.deepEqual(report.daySummaries.map((item) => item.key), ['2026-07-10', '2026-07-11']);
 assert.equal(report.sessionSummaries[0]?.key, 'morning');
-assert.equal(report.modelSummaries[0]?.key, 'OpeningDriveFvgContinuation');
+assert.equal(report.modelSummaries[0]?.key, 'NoInstalledSetup');
 assert.equal(report.selectedRows.some((row) => row.ticketId === 'tight-loss'), false);
 assert.match(report.markdown, /OpeningDrive Fine-Risk Lane Validation/);
 

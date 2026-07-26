@@ -16,7 +16,7 @@ fs.writeFileSync(path.join(tmpDir, 'synthetic-artifact.json'), JSON.stringify({
   },
 }, null, 2));
 
-const ticketId = 'synthetic-artifact|2026-06-10T11:00:00:0:SweepMssFvgRetrace:LONG';
+const ticketId = 'synthetic-artifact|2026-06-10T11:00:00:0:NoInstalledSetup:LONG';
 const report = buildRawOhlcScannerArtifactSweepMorningLongFullDayUnresolvedDrilldownReport({
   reportDir: tmpDir,
   fullDayComparisonPath: 'synthetic-comparison.json',
@@ -27,7 +27,7 @@ const report = buildRawOhlcScannerArtifactSweepMorningLongFullDayUnresolvedDrill
       ticketId,
       tradeDate: '2026-06-10',
       session: 'morning',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       proofTime: '2026-06-10T11:00:00',
       entry: 100,

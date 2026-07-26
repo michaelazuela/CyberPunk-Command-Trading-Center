@@ -134,7 +134,7 @@
       }
     },
     "bestConditionalCandidate": {
-      "setupType": "RaidReclaimReversal",
+      "setupType": "HistoricalReviewReversal",
       "direction": "LONG",
       "detectedStatus": "Possible",
       "executionStatus": "Conditional",
@@ -316,7 +316,7 @@
         }
       },
       {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "direction": "LONG",
         "detectedStatus": "Possible",
         "executionStatus": "Conditional",
@@ -487,7 +487,7 @@
         }
       },
       {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
         "pathway": "intraday_mss_micro_continuation",
         "direction": "NO TRADE",
@@ -601,7 +601,7 @@
         }
       },
       {
-        "setupType": "RaidReclaimReversal",
+        "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "Raid Reclaim Reversal",
         "pathway": "raid_reclaim_reversal",
         "direction": "NO TRADE",
@@ -780,7 +780,7 @@
       }
     },
     "bestConditionalCandidate": {
-      "setupType": "RaidReclaimReversal",
+      "setupType": "HistoricalReviewReversal",
       "scenarioLabel": "Bullish Raid Reclaim Reversal Reversal",
       "direction": "LONG",
       "detectedStatus": "Conditional",

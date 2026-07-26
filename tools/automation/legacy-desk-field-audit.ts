@@ -217,7 +217,7 @@ function classifyFinding(field: string, relativeFile: string, snippet = ''): Omi
   if (field === 'candidateLifecycleTrace' || field === 'bestLongPlan/bestShortPlan' || field === 'primaryDeskPlay') {
     return {
       classification: 'keep_current_support',
-      cleanupAction: 'Keep as internal/supporting scanner state. It must not outrank the canonical ticket.',
+      cleanupAction: 'Keep as internal/context scanner state. It must not outrank the canonical ticket.',
     };
   }
   return {

@@ -118,7 +118,7 @@ writeTape('morning', {
   '2026-07-22T09:10:00.0000000': event({
     time: '2026-07-22T09:10:00',
     session: 'morning',
-    model: 'SweepMssFvgRetrace',
+    model: 'NoInstalledSetup',
     direction: 'LONG',
     entry: 7519.5,
     stop: 7515.25,
@@ -128,7 +128,7 @@ writeTape('morning', {
   '2026-07-22T11:45:00.0000000': event({
     time: '2026-07-22T11:45:00',
     session: 'morning',
-    model: 'raidReclaim',
+    model: 'historicalReview',
     direction: 'LONG',
     entry: 7546.5,
     stop: 7528.5,
@@ -141,7 +141,7 @@ writeTape('lunch', {
   '2026-07-22T15:45:00.0000000': event({
     time: '2026-07-22T15:45:00',
     session: 'lunch',
-    model: 'IntradayMssMicroContinuation',
+    model: 'NoInstalledSetup',
     direction: 'LONG',
     entry: 7540,
     stop: 7535.75,
@@ -151,7 +151,7 @@ writeTape('lunch', {
   '2026-07-22T15:50:00.0000000': event({
     time: '2026-07-22T15:50:00',
     session: 'lunch',
-    model: 'raidReclaim',
+    model: 'historicalReview',
     direction: 'SHORT',
     entry: 7541,
     stop: 7546.25,
@@ -212,8 +212,8 @@ assert.equal(report.summary.tradingLogicChangedRows, 0);
 assert.equal(report.summary.automatedOrderRows, 0);
 assert.equal(report.summary.blockedRows, 0);
 assert.equal(report.summary.recommendation, 'ready_for_disabled_scanner_runtime_wiring');
-assert.equal(report.selectedCandidates[0]?.model, 'SweepMssFvgRetrace');
-assert.equal(report.selectedCandidates[1]?.model, 'IntradayMssMicroContinuation');
+assert.equal(report.selectedCandidates[0]?.model, 'NoInstalledSetup');
+assert.equal(report.selectedCandidates[1]?.model, 'NoInstalledSetup');
 assert.ok(report.artifacts.runtimeGateReceiptJsonPath);
 
 const blocked = buildUnifiedDeskOutputDisabledE2ERuntimeValidationReport({

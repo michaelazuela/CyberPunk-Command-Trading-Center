@@ -58,7 +58,7 @@ const failed = Array.from({ length: 12 }, (_, index) => candidate(index + 20, {
 }));
 const modelOne = Array.from({ length: 12 }, (_, index) => candidate(index + 40));
 const turtle = Array.from({ length: 12 }, (_, index) => candidate(index + 60, {
-  overlapClassification: 'RAID_RECLAIM_overlap_possible',
+  overlapClassification: 'HISTORICAL_REVERSAL_overlap_possible',
   marketStructureShiftPresent: false,
 }));
 
@@ -112,7 +112,7 @@ assert.equal(pack.allAdvisoryOnlySamplesIncluded, true);
 assert.equal(pack.bucketSummary.best_clean_draw_delivery_achieved_samples, 10);
 assert.equal(pack.bucketSummary.clean_draw_failed_delivery_samples, 10);
 assert.equal(pack.bucketSummary.model_1_overlap_samples, 10);
-assert.equal(pack.bucketSummary.RAID_RECLAIM_overlap_samples, 10);
+assert.equal(pack.bucketSummary.HISTORICAL_REVERSAL_overlap_samples, 10);
 assert.equal(pack.reviewLabelsAreSuggestionsOnly, true);
 assert.ok(pack.suggestedReviewLabels.includes('strong_advisory_candidate'));
 assert.ok(pack.samples.every((sample) => sample.boundary === 'research_only_not_execution_authority'));
@@ -145,7 +145,7 @@ assert.equal(pmPack.bucketSummary.advisory_only_samples, 3);
 assert.equal(pmPack.bucketSummary.best_clean_draw_delivery_achieved_samples, 10);
 assert.equal(pmPack.bucketSummary.clean_draw_failed_delivery_samples, 10);
 assert.equal(pmPack.bucketSummary.model_1_overlap_samples, 10);
-assert.equal(pmPack.bucketSummary.RAID_RECLAIM_overlap_samples, 10);
+assert.equal(pmPack.bucketSummary.HISTORICAL_REVERSAL_overlap_samples, 10);
 assert.ok(pmPack.selectionLogic.includes('Include all advisory-only PM samples.'));
 assert.ok(pmPack.outputPaths.jsonPath.endsWith('time-window-liquidity-delivery-PM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json'));
 assert.notEqual(pmPack.outputPaths.jsonPath, pack.outputPaths.jsonPath);

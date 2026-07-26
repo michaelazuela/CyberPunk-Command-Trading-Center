@@ -39,7 +39,7 @@ fs.writeFileSync(path.join(auditDir, 'tape.json'), JSON.stringify({
       },
       setupCandidateStatus: {
         selected: {
-          setupType: 'raidReclaim',
+          setupType: 'historicalReview',
           direction: 'SHORT',
           rankScore: 175,
           decisionQualityScore: 44,
@@ -47,7 +47,7 @@ fs.writeFileSync(path.join(auditDir, 'tape.json'), JSON.stringify({
         },
         statuses: [
           {
-            setupType: 'IntradayMssMicroContinuation',
+            setupType: 'NoInstalledSetup',
             direction: 'LONG',
             candidateState: 'HUMAN_REVIEW_READY',
             executionStatus: 'Conditional',
@@ -118,7 +118,7 @@ const inventory: UnifiedPositiveHeldLocalPreviewStructuralFieldInventoryReport =
   fields: [],
   rows: [{
     rowId: 'row-1',
-    setupType: 'IntradayMssMicroContinuation',
+    setupType: 'NoInstalledSetup',
     session: 'morning',
     direction: 'LONG',
     outcomeBucket: 'winner',
@@ -134,7 +134,7 @@ const inventory: UnifiedPositiveHeldLocalPreviewStructuralFieldInventoryReport =
     htfDataLimited: false,
     htfReliability: 'structural',
     htfConflict: false,
-    htfSupported: true,
+    htfContextAligned: true,
     countertrend: false,
     confidenceBucket: 'confidence_gte_80',
     hasLineInSand: true,

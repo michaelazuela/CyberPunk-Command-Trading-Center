@@ -21,7 +21,7 @@ fs.writeFileSync(tapePath, JSON.stringify({
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'SweepMssFvgRetrace',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             detectedStatus: 'Possible',
             executionStatus: 'Conditional',
@@ -37,8 +37,8 @@ fs.writeFileSync(tapePath, JSON.stringify({
       candidateLifecycleTrace: {
         createdCandidates: [
           {
-            candidateKey: 'SweepMssFvgRetrace|SHORT|scenario|Conditional',
-            setupType: 'SweepMssFvgRetrace',
+            candidateKey: 'NoInstalledSetup|SHORT|scenario|Conditional',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             detectedStatus: 'Possible',
             executionStatus: 'Conditional',
@@ -58,7 +58,7 @@ fs.writeFileSync(tapePath, JSON.stringify({
       setupCandidateStatus: {
         statuses: [
           {
-            setupType: 'SweepMssFvgRetrace',
+            setupType: 'NoInstalledSetup',
             direction: 'SHORT',
             detectedStatus: 'Possible',
             executionStatus: 'Conditional',
@@ -121,11 +121,11 @@ const replayPackageReport = {
   },
   rows: [
     {
-      ticketId: '2026-06-12-lunch-SweepMssFvgRetrace-SHORT',
+      ticketId: '2026-06-12-lunch-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-12',
       session: 'lunch',
       instrument: 'MES',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       proofTime: '2026-06-12T12:00:00',
       firstSeenTime: '2026-06-12T12:00:00',
@@ -150,7 +150,7 @@ const replayPackageReport = {
       blockers: ['directionally invalid entry-to-stop geometry'],
     },
   ],
-  blockers: ['2026-06-12-lunch-SweepMssFvgRetrace-SHORT: directionally invalid entry-to-stop geometry'],
+  blockers: ['2026-06-12-lunch-NoInstalledSetup-SHORT: directionally invalid entry-to-stop geometry'],
   recommendations: [],
   markdown: '',
 } satisfies UnifiedPositiveHeldLocalPreviewReplayPackageReport;
@@ -181,10 +181,10 @@ const geometrySourceDrilldownReport = {
   },
   rows: [
     {
-      ticketId: '2026-06-12-lunch-SweepMssFvgRetrace-SHORT',
+      ticketId: '2026-06-12-lunch-NoInstalledSetup-SHORT',
       tradeDate: '2026-06-12',
       session: 'lunch',
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       replayProofTime: '2026-06-12T12:00:00',
       replayEntry: 7441,

@@ -88,7 +88,7 @@ export interface RawOhlcScannerArtifactSweepLatestPositiveDrilldownReport {
     trainSamebarReports: string[];
     testSamebarReports: string[];
     minRowsPerPeriod: number;
-    setupType: 'SweepMssFvgRetrace';
+    setupType: 'NoInstalledSetup';
   };
   assumptions: {
     consumesExistingSameBarReportsOnly: true;
@@ -119,7 +119,7 @@ export interface RawOhlcScannerArtifactSweepLatestPositiveDrilldownReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const SETUP_TYPE = 'SweepMssFvgRetrace';
+const SETUP_TYPE = 'NoInstalledSetup';
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -350,7 +350,7 @@ function buildMarkdown(report: Omit<RawOhlcScannerArtifactSweepLatestPositiveDri
     '',
     `Status: ${report.status}`,
     '',
-    'Authority: local-only read-only SweepMssFvgRetrace research. It consumes saved same-bar reports only; it does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change canExecute, or change entry/stop/target/risk math.',
+    'Authority: local-only read-only NoInstalledSetup research. It consumes saved same-bar reports only; it does not run setupScanner, post Discord, write Supabase, read live bridge data, install rank behavior, change canExecute, or change entry/stop/target/risk math.',
     '',
     '## Summary',
     `- Sweep train/test rows: ${report.summary.trainRows}/${report.summary.testRows}.`,
@@ -407,8 +407,8 @@ export function buildRawOhlcScannerArtifactSweepLatestPositiveDrilldownReport(ar
   const blockers = [
     args.trainSamebarReports.length === 0 ? 'missing train same-bar reports' : null,
     args.testSamebarReports.length === 0 ? 'missing test same-bar reports' : null,
-    trainRows.length === 0 ? 'no train SweepMssFvgRetrace same-bar rows found' : null,
-    testRows.length === 0 ? 'no latest/test SweepMssFvgRetrace same-bar rows found' : null,
+    trainRows.length === 0 ? 'no train NoInstalledSetup same-bar rows found' : null,
+    testRows.length === 0 ? 'no latest/test NoInstalledSetup same-bar rows found' : null,
     ...args.trainSamebarReports.map((report, index) => report.status !== 'pass' ? `train same-bar report ${args.trainSamebarReportPaths[index]} status ${report.status}` : null),
     ...args.testSamebarReports.map((report, index) => report.status !== 'pass' ? `test same-bar report ${args.testSamebarReportPaths[index]} status ${report.status}` : null),
   ].filter((item): item is string => Boolean(item));

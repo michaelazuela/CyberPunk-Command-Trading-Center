@@ -40,7 +40,7 @@ function row(args: {
     session: 'morning',
     proofTime: args.proofTime,
     direction: 'LONG',
-    prioritySetupType: 'SweepMssFvgRetrace',
+    prioritySetupType: 'NoInstalledSetup',
     openingDriveTicketId: `od-${args.ticketId}`,
     priorityTicketId: args.ticketId,
     openingDriveOneMesPl: -64.37,

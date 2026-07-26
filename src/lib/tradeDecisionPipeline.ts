@@ -137,26 +137,7 @@ function inferBias(result: AnalysisResult | null | undefined): BiasDirection {
 }
 
 function setupFromText(...parts: Array<unknown>): SetupType {
-  const text = parts.filter(Boolean).join(' ').toUpperCase();
-  if (!text || text.includes('NO TRADE')) return SetupType.NoSetup;
-  if (
-    text.includes('AFTER-LUNCH DRIVE FVG CONTINUATION') ||
-    text.includes('AFTER LUNCH DRIVE FVG CONTINUATION') ||
-    text.includes('AFTER_LUNCH_DRIVE_FVG_CONTINUATION')
-  ) return SetupType.AfterLunchDriveFvgContinuation;
-  if (
-    text.includes('OPENING DRIVE FVG CONTINUATION') ||
-    text.includes('OPENING_DRIVE_FVG_CONTINUATION')
-  ) return SetupType.OpeningDriveFvgContinuation;
-  if (
-    text.includes('INTRADAY MSS MICRO CONTINUATION') ||
-    text.includes('INTRADAY_MSS_MICRO_CONTINUATION') ||
-    text.includes('MICRO CONTINUATION RETEST')
-  ) return SetupType.IntradayMssMicroContinuation;
-  if (text.includes('RAID RECLAIM REVERSAL') || text.includes('FAILED BREAKOUT REVERSAL') || text.includes('FAILED BREAKDOWN REVERSAL')) return SetupType.RaidReclaimReversal;
-  const hasSweepOrReclaim = text.includes('LIQUIDITY') || text.includes('SWEEP') || text.includes('RECLAIM') || text.includes('FAILED BREAKOUT') || text.includes('FAILED BREAKDOWN');
-  const hasStructureOrImbalance = text.includes('MSS') || text.includes('STRUCTURE SHIFT') || text.includes('FVG') || text.includes('FAIR VALUE') || text.includes('IMBALANCE') || text.includes('DISPLACEMENT');
-  if (hasSweepOrReclaim || hasStructureOrImbalance) return SetupType.SweepMssFvgRetrace;
+  void parts;
   return SetupType.NoSetup;
 }
 
@@ -428,11 +409,11 @@ function confidenceScore(confidence: Confidence): number {
 
 function setupScore(setupType: SetupType): number {
   switch (setupType) {
-    case SetupType.SweepMssFvgRetrace: return 100;
-    case SetupType.RaidReclaimReversal: return 99;
-    case SetupType.OpeningDriveFvgContinuation: return 98;
-    case SetupType.AfterLunchDriveFvgContinuation: return 98;
-    case SetupType.IntradayMssMicroContinuation: return 97;
+    case SetupType.NoSetup: return 100;
+    case SetupType.NoSetup: return 99;
+    case SetupType.NoSetup: return 98;
+    case SetupType.NoSetup: return 98;
+    case SetupType.NoSetup: return 97;
     default: return 0;
   }
 }
@@ -636,25 +617,13 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
     candidate.executionStatus === ExecutionStatus.Blocked ? candidate.blockReason || NoTradeReason.NoApprovedSetup :
     candidate.blockReason === NoTradeReason.OutsideTimeWindow ? candidate.blockReason :
     targetRoomHardBlocker;
-  const hasSweep = candidateTextIncludes(candidate, 'sweep', 'liquidity raid');
-  const hasReclaim = candidateTextIncludes(candidate, 'reclaim');
-  const hasDisplacement = candidateTextIncludes(candidate, 'displacement');
-  const hasMss = candidateTextIncludes(candidate, 'market structure shift', 'mss');
-  const hasFvg = candidateTextIncludes(candidate, 'fair value gap', 'fvg', 'imbalance');
-  const hasRaidReclaim = candidate.setupType === SetupType.RaidReclaimReversal || candidateTextIncludes(candidate, 'raid reclaim', 'failed breakout', 'failed breakdown');
   const htfAligned = candidateTextIncludes(candidate, 'higher-timeframe', 'big-picture', 'structure supports') ||
     chartContext.multiTimeframeContext?.alignment?.alignedDirection === candidate.direction;
   const hasLiquidityMap =
     Boolean(candidate.targetObjectivePlan?.liquidityTarget1 || candidate.targetObjectivePlan?.nearestLiquidityTarget) ||
     Boolean((chartContext.sessionLevelContext?.levelsToWatch || []).length);
   const riskAssessment = makeRiskAssessmentFromSetup(candidate);
-  const modelScore = clampQualityScore(
-    (hasSweep ? 6 : 0) +
-    (hasReclaim ? 6 : 0) +
-    (hasRaidReclaim || hasFvg ? 7 : 0) +
-    (hasDisplacement || hasMss || hasRaidReclaim ? 6 : 0),
-    25
-  );
+  const modelScore = 0;
   const executionScore = clampQualityScore(
     (candidate.requiredTrigger ? 6 : 0) +
     (isValidPrice(candidate.entry) ? 5 : 0) +
@@ -692,16 +661,7 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
       score: modelScore,
       max: 25,
       status: qualityStatus(modelScore, 25),
-      note:
-        candidate.setupType === SetupType.RaidReclaimReversal
-          ? 'Raid/reclaim reversal sequence quality.'
-          : candidate.setupType === SetupType.OpeningDriveFvgContinuation
-              ? 'Opening drive FVG continuation sequence quality.'
-          : candidate.setupType === SetupType.AfterLunchDriveFvgContinuation
-              ? 'After-lunch drive FVG continuation sequence quality.'
-          : candidate.setupType === SetupType.IntradayMssMicroContinuation
-              ? 'Intraday MSS micro-continuation sequence quality.'
-            : 'Sweep -> MSS -> FVG retrace sequence quality.',
+      note: 'Blank-slate mode: no trading model is installed, so model completion cannot score.',
     },
     {
       label: '5M execution quality',

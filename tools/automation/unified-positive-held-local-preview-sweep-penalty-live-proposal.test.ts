@@ -91,11 +91,11 @@ assert.equal(report.status, 'pass');
 assert.equal(report.recommendation, 'approval_ready_for_narrow_live_rank_penalty');
 assert.equal(report.approvalGate.requiredBeforeLiveInstall, true);
 assert.equal(report.approvalGate.explicitUserApprovalRequired, true);
-assert.equal(report.proposedRule.setupType, 'SweepMssFvgRetrace');
+assert.equal(report.proposedRule.setupType, 'NoInstalledSetup');
 assert.equal(report.proposedRule.appliesOnlyWhen.executionStatus, 'Blocked');
 assert.equal(report.proposedRule.appliesOnlyWhen.blockReason, 'InvalidStopLocation');
 assert.equal(report.proposedRule.preservesValidSweepLead, true);
-assert.equal(report.proposedRule.preservesraidReclaim, true);
+assert.equal(report.proposedRule.preserveshistoricalReview, true);
 assert.equal(report.proposedRule.preservesModelAvailability, true);
 assert.equal(report.proposedRule.preservesCanExecute, true);
 assert.equal(report.authority.changesTradingLogic, false);
@@ -103,7 +103,7 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.readsLiveBridge, false);
-assert.match(report.markdown, /No raidReclaim removal/);
+assert.match(report.markdown, /No historicalReview removal/);
 assert.match(report.markdown, /No canExecute removal or loosening/);
 
 const blocked = buildUnifiedPositiveHeldLocalPreviewSweepPenaltyLiveProposalReport({

@@ -43,14 +43,14 @@ export interface UnifiedPositiveHeldLocalPreviewSweepPenaltyLiveProposalReport {
     prohibitedBoundaries: string[];
   };
   proposedRule: {
-    setupType: 'SweepMssFvgRetrace';
+    setupType: 'NoInstalledSetup';
     appliesOnlyWhen: {
       executionStatus: 'Blocked';
       blockReason: 'InvalidStopLocation';
     };
     penaltyPoints: number;
     preservesValidSweepLead: true;
-    preservesraidReclaim: true;
+    preserveshistoricalReview: true;
     preservesModelAvailability: true;
     preservesCanExecute: true;
   };
@@ -154,8 +154,8 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewSweepPenaltyL
     `- Primary boundary: ${report.proposedLiveBoundary.primaryBoundary}.`,
     `- Secondary boundary: ${report.proposedLiveBoundary.secondaryBoundary}.`,
     `- Preferred install path: ${report.proposedLiveBoundary.preferredBoundary}.`,
-    `- Proposed rule: apply a ${report.proposedRule.penaltyPoints}-point rank penalty only to SweepMssFvgRetrace rows with executionStatus=${report.proposedRule.appliesOnlyWhen.executionStatus} and blockReason=${report.proposedRule.appliesOnlyWhen.blockReason}.`,
-    '- raidReclaim and SweepMssFvgRetrace model availability remain unchanged.',
+    `- Proposed rule: apply a ${report.proposedRule.penaltyPoints}-point rank penalty only to NoInstalledSetup rows with executionStatus=${report.proposedRule.appliesOnlyWhen.executionStatus} and blockReason=${report.proposedRule.appliesOnlyWhen.blockReason}.`,
+    '- historicalReview and NoInstalledSetup model availability remain unchanged.',
     '- canExecute remains a final compatibility/execution flag and is not created or loosened by this rule.',
     '',
     '## Evidence',
@@ -233,20 +233,20 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPenaltyLiveProposalRepo
       preferredBoundary: 'audit_book_first_then_pipeline_only_after_regression',
       prohibitedBoundaries: [
         'Do not change setup eligibility in src/lib/setupScanner.ts.',
-        'Do not remove SweepMssFvgRetrace or raidReclaim from the primary model registry.',
+        'Do not remove NoInstalledSetup or historicalReview from the primary model registry.',
         'Do not change canExecute, entry, stop, target, risk, bridge, Discord, or Supabase behavior.',
         'Do not use realized outcome P/L as live scoring input.',
       ],
     },
     proposedRule: {
-      setupType: 'SweepMssFvgRetrace',
+      setupType: 'NoInstalledSetup',
       appliesOnlyWhen: {
         executionStatus: 'Blocked',
         blockReason: 'InvalidStopLocation',
       },
       penaltyPoints: PENALTY_POINTS,
       preservesValidSweepLead: true,
-      preservesraidReclaim: true,
+      preserveshistoricalReview: true,
       preservesModelAvailability: true,
       preservesCanExecute: true,
     },
@@ -272,8 +272,8 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPenaltyLiveProposalRepo
       'Confirm the selected-candidate output returns to the pre-install baseline and Discord/Supabase/bridge behavior remains unchanged.',
     ],
     nonGoals: [
-      'No raidReclaim removal.',
-      'No SweepMssFvgRetrace removal.',
+      'No historicalReview removal.',
+      'No NoInstalledSetup removal.',
       'No canExecute removal or loosening.',
       'No target, stop, entry, risk, session, bridge, Supabase, Discord, or automated execution change.',
       'No live use of realized P/L or future outcome labels.',

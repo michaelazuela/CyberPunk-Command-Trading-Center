@@ -87,7 +87,7 @@ export interface RawOhlcScannerArtifactOpeningDriveFineRiskValidationReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const DEFAULT_SETUP_TYPE = 'OpeningDriveFvgContinuation';
+const DEFAULT_SETUP_TYPE = 'NoInstalledSetup';
 const DEFAULT_CANDIDATE_FINE_RISK_BUCKET = 'risk_24_to_32';
 const DEFAULT_VALIDATION_PERCENT = 0.3;
 const DEFAULT_MIN_VALIDATION_ROWS = 3;

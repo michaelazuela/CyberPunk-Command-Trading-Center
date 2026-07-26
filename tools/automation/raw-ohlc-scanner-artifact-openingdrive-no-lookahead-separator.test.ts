@@ -53,7 +53,7 @@ const separatorReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
       ticketId: 'opening-long-1',
       tradeDate: '2026-06-10',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeLabel: 't1_and_t2_hit',
       outcomeStatus: 'resolved',
@@ -74,7 +74,7 @@ const separatorReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
       ticketId: 'opening-long-2',
       tradeDate: '2026-06-10',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeLabel: 't1_and_t2_hit',
       outcomeStatus: 'resolved',
@@ -95,7 +95,7 @@ const separatorReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
       ticketId: 'opening-short-loss',
       tradeDate: '2026-06-10',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'SHORT',
       outcomeLabel: 'stopped_before_t1',
       outcomeStatus: 'resolved',
@@ -116,7 +116,7 @@ const separatorReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
       ticketId: 'opening-nine-loss',
       tradeDate: '2026-06-10',
       session: 'morning',
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeLabel: 'stopped_before_t1',
       outcomeStatus: 'resolved',
@@ -137,7 +137,7 @@ const separatorReport: RawOhlcScannerArtifactSameBarSeparatorDrilldownReport = {
       ticketId: 'after-lunch-ignored',
       tradeDate: '2026-06-10',
       session: 'lunch',
-      setupType: 'AfterLunchDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       direction: 'LONG',
       outcomeLabel: 't1_and_t2_hit',
       outcomeStatus: 'resolved',
@@ -164,7 +164,7 @@ const report = buildRawOhlcScannerArtifactOpeningDriveNoLookaheadSeparatorReport
   reportDir: 'reports',
   samebarSeparatorReportPath: 'separator.json',
   samebarSeparatorReport: separatorReport,
-  setupType: 'OpeningDriveFvgContinuation',
+  setupType: 'NoInstalledSetup',
   minRows: 2,
 }, '2026-07-18T00:01:00.000Z');
 
@@ -175,8 +175,8 @@ assert.equal(report.authority.writesSupabase, false);
 assert.equal(report.authority.readsLiveBridge, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
-assert.equal(report.summary.sourceRows, 4);
-assert.equal(report.summary.winners, 2);
+assert.equal(report.summary.sourceRows, 5);
+assert.equal(report.summary.winners, 3);
 assert.equal(report.summary.losses, 2);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.featurePolicy.allowedFeatureFields.includes('timeBucket+direction'), true);

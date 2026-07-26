@@ -35,7 +35,7 @@ interface SimulationRow {
   session: string;
   proofTime: string;
   originalTicketId: string;
-  originalSetupType: 'OpeningDriveFvgContinuation';
+  originalSetupType: 'NoInstalledSetup';
   originalOneMesPl: number | null;
   simulatedTicketId: string;
   simulatedSetupType: string;
@@ -83,7 +83,7 @@ export interface RawOhlcScannerArtifactOpeningDriveOosPrioritySimulationReport {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const PRIORITY_SET = new Set(['SweepMssFvgRetrace', 'IntradayMssMicroContinuation']);
+const PRIORITY_SET = new Set(['NoInstalledSetup', 'NoInstalledSetup']);
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -157,13 +157,13 @@ function buildRows(report: RawOhlcScannerArtifactOpeningDriveOosCollisionCompari
     const replace = canReplace(row);
     const simulatedOneMesPl = replace ? row.bestCompetingOneMesPl : row.selectedOneMesPl;
     const simulatedTicketId = replace ? row.bestCompetingTicketId || row.selectedTicketId : row.selectedTicketId;
-    const simulatedSetupType = replace ? row.bestCompetingSetupType || 'UnknownSetup' : 'OpeningDriveFvgContinuation';
+    const simulatedSetupType = replace ? row.bestCompetingSetupType || 'UnknownSetup' : 'NoInstalledSetup';
     return {
       tradeDate: row.tradeDate,
       session: row.session,
       proofTime: row.proofTime,
       originalTicketId: row.selectedTicketId,
-      originalSetupType: 'OpeningDriveFvgContinuation',
+      originalSetupType: 'NoInstalledSetup',
       originalOneMesPl: row.selectedOneMesPl,
       simulatedTicketId,
       simulatedSetupType,

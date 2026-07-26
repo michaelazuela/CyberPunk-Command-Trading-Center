@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
-  UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport,
+  UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport,
 } from './unified-positive-held-local-preview-raidReclaim-replay-package';
 
-type PackageRow = UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport['rows'][number];
+type PackageRow = UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport['rows'][number];
 type ActionDecision = 'rank_penalty_candidate' | 'review_note_candidate' | 'reject_for_now';
 
 interface ActionProbeRow {
@@ -29,8 +29,8 @@ interface ActionProbeRow {
   recommendation: string;
 }
 
-export interface UnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport {
-  reportType: 'unified_positive_held_local_preview_raidReclaim_action_probe';
+export interface UnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport {
+  reportType: 'unified_positive_held_local_preview_historicalReview_action_probe';
   generatedAt: string;
   status: 'pass' | 'fail';
   authority: {
@@ -53,7 +53,7 @@ export interface UnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport {
   };
   source: {
     reportDir: string;
-    raidReclaimReplayPackagePath: string | null;
+    historicalReviewReplayPackagePath: string | null;
   };
   assumptions: {
     probesAreResearchOnly: true;
@@ -96,7 +96,7 @@ function latestMatchingFile(reportDir: string, pattern: RegExp): string | null {
   return matches[0] || null;
 }
 
-function authority(): UnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport['authority'] {
+function authority(): UnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport['authority'] {
   return {
     readOnly: true,
     localOnly: true,
@@ -188,13 +188,13 @@ function buildProbes(rows: PackageRow[]): ActionProbeRow[] {
   return [
     buildProbe(
       'blocked_protected_stop_rank_penalty',
-      'Treat blocked protected-stop raidReclaim state as a possible rank penalty while preserving clean Conditional raidReclaim.',
+      'Treat blocked protected-stop historicalReview state as a possible rank penalty while preserving clean Conditional historicalReview.',
       blocked,
       clean,
     ),
     buildProbe(
       'blocked_protected_stop_review_note',
-      'Treat blocked protected-stop raidReclaim state as a human-review caution note while preserving model eligibility.',
+      'Treat blocked protected-stop historicalReview state as a human-review caution note while preserving model eligibility.',
       blocked,
       clean,
     ),
@@ -205,9 +205,9 @@ function escapeTable(value: string): string {
   return value.replace(/\|/g, '/').replace(/\r?\n/g, ' ');
 }
 
-function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport, 'markdown'>): string {
+function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport, 'markdown'>): string {
   return [
-    '# Unified Positive Held-Local Preview raidReclaim Action Probe',
+    '# Unified Positive Held-Local Preview historicalReview Action Probe',
     '',
     `Status: ${report.status}`,
     '',
@@ -233,27 +233,27 @@ function buildMarkdown(report: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimAc
   ].join('\n');
 }
 
-export function buildUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport(args: {
+export function buildUnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport(args: {
   reportDir: string;
-  raidReclaimReplayPackagePath: string | null;
-  raidReclaimReplayPackageReport: UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport | null;
-}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport {
-  const rows = args.raidReclaimReplayPackageReport?.rows || [];
+  historicalReviewReplayPackagePath: string | null;
+  historicalReviewReplayPackageReport: UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport | null;
+}, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport {
+  const rows = args.historicalReviewReplayPackageReport?.rows || [];
   const probes = buildProbes(rows);
   const blockers = [
-    !args.raidReclaimReplayPackagePath ? 'missing raidReclaim replay package path' : null,
-    !args.raidReclaimReplayPackageReport ? 'missing raidReclaim replay package report' : null,
-    args.raidReclaimReplayPackageReport && args.raidReclaimReplayPackageReport.status !== 'pass' ? `raidReclaim replay package status ${args.raidReclaimReplayPackageReport.status}` : null,
-    rows.length === 0 ? 'no raidReclaim replay package rows found' : null,
+    !args.historicalReviewReplayPackagePath ? 'missing historicalReview replay package path' : null,
+    !args.historicalReviewReplayPackageReport ? 'missing historicalReview replay package report' : null,
+    args.historicalReviewReplayPackageReport && args.historicalReviewReplayPackageReport.status !== 'pass' ? `historicalReview replay package status ${args.historicalReviewReplayPackageReport.status}` : null,
+    rows.length === 0 ? 'no historicalReview replay package rows found' : null,
   ].filter((item): item is string => Boolean(item));
-  const base: Omit<UnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport, 'markdown'> = {
-    reportType: 'unified_positive_held_local_preview_raidReclaim_action_probe',
+  const base: Omit<UnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport, 'markdown'> = {
+    reportType: 'unified_positive_held_local_preview_historicalReview_action_probe',
     generatedAt,
     status: blockers.length ? 'fail' : 'pass',
     authority: authority(),
     source: {
       reportDir: args.reportDir,
-      raidReclaimReplayPackagePath: args.raidReclaimReplayPackagePath,
+      historicalReviewReplayPackagePath: args.historicalReviewReplayPackagePath,
     },
     assumptions: {
       probesAreResearchOnly: true,
@@ -273,19 +273,19 @@ export function buildUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport
     rows: probes,
     blockers,
     recommendations: blockers.length
-      ? ['Do not use action probes until the raidReclaim replay package is present and passing.']
+      ? ['Do not use action probes until the historicalReview replay package is present and passing.']
       : probes.some((row) => row.decision === 'rank_penalty_candidate')
         ? [
           'Next step is replay-expanded rank-penalty validation only; do not install scanner-visible rank changes yet.',
-          'Keep raidReclaim enabled. The candidate action targets blocked protected-stop state only.',
+          'Keep historicalReview enabled. The candidate action targets blocked protected-stop state only.',
         ]
         : ['Current evidence supports caution-note review before any rank penalty.'],
   };
   return { ...base, markdown: buildMarkdown(base) };
 }
 
-export function writeUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport(
-  report: UnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport,
+export function writeUnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport(
+  report: UnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport,
   outDir = DEFAULT_REPORT_DIR,
 ): { jsonPath: string; markdownPath: string } {
   fs.mkdirSync(outDir, { recursive: true });
@@ -297,18 +297,18 @@ export function writeUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport
   return { jsonPath, markdownPath };
 }
 
-export function runUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeCli(args = process.argv.slice(2)): void {
+export function runUnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeCli(args = process.argv.slice(2)): void {
   const outDir = readFlag(args, '--out-dir') || DEFAULT_REPORT_DIR;
-  const raidReclaimReplayPackagePath = readFlag(args, '--raidReclaim-replay-package') ||
+  const historicalReviewReplayPackagePath = readFlag(args, '--historicalReview-replay-package') ||
     latestMatchingFile(outDir, /^unified-positive-held-local-preview-raidReclaim-replay-package-\d+\.json$/);
-  const report = buildUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport({
+  const report = buildUnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport({
     reportDir: outDir,
-    raidReclaimReplayPackagePath,
-    raidReclaimReplayPackageReport: raidReclaimReplayPackagePath && fs.existsSync(raidReclaimReplayPackagePath)
-      ? JSON.parse(fs.readFileSync(raidReclaimReplayPackagePath, 'utf8')) as UnifiedPositiveHeldLocalPreviewraidReclaimReplayPackageReport
+    historicalReviewReplayPackagePath,
+    historicalReviewReplayPackageReport: historicalReviewReplayPackagePath && fs.existsSync(historicalReviewReplayPackagePath)
+      ? JSON.parse(fs.readFileSync(historicalReviewReplayPackagePath, 'utf8')) as UnifiedPositiveHeldLocalPreviewhistoricalReviewReplayPackageReport
       : null,
   });
-  const paths = writeUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeReport(report, outDir);
+  const paths = writeUnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeReport(report, outDir);
   if (args.includes('--json')) {
     console.log(JSON.stringify({ ...paths, status: report.status, summary: report.summary }, null, 2));
   } else {
@@ -321,7 +321,7 @@ export function runUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeCli(args
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   try {
-    runUnifiedPositiveHeldLocalPreviewraidReclaimActionProbeCli();
+    runUnifiedPositiveHeldLocalPreviewhistoricalReviewActionProbeCli();
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

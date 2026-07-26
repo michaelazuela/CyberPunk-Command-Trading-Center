@@ -162,7 +162,7 @@ function sample(
     summary: 'fixture',
     whyAdvisoryOnly: 'Research-only fixture.',
     model1Overlap: false,
-    raidReclaimOverlap: false,
+    historicalReversalOverlap: false,
     researchDetectorReason: 'fixture',
     warningFailureReason: 'fixture',
     dataQualityNotes: [],
@@ -288,7 +288,7 @@ const newModelCandidateReport = runResearchModelValidation({
 const newModelCandidateValidation = labelFor(newModelCandidateReport, 'false_run_liquidity_fade');
 assert.equal(newModelCandidateValidation.researchValidationLabel, 'human_model_design_discussion_only');
 assert.equal(newModelCandidateValidation.humanReviewMetrics?.humanLabelCounts.new_model_candidate_review, 1);
-assert.ok(newModelCandidateValidation.supportingEvidence.some((line) => line.includes('distinct research model candidates')));
+assert.ok(newModelCandidateValidation.contextNotes.some((line) => line.includes('distinct research model candidates')));
 assert.equal(newModelCandidateReport.approvalBoundary.validationPromotesModel, false);
 
 const weakReviewed = runResearchModelValidation({

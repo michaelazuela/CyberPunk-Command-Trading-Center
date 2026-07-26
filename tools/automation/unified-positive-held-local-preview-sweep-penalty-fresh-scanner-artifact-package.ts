@@ -195,7 +195,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPenaltyFreshScannerArti
 }, generatedAt = new Date().toISOString()): UnifiedPositiveHeldLocalPreviewSweepPenaltyFreshScannerArtifactPackageReport {
   const installedRows = args.installedScoreComparisonReport?.rows || [];
   const rows = installedRows
-    .filter((row) => row.setupType === 'SweepMssFvgRetrace')
+    .filter((row) => row.setupType === 'NoInstalledSetup')
     .map(rowFromInstalled)
     .sort((a, b) => a.tradeDate.localeCompare(b.tradeDate) || a.session.localeCompare(b.session) || a.ticketId.localeCompare(b.ticketId));
   const blockers = [
@@ -221,7 +221,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPenaltyFreshScannerArti
     summary: {
       installedScoreRows: installedRows.length,
       freshArtifactRows: rows.length,
-      sweepArtifactRows: rows.filter((row) => row.setupType === 'SweepMssFvgRetrace').length,
+      sweepArtifactRows: rows.filter((row) => row.setupType === 'NoInstalledSetup').length,
       validSweepLeadArtifactRows: rows.filter((row) => row.validSweepLead).length,
       invalidStopSweepArtifactRows: rows.filter((row) => row.invalidStopSweepPenaltyCandidate).length,
       installedPenaltyArtifactRows: rows.filter((row) => row.installedPenaltyExpected).length,

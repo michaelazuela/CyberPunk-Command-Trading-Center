@@ -41,7 +41,7 @@ const report = buildYtdSessionLaneComparisonReport({
         movement: 'bullish_drive',
         htf: htfAlignedLong,
         completeCandidateCount: 4,
-        selected: selected('OpeningDriveFvgContinuation', 'LONG', '2026-01-02T09:35:00', 't2_hit', 20),
+        selected: selected('NoInstalledSetup', 'LONG', '2026-01-02T09:35:00', 't2_hit', 20),
       },
       {
         date: '2026-01-03',
@@ -49,7 +49,7 @@ const report = buildYtdSessionLaneComparisonReport({
         movement: 'high_raid_reversal_down',
         htf: htfCounterShort,
         completeCandidateCount: 3,
-        selected: selected('SweepMssFvgRetrace', 'SHORT', '2026-01-03T10:05:00', 'stopped_before_t1', -10),
+        selected: selected('NoInstalledSetup', 'SHORT', '2026-01-03T10:05:00', 'stopped_before_t1', -10),
       },
       {
         date: '2026-01-03',
@@ -57,7 +57,7 @@ const report = buildYtdSessionLaneComparisonReport({
         movement: 'bearish_drive',
         htf: htfCounterShort,
         completeCandidateCount: 2,
-        selected: selected('AfterLunchDriveFvgContinuation', 'SHORT', '2026-01-03T12:20:00', 'no_fill', 0),
+        selected: selected('NoInstalledSetup', 'SHORT', '2026-01-03T12:20:00', 'no_fill', 0),
       },
       {
         date: '2026-01-04',
@@ -65,16 +65,16 @@ const report = buildYtdSessionLaneComparisonReport({
         movement: 'low_raid_reversal_up',
         htf: htfAlignedLong,
         completeCandidateCount: 2,
-        selected: selected('IntradayMssMicroContinuation', 'LONG', '2026-01-04T14:15:00', 'filled_unresolved_by_session_end', 0),
+        selected: selected('NoInstalledSetup', 'LONG', '2026-01-04T14:15:00', 'filled_unresolved_by_session_end', 0),
       },
     ],
   },
 }, '2026-07-22T01:00:00.000Z');
 
-const openingDrive = report.laneSummaries.find((summary) => summary.session === 'morning' && summary.setupType === 'OpeningDriveFvgContinuation');
-const sweep = report.laneSummaries.find((summary) => summary.session === 'morning' && summary.setupType === 'SweepMssFvgRetrace');
-const afterLunch = report.laneSummaries.find((summary) => summary.session === 'lunch' && summary.setupType === 'AfterLunchDriveFvgContinuation');
-const lunchIntraday = report.laneSummaries.find((summary) => summary.session === 'lunch' && summary.setupType === 'IntradayMssMicroContinuation');
+const openingDrive = report.laneSummaries.find((summary) => summary.session === 'morning' && summary.setupType === 'NoInstalledSetup');
+const sweep = report.laneSummaries.find((summary) => summary.session === 'morning' && summary.setupType === 'NoInstalledSetup');
+const afterLunch = report.laneSummaries.find((summary) => summary.session === 'lunch' && summary.setupType === 'NoInstalledSetup');
+const lunchIntraday = report.laneSummaries.find((summary) => summary.session === 'lunch' && summary.setupType === 'NoInstalledSetup');
 
 assert.equal(report.reportType, 'ytd_session_lane_comparison_report');
 assert.equal(report.authority.researchOnly, true);

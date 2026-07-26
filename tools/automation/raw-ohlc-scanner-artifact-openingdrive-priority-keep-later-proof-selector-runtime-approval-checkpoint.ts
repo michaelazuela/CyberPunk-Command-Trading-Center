@@ -35,7 +35,7 @@ export interface RawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSelecto
     livePromotionAllowed: false;
   };
   proposedRuntimeScope: {
-    modelScope: 'SweepMssFvgRetrace';
+    modelScope: 'NoInstalledSetup';
     selectorScope: 'keep_later_sweep_proof_only';
     likelyFilesToModify: string[];
     filesExplicitlyOutOfScope: string[];
@@ -243,7 +243,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
       livePromotionAllowed: false,
     },
     proposedRuntimeScope: {
-      modelScope: 'SweepMssFvgRetrace',
+      modelScope: 'NoInstalledSetup',
       selectorScope: 'keep_later_sweep_proof_only',
       likelyFilesToModify: [
         'src/lib/setupScanner.ts',
@@ -258,15 +258,15 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
         'Discord posting, button, or formatter files',
         'NinjaTrader bridge/recorder/backfill files',
       ],
-      allowedBehaviorChange: 'Add a narrowly guarded rank/selection preference for SweepMssFvgRetrace keep_later_sweep_proof candidates only when existing deterministic 5M proof, protected stop, entry, T1/T2, outcome-tested source/proof fields, and existing scanner candidate validity are present.',
+      allowedBehaviorChange: 'Add a narrowly guarded rank/selection preference for NoInstalledSetup keep_later_sweep_proof candidates only when existing deterministic 5M proof, protected stop, entry, T1/T2, outcome-tested source/proof fields, and existing scanner candidate validity are present.',
       forbiddenBehaviorChanges: [
         'Do not loosen canExecute.',
         'Do not change entry/stop/T1/T2/risk/invalidation math.',
         'Do not post Discord or alter publish eligibility.',
         'Do not read or write Supabase.',
         'Do not read live bridge data.',
-        'Do not broaden beyond SweepMssFvgRetrace keep_later_sweep_proof.',
-        'Do not remove or weaken raidReclaim or any approved model.',
+        'Do not broaden beyond NoInstalledSetup keep_later_sweep_proof.',
+        'Do not remove or weaken historicalReview or any approved model.',
       ],
       rollbackPath: [
         'Revert the single future runtime install commit.',

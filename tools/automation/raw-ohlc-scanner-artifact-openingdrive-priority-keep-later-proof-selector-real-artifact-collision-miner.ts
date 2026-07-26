@@ -106,10 +106,10 @@ export interface RawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSelecto
 }
 
 const TARGET_SETUPS = new Set([
-  'OpeningDriveFvgContinuation',
-  'SweepMssFvgRetrace',
-  'IntradayMssMicroContinuation',
-  'AfterLunchDriveFvgContinuation',
+  'NoInstalledSetup',
+  'NoInstalledSetup',
+  'NoInstalledSetup',
+  'NoInstalledSetup',
 ]);
 
 const __filename = fileURLToPath(import.meta.url);
@@ -263,10 +263,10 @@ function mineGroups(artifact: Record<string, unknown>): { eventsScanned: number;
       completedBarTime: rows[0]?.completedBarTime || '',
       groupSize: rows.length,
       setupTypes,
-      hasOpeningDrive: setupTypes.includes('OpeningDriveFvgContinuation'),
-      hasSweep: setupTypes.includes('SweepMssFvgRetrace'),
-      hasIntradayMssMicro: setupTypes.includes('IntradayMssMicroContinuation'),
-      hasAfterLunchDrive: setupTypes.includes('AfterLunchDriveFvgContinuation'),
+      hasOpeningDrive: setupTypes.includes('NoInstalledSetup'),
+      hasSweep: setupTypes.includes('NoInstalledSetup'),
+      hasIntradayMssMicro: setupTypes.includes('NoInstalledSetup'),
+      hasAfterLunchDrive: setupTypes.includes('NoInstalledSetup'),
       validLevelRows: rows.filter((row) => row.deterministicLevelsValid).length,
       rows,
     };
@@ -277,9 +277,9 @@ function mineGroups(artifact: Record<string, unknown>): { eventsScanned: number;
 
 function pairSummary(groups: CollisionGroup[]): PairSummary[] {
   const pairs: Array<[string, (group: CollisionGroup) => boolean]> = [
-    ['OpeningDriveFvgContinuation+SweepMssFvgRetrace', (group) => group.hasOpeningDrive && group.hasSweep],
-    ['AfterLunchDriveFvgContinuation+SweepMssFvgRetrace', (group) => group.hasAfterLunchDrive && group.hasSweep],
-    ['IntradayMssMicroContinuation+OpeningDriveFvgContinuation+SweepMssFvgRetrace', (group) => group.hasIntradayMssMicro && group.hasOpeningDrive && group.hasSweep],
+    ['NoInstalledSetup+NoInstalledSetup', (group) => group.hasOpeningDrive && group.hasSweep],
+    ['NoInstalledSetup+NoInstalledSetup', (group) => group.hasAfterLunchDrive && group.hasSweep],
+    ['NoInstalledSetup+NoInstalledSetup+NoInstalledSetup', (group) => group.hasIntradayMssMicro && group.hasOpeningDrive && group.hasSweep],
   ];
   return pairs.map(([pair, predicate]) => {
     const matching = groups.filter(predicate);
@@ -346,7 +346,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
     mined.eventsScanned === 0 ? 'no events found in artifact' : null,
     mined.candidateRows.length === 0 ? 'no scoped candidate rows found in artifact' : null,
     mined.groups.length === 0 ? 'no natural same-proof candidate groups found in artifact' : null,
-    openingDriveSweepGroups.length === 0 ? 'no natural OpeningDriveFvgContinuation + SweepMssFvgRetrace groups found' : null,
+    openingDriveSweepGroups.length === 0 ? 'no natural NoInstalledSetup + NoInstalledSetup groups found' : null,
   ].filter((item): item is string => Boolean(item));
   const readyForPopulationMetadataInstallEvidence = blockers.length === 0;
   const base: Omit<RawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSelectorRealArtifactCollisionMinerReport, 'markdown'> = {

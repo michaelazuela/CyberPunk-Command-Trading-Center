@@ -30,7 +30,7 @@ function timingRow(id: string, overrides: Partial<UnifiedPositiveHeldLocalPrevie
     ticketId: id,
     tradeDate: '2026-07-09',
     session: 'morning',
-    setupType: 'SweepMssFvgRetrace',
+    setupType: 'NoInstalledSetup',
     direction: 'SHORT',
     outcomeBucket: 'loss_stopped_before_t1',
     outcomeLabel: 'stopped_before_t1',
@@ -75,7 +75,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
   modelTiming: [],
   rows: [
     timingRow('opening-winner', {
-      setupType: 'OpeningDriveFvgContinuation',
+      setupType: 'NoInstalledSetup',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
       resolvedOneMesPl: 100,
@@ -97,7 +97,7 @@ const timingReport: UnifiedPositiveHeldLocalPreviewReplayPackageSourceProofTimin
     timingRow('htf-lower', {
       ticketId: 'htf-lower',
       tradeDate: '2026-07-10',
-      setupType: 'IntradayMssMicroContinuation',
+      setupType: 'NoInstalledSetup',
       outcomeBucket: 'winner_t1_t2',
       outcomeLabel: 't1_and_t2_hit',
       resolvedOneMesPl: 25,
@@ -119,7 +119,7 @@ const boostReport: UnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationR
   source: {
     reportDir: 'reports',
     sourceProofTimingPath: 'timing.json',
-    selectedSetupTypes: ['SweepMssFvgRetrace'],
+    selectedSetupTypes: ['NoInstalledSetup'],
   },
   assumptions: {
     validationIsResearchOnly: true,
@@ -154,10 +154,10 @@ const boostReport: UnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationR
       session: 'morning',
       rows: 2,
       topBeforeTicketId: 'opening-winner',
-      topBeforeSetupType: 'OpeningDriveFvgContinuation',
+      topBeforeSetupType: 'NoInstalledSetup',
       topBeforeOneMesPl: 100,
       topAfterTicketId: 'sweep-loss',
-      topAfterSetupType: 'SweepMssFvgRetrace',
+      topAfterSetupType: 'NoInstalledSetup',
       topAfterOneMesPl: -95,
       topChanged: true,
     },
@@ -167,10 +167,10 @@ const boostReport: UnifiedPositiveHeldLocalPreviewPositiveFamilyBoostValidationR
       session: 'morning',
       rows: 2,
       topBeforeTicketId: 'htf-lower',
-      topBeforeSetupType: 'IntradayMssMicroContinuation',
+      topBeforeSetupType: 'NoInstalledSetup',
       topBeforeOneMesPl: 25,
       topAfterTicketId: 'sweep-better',
-      topAfterSetupType: 'SweepMssFvgRetrace',
+      topAfterSetupType: 'NoInstalledSetup',
       topAfterOneMesPl: 50,
       topChanged: true,
     },
@@ -201,7 +201,7 @@ assert.equal(report.summary.worsenedDeltaOneMesPl, -195);
 assert.equal(report.summary.worsenedWhereAfterSweep, 1);
 assert.equal(report.summary.worsenedWhereBeforeWinner, 1);
 assert.equal(report.summary.recommendation, 'mine_worsened_sweep_guard');
-assert.equal(report.worsenedByBeforeSetup[0]?.key, 'OpeningDriveFvgContinuation');
+assert.equal(report.worsenedByBeforeSetup[0]?.key, 'NoInstalledSetup');
 assert.equal(report.worsenedByAfterIssueTag.find((row) => row.key === 'same_bar_entry')?.rows, 1);
 assert.equal(report.worsenedByAfterProofToEntryBucket[0]?.key, 'same_bar');
 assert.equal(report.worsenedByAfterRiskBucket[0]?.key, '6.25-8');
@@ -214,7 +214,7 @@ const wrongFamily = buildUnifiedPositiveHeldLocalPreviewSweepBoostCollisionDrill
   boostValidationPath: 'boost.json',
   boostValidationReport: {
     ...boostReport,
-    source: { ...boostReport.source, selectedSetupTypes: ['AfterLunchDriveFvgContinuation'] },
+    source: { ...boostReport.source, selectedSetupTypes: ['NoInstalledSetup'] },
   },
 }, '2026-07-20T00:03:00.000Z');
 

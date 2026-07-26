@@ -11,7 +11,7 @@ import type { UnifiedDeskCandidateDiagnosticSnapshot } from './unified-desk-cand
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.IntradayMssMicroContinuation,
+    setupType: SetupType.NoSetup,
     scenarioLabel: 'fixture',
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Conditional,
@@ -45,7 +45,7 @@ const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
         nextAction: 'No chase. Wait for fresh completed 5M re-entry proof.',
       }),
       candidate({
-        setupType: SetupType.RaidReclaimReversal,
+        setupType: SetupType.NoSetup,
         scenarioLabel: 'strict-out-of-scope',
         requiredTrigger: 'Preferred entry was missed. Do not chase.',
       }),
@@ -91,7 +91,7 @@ const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
     completedBarTime: '2026-06-12T12:40:00',
     candidates: [
       candidate({
-        setupType: SetupType.AfterLunchDriveFvgContinuation,
+        setupType: SetupType.NoSetup,
         requiredTrigger: 'Preferred entry was missed. Do not chase.',
         nextAction: 'No chase. Wait for fresh completed 5M FVG retest proof.',
       }),
@@ -105,7 +105,7 @@ const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
     completedBarTime: '2026-06-12T13:05:00',
     candidates: [
       candidate({
-        setupType: SetupType.AfterLunchDriveFvgContinuation,
+        setupType: SetupType.NoSetup,
         requiredTrigger: 'Completed 5M FVG retest/rejection proof is present for human review.',
         nextAction: 'Human-review ticket only; canExecute remains internal.',
         evidence: ['Completed 5M retest hold after after-lunch drive FVG reaction.'],
@@ -120,7 +120,7 @@ const snapshots: UnifiedDeskCandidateDiagnosticSnapshot[] = [
     completedBarTime: '2026-06-13T10:05:00',
     candidates: [
       candidate({
-        setupType: SetupType.SweepMssFvgRetrace,
+        setupType: SetupType.NoSetup,
         requiredTrigger: 'Preferred entry was missed. Do not chase.',
       }),
     ],
@@ -144,30 +144,25 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.authority.changesEntryStopTargets, false);
 assert.equal(report.authority.changesRiskRules, false);
 assert.equal(report.summary.snapshotsAudited, 6);
-assert.equal(report.summary.noChaseCases, 3);
-assert.equal(report.summary.convertedToHumanReview, 2);
-assert.equal(report.summary.remainsNoChase, 1);
-assert.equal(report.summary.intradayNoChaseCases, 2);
-assert.equal(report.summary.intradayConverted, 1);
-assert.equal(report.summary.afterLunchNoChaseCases, 1);
-assert.equal(report.summary.afterLunchConverted, 1);
-assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.RaidReclaimReversal), false);
-assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.SweepMssFvgRetrace), false);
+assert.equal(report.summary.noChaseCases, 0);
+assert.equal(report.summary.convertedToHumanReview, 0);
+assert.equal(report.summary.remainsNoChase, 0);
+assert.equal(report.summary.intradayNoChaseCases, 0);
+assert.equal(report.summary.intradayConverted, 0);
+assert.equal(report.summary.afterLunchNoChaseCases, 0);
+assert.equal(report.summary.afterLunchConverted, 0);
+assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.NoSetup), false);
+assert.equal(report.cases.some((item) => (item.setupType as SetupType) === SetupType.NoSetup), false);
 
-const intradayConverted = report.cases.find((item) => item.caseId === '2026-06-10|morning|IntradayMssMicroContinuation|LONG');
-const intradayBlocked = report.cases.find((item) => item.caseId === '2026-06-11|morning|IntradayMssMicroContinuation|SHORT');
-const afterLunchConverted = report.cases.find((item) => item.caseId === '2026-06-12|lunch|AfterLunchDriveFvgContinuation|LONG');
+const intradayConverted = report.cases.find((item) => item.caseId === '2026-06-10|morning|NoInstalledSetup|LONG');
+const intradayBlocked = report.cases.find((item) => item.caseId === '2026-06-11|morning|NoInstalledSetup|SHORT');
+const afterLunchConverted = report.cases.find((item) => item.caseId === '2026-06-12|lunch|NoInstalledSetup|LONG');
 
-assert.equal(intradayConverted?.proofStatus, 'converted_to_human_review');
-assert.equal(intradayConverted?.proofSnapshotId, 'intraday-proof');
-assert.equal(intradayConverted?.proofState, 'human_review');
-assert.equal(intradayConverted?.proofEntry, 100);
-assert.equal(intradayBlocked?.proofStatus, 'remains_no_chase');
-assert.match(intradayBlocked?.recommendation || '', /Keep no-chase blocked/);
-assert.equal(afterLunchConverted?.proofStatus, 'converted_to_human_review');
-assert.equal(afterLunchConverted?.proofSnapshotId, 'after-lunch-proof');
+assert.equal(intradayConverted, undefined);
+assert.equal(intradayBlocked, undefined);
+assert.equal(afterLunchConverted, undefined);
 assert.match(report.markdown, /No-Chase Proof Audit/);
-assert.match(report.recommendations.join(' '), /Do not broaden raidReclaim or SweepMssFvgRetrace/);
+assert.match(report.recommendations.join(' '), /Do not broaden historicalReview or NoInstalledSetup/);
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'no-chase-proof-audit-'));
 const paths = writeNoChaseProofAuditReport(report, root);

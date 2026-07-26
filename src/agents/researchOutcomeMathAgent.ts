@@ -37,7 +37,7 @@ export interface ResearchOutcomeCandidate {
   concept: string;
   direction: ResearchBackfillDirection;
   window: string | null;
-  classification: 'model1_overlap' | 'RAID_RECLAIM_overlap' | 'advisory_only';
+  classification: 'model1_overlap' | 'HISTORICAL_REVERSAL_overlap' | 'advisory_only';
   summary: string;
   advisoryOnly: true;
   sourcePath?: string;
@@ -64,7 +64,7 @@ export interface ResearchCandidateOutcome {
   concept: string;
   direction: ResearchBackfillDirection;
   window: string | null;
-  classification: 'model1_overlap' | 'RAID_RECLAIM_overlap' | 'advisory_only';
+  classification: 'model1_overlap' | 'HISTORICAL_REVERSAL_overlap' | 'advisory_only';
   advisoryOnly: true;
   observationWindowBars: number;
   observationWindowMinutes: number;
