@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add tight selector for Structure Shift Continuation.
+Files changed: tools/automation/structure-shift-continuation-tight-match-selector.ts, tools/automation/structure-shift-continuation-tight-match-selector.test.ts, docs/PROJECT_STATUS.md.
+Reason: Classify Structure Shift PDF-window matches into tight/usable/loose/reject before comparing the model lane against the other installed forensic lanes.
+Tests run: npx tsx tools/automation/structure-shift-continuation-tight-match-selector.test.ts; exact legacy/supporting-label drift search against the selector files; real local selector against the Structure Shift PDF-window filter report.
+Result: Passed. The selector keeps scanner/promotion/Discord/Supabase/bridge/execution eligibility false and applies the same conservative time/distance quality bands as prior lanes. Real selector produced sourceProfitablePdfTrades=40, sourceMatchedTrades=14, rows=40, tightRows=1, usableRows=5, looseRows=8, rejectRows=26, selectedRows=6, selectedDollars=$135.00, looseDollars=$441.25, rejectedDollars=$1642.50, selectedShortRows=5, selectedLongRows=1, selectedSupportHtfRows=6. Report path: `tools/automation/diagnostic-reports/structure-shift-continuation-tight-match-selector-1785042178796.json`.
+Trading logic changed: No. This is a local selector over replay/PDF artifacts. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Structure Shift has meaningful broad overlap, but the tight/usable selected dollars are modest. It should be compared across lanes before scanner-facing work.
+Next recommended action: Rerun the model-lane comparison with four installed forensic lanes.
+
+Date: 2026-07-25
 Task: Add PDF-window attribution for Structure Shift Continuation.
 Files changed: tools/automation/structure-shift-continuation-pdf-window-filter.ts, tools/automation/structure-shift-continuation-pdf-window-filter.test.ts, docs/PROJECT_STATUS.md.
 Reason: Compare Structure Shift replay detections against the profitable June PDF trade windows before adding a selector, scanner wiring, promotion, Discord card, or production behavior.
