@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add tight selector for Drive Pullback Continuation.
+Files changed: tools/automation/drive-pullback-continuation-tight-match-selector.ts, tools/automation/drive-pullback-continuation-tight-match-selector.test.ts, docs/PROJECT_STATUS.md.
+Reason: Classify Drive Pullback PDF-window matches into tight/usable/loose/reject before comparing the model lane against prior installed forensic lanes.
+Tests run: npx tsx tools/automation/drive-pullback-continuation-tight-match-selector.test.ts; exact legacy/supporting-label drift search against the selector files; real local selector against the Drive Pullback PDF-window filter report.
+Result: Passed. The selector keeps scanner/promotion/Discord/Supabase/bridge/execution eligibility false and applies the same conservative time/distance quality bands as prior lanes. Real selector produced sourceProfitablePdfTrades=40, sourceMatchedTrades=4, rows=40, tightRows=2, usableRows=2, looseRows=0, rejectRows=36, selectedRows=4, selectedDollars=$271.25, rejectedDollars=$1947.50, selectedShortRows=4, selectedLongRows=0, selectedSupportHtfRows=2. Report path: `tools/automation/diagnostic-reports/drive-pullback-continuation-tight-match-selector-1785040697741.json`.
+Trading logic changed: No. This is a local selector over replay/PDF artifacts. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Drive Pullback selected rows are real but smaller than the leading model lane; do not install scanner behavior from this alone.
+Next recommended action: Rerun the model-lane comparison with all three installed forensic lanes: Liquidity Raid Reclaim, Raid Failure Displacement, and Drive Pullback Continuation.
+
+Date: 2026-07-25
 Task: Add PDF-window attribution for Drive Pullback Continuation.
 Files changed: tools/automation/drive-pullback-continuation-pdf-window-filter.ts, tools/automation/drive-pullback-continuation-pdf-window-filter.test.ts, docs/PROJECT_STATUS.md.
 Reason: Compare Drive Pullback replay detections against the profitable June PDF trade windows before adding any selector, scanner wiring, promotion, Discord card, or production behavior.
