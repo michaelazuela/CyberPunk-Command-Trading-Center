@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add replay-only source/proof clause miner for Raid Failure Displacement Reversal.
+Files changed: tools/automation/raid-failure-displacement-source-clause-miner.ts, tools/automation/raid-failure-displacement-source-clause-miner.test.ts, docs/PROJECT_STATUS.md.
+Reason: Mine the leading model's tight/usable rows for shared pre-entry source/proof clauses before drafting any scanner-owned preview candidate.
+Tests run: npx tsx tools/automation/raid-failure-displacement-source-clause-miner.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against the clause miner files; real local clause miner against the latest Raid Failure Displacement tight-selector report.
+Result: Passed. Focused clause miner test passed, TypeScript passed, exact legacy/supporting-label search returned no hits in the miner files, and the blank-slate setup registry still returns no scanner candidates. Real local miner produced rows=40, selectedRows=17, tightRows=10, usableRows=7, looseRows=6, rejectRows=17, selectedDollars=$1090.00, tightDollars=$697.50, usableDollars=$392.50, looseDollars=$497.50, rejectedDollars=$631.25, shortSelectedRows=13, longSelectedRows=4, morningSelectedRows=10, lunchSelectedRows=7. Top clauses: evidence_left_imbalance selectedRows=15 selectedDollars=$963.75; htf=support selectedRows=15 selectedDollars=$937.50; direction=SHORT selectedRows=13 selectedDollars=$721.25; proof_same_bar selectedRows=9 selectedDollars=$631.25. Top conjunction: evidence_left_imbalance + htf=support rows=13 dollars=$811.25. Report path: `tools/automation/diagnostic-reports/raid-failure-displacement-source-clause-miner-1785037664034.json`.
+Trading logic changed: No. This is a local selector-artifact miner. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The strongest clause includes high risk-band rows, so scanner preview must still keep deterministic risk gates and cannot use this miner as approval by itself.
+Next recommended action: Draft a scanner-preview contract for Raid Failure Displacement Reversal that is disabled by default and requires HTF support, left-imbalance displacement proof, completed 5M proof, deterministic protected stop, and normal risk gates.
+
+Date: 2026-07-25
 Task: Add five-model selector comparison report for the first two installed forensic models.
 Files changed: tools/automation/five-model-selector-comparison-report.ts, tools/automation/five-model-selector-comparison-report.test.ts, docs/PROJECT_STATUS.md.
 Reason: Compare the replay-only tight selector evidence for Liquidity Raid Reclaim Reversal and Raid Failure Displacement Reversal before any scanner-owned preview candidate is proposed.
