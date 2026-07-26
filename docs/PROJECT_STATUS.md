@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add replay-only proof for Drive Pullback Continuation.
+Files changed: tools/automation/drive-pullback-continuation-replay-proof.ts, tools/automation/drive-pullback-continuation-replay-proof.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove the third approved forensic model against stored OHLC before any PDF attribution, scanner wiring, promotion, Discord card, or production behavior is touched.
+Tests run: npx tsx tools/automation/drive-pullback-continuation-replay-proof.test.ts; npx tsx src/lib/forensicModels/drivePullbackContinuation.test.ts; npx tsx src/config/setupRegistry.test.ts; exact legacy/supporting-label drift search against the replay proof files; real local replay against the saved June OHLC pack.
+Result: Passed. The synthetic replay proof requires post-drive 5M pullback/rejection proof, keeps same-drive-candle FVG creation from counting as the pullback proof, and preserves all scanner/promotion/Discord/Supabase/bridge/execution authority flags as false. Real June 8-28 morning/lunch replay loaded 5M=12119, 15M=4052, 60M=1025, 120M=527, 240M=266, evaluated 1089 contexts, and found detections=139, uniqueDetections=139, longDetections=48, shortDetections=91, supportHtfRows=115, conflictHtfRows=23. Report path: `tools/automation/diagnostic-reports/drive-pullback-continuation-replay-proof-MES-2026-06-08-to-2026-06-28-1785039886138.json`.
+Trading logic changed: No. This is a replay-only proof harness. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None. The replay used a local saved OHLC JSON file only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The replay proves detection volume, not outcome quality. It still needs PDF-window attribution and a tight selector before scanner-facing work.
+Next recommended action: Add PDF-window attribution for Drive Pullback Continuation, then compare profitable PDF-window rows against the prior two installed model lanes.
+
+Date: 2026-07-25
 Task: Add isolated Drive Pullback Continuation detector.
 Files changed: src/lib/forensicModels/drivePullbackContinuation.ts, src/lib/forensicModels/drivePullbackContinuation.test.ts, docs/PROJECT_STATUS.md.
 Reason: Install the third approved forensic model as a pure detector before any replay package, scanner wiring, promotion, Discord card, or production behavior is touched.
