@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add replay-only retest-entry validation for Raid Failure Displacement Reversal.
+Files changed: tools/automation/raid-failure-displacement-retest-entry-validation.ts, tools/automation/raid-failure-displacement-retest-entry-validation.test.ts, docs/PROJECT_STATUS.md.
+Reason: Verify whether the risk-clean retest entries from the geometry miner actually traded after completed 5M proof and before the profitable PDF exit window.
+Tests run: npx tsx tools/automation/raid-failure-displacement-retest-entry-validation.test.ts; npx tsx tools/automation/raid-failure-displacement-tight-entry-geometry-miner.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against the retest validation files; real local retest validation against the latest geometry report and saved June OHLC pack.
+Result: Passed. Focused retest validation test passed, geometry miner test passed, TypeScript passed, exact legacy/supporting-label search returned no hits in the retest files, and the blank-slate setup registry still returns no scanner candidates. Real local validation loaded 5M=12119 bars and produced geometryRows=13, retestTouchedRows=5, cleanRetestRows=5, cleanRetestDollars=$91.25, ambiguousStopTouchRows=0, noRetestTouchRows=8, noRetestTouchDollars=$720.00, scannerInstallEligibleRows=0, promotionEligibleRows=0, discordEligibleRows=0, executionApprovalEligibleRows=0, canExecuteTrueRows=0. Report path: `tools/automation/diagnostic-reports/raid-failure-displacement-retest-entry-validation-1785038896723.json`.
+Trading logic changed: No. This is a replay-only retest validation. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None. The validation used a local saved OHLC JSON file only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The retest-entry version is risk clean when touched, but it captures only 5 of the 13 source/proof-qualified winners. That is too small to wire scanner behavior without another narrowing or model phase.
+Next recommended action: Continue installing the third model, Drive Pullback Continuation, in isolation rather than forcing Raid Failure Displacement into scanner preview prematurely.
+
+Date: 2026-07-25
 Task: Add replay-only tight-entry geometry miner for Raid Failure Displacement Reversal.
 Files changed: tools/automation/raid-failure-displacement-tight-entry-geometry-miner.ts, tools/automation/raid-failure-displacement-tight-entry-geometry-miner.test.ts, docs/PROJECT_STATUS.md.
 Reason: Determine whether the leading model can satisfy the current 5-point risk cap with no-lookahead 5M proof-bar geometry instead of weakening risk or scanner rules.
