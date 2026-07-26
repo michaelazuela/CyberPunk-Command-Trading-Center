@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add PDF-window attribution for Drive Pullback Continuation.
+Files changed: tools/automation/drive-pullback-continuation-pdf-window-filter.ts, tools/automation/drive-pullback-continuation-pdf-window-filter.test.ts, docs/PROJECT_STATUS.md.
+Reason: Compare Drive Pullback replay detections against the profitable June PDF trade windows before adding any selector, scanner wiring, promotion, Discord card, or production behavior.
+Tests run: npx tsx tools/automation/drive-pullback-continuation-pdf-window-filter.test.ts; exact legacy/supporting-label drift search against the PDF-window filter files; real local PDF-window filter against `C:\Users\Mike\Downloads\206257_Monthly_20260630.pdf` and the Drive Pullback replay proof report.
+Result: Passed. The filter extracts profitable PDF fills, pairs open/close lots, converts GMT fills to ET, and matches only same date/session/direction replay detections that appeared before the PDF entry within 60 minutes and 12 points. Real June 8-28 run produced profitablePdfTrades=40, replayDetections=139, matchedTrades=4, unmatchedTrades=36, matchedLongTrades=0, matchedShortTrades=4, matchedDollars=$271.25, totalProfitableDollars=$2218.75, supportHtfMatches=2, conflictHtfMatches=0. Report path: `tools/automation/diagnostic-reports/drive-pullback-continuation-pdf-window-filter-2026-06-08-to-2026-06-28-1785040421246.json`.
+Trading logic changed: No. This is a local PDF/replay attribution tool. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Drive Pullback appears too broad in replay and only modestly overlaps the profitable PDF windows under this first filter. It needs a tight selector before it can be compared fairly to the earlier two lanes.
+Next recommended action: Add a Drive Pullback tight-match selector, then rerun the five-model comparison with all three installed lanes.
+
+Date: 2026-07-25
 Task: Add replay-only proof for Drive Pullback Continuation.
 Files changed: tools/automation/drive-pullback-continuation-replay-proof.ts, tools/automation/drive-pullback-continuation-replay-proof.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove the third approved forensic model against stored OHLC before any PDF attribution, scanner wiring, promotion, Discord card, or production behavior is touched.
