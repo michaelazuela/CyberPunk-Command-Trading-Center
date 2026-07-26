@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model install readiness audit.
+Files changed: tools/automation/five-model-install-readiness-audit.ts, tools/automation/five-model-install-readiness-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: Add one local audit that reads the saved activation, scanner readback, Discord preview, launch checklist, one-row manifest, disabled sender, and closeout artifacts so the five-model install has a single end-to-end readiness state before any production webhook call.
+Tests run: npx tsx tools/automation/five-model-install-readiness-audit.test.ts; npx tsc --noEmit --pretty false; changed-file drift scan; git diff --check; real install readiness audit from current saved five-model artifacts.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-install-readiness-audit-1785095689880.json`. Summary: artifactsChecked=7, artifactsPassed=7, scannerSurfaceRows=18, scannerReadbackRows=18, discordPreviewPayloads=18, approvedDeskPlanRows=5, formingDeskReadRows=13, candidateSelectedRows=1, payloadSelectedRows=1, productionReceiptAcceptedRows=0, discordPostRows=0, webhookCallRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0, recommendation=awaiting_explicit_discord_execution. Requirement audit proves scanner surface, scanner readback, Discord preview, fixed one-row candidate/idempotency, disabled sender, and closeout runbook; it leaves the one real Discord receipt/audit as waiting.
+Trading logic changed: No. This is a local readiness audit only. It does not send Discord, write Supabase, read live bridge data, change scanner detection, setupRegistry, ranking, promotion rules, entry/stop/target math, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call. The audit only proves whether the install is waiting for explicit one-row Discord execution or ready for final receipt handoff.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The audit should remain in waiting state until the separately approved one-row production rehearsal has produced and passed a receipt audit.
+Next recommended action: Stop at the explicit Discord side-effect gate until the exact one-row five-model Discord production rehearsal is approved, then run the receipt audit and rerun this install readiness audit to reach final handoff.
+
+Date: 2026-07-26
 Task: Add five-model Discord production rehearsal closeout runbook.
 Files changed: tools/automation/five-model-discord-production-rehearsal-closeout.ts, tools/automation/five-model-discord-production-rehearsal-closeout.test.ts, docs/PROJECT_STATUS.md.
 Reason: Add a local closeout verifier that ties together the selected one-row manifest, disabled sender proof, and optional receipt audit so the final Discord rehearsal gate has one exact runbook and cannot drift candidate/idempotency/payload boundaries.
