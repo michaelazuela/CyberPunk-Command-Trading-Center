@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Install five-model forensic playbook definitions.
+Files changed: docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Start the clean rebuild from a blank slate with a source-of-truth playbook before any scanner, registry, detector, promotion, Discord, Supabase, or bridge behavior is reintroduced.
+Tests run: model-heading count check; exact legacy/supporting-label drift search against active `src`, `tools`, and the new playbook; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run build; npm run lint.
+Result: Passed. The playbook contains exactly five model definitions, the exact old model/supporting-label search returned no hits in active code or the new playbook, TypeScript passed, required guards passed, production build passed, and lint passed.
+Trading logic changed: No. This is documentation only and does not install model detection, ranking, promotion, scanner candidates, Discord publishing, Supabase writes, bridge reads, entry/stop/target logic, risk logic, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The definitions are a contract for the next micro-phase, not active scanner behavior. Each detector still needs isolated replay proof before scanner wiring.
+Next recommended action: Add a typed approved-model registry with exactly these five names and no detector behavior.
+
+Date: 2026-07-25
 Task: Blank-slate the trading-model surface.
 Files changed: active setup registry/types, scanner/pipeline/model-label consumers, Discord/card/test helpers, research automation commands, time-window naming, architecture guard, and project status.
 Reason: User requested every old trading model and context-only model path be removed so the desk can restart model work from a clean slate.
