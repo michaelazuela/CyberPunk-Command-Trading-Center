@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add replay-only Liquidity Raid Reclaim Reversal proof package.
+Files changed: tools/automation/liquidity-raid-reclaim-reversal-replay-proof.ts, tools/automation/liquidity-raid-reclaim-reversal-replay-proof.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove the first isolated detector against stored June OHLC before any scanner candidate wiring.
+Tests run: npx tsx tools/automation/liquidity-raid-reclaim-reversal-replay-proof.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against new detector/proof/registry/playbook files; real local replay command against `tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-06-01-to-2026-07-02-1784594514789.json`; scanner import isolation search; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run build; npm run lint.
+Result: Passed. Replay proof tool test passed, TypeScript passed, and exact legacy/supporting-label search returned no hits in the new files. Real local replay for MES June 8-28 morning/lunch loaded 5M=12119, 15M=4052, 60M=1025, 120M=527, 240M=266 bars, evaluated 1119 contexts, and produced 237 unique raw detector hits: 134 LONG and 103 SHORT. Report path: `tools/automation/diagnostic-reports/liquidity-raid-reclaim-reversal-replay-proof-MES-2026-06-08-to-2026-06-28-1785035014958.json`. Detector references remain isolated to the detector, detector test, and replay proof tool. Guards, production build, and lint passed.
+Trading logic changed: No. This is a replay-only diagnostic package. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, or automated execution.
+Bridge impact: None. The replay used a local saved OHLC JSON file only.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The raw detector is intentionally broad and is not scanner-ready. The 237 hits prove the detector sees the pattern, but also prove it needs a narrowing/outcome-attribution phase before promotion.
+Next recommended action: Build the next micro-phase as a replay-only forensic filter for Liquidity Raid Reclaim Reversal: match detections to PDF-winning trade windows, add no-chase/first-valid-window controls, and report which subset survives.
+
+Date: 2026-07-25
 Task: Install isolated Liquidity Raid Reclaim Reversal detector.
 Files changed: src/lib/forensicModels/liquidityRaidReclaimReversal.ts, src/lib/forensicModels/liquidityRaidReclaimReversal.test.ts, docs/PROJECT_STATUS.md.
 Reason: Begin detector installation one model at a time while keeping the scanner blank until isolated model proof is clean.
