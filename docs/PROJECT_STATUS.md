@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model Discord production rehearsal closeout runbook.
+Files changed: tools/automation/five-model-discord-production-rehearsal-closeout.ts, tools/automation/five-model-discord-production-rehearsal-closeout.test.ts, docs/PROJECT_STATUS.md.
+Reason: Add a local closeout verifier that ties together the selected one-row manifest, disabled sender proof, and optional receipt audit so the final Discord rehearsal gate has one exact runbook and cannot drift candidate/idempotency/payload boundaries.
+Tests run: npx tsx tools/automation/five-model-discord-production-rehearsal-closeout.test.ts; npx tsc --noEmit --pretty false; changed-file drift scan; git diff --check; real closeout against `tools/automation/diagnostic-reports/five-model-discord-one-row-rehearsal-manifest-1785093870563.json` and `tools/automation/diagnostic-reports/five-model-discord-one-row-production-rehearsal-disabled-sender-1785094067546.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-discord-production-rehearsal-closeout-1785095193822.json`. Summary: manifestPassed=true, disabledSenderPassed=true, receiptAuditPassed=false, candidateSelectedRows=1, payloadSelectedRows=1, productionReceiptAcceptedRows=0, discordPostRows=0, webhookCallRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0, recommendation=awaiting_explicit_discord_execution. Selected candidate: `five-model-discord-rehearsal|c1c068f94450e08d`; idempotency key: `five-model-discord-production-rehearsal:d558fda9a5a868cc`.
+Trading logic changed: No. This is a local diagnostic/runbook layer only. It does not send Discord, write Supabase, read live bridge data, change scanner detection, setupRegistry, ranking, promotion rules, entry/stop/target math, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call. The closeout report only records whether the next state is waiting for explicit one-row Discord execution or ready for final handoff after a valid receipt audit.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The closeout can only reach final handoff after the separately approved one-row production rehearsal has produced a receipt and the receipt audit passes.
+Next recommended action: Stop at the explicit Discord side-effect gate until the exact one-row five-model Discord production rehearsal is approved for candidate `five-model-discord-rehearsal|c1c068f94450e08d` with idempotency key `five-model-discord-production-rehearsal:d558fda9a5a868cc`, then audit the produced receipt.
+
+Date: 2026-07-26
 Task: Add five-model Discord one-row rehearsal receipt audit.
 Files changed: tools/automation/five-model-discord-one-row-rehearsal-receipt-audit.ts, tools/automation/five-model-discord-one-row-rehearsal-receipt-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prepare the post-send audit before the one real Discord rehearsal occurs, so the future receipt must prove exact candidate/idempotency match, one-row cap, one webhook call, Discord message id readback, payload-from-manifest proof, and zero Supabase/bridge/canExecute/order drift.
