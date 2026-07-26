@@ -3,6 +3,34 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model Discord one-row production rehearsal sender.
+Files changed: tools/automation/five-model-discord-one-row-production-rehearsal.ts, tools/automation/five-model-discord-one-row-production-rehearsal.test.ts, docs/PROJECT_STATUS.md.
+Reason: Install the disabled-by-default sender contract for the selected five-model manifest candidate so a later real Discord rehearsal must match the exact candidate id, idempotency key, approval phrase, and one-row cap.
+Tests run: npx tsx tools/automation/five-model-discord-one-row-production-rehearsal.test.ts; npx tsc --noEmit --pretty false; real disabled sender against `tools/automation/diagnostic-reports/five-model-discord-one-row-rehearsal-manifest-1785093870563.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-discord-one-row-production-rehearsal-disabled-sender-1785094067546.json`. Summary: manifestPassed=true, candidateSelectedRows=1, payloadSelectedRows=1, explicitApprovalFlagPresent=true, explicitApprovalPhrasePresent=true, productionSendArmed=false, discordPostRows=0, webhookCallRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0, recommendation=ready_for_exactly_one_five_model_production_discord_execution.
+Trading logic changed: No. This is a guarded sender contract and disabled local run only. It does not send Discord unless separately run with `--execute-production-webhook`, does not write Supabase, read live bridge data, change scanner detection, setupRegistry, ranking, promotion rules, entry/stop/target math, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call in the verified run. The sender is installed but remains disabled unless explicitly executed with the matching approval inputs.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The next phase is the actual one-row Discord rehearsal. It will make one real webhook call if explicitly approved and run with `--execute-production-webhook`.
+Next recommended action: Stop at the real Discord side-effect gate until the exact one-row five-model production rehearsal is approved for candidate `five-model-discord-rehearsal|c1c068f94450e08d` with idempotency key `five-model-discord-production-rehearsal:d558fda9a5a868cc`.
+
+Date: 2026-07-26
+Task: Add five-model Discord one-row rehearsal manifest.
+Files changed: tools/automation/five-model-discord-one-row-rehearsal-manifest.ts, tools/automation/five-model-discord-one-row-rehearsal-manifest.test.ts, docs/PROJECT_STATUS.md.
+Reason: Select exactly one Approved Desk Plan payload from the five-model Discord dry-run preview and bind it to a fixed candidate id, idempotency key, and approval phrase before any real webhook rehearsal.
+Tests run: npx tsx tools/automation/five-model-discord-one-row-rehearsal-manifest.test.ts; npx tsc --noEmit --pretty false; real manifest against current launch checklist, Discord preview, and runtime scanner surface artifacts.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-discord-one-row-rehearsal-manifest-1785093870563.json`. Summary: runtimeSurfaceRows=18, discordPreviewPayloads=18, approvedDeskPlanRows=5, formingDeskReadRows=13, candidateSelectedRows=1, payloadSelectedRows=1, discordPostRows=0, webhookCallRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0, recommendation=ready_for_exactly_one_five_model_discord_rehearsal_approval. Selected candidate: `five-model-discord-rehearsal|c1c068f94450e08d`; idempotency key: `five-model-discord-production-rehearsal:d558fda9a5a868cc`.
+Trading logic changed: No. This is a local one-row rehearsal manifest only. It does not send Discord, write Supabase, read live bridge data, change scanner detection, setupRegistry, ranking, promotion rules, entry/stop/target math, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call. The manifest only prepares the exact one-row candidate for a separately approved rehearsal.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The production sender for this five-model manifest is not installed yet; a real Discord post still requires the explicit approval phrase, candidate id, and idempotency key.
+Next recommended action: Add the disabled-by-default five-model one-row production rehearsal sender, then run it without `--execute-production-webhook` to prove it refuses/guards live posting before any real Discord call.
+
+Date: 2026-07-26
 Task: Add five-model launch checklist.
 Files changed: tools/automation/five-model-launch-checklist.ts, tools/automation/five-model-launch-checklist.test.ts, docs/PROJECT_STATUS.md.
 Reason: Tie together the five-model activation, scanner readback, and Discord dry-run preview into one no-network launch checklist before any live webhook rehearsal decision.
