@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add isolated Failed Breakout Reversal detector.
+Files changed: src/lib/forensicModels/failedBreakoutReversal.ts, src/lib/forensicModels/failedBreakoutReversal.test.ts, docs/PROJECT_STATUS.md.
+Reason: Install the fifth approved forensic model as a pure detector before replay proof, PDF attribution, scanner wiring, promotion, Discord card, or production behavior is touched.
+Tests run: npx tsx src/lib/forensicModels/failedBreakoutReversal.test.ts; npx tsx src/config/approvedDeskModels.test.ts; npx tsx src/config/setupRegistry.test.ts; exact legacy/supporting-label drift search against the new detector files.
+Result: Passed. The detector identifies LONG and SHORT failed-breakout reversal proof from named failed-breakout levels, reclaim/close-through facts, protected 5M stops, and app target math. It does not require a separate liquidity sweep, keeps all scanner/promotion/Discord/execution flags false, and the blank-slate setup registry still returns no scanner candidates.
+Trading logic changed: No. This is an isolated detector module only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The detector is not replay- or outcome-proven yet. It needs replay proof and PDF-window attribution before any scanner-facing install.
+Next recommended action: Add replay-only proof for Failed Breakout Reversal against June 8-28 morning/lunch stored OHLC.
+
+Date: 2026-07-25
 Task: Update selector comparison to four forensic lanes.
 Files changed: tools/automation/five-model-selector-comparison-report.ts, tools/automation/five-model-selector-comparison-report.test.ts, docs/PROJECT_STATUS.md.
 Reason: Compare Liquidity Raid Reclaim, Raid Failure Displacement, Drive Pullback Continuation, and Structure Shift Continuation selected PDF-window rows before any scanner-facing install decision.
