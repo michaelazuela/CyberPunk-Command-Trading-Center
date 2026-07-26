@@ -11,6 +11,9 @@ import {
   resolveScannerWindow,
 } from '../../src/lib/localScannerEngine';
 import {
+  fiveModelProductionScannerSummaryLine,
+  readFiveModelProductionScannerSurface,
+  writeFiveModelProductionScannerReadback,
   normalizeScannerBarTimestampMode,
   normalizeScannerOperatorDeliveryReason,
   readUnifiedDeskOutputProductionScannerSurface,
@@ -76,6 +79,108 @@ try {
   assert.equal(readback.reportType, 'unified_desk_output_production_scanner_readback');
   assert.equal(readback.status, 'blocked');
   assert.equal(readback.summary.selectedRows, 0);
+
+  const fiveModelRow = (index: number, session: 'morning' | 'lunch', state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ') => ({
+    cardId: `five-model-row-${index}`,
+    date: '2026-06-09',
+    session,
+    state,
+    stateLabel: state === 'APPROVED_DESK_PLAN' ? 'Approved Desk Plan' : 'Forming Desk Read',
+    model: index % 2 === 0 ? 'Liquidity Raid Reclaim Reversal' : 'Structure Shift Continuation',
+    direction: index % 2 === 0 ? 'LONG' : 'SHORT',
+    headline: `Five-model row ${index}`,
+    bodyLines: ['Five-model scanner surface row.'],
+    levelLine: 'Entry 7540.75 | Stop 7536.25 | T1 7547.50 | T2 7549.75',
+    riskLine: 'Risk remains scanner-owned.',
+    proofLine: 'Completed 5M proof: 10:15 ET.',
+    invalidationLine: 'Invalid if protected 5M structure fails.',
+    authorityLine: 'Decision support only. Discord/Supabase/bridge/canExecute remain off.',
+    scannerVisibleNow: true,
+    publishDiscord: false,
+    writesSupabase: false,
+    readsLiveBridge: false,
+    canExecute: false,
+  });
+  const fiveModelRows = [
+    ...Array.from({ length: 5 }, (_, index) => fiveModelRow(index + 1, index < 3 ? 'morning' : 'lunch', 'APPROVED_DESK_PLAN')),
+    ...Array.from({ length: 13 }, (_, index) => fiveModelRow(index + 6, index < 7 ? 'morning' : 'lunch', 'FORMING_DESK_READ')),
+  ];
+  const fiveModelSurfacePath = path.join(outputDir, '.five-model-production-surface.json');
+  await fs.writeFile(fiveModelSurfacePath, `${JSON.stringify({
+    reportType: 'five_model_production_scanner_surface_activation',
+    generatedAt: '2026-07-26T18:20:00.000Z',
+    status: 'active',
+    approval: {
+      explicitProductionApproval: true,
+      approvalScope: 'five_model_scanner_surface_rows_only',
+      discordPostingRemainsGuarded: true,
+      changesTradingLogic: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      automatedOrders: false,
+    },
+    authority: {
+      scannerVisibleNow: true,
+      localRuntimeSurfaceOnly: true,
+      postsDiscord: false,
+      writesSupabase: false,
+      readsLiveSupabase: false,
+      readsLiveBridge: false,
+      changesScannerBehavior: false,
+      changesTradingLogic: false,
+      changesCanExecute: false,
+      canExecute: false,
+      automatedOrders: false,
+    },
+    source: { scannerSurfaceSmokePath: 'surface-smoke.json' },
+    summary: {
+      selectedRows: 18,
+      approvedDeskPlanRows: 5,
+      formingDeskReadRows: 13,
+      morningRows: 10,
+      lunchRows: 8,
+      eveningRows: 0,
+      discordPostRows: 0,
+      supabaseWriteRows: 0,
+      liveSupabaseReadRows: 0,
+      liveBridgeReadRows: 0,
+      canExecuteTrueRows: 0,
+      canExecuteChangedRows: 0,
+      tradingLogicChangedRows: 0,
+      automatedOrderRows: 0,
+      blockedRows: 0,
+    },
+    rows: fiveModelRows,
+    blockers: [],
+  }, null, 2)}\n`);
+
+  const fiveModelSurface = await readFiveModelProductionScannerSurface(fiveModelSurfacePath);
+  assert.notEqual(fiveModelSurface, null);
+  assert.match(fiveModelProductionScannerSummaryLine(fiveModelSurface), /Five-model production surface active: rows=18/);
+  const fiveModelReadbackPath = path.join(outputDir, 'five-model-readback.json');
+  await writeFiveModelProductionScannerReadback({
+    tradeDate: '2026-07-22',
+    instrument: 'MES',
+    session: 'morning',
+    completed5mTime: '2026-07-22T16:00:00.000Z',
+    surface: fiveModelSurface,
+    filePath: fiveModelReadbackPath,
+  });
+  const fiveModelReadback = JSON.parse(await fs.readFile(fiveModelReadbackPath, 'utf8'));
+  assert.equal(fiveModelReadback.reportType, 'five_model_production_scanner_readback');
+  assert.equal(fiveModelReadback.status, 'pass');
+  assert.equal(fiveModelReadback.summary.selectedRows, 18);
+  assert.equal(fiveModelReadback.summary.approvedDeskPlanRows, 5);
+  assert.equal(fiveModelReadback.summary.formingDeskReadRows, 13);
+  assert.equal(fiveModelReadback.summary.discordPostRows, 0);
+  assert.equal(fiveModelReadback.summary.canExecuteTrueRows, 0);
+
+  const dirtyFiveModelSurfacePath = path.join(outputDir, '.five-model-production-surface-dirty.json');
+  await fs.writeFile(dirtyFiveModelSurfacePath, `${JSON.stringify({
+    ...(fiveModelSurface as any),
+    rows: [{ ...fiveModelRows[0], canExecute: true }, ...fiveModelRows.slice(1)],
+  }, null, 2)}\n`);
+  assert.equal(await readFiveModelProductionScannerSurface(dirtyFiveModelSurfacePath), null);
 
   assert.equal(normalizeScannerBarTimestampMode(undefined), 'open');
   assert.equal(normalizeScannerBarTimestampMode('close'), 'close');

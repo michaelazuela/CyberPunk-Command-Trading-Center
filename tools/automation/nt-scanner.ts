@@ -152,6 +152,10 @@ import {
   type UnifiedDeskOutputProductionScannerSurfaceActivation,
 } from '../../src/lib/unifiedDeskOutputProductionScannerSurface';
 import {
+  APPROVED_DESK_MODEL_DEFINITIONS,
+} from '../../src/config/approvedDeskModels';
+import type { FiveModelProductionScannerSurfaceActivation } from '../../src/lib/fiveModelProductionScannerSurface';
+import {
   attachDiscordMessageReceiptToRagPayload,
   resolveDiscordRagPersistenceConfig,
   upsertDiscordAlertRagPayload,
@@ -559,6 +563,8 @@ const DISCORD_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const MARKET_DATA_GAP_FALLBACK_LEDGER = path.join(__dirname, '.market-data-gap-events.json');
 const UNIFIED_DESK_OUTPUT_PRODUCTION_SURFACE_FILE = path.join(__dirname, '.unified-desk-output-production-scanner-surface.json');
 const UNIFIED_DESK_OUTPUT_PRODUCTION_READBACK_FILE = path.join(__dirname, 'diagnostic-reports', 'unified-desk-output-production-scanner-readback.json');
+const FIVE_MODEL_PRODUCTION_SURFACE_FILE = path.join(__dirname, '.five-model-production-scanner-surface.json');
+const FIVE_MODEL_PRODUCTION_READBACK_FILE = path.join(__dirname, 'diagnostic-reports', 'five-model-production-scanner-readback.json');
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
 export const SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS = 30;
@@ -1620,6 +1626,128 @@ export async function writeUnifiedDeskOutputProductionScannerReadback(args: {
       lunchRows: blockers.length || !args.surface ? 0 : args.surface.summary.lunchRows,
       eveningRows: blockers.length || !args.surface ? 0 : (args.surface.summary.eveningRows ?? 0),
       approvedDeskPlanRows: blockers.length || !args.surface ? 0 : args.surface.summary.approvedDeskPlanRows,
+      discordPostRows: 0,
+      supabaseWriteRows: 0,
+      liveBridgeReadRows: 0,
+      canExecuteTrueRows: 0,
+      tradingLogicChangedRows: 0,
+      automatedOrderRows: 0,
+      blockedRows: blockers.length,
+    },
+    rows: blockers.length || !args.surface ? [] : args.surface.rows,
+    blockers,
+  };
+  await writeRuntimeJsonAtomic(filePath, payload);
+  return filePath;
+}
+
+const FIVE_MODEL_APPROVED_DISPLAY_NAMES = new Set(APPROVED_DESK_MODEL_DEFINITIONS.map((model) => model.displayName));
+
+function fiveModelProductionSurfaceBlockers(
+  surface: FiveModelProductionScannerSurfaceActivation | null,
+): string[] {
+  if (!surface) return ['Five-model production scanner surface is not active.'];
+  return [
+    surface.reportType === 'five_model_production_scanner_surface_activation' ? null : 'Five-model production surface has invalid report type.',
+    surface.status === 'active' ? null : `Five-model production surface status is ${surface.status}.`,
+    surface.approval.explicitProductionApproval ? null : 'Five-model production surface lacks explicit production approval.',
+    surface.approval.discordPostingRemainsGuarded ? null : 'Five-model production surface does not preserve Discord guard.',
+    surface.approval.changesTradingLogic === false ? null : 'Five-model production surface changes trading logic.',
+    surface.approval.changesCanExecute === false ? null : 'Five-model production surface changes canExecute.',
+    surface.approval.changesEntryStopTargets === false ? null : 'Five-model production surface changes entry/stop/targets.',
+    surface.approval.automatedOrders === false ? null : 'Five-model production surface allows automated orders.',
+    surface.authority.scannerVisibleNow ? null : 'Five-model production surface is not scanner-visible.',
+    surface.authority.localRuntimeSurfaceOnly ? null : 'Five-model production surface is not local-runtime-surface-only.',
+    surface.authority.postsDiscord === false ? null : 'Five-model production surface posts Discord.',
+    surface.authority.writesSupabase === false ? null : 'Five-model production surface writes Supabase.',
+    surface.authority.readsLiveSupabase === false ? null : 'Five-model production surface reads live Supabase.',
+    surface.authority.readsLiveBridge === false ? null : 'Five-model production surface reads live bridge.',
+    surface.authority.changesScannerBehavior === false ? null : 'Five-model production surface changes scanner behavior.',
+    surface.authority.changesTradingLogic === false ? null : 'Five-model production surface changes trading logic authority.',
+    surface.authority.changesCanExecute === false ? null : 'Five-model production surface changes canExecute authority.',
+    surface.authority.canExecute === false ? null : 'Five-model production surface has canExecute=true.',
+    surface.authority.automatedOrders === false ? null : 'Five-model production surface allows automated orders authority.',
+    surface.summary.selectedRows === surface.rows.length ? null : 'Five-model production surface selected row count does not match rows.',
+    surface.summary.selectedRows === 18 ? null : 'Five-model production surface must expose exactly 18 rows.',
+    surface.summary.approvedDeskPlanRows === 5 ? null : 'Five-model production surface must expose exactly 5 Approved Desk Plan rows.',
+    surface.summary.formingDeskReadRows === 13 ? null : 'Five-model production surface must expose exactly 13 Forming Desk Read rows.',
+    surface.summary.morningRows === 10 ? null : 'Five-model production surface must expose exactly 10 morning rows.',
+    surface.summary.lunchRows === 8 ? null : 'Five-model production surface must expose exactly 8 lunch rows.',
+    surface.summary.eveningRows === 0 ? null : 'Five-model production surface must expose zero evening rows in this activation.',
+    surface.summary.discordPostRows === 0 ? null : 'Five-model production surface has Discord post rows.',
+    surface.summary.supabaseWriteRows === 0 ? null : 'Five-model production surface has Supabase write rows.',
+    surface.summary.liveSupabaseReadRows === 0 ? null : 'Five-model production surface has live Supabase read rows.',
+    surface.summary.liveBridgeReadRows === 0 ? null : 'Five-model production surface has live bridge read rows.',
+    surface.summary.canExecuteTrueRows === 0 ? null : 'Five-model production surface has canExecute=true rows.',
+    surface.summary.canExecuteChangedRows === 0 ? null : 'Five-model production surface changed canExecute.',
+    surface.summary.tradingLogicChangedRows === 0 ? null : 'Five-model production surface changed trading logic.',
+    surface.summary.automatedOrderRows === 0 ? null : 'Five-model production surface has automated order rows.',
+    surface.summary.blockedRows === 0 ? null : 'Five-model production surface has blocked rows.',
+    surface.rows.every((row) => FIVE_MODEL_APPROVED_DISPLAY_NAMES.has(row.model)) ? null : 'Five-model production surface includes a model outside the approved five-model registry.',
+    surface.rows.every((row) => !row.publishDiscord) ? null : 'Five-model production surface rows would post Discord.',
+    surface.rows.every((row) => !row.writesSupabase) ? null : 'Five-model production surface rows would write Supabase.',
+    surface.rows.every((row) => !row.readsLiveBridge) ? null : 'Five-model production surface rows would read live bridge.',
+    surface.rows.every((row) => !row.canExecute) ? null : 'Five-model production surface rows include canExecute=true.',
+    ...surface.blockers,
+  ].filter((item): item is string => Boolean(item));
+}
+
+export async function readFiveModelProductionScannerSurface(
+  filePath = FIVE_MODEL_PRODUCTION_SURFACE_FILE,
+): Promise<FiveModelProductionScannerSurfaceActivation | null> {
+  try {
+    const surface = (await readRuntimeJson<FiveModelProductionScannerSurfaceActivation>(filePath)).value;
+    const blockers = fiveModelProductionSurfaceBlockers(surface);
+    return blockers.length ? null : surface;
+  } catch {
+    return null;
+  }
+}
+
+export function fiveModelProductionScannerSummaryLine(
+  surface: FiveModelProductionScannerSurfaceActivation | null,
+): string {
+  if (!surface) return 'five-model-output=unavailable';
+  const models = [...new Set(surface.rows.map((row) => row.model))].join(', ');
+  return `[scanner] Five-model production surface active: rows=${surface.summary.selectedRows} approved=${surface.summary.approvedDeskPlanRows} forming=${surface.summary.formingDeskReadRows} models=${models} | Discord guarded, canExecute audit-only, no automated orders.`;
+}
+
+export async function writeFiveModelProductionScannerReadback(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  completed5mTime: string | null;
+  surface: FiveModelProductionScannerSurfaceActivation | null;
+  filePath?: string;
+}): Promise<string> {
+  const filePath = args.filePath || FIVE_MODEL_PRODUCTION_READBACK_FILE;
+  const blockers = fiveModelProductionSurfaceBlockers(args.surface);
+  const payload = {
+    reportType: 'five_model_production_scanner_readback',
+    generatedAt: new Date().toISOString(),
+    status: blockers.length ? 'blocked' : 'pass',
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    scannerSession: args.session,
+    completed5mTime: args.completed5mTime,
+    authority: {
+      scannerVisibleNow: blockers.length === 0,
+      postsDiscord: false,
+      writesSupabase: false,
+      readsLiveBridge: false,
+      changesScannerBehavior: false,
+      changesTradingLogic: false,
+      changesCanExecute: false,
+      canExecute: false,
+      automatedOrders: false,
+    },
+    summary: {
+      selectedRows: blockers.length || !args.surface ? 0 : args.surface.summary.selectedRows,
+      morningRows: blockers.length || !args.surface ? 0 : args.surface.summary.morningRows,
+      lunchRows: blockers.length || !args.surface ? 0 : args.surface.summary.lunchRows,
+      eveningRows: blockers.length || !args.surface ? 0 : args.surface.summary.eveningRows,
+      approvedDeskPlanRows: blockers.length || !args.surface ? 0 : args.surface.summary.approvedDeskPlanRows,
+      formingDeskReadRows: blockers.length || !args.surface ? 0 : args.surface.summary.formingDeskReadRows,
       discordPostRows: 0,
       supabaseWriteRows: 0,
       liveBridgeReadRows: 0,
@@ -11101,6 +11229,17 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       surface: unifiedDeskOutputSurface,
     });
     console.log(`${unifiedDeskOutputProductionScannerSummaryLine(unifiedDeskOutputSurface)} readback=${readbackPath}`);
+  }
+  const fiveModelSurface = await readFiveModelProductionScannerSurface();
+  if (fiveModelSurface) {
+    const readbackPath = await writeFiveModelProductionScannerReadback({
+      tradeDate,
+      instrument: config.instrument,
+      session,
+      completed5mTime: completed5m.time,
+      surface: fiveModelSurface,
+    });
+    console.log(`${fiveModelProductionScannerSummaryLine(fiveModelSurface)} readback=${readbackPath}`);
   }
 
   console.log(scannerCycleSummaryLine({

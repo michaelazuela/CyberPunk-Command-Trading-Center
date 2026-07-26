@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Wire five-model production scanner surface readback into scanner tooling.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Let the local scanner tooling read the tracked five-model production scanner surface, validate it against the approved five-model registry, and write a scanner readback receipt during scanner cycles without changing trade logic or side-effect policy.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; real scanner-function readback against `tools/automation/.five-model-production-scanner-surface.json`.
+Result: Passed. Scanner readback path: `tools/automation/diagnostic-reports/five-model-production-scanner-readback.json`. Summary: selectedRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0. Summary line: `[scanner] Five-model production surface active: rows=18 approved=5 forming=13 models=Raid Failure Displacement Reversal, Structure Shift Continuation | Discord guarded, canExecute audit-only, no automated orders.`
+Trading logic changed: No. This adds scanner readback/wiring for the local five-model surface only. It does not change scanner detection, setupRegistry, ranking, promotion rules, Discord posting, Supabase reads/writes, bridge reads, entry/stop/target math, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The scanner can now read back the five-model surface file, but this still does not create detector output from live candles. Current surface rows are from the saved guarded activation package.
+Next recommended action: Add the local display/Discord-preview bridge for these scanner-readable five-model rows, still dry-run only and with no webhook call.
+
+Date: 2026-07-26
 Task: Add five-model production scanner surface readback.
 Files changed: tools/automation/five-model-production-scanner-surface-readback.ts, tools/automation/five-model-production-scanner-surface-readback.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove the tracked five-model runtime scanner surface can be read back locally and that it exposes exactly the expected row counts while preserving zero side-effect counters.
