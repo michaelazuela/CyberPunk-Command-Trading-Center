@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add PDF-window attribution for Failed Breakout Reversal.
+Files changed: tools/automation/failed-breakout-reversal-pdf-window-filter.ts, tools/automation/failed-breakout-reversal-pdf-window-filter.test.ts, docs/PROJECT_STATUS.md.
+Reason: Compare Failed Breakout Reversal replay detections against profitable June 8-28 PDF trades before any selector, scanner, promotion, Discord, Supabase, or bridge behavior is touched.
+Tests run: npx tsx tools/automation/failed-breakout-reversal-pdf-window-filter.test.ts; npx tsx src/config/setupRegistry.test.ts; exact legacy/supporting-label drift search against the new PDF filter files; real local PDF-window filter against `C:\Users\Mike\Downloads\206257_Monthly_20260630.pdf` and the Failed Breakout replay proof report.
+Result: Passed. The filter remains local-PDF/read-only and local-replay-artifact-only. Real attribution found profitablePdfTrades=40, replayDetections=237, matchedTrades=12, unmatchedTrades=28, matchedLongTrades=2, matchedShortTrades=10, matchedDollars=$855.00, totalProfitableDollars=$2218.75, supportHtfMatches=4, conflictHtfMatches=8. Report path: `tools/automation/diagnostic-reports/failed-breakout-reversal-pdf-window-filter-2026-06-08-to-2026-06-28-1785043735447.json`.
+Trading logic changed: No. This is a local PDF attribution report only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Failed Breakout Reversal has meaningful PDF overlap but a broad raw replay footprint. It needs tight selector filtering before cross-model comparison or scanner-facing work.
+Next recommended action: Add the Failed Breakout Reversal tight-match selector.
+
+Date: 2026-07-25
 Task: Add replay-only proof for Failed Breakout Reversal.
 Files changed: tools/automation/failed-breakout-reversal-replay-proof.ts, tools/automation/failed-breakout-reversal-replay-proof.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove the fifth forensic model can be rediscovered from stored OHLC before PDF attribution, selector ranking, scanner wiring, promotion, Discord publishing, or production behavior is touched.
