@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add replay-only tight-match selector for Raid Failure Displacement Reversal.
+Files changed: tools/automation/raid-failure-displacement-reversal-tight-match-selector.ts, tools/automation/raid-failure-displacement-reversal-tight-match-selector.test.ts, docs/PROJECT_STATUS.md.
+Reason: Classify detector-2 PDF-window matches into tight/usable/loose/reject buckets before considering scanner-facing installation.
+Tests run: npx tsx tools/automation/raid-failure-displacement-reversal-tight-match-selector.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against selector files; real local selector run against the latest detector-2 PDF-window filter report.
+Result: Passed. Focused selector test passed. TypeScript passed. Exact legacy/supporting-label search returned no hits in selector files, and the blank-slate setup registry still returns no scanner candidates. Real local selector produced sourceProfitablePdfTrades=40, sourceMatchedTrades=23, tightRows=10, usableRows=7, looseRows=6, rejectRows=17, selectedRows=17, selectedDollars=$1090.00, looseDollars=$497.50, rejectedDollars=$631.25, scannerInstallEligibleRows=0, promotionEligibleRows=0, discordEligibleRows=0, executionApprovalEligibleRows=0. Report path: `tools/automation/diagnostic-reports/raid-failure-displacement-reversal-tight-match-selector-1785037009808.json`.
+Trading logic changed: No. This is a replay-only selector diagnostic. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Detector 2 has the best forensic signal so far, but it still needs source/session/proof filters before any scanner-facing install. Tight/usable rows are evidence, not production approval.
+Next recommended action: Build a selector comparison report between detector 1 and detector 2, then decide which source/proof clauses deserve the first scanner-owned preview candidate.
+
+Date: 2026-07-25
 Task: Add replay-only PDF-window filter for Raid Failure Displacement Reversal.
 Files changed: tools/automation/raid-failure-displacement-reversal-pdf-window-filter.ts, tools/automation/raid-failure-displacement-reversal-pdf-window-filter.test.ts, docs/PROJECT_STATUS.md.
 Reason: Attribute detector-2 replay hits to the actual profitable June statement trades before any scanner-facing install.
