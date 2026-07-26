@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Install isolated Liquidity Raid Reclaim Reversal detector.
+Files changed: src/lib/forensicModels/liquidityRaidReclaimReversal.ts, src/lib/forensicModels/liquidityRaidReclaimReversal.test.ts, docs/PROJECT_STATUS.md.
+Reason: Begin detector installation one model at a time while keeping the scanner blank until isolated model proof is clean.
+Tests run: npx tsx src/lib/forensicModels/liquidityRaidReclaimReversal.test.ts; exact legacy/supporting-label drift search against forensic model files, approved registry, and playbook; npx tsc --noEmit --pretty false; import isolation search for detectLiquidityRaidReclaimReversal; npx tsx src/config/setupRegistry.test.ts; npx tsx src/config/approvedDeskModels.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run build; npm run lint.
+Result: Passed. Focused detector test passed for synthetic long, synthetic short, and missing-proof no-trigger cases. TypeScript passed. Exact legacy/supporting-label search returned no hits in the new model/registry/playbook files. Import isolation confirmed the detector is referenced only by itself and its test. Blank-slate setup registry still returns no scanner candidates. Guards, production build, and lint passed.
+Trading logic changed: No. This pure detector is not wired into setupScanner, ranking, promotion, Discord publishing, Supabase, bridge reads, entry/stop/target production logic, risk approval, or automated execution. Detector result flags explicitly keep scanner candidate, promotion, Discord, and execution approval disabled.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The detector is proven only against synthetic facts so far. The next phase must replay June 8-28 candle artifacts before any scanner candidate wiring.
+Next recommended action: Run a replay-only proof package for Liquidity Raid Reclaim Reversal across June 8-28.
+
+Date: 2026-07-25
 Task: Install typed five-model registry without scanner behavior.
 Files changed: src/config/approvedDeskModels.ts, src/config/approvedDeskModels.test.ts, docs/PROJECT_STATUS.md.
 Reason: Continue the micro-phase rebuild by giving code a typed source for exactly the five forensic playbook models while keeping scanner detection, promotion, Discord, Supabase, bridge, and execution behavior disabled.
