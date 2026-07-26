@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add five-model guarded scanner visibility contract.
+Files changed: tools/automation/five-model-guarded-scanner-visibility-contract.ts, tools/automation/five-model-guarded-scanner-visibility-contract.test.ts, docs/PROJECT_STATUS.md.
+Reason: Define the explicit production scanner-visibility gate for the five-model adapter output after browser proof, without installing runtime behavior or enabling production scanner visibility, Discord, Supabase, bridge reads, canExecute, trading logic changes, or automated orders.
+Tests run: npx tsx tools/automation/five-model-guarded-scanner-visibility-contract.test.ts; npx tsc --noEmit --pretty false; real guarded scanner visibility contract against `tools/automation/diagnostic-reports/five-model-disabled-scanner-ui-adapter-preview-1785049119196.json` and `tools/automation/diagnostic-reports/five-model-disabled-scanner-ui-browser-adapter-preview-1785049527152.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-guarded-scanner-visibility-contract-1785049867638.json`. Summary: sourceAdapterRows=18, browserRenderedRows=18, candidateRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, runtimeGateEnabled=false, productionGoLiveApproved=false, scannerRuntimeWiredRows=0, scannerVisibleNowRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact guarded scanner visibility contract only. It does not change setup registry entries, scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This proves the contract is ready for an explicit production scanner-visibility decision, but it has not installed scanner visibility or publish behavior.
+Next recommended action: If explicitly approved, install the smallest production scanner-visibility switch for the five-model contract while keeping Discord/Supabase/bridge/execution side effects off.
+
+Date: 2026-07-25
 Task: Add five-model disabled scanner UI browser adapter preview.
 Files changed: tools/automation/five-model-disabled-scanner-ui-browser-adapter-preview.ts, tools/automation/five-model-disabled-scanner-ui-browser-adapter-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove the saved five-model scanner UI adapter artifact can be converted into the existing hidden local preview payload and rendered in the browser while production scanner visibility and all live side effects remain disabled.
