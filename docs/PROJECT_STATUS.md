@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model scanner visibility adapter proof.
+Files changed: tools/automation/five-model-scanner-visibility-adapter-proof.ts, tools/automation/five-model-scanner-visibility-adapter-proof.test.ts, docs/PROJECT_STATUS.md.
+Reason: Run the default-off five-model scanner visibility adapter against the real saved visibility contract artifact and prove the disabled path exposes zero rows while the explicitly allowed path produces the expected scanner surface rows without Discord, Supabase, live bridge reads, canExecute changes, trading-logic changes, or automated orders.
+Tests run: npx tsx tools/automation/five-model-scanner-visibility-adapter-proof.test.ts; npx tsx src/lib/fiveModelScannerVisibilityAdapter.test.ts; npx tsc --noEmit --pretty false; real adapter proof against `tools/automation/diagnostic-reports/five-model-guarded-scanner-visibility-contract-1785049867638.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-scanner-visibility-adapter-proof-1785090208141.json`. Summary: defaultAdapterStatus=disabled, defaultScannerVisibleNow=false, defaultSurfaceRows=0, explicitAdapterStatus=ready, explicitScannerVisibleNow=true, explicitSurfaceRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, canExecuteChangedRows=0, automatedOrderRows=0, wordingViolationRows=0, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact adapter proof only. It does not wire scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This still does not wire the adapter into live scanner runtime. The proof only shows the default-off and explicitly allowed adapter behavior from saved artifacts.
+Next recommended action: Add a local scanner surface smoke for the five-model adapter proof, then use that as the final local evidence before any runtime scanner visibility install decision.
+
+Date: 2026-07-26
 Task: Add default-off five-model scanner visibility adapter contract.
 Files changed: src/lib/fiveModelScannerVisibilityAdapter.ts, src/lib/fiveModelScannerVisibilityAdapter.test.ts, docs/PROJECT_STATUS.md.
 Reason: Add the local adapter contract that converts explicitly approved five-model gate candidates into the shared scanner surface row shape while remaining unwired from runtime scanner behavior and keeping Discord, Supabase, live bridge reads, canExecute changes, trading-logic changes, and automated orders off.
