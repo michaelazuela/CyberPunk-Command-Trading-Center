@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add PDF-window attribution for Structure Shift Continuation.
+Files changed: tools/automation/structure-shift-continuation-pdf-window-filter.ts, tools/automation/structure-shift-continuation-pdf-window-filter.test.ts, docs/PROJECT_STATUS.md.
+Reason: Compare Structure Shift replay detections against the profitable June PDF trade windows before adding a selector, scanner wiring, promotion, Discord card, or production behavior.
+Tests run: npx tsx tools/automation/structure-shift-continuation-pdf-window-filter.test.ts; exact legacy/supporting-label drift search against the PDF-window filter files; real local PDF-window filter against `C:\Users\Mike\Downloads\206257_Monthly_20260630.pdf` and the Structure Shift replay proof report.
+Result: Passed. The filter extracts profitable PDF fills, pairs open/close lots, converts GMT fills to ET, and matches only same date/session/direction replay detections that appeared before the PDF entry within 60 minutes and 12 points. Real June 8-28 run produced profitablePdfTrades=40, replayDetections=228, matchedTrades=14, unmatchedTrades=26, matchedLongTrades=4, matchedShortTrades=10, matchedDollars=$576.25, totalProfitableDollars=$2218.75, supportHtfMatches=14, conflictHtfMatches=0. Report path: `tools/automation/diagnostic-reports/structure-shift-continuation-pdf-window-filter-2026-06-08-to-2026-06-28-1785041928192.json`.
+Trading logic changed: No. This is a local PDF/replay attribution tool. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Structure Shift has meaningful PDF-window overlap, but the replay detector is broad. It needs a tight selector before being compared to the other lanes.
+Next recommended action: Add a Structure Shift tight-match selector, then rerun the model-lane comparison with four installed lanes.
+
+Date: 2026-07-25
 Task: Add replay-only proof for Structure Shift Continuation.
 Files changed: tools/automation/structure-shift-continuation-replay-proof.ts, tools/automation/structure-shift-continuation-replay-proof.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove the fourth approved forensic model against stored OHLC before PDF attribution, scanner wiring, promotion, Discord card, or production behavior is touched.
