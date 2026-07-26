@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add local-only preview dry run for Raid Failure Displacement Reversal.
+Files changed: tools/automation/raid-failure-displacement-local-preview-dry-run.ts, tools/automation/raid-failure-displacement-local-preview-dry-run.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove whether the disabled preview contract can shape scanner-preview rows without enabling scanner wiring, promotion, Discord, Supabase, bridge, canExecute, or execution behavior.
+Tests run: npx tsx tools/automation/raid-failure-displacement-local-preview-dry-run.test.ts; npx tsx src/config/approvedDeskModelPreviewContracts.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against the dry-run files; real default-off dry run; real explicit local-preview dry run.
+Result: Passed. Focused tests passed, TypeScript passed, exact legacy/supporting-label search returned no hits in the dry-run files, and the blank-slate setup registry still returns no scanner candidates. Real default-off run produced sourceRows=40, localPreviewRequested=false, clauseQualifiedRows=13, shapedPreviewRows=0, previewReadyRows=0, heldByRiskRows=0, maxRiskPoints=5, canExecuteTrueRows=0. Real explicit local-preview run produced sourceRows=40, localPreviewRequested=true, clauseQualifiedRows=13, shapedPreviewRows=13, previewReadyRows=0, heldByRiskRows=13, maxRiskPoints=5, scannerInstallEligibleRows=0, promotionEligibleRows=0, discordEligibleRows=0, executionApprovalEligibleRows=0, canExecuteTrueRows=0. Report paths: `tools/automation/diagnostic-reports/raid-failure-displacement-local-preview-dry-run-1785038264860.json` and `tools/automation/diagnostic-reports/raid-failure-displacement-local-preview-dry-run-1785038264928.json`.
+Trading logic changed: No. This is a local dry-run builder only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The source/proof clause is promising, but every real clause-qualified row is held by the current 5-point risk gate. This is not ready for scanner preview as an approved desk plan.
+Next recommended action: Add a replay-only tight-entry geometry miner for Raid Failure Displacement Reversal to find whether a protected 5M stop/entry variant can satisfy the 5-point risk cap without weakening the model.
+
+Date: 2026-07-25
 Task: Add disabled scanner-preview contract for Raid Failure Displacement Reversal.
 Files changed: src/config/approvedDeskModelPreviewContracts.ts, src/config/approvedDeskModelPreviewContracts.test.ts, docs/PROJECT_STATUS.md.
 Reason: Lock the proposed scanner-preview clauses for the current evidence-leading model before any scanner wiring, promotion, Discord, Supabase, bridge, or execution behavior is touched.
