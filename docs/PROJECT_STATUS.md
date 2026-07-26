@@ -2,6 +2,20 @@
 
 ## Latest Change
 
+Date: 2026-07-26
+Task: Add five-model scanner visibility wiring preview.
+Files changed: tools/automation/five-model-scanner-visibility-wiring-preview.ts, tools/automation/five-model-scanner-visibility-wiring-preview.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove exactly which five-model rows the explicit-approval visibility gate would hand to scanner visibility, while keeping runtime wiring, production scanner-visible-now rows, Discord, Supabase, bridge reads, canExecute, trading logic changes, and automated orders off.
+Tests run: npx tsx tools/automation/five-model-scanner-visibility-wiring-preview.test.ts; npx tsc --noEmit --pretty false; real wiring preview against `tools/automation/diagnostic-reports/five-model-guarded-scanner-visibility-contract-1785049867638.json` and `tools/automation/diagnostic-reports/five-model-scanner-visibility-gate-proof-1785050434376.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-scanner-visibility-wiring-preview-1785050791651.json`. Summary: contractCandidateRows=18, gateProofExplicitCandidateRows=18, wiringPreviewRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, scannerRuntimeWiredRows=0, productionScannerVisibleNowRows=0, scannerVisibleIfWiredRows=18, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, canExecuteChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact scanner visibility wiring preview only. It does not wire scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The preview still does not install scanner visibility. The next phase should add a local scanner visibility surface preview that converts these wiring rows into the exact scanner surface shape while remaining off by default.
+Next recommended action: Add a local scanner visibility surface preview from the wiring preview output.
+
 Date: 2026-07-25
 Task: Add five-model scanner visibility gate proof.
 Files changed: tools/automation/five-model-scanner-visibility-gate-proof.ts, tools/automation/five-model-scanner-visibility-gate-proof.test.ts, docs/PROJECT_STATUS.md.
