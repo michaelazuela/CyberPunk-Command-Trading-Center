@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add five-model selector comparison report for the first two installed forensic models.
+Files changed: tools/automation/five-model-selector-comparison-report.ts, tools/automation/five-model-selector-comparison-report.test.ts, docs/PROJECT_STATUS.md.
+Reason: Compare the replay-only tight selector evidence for Liquidity Raid Reclaim Reversal and Raid Failure Displacement Reversal before any scanner-owned preview candidate is proposed.
+Tests run: npx tsx tools/automation/five-model-selector-comparison-report.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against the comparison files; real local comparison against the latest two selector reports.
+Result: Passed. Focused comparison test passed, TypeScript passed, exact legacy/supporting-label search returned no hits in the comparison files, and the blank-slate setup registry still returns no scanner candidates. Real local comparison produced modelsCompared=2, sourceProfitablePdfTrades=40, selectedRowsTotal=20, selectedDollarsTotal=$1245.00, selectedOverlapRows=0, liquidityRaidReclaimOnlyRows=3, raidFailureDisplacementOnlyRows=17, leadingModelId=raid_failure_displacement_reversal, leadingModelSelectedRows=17, leadingModelSelectedDollars=$1090.00, scannerInstallEligibleRows=0, promotionEligibleRows=0, discordEligibleRows=0, executionApprovalEligibleRows=0. Report path: `tools/automation/diagnostic-reports/five-model-selector-comparison-report-1785037331885.json`.
+Trading logic changed: No. This is a local selector-artifact comparison. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Only two of the five approved models are installed through replay proof so far. Raid Failure Displacement Reversal is the current evidence leader, but it still needs source/proof clause mining before scanner preview.
+Next recommended action: Add a replay-only source/proof clause miner for Raid Failure Displacement Reversal selected rows to find the narrow scanner-preview clauses without installing scanner behavior.
+
+Date: 2026-07-25
 Task: Add replay-only tight-match selector for Raid Failure Displacement Reversal.
 Files changed: tools/automation/raid-failure-displacement-reversal-tight-match-selector.ts, tools/automation/raid-failure-displacement-reversal-tight-match-selector.test.ts, docs/PROJECT_STATUS.md.
 Reason: Classify detector-2 PDF-window matches into tight/usable/loose/reject buckets before considering scanner-facing installation.
