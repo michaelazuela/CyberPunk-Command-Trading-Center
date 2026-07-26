@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add disabled scanner-preview contract for Raid Failure Displacement Reversal.
+Files changed: src/config/approvedDeskModelPreviewContracts.ts, src/config/approvedDeskModelPreviewContracts.test.ts, docs/PROJECT_STATUS.md.
+Reason: Lock the proposed scanner-preview clauses for the current evidence-leading model before any scanner wiring, promotion, Discord, Supabase, bridge, or execution behavior is touched.
+Tests run: npx tsx src/config/approvedDeskModelPreviewContracts.test.ts; npx tsx src/config/approvedDeskModels.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; exact legacy/supporting-label drift search against the preview contract files.
+Result: Passed. The preview contract exists only for raid_failure_displacement_reversal, is status=disabled_research_contract, references the source clause miner report, requires HTF support, left-imbalance 5M displacement, same-bar/within-20-minute proof, entry distance within 5 points in replay attribution, completed 5M proof, protected 5M stop, and normal app-owned deterministic gates. All forbidden runtime effects remain false, the base model registry still has productionSessionsEnabled=[], and the blank-slate setup registry still returns no scanner candidates.
+Trading logic changed: No. This is a disabled typed contract. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This contract is a proposal boundary, not scanner behavior. It must be proven by a local scanner-preview dry run before any live-facing installation.
+Next recommended action: Add a local scanner-preview dry-run builder that consumes this disabled contract and candidate-like detector rows, proving preview rows are produced only under explicit local mode and still cannot publish or execute.
+
+Date: 2026-07-25
 Task: Add replay-only source/proof clause miner for Raid Failure Displacement Reversal.
 Files changed: tools/automation/raid-failure-displacement-source-clause-miner.ts, tools/automation/raid-failure-displacement-source-clause-miner.test.ts, docs/PROJECT_STATUS.md.
 Reason: Mine the leading model's tight/usable rows for shared pre-entry source/proof clauses before drafting any scanner-owned preview candidate.
