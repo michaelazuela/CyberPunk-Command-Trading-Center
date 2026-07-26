@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add five-model local scanner consumer probe.
+Files changed: tools/automation/five-model-local-scanner-consumer-probe.ts, tools/automation/five-model-local-scanner-consumer-probe.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove a local scanner consumer can read the five-model disabled runtime preview rows only from the explicit local preview path while default runtime behavior remains disabled.
+Tests run: npx tsx tools/automation/five-model-local-scanner-consumer-probe.test.ts; npx tsc --noEmit --pretty false; real local scanner consumer probe against the latest five-model disabled runtime preview artifact.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-local-scanner-consumer-probe-1785048349705.json`. Summary: defaultStatus=disabled, localPreviewStatus=ready, defaultScannerPreviewRows=0, consumedRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, runtimeGateEnabled=false, scannerRuntimeChangedRows=0, discordPostRows=0, supabaseWriteRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact local scanner consumer probe only. It does not change setup registry entries, scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This still does not refresh active scanner UI/runtime output. The next phase should build a disabled scanner UI refresh preview from the consumer probe artifact.
+Next recommended action: Add a disabled scanner UI refresh preview for the five-model consumer output, still with production/runtime behavior disabled.
+
+Date: 2026-07-25
 Task: Add five-model disabled scanner runtime wiring preview.
 Files changed: tools/automation/five-model-disabled-scanner-runtime-wiring-preview.ts, tools/automation/five-model-disabled-scanner-runtime-wiring-preview.test.ts, docs/PROJECT_STATUS.md.
 Reason: Preview how the five-model scanner surface would be handed to scanner runtime while keeping default runtime behavior disabled and requiring explicit local preview for rows.
