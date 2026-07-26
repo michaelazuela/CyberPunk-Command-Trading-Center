@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model Discord one-row rehearsal receipt audit.
+Files changed: tools/automation/five-model-discord-one-row-rehearsal-receipt-audit.ts, tools/automation/five-model-discord-one-row-rehearsal-receipt-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prepare the post-send audit before the one real Discord rehearsal occurs, so the future receipt must prove exact candidate/idempotency match, one-row cap, one webhook call, Discord message id readback, payload-from-manifest proof, and zero Supabase/bridge/canExecute/order drift.
+Tests run: npx tsx tools/automation/five-model-discord-one-row-rehearsal-receipt-audit.test.ts; npx tsc --noEmit --pretty false.
+Result: Passed. The fixture receipt audit accepts only `five_model_discord_one_row_production_rehearsal_receipt` with one selected candidate, one selected payload, one Discord-post row, one webhook-call row, Discord message id present, matching manifest path, matching candidate id, matching idempotency key, explicit approval proof, webhook execution proof, payload-copied-from-manifest proof, and zero Supabase/bridge/canExecute/trading-logic/order counters. Disabled-sender and duplicate-idempotency fixtures are blocked.
+Trading logic changed: No. This is a local receipt audit only. It does not send Discord, write Supabase, read live bridge data, change scanner detection, setupRegistry, ranking, promotion rules, entry/stop/target math, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call. The audit is waiting for a future one-row production rehearsal receipt.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The audit cannot pass against real artifacts until the separately approved one-row Discord rehearsal has been executed and a receipt exists.
+Next recommended action: Run the exact one-row five-model Discord production rehearsal only after explicit approval for candidate `five-model-discord-rehearsal|c1c068f94450e08d` with idempotency key `five-model-discord-production-rehearsal:d558fda9a5a868cc`, then run this receipt audit against the produced receipt.
+
+Date: 2026-07-26
 Task: Add five-model Discord one-row production rehearsal sender.
 Files changed: tools/automation/five-model-discord-one-row-production-rehearsal.ts, tools/automation/five-model-discord-one-row-production-rehearsal.test.ts, docs/PROJECT_STATUS.md.
 Reason: Install the disabled-by-default sender contract for the selected five-model manifest candidate so a later real Discord rehearsal must match the exact candidate id, idempotency key, approval phrase, and one-row cap.
