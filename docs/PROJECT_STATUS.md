@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add disabled local scanner-candidate preview dry run.
+Files changed: tools/automation/five-model-scanner-candidate-preview-dry-run.ts, tools/automation/five-model-scanner-candidate-preview-dry-run.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove the five-model preview contract can shape primary/secondary lane rows only under explicit local-preview mode, while context-only lanes remain notes and runtime behavior remains unchanged.
+Tests run: npx tsx tools/automation/five-model-scanner-candidate-preview-dry-run.test.ts; npx tsx src/config/setupRegistry.test.ts; exact legacy/supporting-label drift search against the new dry-run files; real default-off dry run; real explicit local-preview dry run.
+Result: Passed. Default-off produced candidateLanes=2, contextOnlyLanes=3, shapedPreviewRows=0, previewReadyRows=0, heldByRiskRows=0, canExecuteTrueRows=0. Explicit local-preview produced candidateLanes=2, contextOnlyLanes=3, shapedPreviewRows=23, previewReadyRows=0, heldByRiskRows=23, maxRiskPoints=5, scannerInstallEligibleRows=0, promotionEligibleRows=0, discordEligibleRows=0, executionApprovalEligibleRows=0, canExecuteTrueRows=0. Report paths: `tools/automation/diagnostic-reports/five-model-scanner-candidate-preview-dry-run-1785044867515.json` and `tools/automation/diagnostic-reports/five-model-scanner-candidate-preview-dry-run-1785044867556.json`.
+Trading logic changed: No. This is a local dry-run artifact only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Primary/secondary rows are all held by the current 5-point risk cap. The next phase should mine protected-entry/stop geometry from stored 5M candles rather than loosen risk or promote rows.
+Next recommended action: Build a protected-entry geometry miner for the 23 held preview rows and prove whether any can use a tighter deterministic protected 5M stop without changing risk rules.
+
+Date: 2026-07-25
 Task: Add five-model scanner-candidate preview contract report.
 Files changed: tools/automation/five-model-scanner-candidate-preview-contract.ts, tools/automation/five-model-scanner-candidate-preview-contract.test.ts, docs/PROJECT_STATUS.md.
 Reason: Convert the five-lane selector comparison into a disabled local scanner-candidate preview contract before any scanner runtime wiring, promotion, Discord publishing, Supabase, bridge, canExecute, or execution behavior is touched.
