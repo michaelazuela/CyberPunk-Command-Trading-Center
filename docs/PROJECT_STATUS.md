@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Complete five-model one-row Discord production rehearsal and final receipt handoff.
+Files changed: docs/PROJECT_STATUS.md.
+Reason: Record the approved one-row Discord production rehearsal, receipt audit, closeout, and final install readiness handoff after the explicit production webhook approval was supplied.
+Tests run: One approved production webhook rehearsal; npx tsx tools/automation/five-model-discord-one-row-rehearsal-receipt-audit.ts; npx tsx tools/automation/five-model-discord-production-rehearsal-closeout.ts; npx tsx tools/automation/five-model-install-readiness-audit.ts.
+Result: Passed. Production receipt path: `tools/automation/diagnostic-reports/five-model-discord-one-row-production-rehearsal-receipt-1785096227820.json`; Discord message id: `1531029292224483432`. Receipt audit path: `tools/automation/diagnostic-reports/five-model-discord-one-row-rehearsal-receipt-audit-1785096235672.json`; receiptAccepted=true, candidateSelectedRows=1, payloadSelectedRows=1, discordPostRows=1, webhookCallRows=0 for the audit itself, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0. Closeout path: `tools/automation/diagnostic-reports/five-model-discord-production-rehearsal-closeout-1785096245152.json`; closeoutState=ready_for_final_handoff, productionReceiptAcceptedRows=1. Final readiness path: `tools/automation/diagnostic-reports/five-model-install-readiness-audit-1785096248381.json`; readinessState=ready_for_final_receipt_handoff, artifactsChecked=7, artifactsPassed=7, scannerSurfaceRows=18, scannerReadbackRows=18, discordPreviewPayloads=18, approvedDeskPlanRows=5, formingDeskReadRows=13, candidateSelectedRows=1, payloadSelectedRows=1, productionReceiptAcceptedRows=1, discordPostRows=0 for the audit itself, webhookCallRows=0 for the audit itself, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This completed exactly one approved Discord webhook rehearsal and diagnostics only. It did not write Supabase, read live bridge data, change scanner detection, setupRegistry, ranking, promotion rules, entry/stop/target math, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: Exactly one approved production rehearsal webhook call was made for candidate `five-model-discord-rehearsal|c1c068f94450e08d` with idempotency key `five-model-discord-production-rehearsal:d558fda9a5a868cc`; Discord returned message id `1531029292224483432`.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Do not rerun the same idempotency key. The production rehearsal is complete and audited.
+Next recommended action: Use the final readiness artifact as the handoff anchor for the five-model desk install; future work should be a new scoped phase, not another rehearsal with the same idempotency key.
+
+Date: 2026-07-26
 Task: Add five-model install readiness audit.
 Files changed: tools/automation/five-model-install-readiness-audit.ts, tools/automation/five-model-install-readiness-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: Add one local audit that reads the saved activation, scanner readback, Discord preview, launch checklist, one-row manifest, disabled sender, and closeout artifacts so the five-model install has a single end-to-end readiness state before any production webhook call.
