@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add protected-entry geometry miner for five-model preview rows.
+Files changed: tools/automation/five-model-protected-entry-geometry-miner.ts, tools/automation/five-model-protected-entry-geometry-miner.test.ts, docs/PROJECT_STATUS.md.
+Reason: Diagnose the 23 disabled scanner-candidate preview rows held by the 5-point risk cap and test whether deterministic protected 5M geometry can produce risk-clean immediate or retest variants without loosening risk.
+Tests run: npx tsx tools/automation/five-model-protected-entry-geometry-miner.test.ts; npx tsx src/config/setupRegistry.test.ts; exact legacy/supporting-label drift search against the new geometry files; real local geometry miner against the five-model preview dry-run and stored June OHLC pack.
+Result: Passed. The miner remains local-preview/local-market-bars artifact only and keeps setup registry, scanner wiring, promotion, Discord, Supabase, bridge, execution approval, and canExecute unchanged/false. Real geometry report loaded 5M=12119 bars, sourceRows=23, geometryRows=23, immediateRiskCleanRows=7, immediateRiskCleanDollars=$265.00, retestRiskCleanRows=23, retestRiskCleanDollars=$1225.00, maxRiskPoints=5, scannerInstallEligibleRows=0, promotionEligibleRows=0, discordEligibleRows=0, executionApprovalEligibleRows=0, canExecuteTrueRows=0. Report path: `tools/automation/diagnostic-reports/five-model-protected-entry-geometry-miner-1785045162627.json`.
+Trading logic changed: No. This is a local geometry diagnostic only. It does not wire scanner candidates, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Immediate protected geometry is available for only 7 rows; all 23 need retest-capable handling. The next phase should build a disabled surface preview that only emits risk-clean immediate rows and labels retest-required rows as conditional/wait, still with all runtime flags false.
+Next recommended action: Build the disabled scanner-surface adapter preview using protected geometry: immediate risk-clean rows as preview candidates, retest-clean rows as conditional wait rows, no Discord/Supabase/bridge/execution effects.
+
+Date: 2026-07-25
 Task: Add disabled local scanner-candidate preview dry run.
 Files changed: tools/automation/five-model-scanner-candidate-preview-dry-run.ts, tools/automation/five-model-scanner-candidate-preview-dry-run.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove the five-model preview contract can shape primary/secondary lane rows only under explicit local-preview mode, while context-only lanes remain notes and runtime behavior remains unchanged.
