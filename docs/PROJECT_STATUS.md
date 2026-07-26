@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-25
+Task: Add default-off five-model scanner visibility gate.
+Files changed: src/lib/fiveModelScannerVisibilityGate.ts, src/lib/fiveModelScannerVisibilityGate.test.ts, docs/PROJECT_STATUS.md.
+Reason: Install the smallest code-level gate for five-model scanner visibility after the guarded contract, while keeping default behavior disabled and requiring explicit production approval before any candidates can be returned.
+Tests run: npx tsx src/lib/fiveModelScannerVisibilityGate.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false.
+Result: Passed. The gate returns disabled without explicit production approval. With explicit approval and a clean contract, it returns allowed candidates while still keeping Discord, Supabase, live Supabase reads, live bridge reads, canExecute, trading-logic changes, canExecute changes, and automated orders false/off. Dirty contract rows block the gate.
+Trading logic changed: No. This adds a default-off visibility gate function only. It does not wire scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The gate is not wired to scanner output yet. The next phase should add a local proof that the gate consumes the real guarded contract artifact and remains disabled unless explicit approval is passed.
+Next recommended action: Add a saved-artifact proof for the five-model scanner visibility gate using the real guarded contract report.
+
+Date: 2026-07-25
 Task: Add five-model guarded scanner visibility contract.
 Files changed: tools/automation/five-model-guarded-scanner-visibility-contract.ts, tools/automation/five-model-guarded-scanner-visibility-contract.test.ts, docs/PROJECT_STATUS.md.
 Reason: Define the explicit production scanner-visibility gate for the five-model adapter output after browser proof, without installing runtime behavior or enabling production scanner visibility, Discord, Supabase, bridge reads, canExecute, trading logic changes, or automated orders.
