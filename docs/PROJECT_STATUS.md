@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add five-model scanner visibility install preread.
+Files changed: tools/automation/five-model-scanner-visibility-install-preread.ts, tools/automation/five-model-scanner-visibility-install-preread.test.ts, docs/PROJECT_STATUS.md.
+Reason: Inventory the exact local runtime path required for a future five-model scanner visibility adapter after the execution dry run passed, while keeping this phase preread-only with scanner runtime wiring, production scanner visibility, Discord, Supabase, live bridge reads, canExecute changes, trading-logic changes, and automated orders off.
+Tests run: npx tsx tools/automation/five-model-scanner-visibility-install-preread.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsc --noEmit --pretty false; real preread against `tools/automation/diagnostic-reports/five-model-guarded-production-rehearsal-execution-dry-run-1785051843268.json`.
+Result: Passed. Report path: `tools/automation/diagnostic-reports/five-model-scanner-visibility-install-preread-1785052620437.json`. Summary: executionDryRunRows=18, approvedDeskPlanRows=5, formingDeskReadRows=13, morningRows=10, lunchRows=8, eveningRows=0, requiredOwnerFilesFound=3, requiredOwnerFilesMissing=0, scannerRuntimeWiredRows=0, productionScannerVisibleNowRows=0, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, tradingLogicChangedRows=0, canExecuteChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: No. This is a saved-artifact install preread only. It does not wire scanner runtime behavior, ranking, promotion, Discord publishing, Supabase reads/writes, bridge reads, entry/stop/target production logic, risk approval, canExecute, or automated execution.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This still does not install production scanner visibility or make Discord/Supabase/bridge changes. It only identifies the required local runtime path and approval boundary for the next adapter-contract phase.
+Next recommended action: Add the local runtime adapter contract behind the explicit five-model scanner visibility install gate, still with production scanner visibility, Discord, Supabase, live bridge reads, canExecute changes, trading-logic changes, and automated orders off by default.
+
+Date: 2026-07-26
 Task: Add five-model guarded production rehearsal execution dry run.
 Files changed: tools/automation/five-model-guarded-production-rehearsal-execution-dry-run.ts, tools/automation/five-model-guarded-production-rehearsal-execution-dry-run.test.ts, docs/PROJECT_STATUS.md.
 Reason: Execute the saved rehearsal manifest as a local dry run only, producing an execution receipt and proving the manifest rows can pass the guarded contract without scanner runtime wiring, production scanner visibility, Discord, Supabase, live bridge reads, canExecute changes, trading-logic changes, or automated orders.
