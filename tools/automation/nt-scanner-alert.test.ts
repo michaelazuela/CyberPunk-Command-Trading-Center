@@ -80,7 +80,7 @@ try {
   assert.equal(readback.status, 'blocked');
   assert.equal(readback.summary.selectedRows, 0);
 
-  const fiveModelRow = (index: number, session: 'morning' | 'lunch', state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ') => ({
+  const fiveModelRow = (index: number, session: 'morning' | 'lunch' | 'evening', state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ') => ({
     cardId: `five-model-row-${index}`,
     date: '2026-06-09',
     session,
@@ -104,6 +104,7 @@ try {
   const fiveModelRows = [
     ...Array.from({ length: 5 }, (_, index) => fiveModelRow(index + 1, index < 3 ? 'morning' : 'lunch', 'APPROVED_DESK_PLAN')),
     ...Array.from({ length: 13 }, (_, index) => fiveModelRow(index + 6, index < 7 ? 'morning' : 'lunch', 'FORMING_DESK_READ')),
+    fiveModelRow(19, 'evening', 'FORMING_DESK_READ'),
   ];
   const fiveModelSurfacePath = path.join(outputDir, '.five-model-production-surface.json');
   await fs.writeFile(fiveModelSurfacePath, `${JSON.stringify({
@@ -134,12 +135,12 @@ try {
     },
     source: { scannerSurfaceSmokePath: 'surface-smoke.json' },
     summary: {
-      selectedRows: 18,
+      selectedRows: 19,
       approvedDeskPlanRows: 5,
-      formingDeskReadRows: 13,
+      formingDeskReadRows: 14,
       morningRows: 10,
       lunchRows: 8,
-      eveningRows: 0,
+      eveningRows: 1,
       discordPostRows: 0,
       supabaseWriteRows: 0,
       liveSupabaseReadRows: 0,
@@ -156,7 +157,7 @@ try {
 
   const fiveModelSurface = await readFiveModelProductionScannerSurface(fiveModelSurfacePath);
   assert.notEqual(fiveModelSurface, null);
-  assert.match(fiveModelProductionScannerSummaryLine(fiveModelSurface), /Five-model production surface active: rows=18/);
+  assert.match(fiveModelProductionScannerSummaryLine(fiveModelSurface), /Five-model production surface active: rows=19/);
   const fiveModelReadbackPath = path.join(outputDir, 'five-model-readback.json');
   await writeFiveModelProductionScannerReadback({
     tradeDate: '2026-07-22',
@@ -169,9 +170,10 @@ try {
   const fiveModelReadback = JSON.parse(await fs.readFile(fiveModelReadbackPath, 'utf8'));
   assert.equal(fiveModelReadback.reportType, 'five_model_production_scanner_readback');
   assert.equal(fiveModelReadback.status, 'pass');
-  assert.equal(fiveModelReadback.summary.selectedRows, 18);
+  assert.equal(fiveModelReadback.summary.selectedRows, 19);
   assert.equal(fiveModelReadback.summary.approvedDeskPlanRows, 5);
-  assert.equal(fiveModelReadback.summary.formingDeskReadRows, 13);
+  assert.equal(fiveModelReadback.summary.formingDeskReadRows, 14);
+  assert.equal(fiveModelReadback.summary.eveningRows, 1);
   assert.equal(fiveModelReadback.summary.discordPostRows, 0);
   assert.equal(fiveModelReadback.summary.canExecuteTrueRows, 0);
 

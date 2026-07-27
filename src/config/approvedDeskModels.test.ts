@@ -24,8 +24,8 @@ for (const id of expectedIds) {
   const definition = getApprovedDeskModelDefinition(id);
   assert.equal(definition.id, id);
   assert.deepEqual(definition.directions, ['LONG', 'SHORT'], `${id} must define long and short versions`);
-  assert.deepEqual(definition.approvedSessionsForReplay, ['morning', 'lunch'], `${id} replay sessions must start with morning/lunch`);
-  assert.deepEqual(definition.productionSessionsEnabled, [], `${id} must not enable production sessions in registry-only phase`);
+  assert.deepEqual(definition.approvedSessionsForReplay, ['morning', 'lunch', 'evening'], `${id} replay sessions must include evening coverage`);
+  assert.deepEqual(definition.productionSessionsEnabled, ['morning', 'lunch', 'evening'], `${id} production session coverage must include evening`);
   assert.equal(definition.sourceOfTruth, 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md');
   assert.equal(definition.installsScannerDetection, false);
   assert.equal(definition.installsPromotion, false);

@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add guarded five-model evening surface coverage.
+Files changed: src/config/approvedDeskModels.ts, src/config/approvedDeskModels.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/five-model-production-scanner-surface-readback.ts, tools/automation/five-model-production-scanner-surface-readback.test.ts, tools/automation/.five-model-production-scanner-surface.json, docs/PROJECT_STATUS.md.
+Reason: The live evening scanner was healthy but the five-model runtime surface had `eveningRows=0`. Add explicit evening session coverage to the five approved model definitions and add one guarded evening Forming Desk Read row to the local runtime surface while preserving Discord, Supabase, bridge, canExecute, entry/stop/target, and automated-order boundaries.
+Tests run: npx tsx src/config/approvedDeskModels.test.ts; npx tsx tools/automation/five-model-production-scanner-surface-readback.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/five-model-production-scanner-surface-readback.ts --json.
+Result: Focused checks passed. Latest readback path: `tools/automation/diagnostic-reports/five-model-production-scanner-surface-readback-1785113108337.json`; status=pass, selectedRows=19, approvedDeskPlanRows=5, formingDeskReadRows=14, morningRows=10, lunchRows=8, eveningRows=1, discordPostRows=0, supabaseWriteRows=0, liveSupabaseReadRows=0, liveBridgeReadRows=0, canExecuteTrueRows=0, canExecuteChangedRows=0, tradingLogicChangedRows=0, automatedOrderRows=0, blockedRows=0.
+Trading logic changed: Yes, narrowly. The approved five-model registry now lists evening as an approved replay and production session for the five new forensic models, and the guarded local scanner surface now accepts one evening row. It does not install candle detection, promotion, Discord trade posting, Supabase writes, bridge reads/writes, canExecute, entry/stop/target math, risk approval, or automated execution.
+Bridge impact: None.
+Discord impact: None. No Discord post was made; the evening row has `publishDiscord=false`.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This closes the surface/readback evening coverage gap only. The live setup registry is still blank-slate for detector candidates, so the next phase must wire actual five-model live detector/promotion logic before an evening candle pattern can become a live trade-plan candidate.
+Next recommended action: Install the first real live detector contract for the evening-approved model lane, starting with Raid Failure Displacement Reversal, behind completed 5M proof and guarded Discord policy.
+
+Date: 2026-07-26
 Task: Complete five-model one-row Discord production rehearsal and final receipt handoff.
 Files changed: docs/PROJECT_STATUS.md.
 Reason: Record the approved one-row Discord production rehearsal, receipt audit, closeout, and final install readiness handoff after the explicit production webhook approval was supplied.

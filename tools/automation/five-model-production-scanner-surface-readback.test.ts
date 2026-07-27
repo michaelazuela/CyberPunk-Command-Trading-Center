@@ -5,7 +5,7 @@ import {
 import type { FiveModelProductionScannerSurfaceActivation } from '../../src/lib/fiveModelProductionScannerSurface';
 import type { UnifiedDeskOutputScannerSurfaceRow } from '../../src/lib/unifiedDeskOutputScannerSurface';
 
-function row(index: number, session: 'morning' | 'lunch', state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ'): UnifiedDeskOutputScannerSurfaceRow {
+function row(index: number, session: 'morning' | 'lunch' | 'evening', state: 'APPROVED_DESK_PLAN' | 'FORMING_DESK_READ'): UnifiedDeskOutputScannerSurfaceRow {
   const stateLabel = state === 'APPROVED_DESK_PLAN' ? 'Approved Desk Plan' : 'Forming Desk Read';
   return {
     cardId: `five-model-row-${index}`,
@@ -33,6 +33,7 @@ function row(index: number, session: 'morning' | 'lunch', state: 'APPROVED_DESK_
 const rows = [
   ...Array.from({ length: 5 }, (_, index) => row(index + 1, index < 3 ? 'morning' : 'lunch', 'APPROVED_DESK_PLAN')),
   ...Array.from({ length: 13 }, (_, index) => row(index + 6, index < 7 ? 'morning' : 'lunch', 'FORMING_DESK_READ')),
+  row(19, 'evening', 'FORMING_DESK_READ'),
 ];
 
 const surface: FiveModelProductionScannerSurfaceActivation = {
@@ -65,12 +66,12 @@ const surface: FiveModelProductionScannerSurfaceActivation = {
     scannerSurfaceSmokePath: 'surface-smoke.json',
   },
   summary: {
-    selectedRows: 18,
+    selectedRows: 19,
     approvedDeskPlanRows: 5,
-    formingDeskReadRows: 13,
+    formingDeskReadRows: 14,
     morningRows: 10,
     lunchRows: 8,
-    eveningRows: 0,
+    eveningRows: 1,
     discordPostRows: 0,
     supabaseWriteRows: 0,
     liveSupabaseReadRows: 0,
@@ -106,12 +107,12 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.authority.canExecute, false);
 assert.equal(report.authority.automatedOrders, false);
 assert.equal(report.source.runtimeReadSource, 'primary');
-assert.equal(report.summary.selectedRows, 18);
+assert.equal(report.summary.selectedRows, 19);
 assert.equal(report.summary.approvedDeskPlanRows, 5);
-assert.equal(report.summary.formingDeskReadRows, 13);
+assert.equal(report.summary.formingDeskReadRows, 14);
 assert.equal(report.summary.morningRows, 10);
 assert.equal(report.summary.lunchRows, 8);
-assert.equal(report.summary.eveningRows, 0);
+assert.equal(report.summary.eveningRows, 1);
 assert.equal(report.summary.discordPostRows, 0);
 assert.equal(report.summary.supabaseWriteRows, 0);
 assert.equal(report.summary.liveBridgeReadRows, 0);

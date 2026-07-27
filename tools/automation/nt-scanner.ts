@@ -1668,12 +1668,16 @@ function fiveModelProductionSurfaceBlockers(
     surface.authority.canExecute === false ? null : 'Five-model production surface has canExecute=true.',
     surface.authority.automatedOrders === false ? null : 'Five-model production surface allows automated orders authority.',
     surface.summary.selectedRows === surface.rows.length ? null : 'Five-model production surface selected row count does not match rows.',
-    surface.summary.selectedRows === 18 ? null : 'Five-model production surface must expose exactly 18 rows.',
+    surface.summary.selectedRows === surface.summary.morningRows + surface.summary.lunchRows + surface.summary.eveningRows
+      ? null
+      : 'Five-model production surface session row counts do not add up to selected rows.',
     surface.summary.approvedDeskPlanRows === 5 ? null : 'Five-model production surface must expose exactly 5 Approved Desk Plan rows.',
-    surface.summary.formingDeskReadRows === 13 ? null : 'Five-model production surface must expose exactly 13 Forming Desk Read rows.',
+    surface.summary.formingDeskReadRows === surface.summary.selectedRows - surface.summary.approvedDeskPlanRows
+      ? null
+      : 'Five-model production surface Forming Desk Read count does not match selected rows.',
     surface.summary.morningRows === 10 ? null : 'Five-model production surface must expose exactly 10 morning rows.',
     surface.summary.lunchRows === 8 ? null : 'Five-model production surface must expose exactly 8 lunch rows.',
-    surface.summary.eveningRows === 0 ? null : 'Five-model production surface must expose zero evening rows in this activation.',
+    surface.summary.eveningRows <= 1 ? null : 'Five-model production surface may expose at most one evening row in this activation.',
     surface.summary.discordPostRows === 0 ? null : 'Five-model production surface has Discord post rows.',
     surface.summary.supabaseWriteRows === 0 ? null : 'Five-model production surface has Supabase write rows.',
     surface.summary.liveSupabaseReadRows === 0 ? null : 'Five-model production surface has live Supabase read rows.',

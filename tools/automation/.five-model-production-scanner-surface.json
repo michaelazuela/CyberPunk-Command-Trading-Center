@@ -28,12 +28,12 @@
     "scannerSurfaceSmokePath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\diagnostic-reports\\five-model-scanner-surface-smoke-1785090633804.json"
   },
   "summary": {
-    "selectedRows": 18,
+    "selectedRows": 19,
     "approvedDeskPlanRows": 5,
-    "formingDeskReadRows": 13,
+    "formingDeskReadRows": 14,
     "morningRows": 10,
     "lunchRows": 8,
-    "eveningRows": 0,
+    "eveningRows": 1,
     "discordPostRows": 0,
     "supabaseWriteRows": 0,
     "liveSupabaseReadRows": 0,
@@ -476,9 +476,33 @@
       "writesSupabase": false,
       "readsLiveBridge": false,
       "canExecute": false
+    },
+    {
+      "cardId": "five-model-visibility-contract|five-model-ui-adapter|five-model|2026-06-18|evening|raid_failure_displacement_reversal|SHORT|2026-06-18T20:30:00|evening_overnight_high_raid_bearish_displacement",
+      "date": "2026-06-18",
+      "session": "evening",
+      "state": "FORMING_DESK_READ",
+      "stateLabel": "Forming Desk Read",
+      "model": "Raid Failure Displacement Reversal",
+      "direction": "SHORT",
+      "headline": "Forming Desk Read | EVENING | SHORT | Raid Failure Displacement Reversal",
+      "bodyLines": [
+        "evening short desk output from the five-model visibility gate.",
+        "Guarded evening coverage row for overnight-high raid plus bearish displacement research; scanner promotion still requires a live detector install and completed 5M proof."
+      ],
+      "levelLine": "Entry requires live completed 5M proof | Stop requires protected 5M structure | T1/T2 require app risk math",
+      "riskLine": "No fixed live risk is installed by this surface row.",
+      "proofLine": "Completed 5M proof: required live in evening window.",
+      "invalidationLine": "Invalidation remains the future live protected 5M stop line from the installed detector contract.",
+      "authorityLine": "Decision support only. Discord/Supabase/bridge/canExecute remain off in this adapter.",
+      "scannerVisibleNow": true,
+      "publishDiscord": false,
+      "writesSupabase": false,
+      "readsLiveBridge": false,
+      "canExecute": false
     }
   ],
   "blockers": [],
   "runtimeSurfacePath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\.five-model-production-scanner-surface.json",
-  "markdown": "# Five Model Production Scanner Surface Activation\n\nStatus: active\n\nAuthority: local runtime scanner surface activation only. This writes the five-model scanner surface file only with explicit approval. It does not post Discord, write Supabase, read live Supabase, read live bridge data, change scanner behavior, change trading logic, change canExecute, change entry/stop/targets, or place/manage orders.\n\n## Summary\n- Scanner visible now: true.\n- Selected rows: 18.\n- Approved Desk Plan rows: 5.\n- Forming Desk Read rows: 13.\n- Morning rows: 10.\n- Lunch rows: 8.\n- Evening rows: 0.\n- Discord-post rows: 0.\n- Supabase-write rows: 0.\n- Live-bridge-read rows: 0.\n- canExecute true rows: 0.\n- Trading-logic changed rows: 0.\n- Runtime surface: C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\.five-model-production-scanner-surface.json.\n\n## Rows\n| Date | Session | State | Model | Direction | Levels |\n|---|---|---|---|---|---|\n| 2026-06-09 | morning | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7383.75 | Stop 7388.75 | T1 7376.25 | T2 7373.75 |\n| 2026-06-10 | lunch | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7327.75 | Stop 7332.75 | T1 7320.25 | T2 7317.75 |\n| 2026-06-10 | lunch | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7301.5 | Stop 7306.5 | T1 7294 | T2 7291.5 |\n| 2026-06-16 | lunch | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7592.5 | Stop 7597.5 | T1 7585 | T2 7582.5 |\n| 2026-06-17 | morning | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7595.25 | Stop 7600.25 | T1 7587.75 | T2 7585.25 |\n| 2026-06-17 | morning | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7586 | Stop 7591 | T1 7578.5 | T2 7576 |\n| 2026-06-18 | morning | Forming Desk Read | Raid Failure Displacement Reversal | LONG | Entry 7540.25 | Stop 7535.25 | T1 7547.75 | T2 7550.25 |\n| 2026-06-22 | morning | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7594.5 | Stop 7599.5 | T1 7587 | T2 7584.5 |\n| 2026-06-22 | lunch | Approved Desk Plan | Raid Failure Displacement Reversal | SHORT | Entry 7540.75 | Stop 7545.25 | T1 7534 | T2 7531.75 |\n| 2026-06-24 | morning | Forming Desk Read | Raid Failure Displacement Reversal | LONG | Entry 7441.25 | Stop 7436.25 | T1 7448.75 | T2 7451.25 |\n| 2026-06-25 | morning | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7485.75 | Stop 7490.75 | T1 7478.25 | T2 7475.75 |\n| 2026-06-25 | lunch | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7449 | Stop 7454 | T1 7441.5 | T2 7439 |\n| 2026-06-26 | morning | Forming Desk Read | Raid Failure Displacement Reversal | LONG | Entry 7388.75 | Stop 7383.75 | T1 7396.25 | T2 7398.75 |\n| 2026-06-26 | lunch | Approved Desk Plan | Raid Failure Displacement Reversal | SHORT | Entry 7434 | Stop 7438.25 | T1 7427.75 | T2 7425.5 |\n| 2026-06-15 | morning | Approved Desk Plan | Structure Shift Continuation | LONG | Entry 7617.75 | Stop 7614.25 | T1 7623 | T2 7624.75 |\n| 2026-06-16 | lunch | Approved Desk Plan | Structure Shift Continuation | SHORT | Entry 7601.75 | Stop 7603.25 | T1 7599.5 | T2 7598.75 |\n| 2026-06-16 | lunch | Approved Desk Plan | Structure Shift Continuation | SHORT | Entry 7596.25 | Stop 7600.5 | T1 7590 | T2 7587.75 |\n| 2026-06-17 | morning | Forming Desk Read | Structure Shift Continuation | SHORT | Entry 7586 | Stop 7591 | T1 7578.5 | T2 7576 |\n\n## Blockers\n- None."
+  "markdown": "# Five Model Production Scanner Surface Activation\n\nStatus: active\n\nAuthority: local runtime scanner surface activation only. This writes the five-model scanner surface file only with explicit approval. It does not post Discord, write Supabase, read live Supabase, read live bridge data, change scanner behavior, change trading logic, change canExecute, change entry/stop/targets, or place/manage orders.\n\n## Summary\n- Scanner visible now: true.\n- Selected rows: 19.\n- Approved Desk Plan rows: 5.\n- Forming Desk Read rows: 14.\n- Morning rows: 10.\n- Lunch rows: 8.\n- Evening rows: 1.\n\n## Side Effects\n- discordPostRows: 0\n- supabaseWriteRows: 0\n- liveBridgeReadRows: 0\n- canExecuteTrueRows: 0\n- tradingLogicChangedRows: 0\n- automatedOrderRows: 0\n\n## Rows\n| Date | Session | State | Model | Direction | Levels |\n|---|---|---|---|---|---|\n| 2026-06-09 | morning | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7383.75 / Stop 7388.75 / T1 7376.25 / T2 7373.75 |\n| 2026-06-10 | lunch | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7327.75 / Stop 7332.75 / T1 7320.25 / T2 7317.75 |\n| 2026-06-10 | lunch | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7301.5 / Stop 7306.5 / T1 7294 / T2 7291.5 |\n| 2026-06-16 | lunch | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7592.5 / Stop 7597.5 / T1 7585 / T2 7582.5 |\n| 2026-06-17 | morning | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7595.25 / Stop 7600.25 / T1 7587.75 / T2 7585.25 |\n| 2026-06-17 | morning | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7586 / Stop 7591 / T1 7578.5 / T2 7576 |\n| 2026-06-18 | morning | Forming Desk Read | Raid Failure Displacement Reversal | LONG | Entry 7540.25 / Stop 7535.25 / T1 7547.75 / T2 7550.25 |\n| 2026-06-22 | morning | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7594.5 / Stop 7599.5 / T1 7587 / T2 7584.5 |\n| 2026-06-22 | lunch | Approved Desk Plan | Raid Failure Displacement Reversal | SHORT | Entry 7540.75 / Stop 7545.25 / T1 7534 / T2 7531.75 |\n| 2026-06-24 | morning | Forming Desk Read | Raid Failure Displacement Reversal | LONG | Entry 7441.25 / Stop 7436.25 / T1 7448.75 / T2 7451.25 |\n| 2026-06-25 | morning | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7485.75 / Stop 7490.75 / T1 7478.25 / T2 7475.75 |\n| 2026-06-25 | lunch | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry 7449 / Stop 7454 / T1 7441.5 / T2 7439 |\n| 2026-06-26 | morning | Forming Desk Read | Raid Failure Displacement Reversal | LONG | Entry 7388.75 / Stop 7383.75 / T1 7396.25 / T2 7398.75 |\n| 2026-06-26 | lunch | Approved Desk Plan | Raid Failure Displacement Reversal | SHORT | Entry 7434 / Stop 7438.25 / T1 7427.75 / T2 7425.5 |\n| 2026-06-15 | morning | Approved Desk Plan | Structure Shift Continuation | LONG | Entry 7617.75 / Stop 7614.25 / T1 7623 / T2 7624.75 |\n| 2026-06-16 | lunch | Approved Desk Plan | Structure Shift Continuation | SHORT | Entry 7601.75 / Stop 7603.25 / T1 7599.5 / T2 7598.75 |\n| 2026-06-16 | lunch | Approved Desk Plan | Structure Shift Continuation | SHORT | Entry 7596.25 / Stop 7600.5 / T1 7590 / T2 7587.75 |\n| 2026-06-17 | morning | Forming Desk Read | Structure Shift Continuation | SHORT | Entry 7586 / Stop 7591 / T1 7578.5 / T2 7576 |\n| 2026-06-18 | evening | Forming Desk Read | Raid Failure Displacement Reversal | SHORT | Entry requires live completed 5M proof / Stop requires protected 5M structure / T1/T2 require app risk math |\n\n## Blockers\n- None."
 }
