@@ -137,7 +137,12 @@ function inferBias(result: AnalysisResult | null | undefined): BiasDirection {
 }
 
 function setupFromText(...parts: Array<unknown>): SetupType {
-  void parts;
+  const text = parts.filter(Boolean).join(' ').toLowerCase();
+  if (text.includes('liquidity raid reclaim reversal')) return SetupType.LiquidityRaidReclaimReversal;
+  if (text.includes('raid failure displacement reversal')) return SetupType.RaidFailureDisplacementReversal;
+  if (text.includes('drive pullback continuation')) return SetupType.DrivePullbackContinuation;
+  if (text.includes('structure shift continuation')) return SetupType.StructureShiftContinuation;
+  if (text.includes('failed breakout reversal')) return SetupType.FailedBreakoutReversal;
   return SetupType.NoSetup;
 }
 
@@ -409,11 +414,12 @@ function confidenceScore(confidence: Confidence): number {
 
 function setupScore(setupType: SetupType): number {
   switch (setupType) {
-    case SetupType.NoSetup: return 100;
-    case SetupType.NoSetup: return 99;
-    case SetupType.NoSetup: return 98;
-    case SetupType.NoSetup: return 98;
-    case SetupType.NoSetup: return 97;
+    case SetupType.RaidFailureDisplacementReversal: return 100;
+    case SetupType.LiquidityRaidReclaimReversal: return 95;
+    case SetupType.FailedBreakoutReversal: return 94;
+    case SetupType.StructureShiftContinuation: return 92;
+    case SetupType.DrivePullbackContinuation: return 90;
+    case SetupType.NoSetup: return 0;
     default: return 0;
   }
 }
@@ -623,7 +629,7 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
     Boolean(candidate.targetObjectivePlan?.liquidityTarget1 || candidate.targetObjectivePlan?.nearestLiquidityTarget) ||
     Boolean((chartContext.sessionLevelContext?.levelsToWatch || []).length);
   const riskAssessment = makeRiskAssessmentFromSetup(candidate);
-  const modelScore = 0;
+  const modelScore = candidate.setupType === SetupType.NoSetup ? 0 : 25;
   const executionScore = clampQualityScore(
     (candidate.requiredTrigger ? 6 : 0) +
     (isValidPrice(candidate.entry) ? 5 : 0) +
@@ -661,7 +667,9 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
       score: modelScore,
       max: 25,
       status: qualityStatus(modelScore, 25),
-      note: 'Blank-slate mode: no trading model is installed, so model completion cannot score.',
+      note: modelScore > 0
+        ? 'Approved five-model scanner contract matched completed 5M proof.'
+        : 'No approved five-model scanner contract matched completed 5M proof.',
     },
     {
       label: '5M execution quality',

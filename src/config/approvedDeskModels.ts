@@ -22,8 +22,8 @@ export interface ApprovedDeskModelDefinition {
   targetRule: string;
   invalidationRule: string;
   sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md';
-  installsScannerDetection: false;
-  installsPromotion: false;
+  installsScannerDetection: boolean;
+  installsPromotion: boolean;
   installsDiscordPublishing: false;
   installsExecutionApproval: false;
 }
@@ -48,8 +48,8 @@ export const APPROVED_DESK_MODEL_DEFINITIONS: readonly ApprovedDeskModelDefiniti
     targetRule: 'T1 = 1.5R and T2 = 2.0R from actual entry to protected stop.',
     invalidationRule: 'Completed 5M acceptance back through protected reclaimed/failed structure or stop failure.',
     sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
-    installsScannerDetection: false,
-    installsPromotion: false,
+    installsScannerDetection: true,
+    installsPromotion: true,
     installsDiscordPublishing: false,
     installsExecutionApproval: false,
   },
@@ -72,8 +72,8 @@ export const APPROVED_DESK_MODEL_DEFINITIONS: readonly ApprovedDeskModelDefiniti
     targetRule: 'T1 = 1.5R and T2 = 2.0R from actual entry to protected stop.',
     invalidationRule: 'Acceptance back through the displacement origin or protected stop.',
     sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
-    installsScannerDetection: false,
-    installsPromotion: false,
+    installsScannerDetection: true,
+    installsPromotion: true,
     installsDiscordPublishing: false,
     installsExecutionApproval: false,
   },
@@ -96,8 +96,8 @@ export const APPROVED_DESK_MODEL_DEFINITIONS: readonly ApprovedDeskModelDefiniti
     targetRule: 'T1 = 1.5R and T2 = 2.0R from actual entry to protected stop.',
     invalidationRule: 'Acceptance through protected pullback structure, no target room, or no real drive.',
     sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
-    installsScannerDetection: false,
-    installsPromotion: false,
+    installsScannerDetection: true,
+    installsPromotion: true,
     installsDiscordPublishing: false,
     installsExecutionApproval: false,
   },
@@ -120,8 +120,8 @@ export const APPROVED_DESK_MODEL_DEFINITIONS: readonly ApprovedDeskModelDefiniti
     targetRule: 'T1 = 1.5R and T2 = 2.0R from actual entry to protected stop.',
     invalidationRule: 'Acceptance back through shifted structure or missing protected stop.',
     sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
-    installsScannerDetection: false,
-    installsPromotion: false,
+    installsScannerDetection: true,
+    installsPromotion: true,
     installsDiscordPublishing: false,
     installsExecutionApproval: false,
   },
@@ -144,8 +144,8 @@ export const APPROVED_DESK_MODEL_DEFINITIONS: readonly ApprovedDeskModelDefiniti
     targetRule: 'T1 = 1.5R and T2 = 2.0R from actual entry to protected stop.',
     invalidationRule: 'Acceptance back outside the failed-breakout structure or missing protected stop.',
     sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
-    installsScannerDetection: false,
-    installsPromotion: false,
+    installsScannerDetection: true,
+    installsPromotion: true,
     installsDiscordPublishing: false,
     installsExecutionApproval: false,
   },

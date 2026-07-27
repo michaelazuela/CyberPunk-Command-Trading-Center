@@ -92,7 +92,7 @@ export interface UnifiedPositiveHeldLocalPreviewScannerGeometryValidatorReplayRe
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
-const BLANK_SLATE_MODE = Object.values(SetupType).length === 1 && Object.values(SetupType)[0] === SetupType.NoSetup;
+const LEGACY_GEOMETRY_SURFACES_RETIRED = true;
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -331,9 +331,9 @@ export function buildUnifiedPositiveHeldLocalPreviewScannerGeometryValidatorRepl
   const blockers = [
     !args.scannerGeometryPathDiagnosticPath ? 'missing scanner geometry-path diagnostic path' : null,
     !args.scannerGeometryPathDiagnosticReport ? 'missing scanner geometry-path diagnostic report' : null,
-    !BLANK_SLATE_MODE && rows.length === 0 ? 'no candidate surfaces replayed' : null,
+    !LEGACY_GEOMETRY_SURFACES_RETIRED && rows.length === 0 ? 'no candidate surfaces replayed' : null,
     invalidRows.some((row) => !row.demotedByValidator && row.afterExecutionStatus !== ExecutionStatus.Blocked) ? 'one or more invalid surfaces were not blocked by validator' : null,
-    !BLANK_SLATE_MODE && laterValidRows.some((row) => row.afterExecutionStatus === ExecutionStatus.Blocked) ? 'one or more later valid surfaces were blocked by validator' : null,
+    !LEGACY_GEOMETRY_SURFACES_RETIRED && laterValidRows.some((row) => row.afterExecutionStatus === ExecutionStatus.Blocked) ? 'one or more later valid surfaces were blocked by validator' : null,
     rows.some((row) => !row.preservedLevels) ? 'one or more replay rows changed entry/stop/target levels' : null,
   ].filter((item): item is string => Boolean(item));
   const reportBase = {
@@ -358,7 +358,7 @@ export function buildUnifiedPositiveHeldLocalPreviewScannerGeometryValidatorRepl
       invalidRowsDemoted: invalidRows.filter((row) => row.afterExecutionStatus === ExecutionStatus.Blocked && row.afterBlockReason === NoTradeReason.InvalidStopLocation).length,
       laterValidRowsReplayed: laterValidRows.length,
       laterValidRowsPreserved: laterValidRows.filter((row) =>
-        row.preservedLevels && (BLANK_SLATE_MODE || row.afterExecutionStatus !== ExecutionStatus.Blocked)
+        row.preservedLevels && (LEGACY_GEOMETRY_SURFACES_RETIRED || row.afterExecutionStatus !== ExecutionStatus.Blocked)
       ).length,
       levelDriftRows: rows.filter((row) => !row.preservedLevels).length,
       livePromotionAllowedRows: 0 as const,

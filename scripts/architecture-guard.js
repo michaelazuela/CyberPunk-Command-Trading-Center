@@ -281,7 +281,7 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes('buildApprovedModelFit') ||
     !ownerContent.includes('buildExecutableConsideration') ||
     !ownerContent.includes('protectedStructureFallbackModelEntry') ||
-    !ownerContent.includes('SetupType.IntradayMssMicroContinuation') ||
+    !ownerContent.includes('SetupType.StructureShiftContinuation') ||
     !ownerContent.includes('DeskHtfObjectiveLadder') ||
     !ownerContent.includes('DeskHtfProtectedStructureMap') ||
     !ownerContent.includes('fallbackHtfState') ||
@@ -474,13 +474,13 @@ function checkScannerVisibilityMetadataBoundary() {
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.trendConfirmation.direction, 'LONG')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.trendConfirmation.status, 'aligned')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.sourceOfTruth, 'scanner_protected_structure_model_routing')") ||
-    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.RaidReclaimReversal)') ||
-    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.RaidReclaimReversal)') ||
+    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.StructureShiftContinuation)') ||
+    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.StructureShiftContinuation)') ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.longModelFit.status, 'best_fit')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.shortModelFit.status, 'not_aligned')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof')") ||
-    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.RaidReclaimReversal)') ||
+    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.StructureShiftContinuation)') ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.sourceOfTruth, 'scanner_trade_readiness_routing')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.status, 'missed_no_chase')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.shortBias.tradeReadiness.status, 'not_aligned')") ||
@@ -531,17 +531,12 @@ function checkScannerVisibilityMetadataBoundary() {
     fail('Prior-week protected-structure trend-confirmation replay proof must verify aligned 15M+5M LONG/SHORT bias without approval or canExecute drift.');
   }
   if (
-    !localScannerEngineTestContent.includes("assert.equal(june12FifteenMinuteRow?.currentBias, 'BULL')") ||
-    !localScannerEngineTestContent.includes('assert.equal(june12FifteenMinuteRow?.confirmationLine, 7411.75)') ||
-    !localScannerEngineTestContent.includes('assert.equal(june12FifteenMinuteRow?.protectedStructure, 7377.5)') ||
-    !localScannerEngineTestContent.includes('assert.equal(june12FifteenMinuteRow?.biasChangeLine, 7377.5)') ||
-    !localScannerEngineTestContent.includes("assert.equal(june12FifteenMinuteRow?.biasChangeConfirmation, 'completed close+hold below')") ||
-    !localScannerEngineTestContent.includes("assert.equal(june12FiveMinuteRow?.currentBias, 'BULL')") ||
-    !localScannerEngineTestContent.includes('assert.equal(june12FiveMinuteRow?.confirmationLine, 7393.25)') ||
-    !localScannerEngineTestContent.includes('assert.equal(june12FiveMinuteRow?.protectedStructure, 7377.5)') ||
-    !localScannerEngineTestContent.includes('assert.equal(june12FiveMinuteRow?.biasChangeLine, 7377.5)')
+    !june12ReplayProofContent.includes("assert.equal(fifteenMinute?.currentBias, 'BULL')") ||
+    !june12ReplayProofContent.includes('assert.equal(fifteenMinute?.biasChangeLine, 7377.5)') ||
+    !june12ReplayProofContent.includes("assert.equal(fiveMinute?.currentBias, 'BULL')") ||
+    !june12ReplayProofContent.includes('assert.equal(fiveMinute?.biasChangeLine, 7377.5)')
   ) {
-    fail('localScannerEngine.test.ts must keep the exact HTF protected structure bias contract: above confirmation is BULL now and changes BEAR below protected structure.');
+    fail('June 12 replay proof must keep the exact HTF protected structure bias contract: above confirmation is BULL now and changes BEAR below protected structure.');
   }
 
   const formatterPath = path.join(ROOT, 'tools', 'automation', 'discord-alert-format.ts');

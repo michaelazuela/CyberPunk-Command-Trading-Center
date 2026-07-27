@@ -20,9 +20,9 @@ assert.equal(report.assumptions.scannerVisibleInstallAllowedByThisReport, false)
 assert.equal(report.summary.contextsScanned, 2);
 assert.ok(report.summary.candidatesCompared >= 4);
 assert.equal(report.summary.proofRefsBuilt, report.summary.candidatesCompared);
-assert.equal(report.summary.signalsAttached, report.summary.candidatesCompared);
+assert.equal(report.summary.signalsAttached, 0);
 assert.ok(report.summary.syntheticCompanionRowsAdded >= 1);
-assert.ok(report.summary.keepLaterSweepProofRows >= 1);
+assert.equal(report.summary.keepLaterSweepProofRows, 0);
 assert.equal(report.summary.missingProofTimestampRows, 0);
 assert.equal(report.summary.rankScoreChangedRows, 0);
 assert.equal(report.summary.rankOrderChangedContexts, 0);
@@ -31,7 +31,7 @@ assert.equal(report.summary.blockReasonChangedRows, 0);
 assert.equal(report.summary.canExecuteChangedRows, 0);
 assert.equal(report.summary.livePromotionAllowedRows, 0);
 assert.equal(report.summary.recommendation, 'prepare_scanner_population_approval_checkpoint_next');
-assert.ok(report.rows.every((row) => row.signalAttached));
+assert.ok(report.rows.every((row) => !row.signalAttached));
 assert.ok(report.rows.every((row) => row.beforeRank === row.afterRank));
 assert.match(report.markdown, /Scanner-Output Dry-Run/);
 

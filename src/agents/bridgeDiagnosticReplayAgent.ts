@@ -429,7 +429,7 @@ function candidatePool(input: BridgeDiagnosticReplayInput): SetupCandidate[] {
 
 function candidateIsApprovedExecutable(candidate: SetupCandidate): boolean {
   return (
-    (candidate.setupType === SetupType.NoSetup || candidate.setupType === SetupType.NoSetup) &&
+    candidate.setupType !== SetupType.NoSetup &&
     candidate.executionStatus === ExecutionStatus.Executable &&
     candidate.direction !== 'NO TRADE' &&
     !candidate.blockReason

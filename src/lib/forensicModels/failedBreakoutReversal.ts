@@ -17,8 +17,8 @@ export interface FailedBreakoutReversalDetection {
   htfContext: 'support' | 'caution' | 'conflict' | 'unknown';
   evidence: string[];
   missingEvidence: string[];
-  installsScannerCandidate: false;
-  installsPromotion: false;
+  installsScannerCandidate: true;
+  installsPromotion: true;
   installsDiscordPublishing: false;
   installsExecutionApproval: false;
 }
@@ -145,8 +145,8 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Fa
     htfContext: htfContextForDirection(context, direction),
     evidence,
     missingEvidence,
-    installsScannerCandidate: false,
-    installsPromotion: false,
+    installsScannerCandidate: true,
+    installsPromotion: true,
     installsDiscordPublishing: false,
     installsExecutionApproval: false,
   };

@@ -3414,7 +3414,7 @@ function primaryRegistryEntryForSetup(setupType: SetupType | null | undefined): 
 
 function protectedStructureFallbackModelEntry(direction: 'LONG' | 'SHORT', map: DeskHtfProtectedStructureMap): SetupRegistryEntry | null {
   if (protectedStructureSupportDirection(map) !== direction) return null;
-  return SETUP_REGISTRY.find((entry) => entry.setupType === SetupType.NoSetup && entry.role === 'primary_model') || null;
+  return SETUP_REGISTRY.find((entry) => entry.setupType === SetupType.StructureShiftContinuation && entry.role === 'primary_model') || null;
 }
 
 function existingModelFitMissingProof(item: ScannerCandidateLifecycleTraceItem | null): string[] {
@@ -3459,15 +3459,15 @@ function buildApprovedModelFit(args: {
   const aligned = protectedDirection === args.direction;
   if (!aligned) {
     if (lifecycleItemIsHtfFvgMicroMssReaction(args.item)) {
-      const entry = primaryRegistryEntryForSetup(SetupType.NoSetup);
+      const entry = primaryRegistryEntryForSetup(SetupType.StructureShiftContinuation);
       return {
         sourceOfTruth: 'scanner_protected_structure_model_fit',
-        setupType: SetupType.NoSetup,
-        modelName: entry?.label || 'Intraday MSS Micro Continuation',
-        parentModelFamily: entry?.parentModelFamily || 'INTRADAY_MSS_MICRO_CONTINUATION',
+        setupType: SetupType.StructureShiftContinuation,
+        modelName: entry?.label || 'Structure Shift Continuation',
+        parentModelFamily: entry?.parentModelFamily || null,
         fitScore: Math.max(70, Math.min(100, Math.round(lifecycleItemScore(args.item) + 6))),
         status: 'best_fit',
-        reason: `${args.direction} routes to Intraday MSS Micro Continuation from HTF FVG reaction plus completed 5M micro MSS/close-through. HTF conflict remains caution/management, not an eraser; execution still requires protected 5M stop proof and normal gates.`,
+        reason: `${args.direction} routes to Structure Shift Continuation from HTF FVG reaction plus completed 5M micro MSS/close-through. HTF conflict remains caution/management, not an eraser; execution still requires protected 5M stop proof and normal gates.`,
         missingProof: existingModelFitMissingProof(args.item),
         approvalBoundary: boundary,
       };
@@ -3508,7 +3508,7 @@ function buildApprovedModelFit(args: {
   const fitScore = Math.max(0, Math.min(100, Math.round(baseScore + (existingEntry ? 8 : 2))));
   const modelSource = existingEntry
     ? 'existing scanner candidate'
-    : 'protected 15M+5M alignment routed to approved Intraday MSS Micro Continuation model';
+    : 'protected 15M+5M alignment routed to approved Structure Shift Continuation model';
   return {
     sourceOfTruth: 'scanner_protected_structure_model_fit',
     setupType: entry.setupType,
@@ -5742,7 +5742,7 @@ function buildPrimaryDeskPlay(args: {
       ? `${trendConfirmation.summary} Opposite side stays visible as ${oppositeBias?.state || 'not_present'}.`
       : `${directionLabel(primaryDirection)} remains primary while its line/trigger holds. Opposite side stays visible as ${oppositeBias?.state || 'not_present'}.`
     : selectedLifecycleItem?.direction && !lifecycleItemHasHtfSupport(selectedLifecycleItem)
-    ? `No HTF-supported directional play is confirmed. ${selectedLifecycleItem.direction} evidence stays review-only until completed HTF context or protected 5M reversal proof changes the map.`
+    ? `No HTF-supported directional play is confirmed; completed HTF support is not confirmed. ${selectedLifecycleItem.direction} evidence stays review-only until completed HTF context or protected 5M reversal proof changes the map.`
     : countertrendWarning && selectedLifecycleItem?.direction
     ? `No HTF-supported directional play is confirmed. ${selectedLifecycleItem.direction} evidence is review-only against opposing HTF/session structure until protected 5M proof changes the map.`
     : 'No HTF-supported directional play is confirmed from scanner-owned lifecycle state.';

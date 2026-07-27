@@ -152,8 +152,8 @@ assert.equal(longDetected.target1, 7518);
 assert.equal(longDetected.target2, 7525.5);
 assert.equal(longDetected.htfContext, 'support');
 assert.equal(longDetected.displacementQuality, 'high_quality');
-assert.equal(longDetected.installsScannerCandidate, false);
-assert.equal(longDetected.installsPromotion, false);
+assert.equal(longDetected.installsScannerCandidate, true);
+assert.equal(longDetected.installsPromotion, true);
 assert.equal(longDetected.installsDiscordPublishing, false);
 assert.equal(longDetected.installsExecutionApproval, false);
 
@@ -227,7 +227,50 @@ const missingDisplacement = detectRaidFailureDisplacementReversal(context({
 assert.equal(missingDisplacement.detected, false);
 assert.ok(missingDisplacement.missingEvidence.includes('Missing confirmed directional displacement after failure.'));
 
-const scannerResult = scanSetupCandidates({ sessionType: 'morning', chartContext: context({}) });
-assert.deepEqual(scannerResult.candidates, [], 'isolated detector phase must not wire scanner candidates');
+const scannerResult = scanSetupCandidates({ sessionType: 'morning', chartContext: context({
+  liquiditySweeps: [{
+    type: 'sweep',
+    direction: 'LONG',
+    level: 7482,
+    sweptLevelLabel: 'overnight low',
+    reclaimed: true,
+    timestamp: '2026-06-10T10:05:00-04:00',
+    confidence: 'High',
+  }],
+  reclaimEvents: [{
+    direction: 'LONG',
+    reclaimedLevel: 7482,
+    levelLabel: 'overnight low',
+    timestamp: '2026-06-10T10:05:00-04:00',
+    confidence: 'High',
+  }],
+  failedBreakEvents: [{
+    direction: 'LONG',
+    failedLevel: 7482,
+    levelLabel: 'overnight low',
+    sweptExtreme: 7480,
+    timestamp: '2026-06-10T10:05:00-04:00',
+    confidence: 'High',
+  }],
+  displacementCandles: [{
+    direction: 'LONG',
+    candleIndex: 2,
+    timestamp: '2026-06-10T10:10:00-04:00',
+    open: 7482,
+    high: 7496,
+    low: 7481,
+    close: 7495,
+    bodyPoints: 13,
+    rangePoints: 15,
+    bodyToRange: 0.87,
+    closeLocation: 'top_quarter',
+    displacementScore: 92,
+    quality: 'high_quality',
+    leavesImbalance: true,
+    breaksStructure: true,
+    confidence: 'High',
+  }],
+}) });
+assert.equal(scannerResult.bestConditionalCandidate?.setupType, 'RaidFailureDisplacementReversal');
 
 console.log('raid failure displacement reversal detector contract verified');

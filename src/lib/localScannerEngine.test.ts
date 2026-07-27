@@ -55,7 +55,8 @@ assert.equal(scannerContextState(morningWindow), 'MapReady');
 
 const audit = buildTradeDecisionMapAudit(SETUP_REGISTRY);
 assert.equal(audit.sourceOfTruth, 'setup_registry_trade_decision_map_audit');
-assert.equal(audit.entries.length, 0);
+assert.equal(audit.entries.length, 5);
+assert.equal(audit.entries.every((entry) => entry.role === 'primary_model'), true);
 assert.equal(audit.tradingLogicChanged, false);
 
 const blankCandidate = candidate();
@@ -138,4 +139,4 @@ assert.equal(scannerStateFromDecision({
   candidate: null,
 }), 'NoTrade');
 
-console.log('localScannerEngine blank-slate compatibility verified');
+console.log('localScannerEngine five-model compatibility verified');

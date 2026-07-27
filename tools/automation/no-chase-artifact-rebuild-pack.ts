@@ -138,6 +138,7 @@ function recommendationFor(caseItem: NoChaseOhlcProofCase, decision: RebuildDeci
 
 function buildRow(caseItem: NoChaseOhlcProofCase): NoChaseArtifactRebuildPackRow | null {
   if (BLANK_SLATE_MODE) return null;
+  if (caseItem.setupType === SetupType.NoSetup) return null;
   if (caseItem.reviewClassification !== 'reviewable_full_plan') return null;
   if (caseItem.entry === null || caseItem.stop === null || caseItem.target1 === null || caseItem.target2 === null) return null;
   const rebuildDecision = rebuildDecisionFor(caseItem);

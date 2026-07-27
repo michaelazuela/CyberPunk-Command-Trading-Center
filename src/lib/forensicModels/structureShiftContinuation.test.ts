@@ -113,8 +113,8 @@ assert.equal(longDetected.target2, 110.75);
 assert.equal(longDetected.shiftTime, '2026-06-15T09:30:00-04:00');
 assert.equal(longDetected.proofTime, '2026-06-15T09:35:00-04:00');
 assert.equal(longDetected.htfContext, 'support');
-assert.equal(longDetected.installsScannerCandidate, false);
-assert.equal(longDetected.installsPromotion, false);
+assert.equal(longDetected.installsScannerCandidate, true);
+assert.equal(longDetected.installsPromotion, true);
 assert.equal(longDetected.installsDiscordPublishing, false);
 assert.equal(longDetected.installsExecutionApproval, false);
 
@@ -146,6 +146,7 @@ assert.equal(missing.detected, false);
 assert.equal(missing.missingEvidence.includes('Missing post-shift 5M continuation proof.'), true);
 
 const scannerResult = scanSetupCandidates({ sessionType: 'morning', chartContext: context(longCandles) });
-assert.equal(scannerResult.candidates.length, 0);
+assert.equal(scannerResult.candidates.length, 1);
+assert.equal(scannerResult.bestConditionalCandidate?.setupType, 'StructureShiftContinuation');
 
 console.log('structure shift continuation detector contract verified');

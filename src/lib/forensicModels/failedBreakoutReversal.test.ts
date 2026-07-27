@@ -125,8 +125,8 @@ assert.equal(longDetected.target1, 7443.5);
 assert.equal(longDetected.target2, 7444.5);
 assert.equal(longDetected.failedLevelLabel, 'range low');
 assert.equal(longDetected.htfContext, 'support');
-assert.equal(longDetected.installsScannerCandidate, false);
-assert.equal(longDetected.installsPromotion, false);
+assert.equal(longDetected.installsScannerCandidate, true);
+assert.equal(longDetected.installsPromotion, true);
 assert.equal(longDetected.installsDiscordPublishing, false);
 assert.equal(longDetected.installsExecutionApproval, false);
 

@@ -24,6 +24,11 @@ export enum BiasDirection {
 }
 
 export enum SetupType {
+  LiquidityRaidReclaimReversal = 'LiquidityRaidReclaimReversal',
+  RaidFailureDisplacementReversal = 'RaidFailureDisplacementReversal',
+  DrivePullbackContinuation = 'DrivePullbackContinuation',
+  StructureShiftContinuation = 'StructureShiftContinuation',
+  FailedBreakoutReversal = 'FailedBreakoutReversal',
   NoSetup = 'NoSetup',
 }
 

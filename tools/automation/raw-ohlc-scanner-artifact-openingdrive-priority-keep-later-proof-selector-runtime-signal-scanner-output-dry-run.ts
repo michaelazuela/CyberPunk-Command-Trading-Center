@@ -266,11 +266,7 @@ export function buildRawOhlcScannerArtifactOpeningDrivePriorityKeepLaterProofSel
     });
     const scopedCandidates = scan.candidates.filter((candidate) =>
       candidate.direction !== 'NO TRADE' &&
-      (
-        candidate.setupType === SetupType.NoSetup ||
-        candidate.setupType === SetupType.NoSetup ||
-        candidate.setupType === SetupType.NoSetup
-      )
+      candidate.setupType !== SetupType.NoSetup
     );
     const fallbackCandidates = scopedCandidates.length ? scopedCandidates : [
       {

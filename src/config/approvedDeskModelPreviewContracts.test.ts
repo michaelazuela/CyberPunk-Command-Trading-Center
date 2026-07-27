@@ -31,13 +31,13 @@ for (const value of Object.values(RAID_FAILURE_DISPLACEMENT_PREVIEW_CONTRACT.for
 }
 
 const model = getApprovedDeskModelDefinition('raid_failure_displacement_reversal');
-assert.deepEqual(model.productionSessionsEnabled, []);
-assert.equal(model.installsScannerDetection, false);
-assert.equal(model.installsPromotion, false);
+assert.deepEqual(model.productionSessionsEnabled, ['morning', 'lunch', 'evening']);
+assert.equal(model.installsScannerDetection, true);
+assert.equal(model.installsPromotion, true);
 assert.equal(model.installsDiscordPublishing, false);
 assert.equal(model.installsExecutionApproval, false);
 
 const scannerResult = scanSetupCandidates({ sessionType: 'morning' });
-assert.deepEqual(scannerResult.candidates, [], 'disabled preview contract must not install scanner candidates');
+assert.deepEqual(scannerResult.candidates, [], 'installed scanner detection must still require structured completed 5M chart context');
 
 console.log('approved desk model preview contract verified');

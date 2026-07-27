@@ -133,6 +133,7 @@ function completePlan(row: NoChaseArtifactRebuildPackRow): boolean {
 
 function buildArtifact(row: NoChaseArtifactRebuildPackRow): NoChaseRebuiltHumanReviewArtifact | null {
   if (BLANK_SLATE_MODE) return null;
+  if (row.setupType === SetupType.NoSetup) return null;
   if (row.rebuildDecision !== 'include_for_rebuild_review') return null;
   if (!completePlan(row)) return null;
   return {

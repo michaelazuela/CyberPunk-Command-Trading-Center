@@ -27,8 +27,8 @@ for (const id of expectedIds) {
   assert.deepEqual(definition.approvedSessionsForReplay, ['morning', 'lunch', 'evening'], `${id} replay sessions must include evening coverage`);
   assert.deepEqual(definition.productionSessionsEnabled, ['morning', 'lunch', 'evening'], `${id} production session coverage must include evening`);
   assert.equal(definition.sourceOfTruth, 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md');
-  assert.equal(definition.installsScannerDetection, false);
-  assert.equal(definition.installsPromotion, false);
+  assert.equal(definition.installsScannerDetection, true);
+  assert.equal(definition.installsPromotion, true);
   assert.equal(definition.installsDiscordPublishing, false);
   assert.equal(definition.installsExecutionApproval, false);
   assert.ok(definition.requiredEvidence.length >= 5, `${id} must carry concrete evidence requirements`);
@@ -50,8 +50,8 @@ for (const blocked of blockedIds) {
 }
 
 const scannerResult = scanSetupCandidates({ sessionType: 'morning' });
-assert.deepEqual(scannerResult.candidates, [], 'registry-only phase must not install scanner candidates');
-assert.equal(scannerResult.bestExecutableCandidate, null, 'registry-only phase must not install executable candidates');
-assert.equal(scannerResult.bestConditionalCandidate, null, 'registry-only phase must not install conditional candidates');
+assert.deepEqual(scannerResult.candidates, [], 'scanner detection must still require structured completed 5M chart context');
+assert.equal(scannerResult.bestExecutableCandidate, null, 'five-model scanner install must not create executable candidates without separate execution approval');
+assert.equal(scannerResult.bestConditionalCandidate, null, 'scanner detection must not invent conditional candidates from missing chart context');
 
-console.log('approvedDeskModels registry-only contract verified');
+console.log('approvedDeskModels scanner-installed contract verified');

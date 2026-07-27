@@ -32,8 +32,8 @@ const report = buildFiveModelScannerCandidatePreviewContract({
   json: true,
 });
 
-assert.equal(report.authority.noSetupRegistryChange, true);
-assert.equal(report.authority.noScannerWiring, true);
+assert.equal(report.authority.noSetupRegistryChange, false);
+assert.equal(report.authority.noScannerWiring, false);
 assert.equal(report.authority.noDiscordPost, true);
 assert.equal(report.authority.noSupabaseRead, true);
 assert.equal(report.authority.noSupabaseWrite, true);
@@ -51,11 +51,11 @@ assert.deepEqual(report.summary.contextOnlyModelIds, [
   'drive_pullback_continuation',
   'failed_breakout_reversal',
 ]);
-assert.equal(report.summary.scannerCandidateEligibleRows, 0);
+assert.equal(report.summary.scannerCandidateEligibleRows, 5);
 assert.equal(report.summary.executionApprovalEligibleRows, 0);
-assert.equal(report.lanes.every((lane) => lane.productionSessionsEnabled.length === 0), true);
-assert.equal(report.lanes.every((lane) => lane.scannerCandidateEligible === false), true);
+assert.equal(report.lanes.every((lane) => lane.productionSessionsEnabled.join(',') === 'morning,lunch,evening'), true);
+assert.equal(report.lanes.every((lane) => lane.scannerCandidateEligible === true), true);
 assert.equal(report.lanes.every((lane) => lane.canExecuteEligible === false), true);
-assert.equal(report.recommendation, 'build_disabled_local_scanner_candidate_preview_from_primary_and_secondary_lanes');
+assert.equal(report.recommendation, 'scanner_candidate_detection_installed_validate_completed_5m_proof_before_visibility');
 
 console.log('five-model scanner-candidate preview contract verified');

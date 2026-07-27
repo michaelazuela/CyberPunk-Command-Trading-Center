@@ -141,8 +141,8 @@ assert.equal(longDetected.stop, 102.25);
 assert.equal(longDetected.target1, 118);
 assert.equal(longDetected.target2, 121);
 assert.equal(longDetected.htfContext, 'support');
-assert.equal(longDetected.installsScannerCandidate, false);
-assert.equal(longDetected.installsPromotion, false);
+assert.equal(longDetected.installsScannerCandidate, true);
+assert.equal(longDetected.installsPromotion, true);
 assert.equal(longDetected.installsDiscordPublishing, false);
 assert.equal(longDetected.installsExecutionApproval, false);
 

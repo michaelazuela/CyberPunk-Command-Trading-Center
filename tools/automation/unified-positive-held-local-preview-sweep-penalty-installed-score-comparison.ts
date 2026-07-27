@@ -96,7 +96,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_REPORT_DIR = path.join(__dirname, 'diagnostic-reports');
 const SWEEP_SETUP = 'NoInstalledSetup';
-const BLANK_SLATE_MODE = Object.values(SetupType).length === 1 && Object.values(SetupType)[0] === SetupType.NoSetup;
+const INSTALLED_SWEEP_PENALTY_PATH_ACTIVE = false;
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -160,12 +160,12 @@ function noTradeReasonFrom(value: string): NoTradeReason | null {
 }
 
 function validSweepLead(row: { setupType: string; executionStatus: string; blockReason: string }): boolean {
-  if (BLANK_SLATE_MODE) return false;
+  if (!INSTALLED_SWEEP_PENALTY_PATH_ACTIVE) return false;
   return row.setupType === SWEEP_SETUP && row.executionStatus === 'Conditional' && row.blockReason === 'EntryTriggerPending';
 }
 
 function invalidStopSweepPenaltyCandidate(row: { setupType: string; executionStatus: string; blockReason: string }): boolean {
-  if (BLANK_SLATE_MODE) return false;
+  if (!INSTALLED_SWEEP_PENALTY_PATH_ACTIVE) return false;
   return row.setupType === SWEEP_SETUP && row.executionStatus === 'Blocked' && row.blockReason === 'InvalidStopLocation';
 }
 
@@ -227,11 +227,11 @@ function compareRows(args: {
       validSweepLead: validSweepLead({ setupType: row.setupType, executionStatus, blockReason }),
       invalidStopSweepPenaltyCandidate: invalidStopSweepPenaltyCandidate({ setupType: row.setupType, executionStatus, blockReason }),
       canExecute: item?.canExecute ?? false,
-      entryPreserved: BLANK_SLATE_MODE || (item?.entry ?? null) === (numberOrNull(intake?.entry) ?? null),
-      stopPreserved: BLANK_SLATE_MODE || (item?.stop ?? null) === (numberOrNull(intake?.stop) ?? null),
-      target1Preserved: BLANK_SLATE_MODE || (item?.target1 ?? null) === (numberOrNull(intake?.target1) ?? null),
-      target2Preserved: BLANK_SLATE_MODE || (item?.target2 ?? null) === (numberOrNull(intake?.target2) ?? null),
-      riskPreserved: BLANK_SLATE_MODE || (item?.riskPoints ?? null) === (numberOrNull(intake?.riskPoints) ?? row.riskPoints ?? null),
+      entryPreserved: !INSTALLED_SWEEP_PENALTY_PATH_ACTIVE || (item?.entry ?? null) === (numberOrNull(intake?.entry) ?? null),
+      stopPreserved: !INSTALLED_SWEEP_PENALTY_PATH_ACTIVE || (item?.stop ?? null) === (numberOrNull(intake?.stop) ?? null),
+      target1Preserved: !INSTALLED_SWEEP_PENALTY_PATH_ACTIVE || (item?.target1 ?? null) === (numberOrNull(intake?.target1) ?? null),
+      target2Preserved: !INSTALLED_SWEEP_PENALTY_PATH_ACTIVE || (item?.target2 ?? null) === (numberOrNull(intake?.target2) ?? null),
+      riskPreserved: !INSTALLED_SWEEP_PENALTY_PATH_ACTIVE || (item?.riskPoints ?? null) === (numberOrNull(intake?.riskPoints) ?? row.riskPoints ?? null),
     };
     return {
       ...base,
@@ -288,7 +288,7 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCo
   const driftRows = rows.filter((row) => !row.entryPreserved || !row.stopPreserved || !row.target1Preserved || !row.target2Preserved || !row.riskPreserved).length;
   const overlay = args.freshScannerOverlayDryRunReport;
   const overlayMatchesExpectedRows = Boolean(
-    BLANK_SLATE_MODE ||
+    !INSTALLED_SWEEP_PENALTY_PATH_ACTIVE ||
     (overlay &&
       overlay.status === 'pass' &&
       overlay.summary.validSweepLeadRows === validSweepLeadRows &&
@@ -307,13 +307,13 @@ export function buildUnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreCo
     overlay && overlay.status !== 'pass' ? `fresh scanner overlay dry-run status ${overlay.status}` : null,
     rows.length === 0 ? 'no installed-score comparison rows' : null,
     validSweepLeadRowsPenalized !== 0 ? 'valid Sweep lead rows would be penalized' : null,
-    !BLANK_SLATE_MODE && invalidStopSweepPenaltyRows === 0 ? 'no invalid-stop Sweep rows found' : null,
-    !BLANK_SLATE_MODE && installedPenaltyRows !== invalidStopSweepPenaltyRows ? 'installed penalty row count does not match invalid-stop Sweep rows' : null,
+    INSTALLED_SWEEP_PENALTY_PATH_ACTIVE && invalidStopSweepPenaltyRows === 0 ? 'no invalid-stop Sweep rows found' : null,
+    INSTALLED_SWEEP_PENALTY_PATH_ACTIVE && installedPenaltyRows !== invalidStopSweepPenaltyRows ? 'installed penalty row count does not match invalid-stop Sweep rows' : null,
     !overlayMatchesExpectedRows ? 'installed score row counts do not match research overlay proof' : null,
     rows.some((row) => row.canExecute !== false) ? 'candidate-book comparison changed canExecute away from false' : null,
     driftRows !== 0 ? 'candidate-book comparison changed entry/stop/target/risk values' : null,
   ].filter((item): item is string => Boolean(item));
-  const recommendation = BLANK_SLATE_MODE
+  const recommendation = !INSTALLED_SWEEP_PENALTY_PATH_ACTIVE
     ? 'blank_slate_no_installed_penalty_path'
     : blockers.length ? 'reject_installed_score_path' : 'installed_score_path_matches_research_overlay';
   const base: Omit<UnifiedPositiveHeldLocalPreviewSweepPenaltyInstalledScoreComparisonReport, 'markdown'> = {

@@ -1,6 +1,14 @@
 import { NoTradeReason, SetupType } from '../types';
 import { SYSTEM_RULES } from '../constants';
 
+export const FIVE_MODEL_ALLOWED_SETUPS = [
+  SetupType.LiquidityRaidReclaimReversal,
+  SetupType.RaidFailureDisplacementReversal,
+  SetupType.DrivePullbackContinuation,
+  SetupType.StructureShiftContinuation,
+  SetupType.FailedBreakoutReversal,
+] as const;
+
 export const TRADE_RULES = {
   instruments: ['MES', 'MNQ'] as const,
   // Compatibility cap only. New execution logic must use structure stops first,
@@ -67,19 +75,19 @@ export const TRADE_RULES = {
     morning: {
       label: 'Morning Setup Scan',
       requiredScreenshotRange: '9:15 AM through 12:00 PM ET',
-      allowedSetups: [],
+      allowedSetups: FIVE_MODEL_ALLOWED_SETUPS,
       contextNotes: [],
     },
     lunch: {
       label: 'Lunch/PM Setup Scan',
       requiredScreenshotRange: '12:00 PM through 4:00 PM ET',
-      allowedSetups: [],
+      allowedSetups: FIVE_MODEL_ALLOWED_SETUPS,
       contextNotes: [],
     },
     evening: {
       label: 'Evening Setup Scan',
       requiredScreenshotRange: '6:45 PM through 10:15 PM ET',
-      allowedSetups: [],
+      allowedSetups: FIVE_MODEL_ALLOWED_SETUPS,
       contextNotes: [],
     },
   },

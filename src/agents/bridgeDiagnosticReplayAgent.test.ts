@@ -44,7 +44,7 @@ const bullish240m = [
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
-    setupType: SetupType.NoSetup,
+    setupType: SetupType.RaidFailureDisplacementReversal,
     direction: 'LONG',
     detectedStatus: SetupCandidateStatus.Detected,
     confidence: 'High',

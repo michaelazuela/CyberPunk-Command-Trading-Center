@@ -77,15 +77,15 @@ export function buildFiveModelScannerCandidatePreviewContract(args: Args) {
       sourceMatchedTrades: model.sourceMatchedTrades,
       replaySessionsAllowed: definition.approvedSessionsForReplay,
       productionSessionsEnabled: definition.productionSessionsEnabled,
-      scannerCandidateEligible: false,
-      promotionEligible: false,
+      scannerCandidateEligible: definition.installsScannerDetection,
+      promotionEligible: definition.installsPromotion,
       discordEligible: false,
       executionApprovalEligible: false,
       canExecuteEligible: false,
       candidatePreviewReason: role === 'primary_candidate_lane'
-        ? 'Leading selected-dollar lane from five-model comparison; eligible for disabled local scanner-candidate preview only.'
+        ? 'Leading selected-dollar lane from five-model comparison; scanner candidate detection is installed but still requires completed 5M proof.'
         : role === 'secondary_candidate_lane'
-          ? 'Adds unique selected rows; eligible for secondary disabled local scanner-candidate preview only.'
+          ? 'Adds unique selected rows; scanner candidate detection is installed but still requires completed 5M proof.'
           : role === 'context_only_lane'
             ? 'Selected rows overlap other lanes; may annotate context only until unique edge is proven.'
             : 'No selected tight/usable rows in the comparison; do not preview as scanner candidate.',
@@ -101,9 +101,9 @@ export function buildFiveModelScannerCandidatePreviewContract(args: Args) {
     generatedAt: new Date().toISOString(),
     authority: {
       localComparisonArtifactOnly: true,
-      disabledPreviewContractOnly: true,
-      noSetupRegistryChange: true,
-      noScannerWiring: true,
+      disabledPreviewContractOnly: false,
+      noSetupRegistryChange: false,
+      noScannerWiring: false,
       noDiscordPost: true,
       noSupabaseRead: true,
       noSupabaseWrite: true,
@@ -120,8 +120,8 @@ export function buildFiveModelScannerCandidatePreviewContract(args: Args) {
       secondaryCandidateLanes: secondaryLanes.length,
       contextOnlyLanes: contextOnlyLanes.length,
       notSelectedLanes: notSelectedLanes.length,
-      scannerCandidateEligibleRows: 0,
-      promotionEligibleRows: 0,
+      scannerCandidateEligibleRows: lanes.filter((lane) => lane.scannerCandidateEligible).length,
+      promotionEligibleRows: lanes.filter((lane) => lane.promotionEligible).length,
       discordEligibleRows: 0,
       executionApprovalEligibleRows: 0,
       canExecuteEligibleRows: 0,
@@ -132,7 +132,7 @@ export function buildFiveModelScannerCandidatePreviewContract(args: Args) {
     },
     lanes,
     recommendation: primaryLanes.length
-      ? 'build_disabled_local_scanner_candidate_preview_from_primary_and_secondary_lanes'
+      ? 'scanner_candidate_detection_installed_validate_completed_5m_proof_before_visibility'
       : 'do_not_build_scanner_preview_until_a_primary_lane_exists',
   };
 }
