@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Add June 24 Structure Shift Continuation winner-story forensic report.
+Files changed: tools/automation/june24-structure-shift-winner-story.ts, tools/automation/june24-structure-shift-winner-story.test.ts, docs/research/june24-structure-shift-continuation-winner-story.md, docs/PROJECT_STATUS.md.
+Reason: The June 24 lunch StructureShiftContinuation rows showed a strong winning bearish sequence, but needed a story-level forensic breakdown using HTF context, 15M displacement, completed 5M structure, and one-by-one 5 Ws without treating repeated lower-close rows as independent edge proofs.
+Tests run: npx tsx tools/automation/june24-structure-shift-winner-story.test.ts; npx tsx tools/automation/june24-structure-shift-winner-story.ts --json; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. The new builder produces a read-only JSON/markdown diagnostic report from saved OHLC artifacts, and the durable research note is saved under docs/research. It classifies the seven selected rows as one bearish parent move: one initial trigger, one pause/retest add-on, and five repeated parent-move continuation rows. All seven outcome prices were touched in the saved 5M path, with no stop-before-target touch in the reviewed path.
+Trading logic changed: No. This is forensic research/reporting only. No scanner wiring, model eligibility, Discord behavior, Supabase behavior, bridge behavior, entry/stop/target/risk rule, canExecute, or automated execution behavior changed.
+Bridge impact: None. The report uses saved local OHLC artifacts only.
+Discord impact: None. No Discord post was made.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The selected rows are one parent sell program with repeated continuation timestamps, not seven standalone live-trade edge proofs. The 13:05 pause/retest row is the cleanest add-on lesson.
+Next recommended action: Use this same forensic story builder pattern on the next PDF-winning date, preserving the one-parent-move vs independent-trade distinction.
+
+Date: 2026-07-26
 Task: Replace five-model stop placement with nearest protected 5M structure risk.
 Files changed: src/config/tradeRules.ts, src/config/tradeRules.test.ts, src/lib/forensicModels/drivePullbackContinuation.ts, src/lib/forensicModels/failedBreakoutReversal.ts, src/lib/forensicModels/liquidityRaidReclaimReversal.ts, src/lib/forensicModels/raidFailureDisplacementReversal.ts, src/lib/forensicModels/structureShiftContinuation.ts, src/lib/forensicModels/structureShiftContinuation.test.ts, docs/PROJECT_STATUS.md.
 Reason: The five-model detectors still had model-local stop placement behavior that could preserve an older/farther protected swing before considering the completed 5M proof structure. The approved rule is that stop placement uses the nearest valid protected 5M structure on the correct side of entry; actual risk is then measured from entry to that stop and validated by the existing risk gate.
