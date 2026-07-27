@@ -1,4 +1,4 @@
-import { SetupCandidate, TradeDecisionStatus } from '../types';
+import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupCandidateStatus, TradeDecisionStatus } from '../types';
 import {
   classifyScannerVisibility,
   type ScannerState,
@@ -6,6 +6,7 @@ import {
   type StaleChaseResult,
   type TargetCascadeResult,
 } from '../lib/localScannerEngine';
+import { candidateHasConcretePlan, scenarioScore } from '../lib/scenarioSelection';
 import type { NormalizedTradePlan } from '../lib/tradePlan';
 
 export interface ScannerPlanSelection {
@@ -26,6 +27,39 @@ function stateFromNormalizedPlan(normalized: NormalizedTradePlan): ScannerState 
   return 'NoTrade';
 }
 
+function stateFromCandidate(candidate: SetupCandidate, normalized: NormalizedTradePlan): ScannerState {
+  if (candidate.executionStatus === ExecutionStatus.Executable) {
+    return normalized.canExecute ? 'Approved' : 'Executable';
+  }
+  if (candidate.executionStatus === ExecutionStatus.Conditional) return 'Conditional';
+  if (candidate.executionStatus === ExecutionStatus.Blocked || candidate.blockReason) return 'Blocked';
+  if (candidate.detectedStatus === SetupCandidateStatus.Possible) return candidate.requiredTrigger ? 'TriggerPending' : 'Watching';
+  if (candidate.detectedStatus === SetupCandidateStatus.Blocked) return 'Blocked';
+  return stateFromNormalizedPlan(normalized);
+}
+
+function candidateSelectionReason(candidate: SetupCandidate | null, fallback: string | null): string | null {
+  if (!candidate) return fallback;
+  if (candidate.blockReason === NoTradeReason.RiskTooWide) {
+    return 'Extended structural risk: nearest protected 5M structure stop is required.';
+  }
+  return candidate.blockReason || candidate.requiredTrigger || candidate.nextAction || fallback;
+}
+
+function selectBestScannerCandidate(candidates: SetupCandidate[] | undefined): SetupCandidate | null {
+  return (candidates || [])
+    .filter((candidate) => {
+      if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return false;
+      if (!candidateHasConcretePlan(candidate)) return false;
+      return candidate.executionStatus === ExecutionStatus.Executable ||
+        candidate.executionStatus === ExecutionStatus.Conditional ||
+        candidate.executionStatus === ExecutionStatus.Blocked ||
+        candidate.detectedStatus === SetupCandidateStatus.Possible ||
+        Boolean(candidate.blockReason);
+    })
+    .sort((a, b) => scenarioScore(b) - scenarioScore(a))[0] || null;
+}
+
 export function selectScannerPlan(args: {
   normalized: NormalizedTradePlan;
   currentPrice: number | null;
@@ -36,25 +70,30 @@ export function selectScannerPlan(args: {
   guards?: unknown;
   targetCascade?: TargetCascadeResult | null;
 }): ScannerPlanSelection {
-  const state = stateFromNormalizedPlan(args.normalized);
+  const candidate = selectBestScannerCandidate(args.normalized.setupCandidates);
+  const state = candidate ? stateFromCandidate(candidate, args.normalized) : stateFromNormalizedPlan(args.normalized);
+  const staleReason = candidateSelectionReason(
+    candidate,
+    candidate ? null : 'Blank-slate mode: scanner plan selection has no installed model candidate for this cycle.',
+  );
   const stale: StaleChaseResult = {
     state,
     stale: false,
-    reason: 'Blank-slate mode: scanner plan selection is disabled until new model definitions are installed.',
+    reason: staleReason,
   };
   return {
-    candidate: null,
+    candidate,
     stale,
     state,
     stateForAlert: state,
     reviewStatus: null,
-    auditWarnings: [
-      'Blank-slate mode: no setup, fallback, context-only, or advisory candidate can be selected.',
+    auditWarnings: candidate ? [] : [
+      'Blank-slate mode: no installed scanner candidate is available for selection.',
     ],
     visibilityMetadata: classifyScannerVisibility({
       state,
-      candidate: null,
-      canExecute: false,
+      candidate,
+      canExecute: Boolean(candidate && args.normalized.canExecute),
       staleReason: stale.reason,
     }),
   };

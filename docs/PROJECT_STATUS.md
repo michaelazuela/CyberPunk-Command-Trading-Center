@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-27
+Task: Remove stale blank-slate selector suppression for installed five-model scanner candidates.
+Files changed: src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts, docs/PROJECT_STATUS.md.
+Reason: After the protected-structure risk fix, live readback showed installed `RaidFailureDisplacementReversal` candidates were no longer blocked by `RiskTooWide`, but the scanner plan selection agent still returned a hardcoded blank-slate suppression. That could still prevent valid installed model candidates from becoming scanner-visible.
+Tests run: npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsx src/agents/deskAgentIntegration.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test.
+Result: Passed. The selector now chooses the best concrete installed setup candidate from the normalized app-owned plan and returns `Conditional`/`Approved`/`Blocked` visibility metadata from that candidate. Blank-slate remains only when no installed candidate exists. No candidate means `canExecute=false`.
+Trading logic changed: Yes. Scanner selection no longer hard-suppresses installed five-model candidates as blank slate. It does not create entries, stops, targets, proof, models, or automated execution; it only selects from candidates already produced by the deterministic pipeline.
+Bridge impact: None.
+Discord impact: Candidate publish eligibility can now receive installed model candidates instead of a hardcoded blank-slate `NoTrade` selection. Discord remains guarded by existing post policy and idempotency.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: A candidate can still be held for legitimate non-risk reasons such as no fresh entry, missing completed 5M proof, data-quality blockers, or Discord policy.
+Next recommended action: Monitor the next live scanner cycle and verify any fresh installed candidate is blocked only by the real current reason, not legacy risk or blank-slate residue.
+
+Date: 2026-07-27
 Task: Stop suppressing five-model plans with the old fixed-risk `RiskTooWide` gate.
 Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
 Reason: The July 27 morning scanner detected a valid `RaidFailureDisplacementReversal` SHORT, but the selected candidate was held local as `NoTrade` because the older fixed-risk cap emitted `RiskTooWide` even though the approved rule is nearest protected completed 5M structure stop plus actual entry-to-stop risk.
