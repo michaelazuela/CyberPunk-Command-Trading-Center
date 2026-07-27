@@ -108,7 +108,6 @@ function statusTone(candidate: SetupCandidate): string {
 
 function formatBlockReason(reason: NoTradeReason | null): string {
   if (!reason) return '';
-  if (reason === NoTradeReason.RiskTooWide) return 'Extended structural risk';
   return String(reason).replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
@@ -123,7 +122,7 @@ function formatCandidateExecutionStatus(candidate: SetupCandidate, finalCanExecu
 }
 
 function candidateReason(candidate: SetupCandidate): string {
-  if (candidate.blockReason === NoTradeReason.RiskTooWide) {
+  if (candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL') {
     return 'Extended structural risk - use the nearest protected 5M structure stop; size or stand down at trader discretion.';
   }
   if (candidate.blockReason) return formatBlockReason(candidate.blockReason);
@@ -546,7 +545,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
                 <div><span className="text-[var(--amber)]">Market Map:</span> {candidate.levelContextSummary}</div>
               )}
               <div><span className="text-[var(--txt)]">Next Action:</span> {candidate.nextAction || candidate.reducedRiskPlan?.reasoning || 'No action required.'}</div>
-              {candidate.blockReason === NoTradeReason.RiskTooWide && (
+              {candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' && (
                 <div className="mt-1 text-[var(--orange)]">
                   Extended structural risk uses the protected 5M stop. It does not erase this setup candidate.
                 </div>
@@ -566,10 +565,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
 
 function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
   const conditionalCandidates = (plan.setupCandidates || [])
-    .filter((candidate) =>
-      candidate.executionStatus === ExecutionStatus.Conditional ||
-      candidate.blockReason === NoTradeReason.RiskTooWide
-    );
+    .filter((candidate) => candidate.executionStatus === ExecutionStatus.Conditional);
   const candidates = selectBestTwoScenarios(conditionalCandidates);
 
   if (candidates.length === 0) return null;

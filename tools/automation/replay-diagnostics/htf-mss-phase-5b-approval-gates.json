@@ -6,7 +6,7 @@
   "boundary": "diagnostic_replay_only_not_execution_authority",
   "cases": {
     "riskTooWide": {
-      "description": "HTF/MSS-valid candidate with RiskTooWide remains non-executable.",
+      "description": "HTF/MSS-valid candidate with ExtendedStructuralRisk remains non-executable.",
       "scanCandidate": {
         "setupType": "HistoricalReviewReversal",
         "scenarioLabel": "HTF Context Continuation After Raid/Reclaim",
@@ -15,14 +15,14 @@
         "candidateState": "REVERSAL_DELIVERY_PLAN_CANDIDATE",
         "detectedStatus": "Conditional",
         "executionStatus": "Conditional",
-        "blockReason": "RiskTooWide",
+        "blockReason": "ExtendedStructuralRisk",
         "entry": 7596,
         "stop": 7612,
         "target1": 7572,
         "target2": 7564,
         "riskPoints": 16,
         "requiredTrigger": "Short only after buy-side raid, reclaim, confirmed bearish 5M MSS with displacement, then clean retest or defined reclaim trigger.",
-        "nextAction": "HTF/MSS reversal-delivery candidate is present, but RiskTooWide blocks execution. Wait for a cleaner retest with protected structure inside max risk.",
+        "nextAction": "HTF/MSS reversal-delivery candidate is present, but ExtendedStructuralRisk blocks execution. Wait for a cleaner retest with protected structure inside max risk.",
         "evidence": [
           "HTF Context Continuation After Raid/Reclaim candidate detected. HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.",
           "15M potential MSS / pending confirm. Liquidity map supports the idea, but 5M confirmation controls plan creation.",
@@ -41,7 +41,7 @@
           "External liquidity target context: prior RTH low / London low / full ETH low 7580.00, 7576.00."
         ],
         "missingEvidence": [
-          "RiskTooWide remains a hard execution block"
+          "ExtendedStructuralRisk remains a hard execution block"
         ]
       },
       "pipeline": {

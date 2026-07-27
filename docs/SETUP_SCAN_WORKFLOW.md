@@ -70,25 +70,25 @@ Each candidate should receive one execution status:
 - `NotDetected`: setup was scanned but not found
 - `Invalid`: setup was inconsistent, structurally invalid, or not allowed for the session
 
-## RiskTooWide Rule
+## Extended Structural Risk Rule
 
-`RiskTooWide` blocks execution only. It means the current protected structure cannot be expressed inside the configured risk limit. It must not erase the detected setup candidate.
+The scanner must use the nearest protected completed 5M structure as the stop. If that creates larger-than-standard risk, the candidate remains visible as extended structural risk instead of being erased or converted into an old fixed-cap blocker.
 
 Correct handling:
 
 ```text
 Sweep -> MSS -> FVG Retrace
 Status: Detected
-Execution: Blocked
-Reason: RiskTooWide
-Next Action: Wait for a cleaner structure stop or a valid retrace trigger.
+Execution: Conditional
+Risk: Extended structural review
+Next Action: Use nearest protected 5M structure stop; size or stand down at trader discretion.
 ```
 
 Incorrect handling:
 
 ```text
 No setup survived gates.
-Reason: RiskTooWide
+Reason: fixed risk cap erased the protected-structure candidate
 ```
 
 ## Ranking Rules
@@ -128,7 +128,7 @@ Builder output remains non-executable until the trade decision pipeline confirms
 - invalidation defined
 - risk inside the hard limit
 
-RiskTooWide candidates remain visible as blocked or conditional opportunities. They must not be converted into approved trades or erased from the scan.
+Extended-structural-risk candidates remain visible as conditional opportunities when the setup, trigger, entry, stop, targets, and invalidation are complete. They must not be erased from the scan by a fixed risk cap.
 
 ## Output Expectation
 
@@ -164,8 +164,8 @@ Conditional Sweep -> MSS -> FVG Retrace Long
 - historical context is not a standalone executable setup.
 - Deprecated setup families must not create active candidates.
 - Setup detection is separate from execution approval.
-- `RiskTooWide` blocks execution only.
-- `RiskTooWide` must not erase the detected setup candidate.
+- Extended structural risk is advisory and sizing context.
+- Fixed risk caps must not erase the detected setup candidate when the protected 5M structure stop is valid.
 - The app ranks executable and conditional opportunities.
 - `NoTrade` is returned only when no executable or conditional primary candidate exists.
 

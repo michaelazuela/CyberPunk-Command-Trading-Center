@@ -1277,7 +1277,6 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
       ? Math.round(candidate.modelConfidenceScore)
       : null;
   const riskAboveStandard =
-    candidate.riskAdvisoryStatus === 'RISK_ABOVE_STANDARD_LIMIT' ||
     candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' ||
     (typeof candidate.riskPoints === 'number' && candidate.riskPoints > TRADE_RULES.maxRiskPoints);
   return [
@@ -1325,7 +1324,6 @@ function compactReviewPlanLines(candidate: SetupCandidate, normalized: CompactNo
       : null;
   const htfLine = candidate.activeRuleset?.htfLineInSand?.lineInSand;
   const riskAboveStandard =
-    candidate.riskAdvisoryStatus === 'RISK_ABOVE_STANDARD_LIMIT' ||
     candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' ||
     (typeof candidate.riskPoints === 'number' && candidate.riskPoints > TRADE_RULES.maxRiskPoints);
   const lineLines = lineInSandLines(candidate);
@@ -2174,9 +2172,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
   const invalidWord = direction === 'SHORT' ? 'above' : 'below';
   const lineInSand = candidateLineInSand(candidate) ?? candidate.entry ?? null;
   const riskAboveStandard =
-    candidate.riskAdvisoryStatus === 'RISK_ABOVE_STANDARD_LIMIT' ||
     candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' ||
-    candidate.blockReason === NoTradeReason.RiskTooWide ||
     (typeof candidate.riskPoints === 'number' && candidate.riskPoints > TRADE_RULES.maxRiskPoints);
   const htfPublishIssue = candidateDiscordHtfPublishIssue(candidate);
   const highConfidenceConditional = isHighConfidenceConditionalCandidate(candidate, normalized);
@@ -3856,9 +3852,7 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
 
 function compactRiskScoreReason(riskScore: ConditionalCandidateRiskScore): string {
   const hardBlock = riskScore.blockReason
-    ? riskScore.blockReason === NoTradeReason.RiskTooWide
-      ? 'Risk is extended to the nearest protected 5M structure.'
-      : `Risk remains blocked by ${riskScore.blockReason}.`
+    ? `Risk remains blocked by ${riskScore.blockReason}.`
     : 'This score is advisory only.';
   const mainReason = riskScore.reasons[0] || hardBlock;
   if (mainReason === hardBlock) return mainReason;
@@ -3867,10 +3861,9 @@ function compactRiskScoreReason(riskScore: ConditionalCandidateRiskScore): strin
 
 function conditionalRiskLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
   const riskAboveStandard =
-    candidate.riskAdvisoryStatus === 'RISK_ABOVE_STANDARD_LIMIT' ||
     candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' ||
     (typeof candidate.riskPoints === 'number' && candidate.riskPoints > TRADE_RULES.maxRiskPoints);
-  if (!riskAboveStandard && candidate.blockReason !== NoTradeReason.RiskTooWide && normalized.noTradeReason !== NoTradeReason.RiskTooWide) {
+  if (!riskAboveStandard) {
     return [];
   }
   const score = scoreConditionalCandidateRiskForDisplay(candidate);

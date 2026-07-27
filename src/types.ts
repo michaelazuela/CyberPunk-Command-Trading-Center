@@ -43,7 +43,6 @@ export enum NoTradeReason {
   EntryTriggerMissing = 'EntryTriggerMissing',
   EntryTriggerPending = 'EntryTriggerPending',
   InvalidStopLocation = 'InvalidStopLocation',
-  RiskTooWide = 'RiskTooWide',
   TargetsUnavailable = 'TargetsUnavailable',
   KillSwitchActive = 'KillSwitchActive',
   ConflictingStructure = 'ConflictingStructure',
@@ -61,13 +60,12 @@ export enum RiskStatus {
 
 export type RiskAdvisoryStatus =
   | 'RISK_WITHIN_STANDARD_LIMIT'
-  | 'RISK_ABOVE_STANDARD_LIMIT'
   | 'RISK_EXTENDED_STRUCTURAL'
   | 'RISK_INVALID_OR_UNDEFINED';
 
 export type RiskPolicy = 'STANDARD_RISK' | 'STRUCTURAL_RISK_ACKNOWLEDGED';
 
-export type ExtractedRiskStatus = 'WithinLimit' | 'Warning' | 'RiskTooWide' | 'Unknown';
+export type ExtractedRiskStatus = 'WithinLimit' | 'Warning' | 'ExtendedStructuralRisk' | 'Unknown';
 
 export enum SetupCandidateStatus {
   Detected = 'Detected',

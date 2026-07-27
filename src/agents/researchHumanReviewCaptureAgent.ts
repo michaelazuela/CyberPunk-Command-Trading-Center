@@ -185,7 +185,7 @@ function containsRiskBlocker(sample: ResearchReviewSample): boolean {
     sample.agentConcerns.join(' '),
     sample.dataQualityNotes.join(' '),
   ].join(' ');
-  return /RiskTooWide|risk too wide|NoTrigger|no trigger|InvalidContext|invalid context|insufficient context|missing|unavailable/i.test(text);
+  return /extended structural risk|risk advisory|risk review|NoTrigger|no trigger|InvalidContext|invalid context|insufficient context|missing|unavailable/i.test(text);
 }
 
 function hasExactEvidencePath(evidence: ResearchReviewEvidence | null | undefined): boolean {
@@ -303,7 +303,7 @@ export function assessHumanReviewInput(input: {
   if (riskOrContextBlocker && isHumanApprovalLabel(humanLabel)) {
     return {
       status: exactAgreement ? 'partially_agrees_with_human' : 'disagrees_with_human',
-      humanInputQuality: /RiskTooWide|risk too wide/i.test(evidenceChecked.join(' ')) ? 'missed_risk' : 'missed_context',
+      humanInputQuality: /extended structural risk|risk advisory|risk review/i.test(evidenceChecked.join(' ')) ? 'missed_risk' : 'missed_context',
       researchUsefulness: 'questionable',
       reason: 'The human input may be useful research evidence, but it appears aggressive because the original sample carried a risk/context blocker that should stay advisory.',
       evidenceChecked,

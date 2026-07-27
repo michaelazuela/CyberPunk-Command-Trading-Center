@@ -106,7 +106,7 @@ await fs.writeFile(path.join(auditDir, 'morning-2026-06-02-MES-MORNING-20260602-
   normalizedPlan: {
     canExecute: false,
     decisionStatus: TradeDecisionStatus.NoTrade,
-    noTradeReason: 'RiskTooWide',
+    noTradeReason: 'EntryTriggerPending',
   },
 }, null, 2)}\n`, 'utf8');
 
@@ -142,7 +142,7 @@ const blocked = await evaluateSchedulerReplayProvenance({
   normalizedPlan: {
     canExecute: false,
     decisionStatus: TradeDecisionStatus.NoTrade,
-    noTradeReason: 'RiskTooWide',
+    noTradeReason: 'EntryTriggerPending',
   },
   allowPostFactoSummary: false,
 });
@@ -158,7 +158,7 @@ const allowed = await evaluateSchedulerReplayProvenance({
   normalizedPlan: {
     canExecute: false,
     decisionStatus: TradeDecisionStatus.NoTrade,
-    noTradeReason: 'RiskTooWide',
+    noTradeReason: 'EntryTriggerPending',
   },
   allowPostFactoSummary: true,
 });
@@ -192,7 +192,7 @@ const clear = await evaluateSchedulerReplayProvenance({
   normalizedPlan: {
     canExecute: false,
     decisionStatus: TradeDecisionStatus.NoTrade,
-    noTradeReason: 'RiskTooWide',
+    noTradeReason: 'EntryTriggerPending',
   },
   allowPostFactoSummary: false,
 });

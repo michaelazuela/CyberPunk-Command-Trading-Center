@@ -172,7 +172,7 @@ function scannerCandidate(overrides: Record<string, unknown> = {}) {
       obstacleBeforeT1: false,
       targetRoomReason: 'Clean path available.',
     },
-    riskAdvisoryStatus: 'RISK_ABOVE_STANDARD_LIMIT',
+    riskAdvisoryStatus: 'RISK_EXTENDED_STRUCTURAL',
     riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
     modelConfidenceScore: 90,
     evidence: [

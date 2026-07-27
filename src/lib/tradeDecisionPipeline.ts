@@ -476,7 +476,7 @@ function makeRiskAssessment(candidate: CandidateInput | null): RiskAssessment {
   const advisoryStatus =
     risk === null || risk <= 0 ? 'RISK_INVALID_OR_UNDEFINED' :
     risk > TRADE_RULES.maxRiskPoints * 2 ? 'RISK_EXTENDED_STRUCTURAL' :
-    risk > TRADE_RULES.maxRiskPoints ? 'RISK_ABOVE_STANDARD_LIMIT' :
+    risk > TRADE_RULES.maxRiskPoints ? 'RISK_EXTENDED_STRUCTURAL' :
     'RISK_WITHIN_STANDARD_LIMIT';
   const status =
     risk === null ? RiskStatus.Unknown :
@@ -507,7 +507,7 @@ function makeRiskAssessmentFromSetup(candidate: SetupCandidate | null): RiskAsse
   const advisoryStatus = candidate?.riskAdvisoryStatus ||
     (risk === null || risk <= 0 ? 'RISK_INVALID_OR_UNDEFINED' :
     risk > TRADE_RULES.maxRiskPoints * 2 ? 'RISK_EXTENDED_STRUCTURAL' :
-    risk > TRADE_RULES.maxRiskPoints ? 'RISK_ABOVE_STANDARD_LIMIT' :
+    risk > TRADE_RULES.maxRiskPoints ? 'RISK_EXTENDED_STRUCTURAL' :
     'RISK_WITHIN_STANDARD_LIMIT');
   const status =
     risk === null ? RiskStatus.Unknown :
@@ -931,7 +931,6 @@ function finalStatusFromSelection(
   if (hasNoClearBias && (selectedExecutable || selectedConditional)) return TradeDecisionStatus.Wait;
   if (selectedExecutable && hasLowQualityScreenshot) return TradeDecisionStatus.Wait;
   if (selectedExecutable) return TradeDecisionStatus.ApprovedTrade;
-  if (selectedConditional?.blockReason === NoTradeReason.RiskTooWide) return TradeDecisionStatus.Wait;
   if (selectedConditional) return TradeDecisionStatus.ConditionalTrade;
   return TradeDecisionStatus.NoTrade;
 }

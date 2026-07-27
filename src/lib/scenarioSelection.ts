@@ -1,5 +1,5 @@
 import { targetsFromEntryStop, TRADE_RULES } from '../config/tradeRules';
-import { ExecutionStatus, NoTradeReason, SetupCandidate } from '../types';
+import { ExecutionStatus, SetupCandidate } from '../types';
 
 export interface CandidateComputedLevels {
   stop: number | null;
@@ -67,7 +67,7 @@ export function scenarioScore(candidate: SetupCandidate): number {
   const executionScore =
     candidate.executionStatus === ExecutionStatus.Executable ? 44 :
     candidate.executionStatus === ExecutionStatus.Conditional ? 30 :
-    candidate.blockReason === NoTradeReason.RiskTooWide ? 16 :
+    candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' ? 16 :
     candidate.executionStatus === ExecutionStatus.Blocked ? 8 :
     0;
   const concretePlanScore = candidateHasConcretePlan(candidate) ? 42 : isNumber(candidate.entry) && isNumber(levels.stop) ? 18 : 0;
@@ -77,7 +77,7 @@ export function scenarioScore(candidate: SetupCandidate): number {
   const riskQualityScore =
     !isNumber(levels.risk) ? 0 :
     levels.risk <= TRADE_RULES.maxRiskPoints ? 18 :
-    candidate.blockReason === NoTradeReason.RiskTooWide ? 4 :
+    candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' ? 4 :
     -18;
   const targetMapScore = candidate.targetObjectivePlan ? 12 : 0;
   const clarityScore = Math.round(((candidate.entryClarity || 0) + (candidate.stopClarity || 0) + (candidate.targetClarity || 0)) * 8);
@@ -132,9 +132,9 @@ export function selectBestTwoScenarioDetails(candidates: SetupCandidate[] | unde
       if (
         candidate.executionStatus !== ExecutionStatus.Executable &&
         candidate.executionStatus !== ExecutionStatus.Conditional &&
-        candidate.blockReason !== NoTradeReason.RiskTooWide
+        candidate.riskAdvisoryStatus !== 'RISK_EXTENDED_STRUCTURAL'
       ) {
-        rejectedCandidatesWithReasons.push({ candidate, reason: 'Candidate is not executable, conditional, or risk-blocked planning quality.' });
+        rejectedCandidatesWithReasons.push({ candidate, reason: 'Candidate is not executable, conditional, or structurally risk-extended planning quality.' });
         return false;
       }
       return true;

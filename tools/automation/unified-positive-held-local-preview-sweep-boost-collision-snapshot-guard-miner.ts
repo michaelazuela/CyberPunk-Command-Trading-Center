@@ -248,7 +248,7 @@ function textTags(candidate: CandidateShape): string[] {
     ['opposing completed 5m', 'txt_opposing_5m'],
     ['avoid shorts in discount', 'txt_avoid_short_discount'],
     ['avoid longs in premium', 'txt_avoid_long_premium'],
-    ['risk exceeds standard', 'txt_risk_exceeds'],
+    ['extended structural risk', 'txt_extended_structural_risk'],
   ];
   return tags.filter(([needle]) => text.includes(needle)).map(([, tag]) => tag);
 }

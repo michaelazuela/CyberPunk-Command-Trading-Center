@@ -7099,7 +7099,6 @@ export function shouldSendScannerAlert(args: {
   }
   if (args.state === 'Blocked') {
     const educational =
-      args.candidate?.blockReason === NoTradeReason.RiskTooWide ||
       args.candidate?.blockReason === NoTradeReason.TargetsUnavailable ||
       args.stale;
     return educational && args.confidence >= thresholds.educationalBlocked

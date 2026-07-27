@@ -267,7 +267,7 @@ assert.equal(extendedStructuralRiskCandidate?.riskPoints, 10);
 assert.equal(extendedStructuralRiskCandidate?.riskPolicy, 'STRUCTURAL_RISK_ACKNOWLEDGED');
 assert.equal(extendedStructuralRiskCandidate?.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
 assert.equal(extendedStructuralRiskCandidate?.blockReason, null);
-assert.equal(extendedStructuralRiskCandidate?.missingEvidence.some((line) => /RiskTooWide|exceeds standard/i.test(line)), false);
+assert.equal(extendedStructuralRiskCandidate?.missingEvidence.some((line) => /extended structural risk blocker|fixed risk cap/i.test(line)), false);
 
 const formingFiveMinute = [
   candle(1, '2026-06-25T09:15:00', 7484.25, 7489, 7478.75, 7483.75),

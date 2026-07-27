@@ -7,10 +7,10 @@ This report proves candidate creation stays separate from executable approval. I
 ## Gate Cases
 
 ### riskTooWide
-- Description: HTF/MSS-valid candidate with RiskTooWide remains non-executable.
+- Description: HTF/MSS-valid candidate with ExtendedStructuralRisk remains non-executable.
 - Scan Candidate: ArchivedSetupPath
 - Candidate Execution: Conditional
-- Candidate Blocker: RiskTooWide
+- Candidate Blocker: ExtendedStructuralRisk
 - Pipeline Status: NoTrade
 - canExecute: false
 - NoTrade Reason: EntryTriggerPending

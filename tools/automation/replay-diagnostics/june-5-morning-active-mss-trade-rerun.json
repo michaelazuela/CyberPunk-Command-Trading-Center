@@ -190,7 +190,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -211,7 +211,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7567.25-7567.5 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -235,7 +235,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7567.5 sits inside 7567.25-7567.5; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7531.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -424,7 +424,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -445,7 +445,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7567.25-7567.5 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -513,7 +513,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7567.5 sits inside 7567.25-7567.5; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7531.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -702,7 +702,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -723,7 +723,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -780,7 +780,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -979,7 +979,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -1000,7 +1000,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -1057,7 +1057,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -1255,7 +1255,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -1276,7 +1276,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -1325,7 +1325,7 @@
           "Supporting evidence: liquidity sweep fact present.",
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -1524,7 +1524,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -1545,7 +1545,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -1602,7 +1602,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -1802,7 +1802,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -1823,7 +1823,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -1880,7 +1880,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -2081,7 +2081,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -2102,7 +2102,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -2159,7 +2159,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -2361,7 +2361,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -2382,7 +2382,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -2439,7 +2439,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -2641,7 +2641,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 11.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -2662,7 +2662,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -2719,7 +2719,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -2937,7 +2937,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 11.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -2958,7 +2958,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -2982,7 +2982,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7556.75 sits inside 7555.5-7558; stop 7568.25 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7526.5.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -3187,7 +3187,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 11.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -3208,7 +3208,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -3232,7 +3232,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7556.75 sits inside 7555.5-7558; stop 7568.25 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7526.5.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -3419,7 +3419,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -3440,7 +3440,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -3497,7 +3497,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -3695,7 +3695,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -3716,7 +3716,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -3773,7 +3773,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -3971,7 +3971,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -3992,7 +3992,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -4049,7 +4049,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -4247,7 +4247,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -4268,7 +4268,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -4325,7 +4325,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -4523,7 +4523,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -4544,7 +4544,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -4601,7 +4601,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -4799,7 +4799,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -4820,7 +4820,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -4877,7 +4877,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -5076,7 +5076,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -5097,7 +5097,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -5154,7 +5154,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -5354,7 +5354,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -5375,7 +5375,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -5432,7 +5432,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -5649,7 +5649,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 19.25 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -5670,7 +5670,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -5694,7 +5694,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7533.75 sits inside 7531-7536.25; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7491.75.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -5900,7 +5900,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 19.25 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -5921,7 +5921,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -5945,7 +5945,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7533.75 sits inside 7531-7536.25; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7488.5.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -6142,7 +6142,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 19.25 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -6163,7 +6163,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -6187,7 +6187,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7533.75 sits inside 7531-7536.25; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7486.25.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -6390,7 +6390,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 19.25 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -6411,7 +6411,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -6435,7 +6435,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7533.75 sits inside 7531-7536.25; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7486.25.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -6640,7 +6640,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -6661,7 +6661,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7567.25-7567.5 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -6685,7 +6685,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7567.5 sits inside 7567.25-7567.5; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7531.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -6874,7 +6874,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -6895,7 +6895,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7567.25-7567.5 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -6963,7 +6963,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7567.5 sits inside 7567.25-7567.5; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7531.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -7152,7 +7152,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -7173,7 +7173,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -7230,7 +7230,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -7429,7 +7429,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -7450,7 +7450,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -7507,7 +7507,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -7705,7 +7705,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -7726,7 +7726,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -7775,7 +7775,7 @@
           "Supporting evidence: liquidity sweep fact present.",
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -7974,7 +7974,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -7995,7 +7995,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -8052,7 +8052,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -8252,7 +8252,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -8273,7 +8273,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -8330,7 +8330,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -8531,7 +8531,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -8552,7 +8552,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -8609,7 +8609,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -8811,7 +8811,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 14.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -8832,7 +8832,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -8889,7 +8889,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -9091,7 +9091,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 11.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -9112,7 +9112,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -9169,7 +9169,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -9387,7 +9387,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 11.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -9408,7 +9408,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -9432,7 +9432,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7556.75 sits inside 7555.5-7558; stop 7568.25 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7526.5.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -9637,7 +9637,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 11.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -9658,7 +9658,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7555.5-7558 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -9682,7 +9682,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7556.75 sits inside 7555.5-7558; stop 7568.25 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7526.5.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -9869,7 +9869,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -9890,7 +9890,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -9947,7 +9947,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -10145,7 +10145,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -10166,7 +10166,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -10223,7 +10223,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -10421,7 +10421,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -10442,7 +10442,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -10499,7 +10499,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -10697,7 +10697,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -10718,7 +10718,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -10775,7 +10775,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -10973,7 +10973,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -10994,7 +10994,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -11051,7 +11051,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -11249,7 +11249,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -11270,7 +11270,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -11327,7 +11327,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -11526,7 +11526,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -11547,7 +11547,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -11604,7 +11604,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -11804,7 +11804,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 34.50 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -11825,7 +11825,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": true,
           "status": "blocked",
@@ -11882,7 +11882,7 @@
           "Supporting evidence: reclaim after sweep fact present.",
           "Supporting evidence: imbalance zone fact present.",
           "Supporting evidence: market structure shift fact present.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00.",
           "Active timeframe MSS pass: completed 5M bearish MSS is aligned with candidate direction.",
@@ -12099,7 +12099,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 19.25 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -12120,7 +12120,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -12144,7 +12144,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7533.75 sits inside 7531-7536.25; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7491.75.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -12350,7 +12350,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 19.25 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -12371,7 +12371,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -12395,7 +12395,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7533.75 sits inside 7531-7536.25; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7488.5.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -12592,7 +12592,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 19.25 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -12613,7 +12613,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -12637,7 +12637,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7533.75 sits inside 7531-7536.25; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7486.25.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {
@@ -12840,7 +12840,7 @@
           "reasoning": "Risk advisory: above standard limit. Human final decision required. Risk is 19.25 points against standard 5."
         },
         "confidence": "High",
-        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "reasoning": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "noTradeReason": null
       },
       "noTradeReason": null,
@@ -12861,7 +12861,7 @@
         "riskAdvisoryStatus": "RISK_EXTENDED_STRUCTURAL",
         "blockReason": null,
         "requiredTrigger": "Entry only on retrace into bearish imbalance 7531-7536.25 after sweep, reclaim, displacement, and bearish structure shift.",
-        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Risk exceeds standard limit. Human final decision required.",
+        "nextAction": "Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
         "activeTimeframeMssRuleset": {
           "applied": false,
           "status": "not_available",
@@ -12885,7 +12885,7 @@
           "Bearish impulse-qualified imbalance created and retraced.",
           "Entry 7533.75 sits inside 7531-7536.25; stop 7553 is beyond the sweep wick.",
           "Minimum 2.0R target requirement passed; target 7486.25.",
-          "Risk exceeds standard limit. Human final decision required."
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
         ]
       },
       "pipelineBestConditional": {

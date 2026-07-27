@@ -103,7 +103,7 @@ const scannerLikeReview = {
       direction: 'LONG',
       decision: 'WAIT',
       executionStatus: 'Conditional',
-      conditionalRiskScore: { score: 49, label: 'High risk', blockReason: 'RiskTooWide' },
+      conditionalRiskScore: { score: 49, label: 'High risk', blockReason: 'ExtendedStructuralRisk' },
       candidate: {
         riskPoints: 8.25,
         entry: 7597,
@@ -121,7 +121,7 @@ assert.equal(scannerViz.summary.averageRiskScore, 49);
 assert.equal(scannerViz.summary.averageResearchQualityScore, null);
 assert.equal(scannerViz.rows[0].riskPoints, 8.25);
 assert.equal(scannerViz.rows[0].riskScore, 49);
-assert.equal(scannerViz.rows[0].blockReason, 'RiskTooWide');
+assert.equal(scannerViz.rows[0].blockReason, 'ExtendedStructuralRisk');
 assert.equal(scannerViz.rows[0].entryCandidate, 7597);
 assert.equal(scannerViz.rows[0].stopCandidate, 7588.75);
 assert.equal(scannerViz.rows[0].targetArea, '7620 / 7620');

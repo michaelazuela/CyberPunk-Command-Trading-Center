@@ -253,7 +253,6 @@ function classify(args: {
   }
   if (
     args.structural.targetRoomStatus === 'blocked_before_t1' ||
-    args.structural.riskAdvisoryStatus === 'RISK_ABOVE_STANDARD_LIMIT' ||
     args.structural.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL'
   ) {
     classes.push('target_room_risk_context');

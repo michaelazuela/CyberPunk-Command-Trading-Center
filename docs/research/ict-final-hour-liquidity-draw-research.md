@@ -87,7 +87,7 @@
 
 - Plain-English meaning: after movement starts, risk should be reduced rather than chasing wider exposure.
 - Transcript evidence / timestamp: transcript/task notes identify reducing risk after movement; exact timestamp was not available in the provided prompt.
-- Why it may matter for 6K: aligns with current no-chase and RiskTooWide discipline.
+- Why it may matter for 6K: aligns with current no-chase and extended structural risk discipline.
 - Current rule coverage: already covered.
 - Classification: research confirmation of existing discipline.
 
@@ -167,7 +167,7 @@ Current Displacement/FVG Pullback Watchlist:
 Current conditional risk scoring behavior:
 
 - Classification: already covered.
-- Conditional risk scoring keeps manual decisions separate from app approval and does not override `RiskTooWide`.
+- Conditional risk scoring keeps manual decisions separate from app approval and does not override protected-structure risk discipline.
 
 Current Discord advisory behavior:
 

@@ -592,7 +592,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
         "proposedEntry": null,
         "proposedStop": null,
         "riskPoints": null,
-        "riskStatus": "WithinLimit | Warning | RiskTooWide | Unknown",
+        "riskStatus": "WithinLimit | Warning | ExtendedStructuralRisk | Unknown",
         "entryConfirmed": false,
         "stopConfirmed": false,
         "requiresManualConfirmation": true,

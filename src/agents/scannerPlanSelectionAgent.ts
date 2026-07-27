@@ -1,4 +1,4 @@
-import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupCandidateStatus, TradeDecisionStatus } from '../types';
+import { ExecutionStatus, SetupCandidate, SetupCandidateStatus, TradeDecisionStatus } from '../types';
 import {
   classifyScannerVisibility,
   type ScannerState,
@@ -40,7 +40,7 @@ function stateFromCandidate(candidate: SetupCandidate, normalized: NormalizedTra
 
 function candidateSelectionReason(candidate: SetupCandidate | null, fallback: string | null): string | null {
   if (!candidate) return fallback;
-  if (candidate.blockReason === NoTradeReason.RiskTooWide) {
+  if (candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL') {
     return 'Extended structural risk: nearest protected 5M structure stop is required.';
   }
   return candidate.blockReason || candidate.requiredTrigger || candidate.nextAction || fallback;

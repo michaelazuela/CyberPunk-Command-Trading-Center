@@ -5,7 +5,7 @@ import {
   scoreConditionalCandidateRisk,
   scoreConditionalCandidateRiskForDisplay,
 } from './conditionalCandidateRiskAgent';
-import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, type SetupCandidate } from '../types';
+import { ExecutionStatus, SetupCandidateStatus, SetupType, type SetupCandidate } from '../types';
 
 function historicalReviewCandidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
   return {
@@ -28,7 +28,9 @@ function historicalReviewCandidate(overrides: Partial<SetupCandidate> = {}): Set
     ],
     missingEvidence: [],
     executionStatus: ExecutionStatus.Conditional,
-    blockReason: NoTradeReason.RiskTooWide,
+    blockReason: null,
+    riskAdvisoryStatus: 'RISK_EXTENDED_STRUCTURAL',
+    riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
     requiredTrigger: 'Wait for a fresh completed 5M retest.',
     nextAction: 'Manual review only.',
     reducedRiskPlan: null,
@@ -45,12 +47,12 @@ const wideScore = scoreConditionalCandidateRisk({
 });
 assert.equal(JSON.stringify(wideCandidate), wideBefore, 'risk scorer must not mutate the candidate');
 assert.equal(wideScore.canExecute, false);
-assert.equal(wideScore.blockReason, NoTradeReason.RiskTooWide);
+assert.equal(wideScore.blockReason, null);
 assert.equal(wideScore.riskPoints, 8.25);
 assert.equal(wideScore.maxAllowedRiskPoints, 5);
 assert.equal(wideScore.estimatedRewardPoints, 23);
 assert.ok(wideScore.estimatedRiskReward && wideScore.estimatedRiskReward > 2);
-assert.ok(wideScore.score <= 64, 'RiskTooWide candidates must stay capped below approved/clean range');
+assert.ok(wideScore.score <= 64, 'Extended structural risk candidates must stay capped below approved/clean range');
 assert.ok(wideScore.reasons.some((reason) => reason.includes('more than 50% above')));
 assert.ok(wideScore.reasons.some((reason) => reason.includes('Higher-timeframe stack is aligned')));
 assert.ok(wideScore.advisoryNotes.some((note) => note.includes('Extended structural risk. Use the nearest protected 5M structure stop')));
@@ -69,7 +71,7 @@ const extendedScore = scoreConditionalCandidateRisk({
   priceExtended: true,
   freshRetestCouldTightenRisk: true,
 });
-assert.ok(extendedScore.score <= 49, 'RiskTooWide plus price extension must cap at high-risk range or lower');
+assert.ok(extendedScore.score <= 49, 'Extended structural risk plus price extension must cap at high-risk range or lower');
 assert.ok(extendedScore.advisoryNotes.some((note) => note.includes('Do not chase')));
 assert.ok(extendedScore.advisoryNotes.some((note) => note.includes('tighter retest trigger')));
 
@@ -78,7 +80,7 @@ const displayScore = scoreConditionalCandidateRiskForDisplay(historicalReviewCan
   nextAction: 'Manual decision only. Do not chase the reclaim candle.',
   evidence: ['HTF stack aligned LONG: 4H / 1H / 15M / 5M.'],
 }));
-assert.equal(displayScore.score, 49, 'shared display/audit scorer should apply the extended RiskTooWide cap');
+assert.equal(displayScore.score, 49, 'shared display/audit scorer should apply the extended structural risk cap');
 assert.equal(displayScore.label, 'High risk');
 assert.equal(inferHigherTimeframeRiskAlignment(historicalReviewCandidate({
   evidence: ['HTF stack aligned LONG: 4H / 1H / 15M / 5M.'],
@@ -94,6 +96,8 @@ const insideLimitCandidate = historicalReviewCandidate({
   target2: 7605,
   riskPoints: 4.25,
   blockReason: null,
+  riskAdvisoryStatus: 'RISK_WITHIN_STANDARD_LIMIT',
+  riskPolicy: 'STANDARD_RISK',
 });
 const insideScore = scoreConditionalCandidateRisk({
   candidate: insideLimitCandidate,

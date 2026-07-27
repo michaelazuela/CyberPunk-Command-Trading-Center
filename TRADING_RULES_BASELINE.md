@@ -249,7 +249,7 @@ No-trade conditions must be explicit:
 - Outside approved window.
 - Missing key level.
 - Missing structure stop.
-- Actual risk too wide.
+- Actual extended structural risk.
 - Target room poor.
 - Price already chased/stale.
 - Conflicting or unclear data.

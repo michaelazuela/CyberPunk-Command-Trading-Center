@@ -168,7 +168,6 @@ function blockReasonFromText(value: unknown): NoTradeReason | null {
   if (value === NoTradeReason.EntryTriggerPending || value === 'EntryTriggerPending') return NoTradeReason.EntryTriggerPending;
   if (value === NoTradeReason.EntryTriggerMissing || value === 'EntryTriggerMissing') return NoTradeReason.EntryTriggerMissing;
   if (value === NoTradeReason.TargetsUnavailable || value === 'TargetsUnavailable') return NoTradeReason.TargetsUnavailable;
-  if (value === NoTradeReason.RiskTooWide || value === 'RiskTooWide') return NoTradeReason.RiskTooWide;
   return null;
 }
 

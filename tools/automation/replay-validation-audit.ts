@@ -191,8 +191,10 @@ export function buildPhase9FReplayValidationAudit(
   const conditional = candidate();
   const blocked = candidate({
     executionStatus: ExecutionStatus.Blocked,
-    blockReason: NoTradeReason.RiskTooWide,
-    missingEvidence: ['Risk exceeds normal app-owned gate.'],
+    blockReason: null,
+    riskAdvisoryStatus: 'RISK_EXTENDED_STRUCTURAL',
+    riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    missingEvidence: ['Extended structural risk review is required.'],
     requiredTrigger: 'Hold with reason: risk gate blocks execution; no trade until protected 5M structure improves.',
   });
   const replay = runBridgeDiagnosticReplay(input([

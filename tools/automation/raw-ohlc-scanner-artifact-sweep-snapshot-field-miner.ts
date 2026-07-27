@@ -342,7 +342,7 @@ function tagList(values: string[] | undefined): string[] {
     text.includes('big-picture structure is bullish') ? 'big_picture_bullish' : null,
     text.includes('full 30-day htf context gate satisfied') ? 'htf_30d_sufficient' : null,
     text.includes('failed htf auction supports') ? 'failed_htf_auction_support' : null,
-    text.includes('risk exceeds standard limit') ? 'risk_exceeds_standard_limit' : null,
+    text.includes('extended structural risk') ? 'extended_structural_risk' : null,
     text.includes('premium/discount alignment') ? 'premium_discount_alignment' : null,
   ].filter((tag): tag is string => Boolean(tag));
 }

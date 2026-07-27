@@ -1,5 +1,5 @@
 import { TRADE_RULES } from '../config/tradeRules';
-import { ExecutionStatus, NoTradeReason, type SetupCandidate } from '../types';
+import { ExecutionStatus, type SetupCandidate } from '../types';
 import { cloneDeskBoundary, CONDITIONAL_RISK_APPROVAL_BOUNDARY } from './deskAgentBoundaries';
 
 export type ConditionalRiskLabel =
@@ -66,10 +66,6 @@ function estimateReward(candidate: SetupCandidate): number | null {
   if (!isValidNumber(target)) return null;
   const reward = Math.abs(target - candidate.entry);
   return reward > 0 ? reward : null;
-}
-
-function isRiskTooWide(candidate: SetupCandidate): boolean {
-  return candidate.blockReason === NoTradeReason.RiskTooWide;
 }
 
 export function inferHigherTimeframeRiskAlignment(candidate: SetupCandidate): HigherTimeframeRiskAlignment {
@@ -183,7 +179,7 @@ export function scoreConditionalCandidateRisk(
     advisoryNotes.push('A tighter retest trigger may improve the risk profile, but it does not approve execution.');
   }
 
-  if (isRiskTooWide(candidate)) {
+  if (candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' || candidate.riskPolicy === 'STRUCTURAL_RISK_ACKNOWLEDGED') {
     score = Math.min(score, input.priceExtended ? 49 : 64);
     advisoryNotes.push('Extended structural risk. Use the nearest protected 5M structure stop; this advisory score does not approve execution.');
   }

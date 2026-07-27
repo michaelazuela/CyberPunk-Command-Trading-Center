@@ -232,8 +232,10 @@ assert.equal(replayWithDeskState.phase9FReplayValidation.authority.replayChanges
 
 const blockedReplayCandidate = candidate({
   executionStatus: ExecutionStatus.Blocked,
-  blockReason: NoTradeReason.RiskTooWide,
-  missingEvidence: ['Risk exceeds normal app-owned gate.'],
+  blockReason: null,
+  riskAdvisoryStatus: 'RISK_EXTENDED_STRUCTURAL',
+  riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
+  missingEvidence: ['Extended structural risk review is required.'],
   requiredTrigger: 'Hold with reason: risk gate blocks execution; no trade until protected 5M structure improves.',
 });
 const blockedReplayEvent = normalizeScannerAuditRecord({

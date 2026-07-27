@@ -218,17 +218,15 @@ Arbitrary stops are not allowed.
 
 ### 10. Validate Risk Limit
 
-The app must hard-block trades when the protected structure stop exceeds the configured risk limit. Risk is app-owned and must be measured from actual entry to actual stop:
+The app must measure risk from the actual entry to the nearest protected completed 5M structure stop:
 
 ```text
 riskPoints = abs(entry - stop)
 ```
 
-If risk is missing, too wide, or not tied to protected structure, the app must block execution. AI cannot override this.
+If risk is missing or not tied to protected structure, the app must block execution. If the protected-structure risk is larger than the standard risk reference, the app marks the candidate as extended structural risk for review and sizing; it must not erase a complete protected-structure candidate with a fixed cap.
 
-`RiskTooWide` means the visible structure cannot currently be expressed inside the configured risk limit. It blocks execution only. It must not erase the detected setup candidate. The setup should remain visible as a conditional opportunity if the chart provides a valid trigger.
-
-For the detailed handling contract, see `docs/RISK_TOO_WIDE_HANDLING.md`.
+Extended structural risk is still decision support only. It does not place orders, override canExecute, or remove the requirement for completed 5M proof, valid entry, valid protected stop, app-computed targets, and structural invalidation.
 
 ### 11. Determine Target Model
 

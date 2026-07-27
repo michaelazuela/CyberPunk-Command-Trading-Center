@@ -85,7 +85,7 @@ function report(args: {
       targetRoomStatus: 'blocked_before_t1',
       htfLineInSandStatus: 'blocked',
       timeframeMssStatus: 'blocked',
-      riskAdvisoryStatus: 'RISK_ABOVE_STANDARD_LIMIT',
+      riskAdvisoryStatus: 'RISK_EXTENDED_STRUCTURAL',
       activeCampaignLayerTags: [],
       structuralTags: ['best_conditional_NoInstalledSetup'],
       blockers: [],

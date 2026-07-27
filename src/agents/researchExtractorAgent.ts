@@ -135,7 +135,7 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
   },
   'Risk reduction after movement': {
     plainEnglishMeaning: 'After movement starts, risk should be reduced rather than chasing wider exposure.',
-    whyItMayMatterFor6K: 'Aligns with current no-chase and RiskTooWide discipline.',
+    whyItMayMatterFor6K: 'Aligns with current no-chase and extended structural risk discipline.',
     currentCoverage: 'already_covered',
     watchlistOnly: true,
   },

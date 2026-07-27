@@ -102,7 +102,6 @@ export const TRADE_RULES = {
     [NoTradeReason.EntryTriggerMissing]: 'hard',
     [NoTradeReason.EntryTriggerPending]: 'wait',
     [NoTradeReason.InvalidStopLocation]: 'hard',
-    [NoTradeReason.RiskTooWide]: 'warning',
     [NoTradeReason.TargetsUnavailable]: 'hard',
     [NoTradeReason.KillSwitchActive]: 'hard',
     [NoTradeReason.ConflictingStructure]: 'hard',

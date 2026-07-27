@@ -340,7 +340,7 @@
       "Entry audit uses trigger candle close 7511.5; stop uses protected 5M structure 7553."
     ],
     "blockers": [
-      "Risk 41.5 exceeds standard 5 point limit."
+      "Risk 41.5 uses extended structural review against standard 5 point limit."
     ],
     "canExecute": false
   },
@@ -422,7 +422,7 @@
           "Confidence score: 90/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status."
         ],
         "missingEvidence": [
@@ -1517,7 +1517,7 @@
           "Confidence score: 90/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status."
         ],
         "missingEvidence": [
@@ -1806,7 +1806,7 @@
           "Confidence score: 93/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status."
         ],
         "missingEvidence": [
@@ -2110,12 +2110,12 @@
           "Confidence score: 100/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status."
         ],
         "missingEvidence": [],
         "requiredTrigger": "Human-review short: 15M bearish opening displacement, completed 5M bearish MSS/displacement, bearish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward sell-side target context.",
-        "nextAction": "Human Review Ready bearish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Risk exceeds standard limit. Human final decision required."
+        "nextAction": "Human Review Ready bearish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
       },
       "fvgZones": [
         {
@@ -2366,7 +2366,7 @@
       "discordPreview": {
         "content": "🟡 [AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY | 2026-06-05 | ID: `JUNE5-OPENING-DRIVE-FVG-HumanReviewReady`",
         "embedTitle": "Compact Trade Plan Summary",
-        "embedDescription": "[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7526.25\nStop: 7553.00\nRisk: 26.75 pts / N/A\nRisk Advisory: Above standard\nRisk exceeds standard limit. Human final decision required.\n\nTargets:\nT1: 7486.25 - scale/secure\nT2: 7472.75 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Risk exceeds standard limit. Human final decision required.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades above the protected 5M opening-drive/imbalance structure stop near 7553.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
+        "embedDescription": "[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7526.25\nStop: 7553.00\nRisk: 26.75 pts / N/A\nRisk Advisory: Above standard\nExtended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\n\nTargets:\nT1: 7486.25 - scale/secure\nT2: 7472.75 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades above the protected 5M opening-drive/imbalance structure stop near 7553.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
         "containsHumanReviewReady": true,
         "containsTraderConfirmation": true,
         "containsCanExecuteTrue": false
@@ -2419,12 +2419,12 @@
           "Confidence score: 100/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status."
         ],
         "missingEvidence": [],
         "requiredTrigger": "Human-review short: 15M bearish opening displacement, completed 5M bearish MSS/displacement, bearish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward sell-side target context.",
-        "nextAction": "Human Review Ready bearish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Risk exceeds standard limit. Human final decision required."
+        "nextAction": "Human Review Ready bearish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
       },
       "fvgZones": [
         {
@@ -2659,7 +2659,7 @@
       "discordPreview": {
         "content": "🟡 [AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY | 2026-06-05 | ID: `JUNE5-OPENING-DRIVE-FVG-HumanReviewReady`",
         "embedTitle": "Compact Trade Plan Summary",
-        "embedDescription": "[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7526.25\nStop: 7553.00\nRisk: 26.75 pts / N/A\nRisk Advisory: Above standard\nRisk exceeds standard limit. Human final decision required.\n\nTargets:\nT1: 7486.25 - scale/secure\nT2: 7472.75 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Risk exceeds standard limit. Human final decision required.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades above the protected 5M opening-drive/imbalance structure stop near 7553.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
+        "embedDescription": "[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7526.25\nStop: 7553.00\nRisk: 26.75 pts / N/A\nRisk Advisory: Above standard\nExtended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\n\nTargets:\nT1: 7486.25 - scale/secure\nT2: 7472.75 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades above the protected 5M opening-drive/imbalance structure stop near 7553.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
         "containsHumanReviewReady": true,
         "containsTraderConfirmation": true,
         "containsCanExecuteTrue": false
@@ -2711,7 +2711,7 @@
           "Confidence score: 100/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00."
         ],
@@ -2720,7 +2720,7 @@
           "Active timeframe MSS ruleset found opposing completed 5M bearish MSS."
         ],
         "requiredTrigger": "Human-review long: 15M bullish opening displacement, completed 5M bullish MSS/displacement, bullish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward buy-side target context.",
-        "nextAction": "Human Review Ready bullish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Risk exceeds standard limit. Human final decision required."
+        "nextAction": "Human Review Ready bullish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
       },
       "fvgZones": [
         {
@@ -2923,7 +2923,7 @@
       "discordPreview": {
         "content": "🟡 [AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY | 2026-06-05 | ID: `JUNE5-OPENING-DRIVE-FVG-HumanReviewReady`",
         "embedTitle": "Compact Trade Plan Summary",
-        "embedDescription": "[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.63\nStop: 7505.50\nRisk: 18.13 pts / N/A\nRisk Advisory: Above standard\nRisk exceeds standard limit. Human final decision required.\n\nTargets:\nT1: 7550.75 - scale/secure\nT2: 7560.00 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Risk exceeds standard limit. Human final decision required.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades below the protected 5M opening-drive/imbalance structure stop near 7505.5.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
+        "embedDescription": "[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.63\nStop: 7505.50\nRisk: 18.13 pts / N/A\nRisk Advisory: Above standard\nExtended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\n\nTargets:\nT1: 7550.75 - scale/secure\nT2: 7560.00 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades below the protected 5M opening-drive/imbalance structure stop near 7505.5.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
         "containsHumanReviewReady": true,
         "containsTraderConfirmation": true,
         "containsCanExecuteTrue": false
@@ -2976,12 +2976,12 @@
           "Confidence score: 100/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status."
         ],
         "missingEvidence": [],
         "requiredTrigger": "Human-review short: 15M bearish opening displacement, completed 5M bearish MSS/displacement, bearish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward sell-side target context.",
-        "nextAction": "Human Review Ready bearish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Risk exceeds standard limit. Human final decision required."
+        "nextAction": "Human Review Ready bearish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
       },
       "fvgZones": [
         {
@@ -3216,7 +3216,7 @@
       "discordPreview": {
         "content": "🟡 [AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY | 2026-06-05 | ID: `JUNE5-OPENING-DRIVE-FVG-HumanReviewReady`",
         "embedTitle": "Compact Trade Plan Summary",
-        "embedDescription": "[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7526.25\nStop: 7533.75\nRisk: 7.50 pts / N/A\nRisk Advisory: Above standard\nRisk exceeds standard limit. Human final decision required.\n\nTargets:\nT1: 7515.00 - scale/secure\nT2: 7511.25 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_ABOVE_STANDARD_LIMIT\nMax risk: 5.00 pts\nRisk Score: 85/100 - Clean risk\nReason: Stop risk is 26-50% above the 5.00 pt app limit. This score is advisory only.\nManual: Risk exceeds standard limit. Human final decision required.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades above the protected 5M opening-drive/imbalance structure stop near 7533.75.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
+        "embedDescription": "[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7526.25\nStop: 7533.75\nRisk: 7.50 pts / N/A\nRisk Advisory: Above standard\nExtended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\n\nTargets:\nT1: 7515.00 - scale/secure\nT2: 7511.25 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 85/100 - Clean risk\nReason: Stop risk is 26-50% above the 5.00 pt app limit. This score is advisory only.\nManual: Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades above the protected 5M opening-drive/imbalance structure stop near 7533.75.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
         "containsHumanReviewReady": true,
         "containsTraderConfirmation": true,
         "containsCanExecuteTrue": false
@@ -3269,12 +3269,12 @@
           "Confidence score: 100/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status."
         ],
         "missingEvidence": [],
         "requiredTrigger": "Human-review short: 15M bearish opening displacement, completed 5M bearish MSS/displacement, bearish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward sell-side target context.",
-        "nextAction": "Human Review Ready bearish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Risk exceeds standard limit. Human final decision required."
+        "nextAction": "Human Review Ready bearish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
       },
       "fvgZones": [
         {
@@ -3525,7 +3525,7 @@
       "discordPreview": {
         "content": "🟡 [AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY | 2026-06-05 | ID: `JUNE5-OPENING-DRIVE-FVG-HumanReviewReady`",
         "embedTitle": "Compact Trade Plan Summary",
-        "embedDescription": "[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.38\nStop: 7533.75\nRisk: 10.38 pts / N/A\nRisk Advisory: Above standard\nRisk exceeds standard limit. Human final decision required.\n\nTargets:\nT1: 7507.75 - scale/secure\nT2: 7502.75 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 70/100 - Acceptable risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Risk exceeds standard limit. Human final decision required.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades above the protected 5M opening-drive/imbalance structure stop near 7533.75.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
+        "embedDescription": "[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.38\nStop: 7533.75\nRisk: 10.38 pts / N/A\nRisk Advisory: Above standard\nExtended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\n\nTargets:\nT1: 7507.75 - scale/secure\nT2: 7502.75 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 70/100 - Acceptable risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades above the protected 5M opening-drive/imbalance structure stop near 7533.75.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
         "containsHumanReviewReady": true,
         "containsTraderConfirmation": true,
         "containsCanExecuteTrue": false
@@ -3578,7 +3578,7 @@
           "Confidence score: 100/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status."
         ],
         "missingEvidence": [
@@ -3586,7 +3586,7 @@
           "Active timeframe MSS ruleset found opposing completed 5M bearish MSS."
         ],
         "requiredTrigger": "Human-review long: 15M bullish opening displacement, completed 5M bullish MSS/displacement, bullish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward buy-side target context.",
-        "nextAction": "Human Review Ready bullish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Risk exceeds standard limit. Human final decision required."
+        "nextAction": "Human Review Ready bullish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
       },
       "fvgZones": [
         {
@@ -3789,7 +3789,7 @@
       "discordPreview": {
         "content": "🟡 [AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY | 2026-06-05 | ID: `JUNE5-OPENING-DRIVE-FVG-HumanReviewReady`",
         "embedTitle": "Compact Trade Plan Summary",
-        "embedDescription": "[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.63\nStop: 7505.50\nRisk: 18.13 pts / N/A\nRisk Advisory: Above standard\nRisk exceeds standard limit. Human final decision required.\n\nTargets:\nT1: 7550.75 - scale/secure\nT2: 7560.00 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Risk exceeds standard limit. Human final decision required.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades below the protected 5M opening-drive/imbalance structure stop near 7505.5.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
+        "embedDescription": "[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.63\nStop: 7505.50\nRisk: 18.13 pts / N/A\nRisk Advisory: Above standard\nExtended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\n\nTargets:\nT1: 7550.75 - scale/secure\nT2: 7560.00 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades below the protected 5M opening-drive/imbalance structure stop near 7505.5.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
         "containsHumanReviewReady": true,
         "containsTraderConfirmation": true,
         "containsCanExecuteTrue": false
@@ -3842,7 +3842,7 @@
           "Confidence score: 93/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status."
         ],
         "missingEvidence": [
@@ -4100,7 +4100,7 @@
           "Confidence score: 100/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status."
         ],
         "missingEvidence": [
@@ -4108,7 +4108,7 @@
           "Active timeframe MSS ruleset found opposing completed 5M bearish MSS."
         ],
         "requiredTrigger": "Human-review long: 15M bullish opening displacement, completed 5M bullish MSS/displacement, bullish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward buy-side target context.",
-        "nextAction": "Human Review Ready bullish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Risk exceeds standard limit. Human final decision required."
+        "nextAction": "Human Review Ready bullish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
       },
       "fvgZones": [
         {
@@ -4311,7 +4311,7 @@
       "discordPreview": {
         "content": "🟡 [AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY | 2026-06-05 | ID: `JUNE5-OPENING-DRIVE-FVG-HumanReviewReady`",
         "embedTitle": "Compact Trade Plan Summary",
-        "embedDescription": "[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.63\nStop: 7508.50\nRisk: 15.13 pts / N/A\nRisk Advisory: Above standard\nRisk exceeds standard limit. Human final decision required.\n\nTargets:\nT1: 7546.25 - scale/secure\nT2: 7554.00 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Risk exceeds standard limit. Human final decision required.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades below the protected 5M opening-drive/imbalance structure stop near 7508.5.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
+        "embedDescription": "[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.63\nStop: 7508.50\nRisk: 15.13 pts / N/A\nRisk Advisory: Above standard\nExtended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\n\nTargets:\nT1: 7546.25 - scale/secure\nT2: 7554.00 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades below the protected 5M opening-drive/imbalance structure stop near 7508.5.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
         "containsHumanReviewReady": true,
         "containsTraderConfirmation": true,
         "containsCanExecuteTrue": false
@@ -4363,7 +4363,7 @@
           "Confidence score: 100/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00."
         ],
@@ -4372,7 +4372,7 @@
           "Active timeframe MSS ruleset found opposing completed 5M bearish MSS."
         ],
         "requiredTrigger": "Human-review long: 15M bullish opening displacement, completed 5M bullish MSS/displacement, bullish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward buy-side target context.",
-        "nextAction": "Human Review Ready bullish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Risk exceeds standard limit. Human final decision required."
+        "nextAction": "Human Review Ready bullish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
       },
       "fvgZones": [
         {
@@ -4575,7 +4575,7 @@
       "discordPreview": {
         "content": "🟡 [AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY | 2026-06-05 | ID: `JUNE5-OPENING-DRIVE-FVG-HumanReviewReady`",
         "embedTitle": "Compact Trade Plan Summary",
-        "embedDescription": "[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.63\nStop: 7512.50\nRisk: 11.13 pts / N/A\nRisk Advisory: Above standard\nRisk exceeds standard limit. Human final decision required.\n\nTargets:\nT1: 7540.25 - scale/secure\nT2: 7546.00 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Risk exceeds standard limit. Human final decision required.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades below the protected 5M opening-drive/imbalance structure stop near 7512.5.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
+        "embedDescription": "[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.63\nStop: 7512.50\nRisk: 11.13 pts / N/A\nRisk Advisory: Above standard\nExtended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\n\nTargets:\nT1: 7540.25 - scale/secure\nT2: 7546.00 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades below the protected 5M opening-drive/imbalance structure stop near 7512.5.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
         "containsHumanReviewReady": true,
         "containsTraderConfirmation": true,
         "containsCanExecuteTrue": false
@@ -4627,7 +4627,7 @@
           "Confidence score: 100/100",
           "Human review required. Decision-support plan only. Trader must confirm entry before action.",
           "OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.",
-          "Risk exceeds standard limit. Human final decision required.",
+          "Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.",
           "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
           "Active timeframe MSS 5M read: 5M bearish confirmed_mss break=true completed=completed at 2026-06-05T09:40:00."
         ],
@@ -4636,7 +4636,7 @@
           "Active timeframe MSS ruleset found opposing completed 5M bearish MSS."
         ],
         "requiredTrigger": "Human-review long: 15M bullish opening displacement, completed 5M bullish MSS/displacement, bullish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward buy-side target context.",
-        "nextAction": "Human Review Ready bullish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Risk exceeds standard limit. Human final decision required."
+        "nextAction": "Human Review Ready bullish Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required. Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion."
       },
       "fvgZones": [
         {
@@ -4839,7 +4839,7 @@
       "discordPreview": {
         "content": "🟡 [AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY | 2026-06-05 | ID: `JUNE5-OPENING-DRIVE-FVG-HumanReviewReady`",
         "embedTitle": "Compact Trade Plan Summary",
-        "embedDescription": "[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.63\nStop: 7512.50\nRisk: 11.13 pts / N/A\nRisk Advisory: Above standard\nRisk exceeds standard limit. Human final decision required.\n\nTargets:\nT1: 7540.25 - scale/secure\nT2: 7546.00 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Risk exceeds standard limit. Human final decision required.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades below the protected 5M opening-drive/imbalance structure stop near 7512.5.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
+        "embedDescription": "[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY\nStatus: HUMAN REVIEW READY - decision-support plan only; trader confirmation required\n\nPlan:\nConfidence: 100/100\nTrigger State: HUMAN_REVIEW_READY\nReview: HumanReviewReady\nHuman review required. Decision-support plan only.\nTrader must confirm entry before action.\nEntry: 7523.63\nStop: 7512.50\nRisk: 11.13 pts / N/A\nRisk Advisory: Above standard\nExtended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\n\nTargets:\nT1: 7540.25 - scale/secure\nT2: 7546.00 - base exit\n\nRisk Advisory:\nDecision: WAIT | App plan review: NO | canExecute: false\nRisk State: RISK_EXTENDED_STRUCTURAL\nMax risk: 5.00 pts\nRisk Score: 55/100 - Caution risk\nReason: Stop risk is more than 50% above the 5.00 pt app limit. This score is advisory only.\nManual: Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.\nWatch: Fresh 5M trigger/retest only. Do not chase.\n\nInvalid:\nInvalid if price trades below the protected 5M opening-drive/imbalance structure stop near 7512.5.\n\nMemory:\nSimilar: 0\nHistory: Neutral\nWarning: none\n\nAction:\nHuman review required. Verify the 5M imbalance retest, protected stop, target room, and invalidation before any trader action.\n\nDetails: Visual attachments unavailable — review local logs before action.\nDecision support only. No automated orders.",
         "containsHumanReviewReady": true,
         "containsTraderConfirmation": true,
         "containsCanExecuteTrue": false

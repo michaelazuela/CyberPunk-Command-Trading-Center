@@ -339,7 +339,7 @@ export function findFirstFiveMinuteCampaignStructureTrigger(args: {
         `${args.direction} 5M completed close broke structure at ${normalizeTime(bar.time)}.`,
         `Entry audit uses trigger candle close ${entry}; stop uses protected 5M structure ${stop ?? 'N/A'}.`,
       ],
-      blockers: riskStatus === 'extended' ? [`Risk ${riskPoints} exceeds standard ${maxRisk} point limit.`] : [],
+      blockers: riskStatus === 'extended' ? [`Risk ${riskPoints} uses extended structural review against the ${maxRisk} point standard.`] : [],
       canExecute: false,
     };
   }

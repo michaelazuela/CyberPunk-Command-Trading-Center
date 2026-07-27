@@ -345,7 +345,7 @@
     },
     "riskTooWideCheck": {
       "status": "NoTrade",
-      "noTradeReason": "RiskTooWide",
+      "noTradeReason": "ExtendedStructuralRisk",
       "bestConditionalBlockReason": null
     }
   },

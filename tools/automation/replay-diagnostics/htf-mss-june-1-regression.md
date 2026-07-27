@@ -65,8 +65,8 @@ This focused replay is a local regression diagnostic. It does not introduce brok
 - Full Deterministic Gates Status: NoTrade
 - Full Deterministic Gates canExecute: false
 - Full Gate Targets: T1 N/A / T2 N/A
-- RiskTooWide Status: NoTrade
-- RiskTooWide Reason: RiskTooWide
+- ExtendedStructuralRisk Status: NoTrade
+- ExtendedStructuralRisk Reason: ExtendedStructuralRisk
 
 ## Diagnostic Replay
 - Final Classification: D_NO_VALID_SETUP
