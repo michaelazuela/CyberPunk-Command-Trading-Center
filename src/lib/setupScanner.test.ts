@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ExecutionStatus, SetupType, type ChartCandleFact, type ChartContext, type MultiTimeframeContext, type TimeframeFactSet } from '../types';
+import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, type ChartCandleFact, type ChartContext, type MultiTimeframeContext, type TimeframeFactSet } from '../types';
 import {
   buildCompletedFiveMinuteProofSelectionSignals,
   computeZoneOverlap,
@@ -66,6 +66,36 @@ function mtf(candles: ChartCandleFact[]): MultiTimeframeContext {
     targetMap: {
       levelsToWatch: [],
     },
+    rules: {
+      higherTimeframesApproveTrades: false,
+      fiveMinuteExecutionRequired: true,
+      aiMayOverwriteOhlcFacts: false,
+    },
+    notes: [],
+  };
+}
+
+function mtfWithFifteenMinute(fiveMinuteCandles: ChartCandleFact[], fifteenMinuteCandles: ChartCandleFact[]): MultiTimeframeContext {
+  const fiveMinute = factSet(fiveMinuteCandles);
+  const fifteenMinute = { ...factSet(fifteenMinuteCandles), timeframe: '15m' as const, role: 'liquidity_map' as const };
+  return {
+    source: 'ninjatrader_bridge',
+    authority: 'ohlc_facts_only',
+    fourHour: { ...fifteenMinute, timeframe: '4h', role: 'macro_context' },
+    twoHour: { ...fifteenMinute, timeframe: '2h', role: 'session_structure' },
+    oneHour: { ...fifteenMinute, timeframe: '1h', role: 'session_structure' },
+    fifteenMinute,
+    fiveMinute,
+    alignment: {
+      macroBias: 'NEUTRAL',
+      sessionBias: 'NEUTRAL',
+      liquidityBias: 'NEUTRAL',
+      executionBias: 'NEUTRAL',
+      alignedDirection: 'SHORT',
+      conflicts: [],
+      notes: [],
+    },
+    targetMap: { levelsToWatch: [] },
     rules: {
       higherTimeframesApproveTrades: false,
       fiveMinuteExecutionRequired: true,
@@ -170,6 +200,46 @@ for (const sessionType of ['morning', 'lunch', 'evening'] as const) {
   assert.equal(scan.bestExecutableCandidate, null);
   assert.equal(scan.bestConditionalCandidate?.setupType, SetupType.RaidFailureDisplacementReversal);
 }
+
+const formingFiveMinute = [
+  candle(1, '2026-06-25T09:15:00', 7484.25, 7489, 7478.75, 7483.75),
+  candle(2, '2026-06-25T09:20:00', 7483.75, 7486.75, 7480, 7482),
+  candle(3, '2026-06-25T09:25:00', 7482.25, 7487.75, 7481.25, 7485.75),
+  candle(4, '2026-06-25T09:30:00', 7485.75, 7488.25, 7479, 7485.75),
+];
+const formingFifteenMinute = [
+  candle(1, '2026-06-25T08:45:00', 7478, 7496.25, 7477.5, 7485.25),
+  candle(2, '2026-06-25T09:00:00', 7485.25, 7492.75, 7481.5, 7486.75),
+  candle(3, '2026-06-25T09:15:00', 7486.75, 7489, 7478.75, 7483.75),
+  candle(4, '2026-06-25T09:30:00', 7483.75, 7488.25, 7479, 7485.75),
+];
+const formingWatchScan = scanSetupCandidates({
+  sessionType: 'morning',
+  chartContext: {
+    ...context('morning'),
+    tradeDate: '2026-06-25',
+    chartTimestamp: '2026-06-25T09:30:00',
+    candles: formingFiveMinute,
+    liquiditySweeps: [],
+    reclaimEvents: [],
+    failedBreakEvents: [],
+    displacementCandles: [],
+    multiTimeframeContext: mtfWithFifteenMinute(formingFiveMinute, formingFifteenMinute),
+    keyLevels: {
+      currentPrice: 7485.75,
+      activeSwingLow: 7479,
+      activeSwingHigh: 7488.25,
+    },
+  },
+});
+assert.equal(formingWatchScan.candidates.length, 1);
+assert.equal(formingWatchScan.bestConditionalCandidate?.setupType, SetupType.RaidFailureDisplacementReversal);
+assert.equal(formingWatchScan.bestConditionalCandidate?.detectedStatus, SetupCandidateStatus.Possible);
+assert.equal(formingWatchScan.bestConditionalCandidate?.direction, 'SHORT');
+assert.equal(formingWatchScan.bestConditionalCandidate?.executionStatus, ExecutionStatus.Conditional);
+assert.equal(formingWatchScan.bestConditionalCandidate?.blockReason, NoTradeReason.EntryTriggerPending);
+assert.equal(formingWatchScan.bestConditionalCandidate?.entry, null);
+assert.match(formingWatchScan.bestConditionalCandidate?.requiredTrigger || '', /wait for completed bearish 5M close-through proof/i);
 
 const emptyScan = scanSetupCandidates({
   sessionType: 'morning',

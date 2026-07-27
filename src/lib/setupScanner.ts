@@ -15,6 +15,7 @@ import { detectFailedBreakoutReversal } from './forensicModels/failedBreakoutRev
 import { detectLiquidityRaidReclaimReversal } from './forensicModels/liquidityRaidReclaimReversal';
 import { detectRaidFailureDisplacementReversal } from './forensicModels/raidFailureDisplacementReversal';
 import { detectStructureShiftContinuation } from './forensicModels/structureShiftContinuation';
+import { detectProtectedShelfWatch, type ProtectedShelfBar } from './protectedShelfWatch';
 
 export const HTF_MSS_CANDIDATE_CONFIDENCE_THRESHOLD = 0;
 
@@ -128,6 +129,77 @@ function hasDirectionallyValidStop(
   return direction === 'LONG' ? stop < entry : stop > entry;
 }
 
+function candlesToProtectedShelfBars(candles: ChartContext['candles'] = []): ProtectedShelfBar[] {
+  return candles
+    .filter((candle) =>
+      typeof candle.timestamp === 'string' &&
+      isValidPrice(candle.open) &&
+      isValidPrice(candle.high) &&
+      isValidPrice(candle.low) &&
+      isValidPrice(candle.close)
+    )
+    .map((candle) => ({
+      time: candle.timestamp as string,
+      open: candle.open as number,
+      high: candle.high as number,
+      low: candle.low as number,
+      close: candle.close as number,
+    }));
+}
+
+function protectedShelfWatchCandidate(chartContext: ChartContext, priority: number): SetupCandidate | null {
+  const fiveMinuteBars = candlesToProtectedShelfBars([
+    ...(chartContext.multiTimeframeContext?.fiveMinute?.fullWindowCandles || []),
+    ...(chartContext.multiTimeframeContext?.fiveMinute?.candles || []),
+    ...(chartContext.candles || []),
+  ]);
+  const fifteenMinuteBars = candlesToProtectedShelfBars([
+    ...(chartContext.multiTimeframeContext?.fifteenMinute?.fullWindowCandles || []),
+    ...(chartContext.multiTimeframeContext?.fifteenMinute?.candles || []),
+  ]);
+  const watch = detectProtectedShelfWatch({ fiveMinuteBars, fifteenMinuteBars });
+  if (watch.state !== 'forming' || (watch.direction !== 'LONG' && watch.direction !== 'SHORT')) return null;
+  const registryEntry = getAllowedSetupRegistry(chartContext.sessionType).find((entry) => entry.setupType === SetupType.RaidFailureDisplacementReversal);
+  if (!registryEntry) return null;
+  const side = watch.direction === 'LONG' ? 'bullish' : 'bearish';
+  const line = watch.shelfPrice !== null ? watch.shelfPrice.toFixed(2) : 'protected shelf';
+  return {
+    setupType: SetupType.RaidFailureDisplacementReversal,
+    scenarioLabel: `${registryEntry.label} Watch`,
+    direction: watch.direction,
+    detectedStatus: SetupCandidateStatus.Possible,
+    confidence: 'Medium',
+    priority,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    riskAdvisoryStatus: 'RISK_INVALID_OR_UNDEFINED',
+    riskPolicy: 'STANDARD_RISK',
+    invalidation: `Stand down if completed 5M accepts back through the protected shelf near ${line}.`,
+    entryClarity: 45,
+    stopClarity: 0,
+    targetClarity: 0,
+    modelConfidenceScore: 70,
+    rankScore: priority,
+    evidence: [
+      ...watch.evidence,
+      `Scanner-installed watch model: ${registryEntry.label}.`,
+      'HTF/15M shelf is context/routing only; it does not approve execution.',
+    ],
+    missingEvidence: [
+      ...watch.missingEvidence,
+      'No entry/stop/T1/T2 is published until completed 5M proof exists.',
+    ],
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: NoTradeReason.EntryTriggerPending,
+    requiredTrigger: `${watch.direction} watch: wait for completed ${side} 5M close-through proof at the protected shelf near ${line}, then require protected 5M stop and target room.`,
+    nextAction: `${watch.direction} WATCH FORMING near ${line}. Watch only; do not chase and do not treat this as execution approval.`,
+    reducedRiskPlan: null,
+  };
+}
+
 function candidateFromDetection(
   detection: InstalledModelDetection,
   chartContext: ChartContext,
@@ -235,7 +307,10 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
     ))
     .filter((candidate): candidate is SetupCandidate => Boolean(candidate))
     .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a));
-  const selectedCandidates = candidates.slice(0, 1);
+  const watchCandidate = candidates.length
+    ? null
+    : protectedShelfWatchCandidate(chartContext, priorityByType.get(SetupType.RaidFailureDisplacementReversal) ?? 0);
+  const selectedCandidates = (candidates.length ? candidates : watchCandidate ? [watchCandidate] : []).slice(0, 1);
   return {
     candidates: selectedCandidates,
     bestExecutableCandidate: null,

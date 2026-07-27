@@ -1,5 +1,6 @@
 import { APPROVED_DESK_MODEL_DEFINITIONS } from '../../config/approvedDeskModels';
 import { nearestProtectedStructureStopFromLevels, roundToTradeTick, targetsFromEntryStop } from '../../config/tradeRules';
+import { detectProtectedShelfWatch, type ProtectedShelfWatch } from '../protectedShelfWatch';
 import type {
   ChartCandleFact,
   ChartContext,
@@ -21,6 +22,7 @@ export interface RaidFailureDisplacementReversalDetection {
   proofTime: string | null;
   raidLevel: number | null;
   raidLevelLabel: string | null;
+  protectedShelfState?: ProtectedShelfWatch['state'] | null;
   displacementTime: string | null;
   displacementQuality: DisplacementCandleFact['quality'] | null;
   htfContext: 'support' | 'caution' | 'conflict' | 'unknown';
@@ -80,6 +82,34 @@ function allFiveMinuteCandles(context: ChartContext): ChartCandleFact[] {
     const key = `${candle.timestamp || ''}|${candle.index}`;
     return array.findIndex((item) => `${item.timestamp || ''}|${item.index}` === key) === index;
   });
+}
+
+function candlesToBars(candles: ChartCandleFact[]) {
+  return candles
+    .filter((candle) =>
+      typeof candle.timestamp === 'string' &&
+      finitePrice(candle.open) &&
+      finitePrice(candle.high) &&
+      finitePrice(candle.low) &&
+      finitePrice(candle.close)
+    )
+    .map((candle) => ({
+      time: candle.timestamp as string,
+      open: candle.open as number,
+      high: candle.high as number,
+      low: candle.low as number,
+      close: candle.close as number,
+    }));
+}
+
+function protectedShelfWatchForContext(context: ChartContext): ProtectedShelfWatch | null {
+  const fiveMinuteBars = candlesToBars(allFiveMinuteCandles(context));
+  const fifteenMinuteBars = candlesToBars([
+    ...(context.multiTimeframeContext?.fifteenMinute?.fullWindowCandles || []),
+    ...(context.multiTimeframeContext?.fifteenMinute?.candles || []),
+  ]);
+  if (fiveMinuteBars.length < 3 || fifteenMinuteBars.length < 3) return null;
+  return detectProtectedShelfWatch({ fiveMinuteBars, fifteenMinuteBars });
 }
 
 function latestDirectionalFacts(context: ChartContext, direction: 'LONG' | 'SHORT'): DirectionalFacts {
@@ -149,9 +179,18 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Ra
   const model = APPROVED_DESK_MODEL_DEFINITIONS.find((item) => item.id === 'raid_failure_displacement_reversal');
   const facts = latestDirectionalFacts(context, direction);
   const candles = allFiveMinuteCandles(context);
-  const entry = entryFromFacts(direction, facts.displacement, facts.reclaim, facts.failure, candles);
-  const stop = stopFromFacts(context, direction, facts.failure, entry);
-  const targets = targetsFromEntryStop(direction, entry, stop);
+  const shelfWatch = protectedShelfWatchForContext(context);
+  const shelfApplies = shelfWatch?.direction === direction &&
+    (shelfWatch.state === 'proof_completed' || shelfWatch.state === 'no_chase');
+  const entry = shelfApplies && finitePrice(shelfWatch.entry)
+    ? shelfWatch.entry
+    : entryFromFacts(direction, facts.displacement, facts.reclaim, facts.failure, candles);
+  const stop = shelfApplies && finitePrice(shelfWatch.stop)
+    ? shelfWatch.stop
+    : stopFromFacts(context, direction, facts.failure, entry);
+  const targets = shelfApplies
+    ? { target1: shelfWatch.target1, target2: shelfWatch.target2, riskPoints: shelfWatch.riskPoints }
+    : targetsFromEntryStop(direction, entry, stop);
   const raidLevel = finitePrice(facts.sweep?.level)
     ? facts.sweep.level
     : finitePrice(facts.reclaim?.reclaimedLevel)
@@ -159,7 +198,9 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Ra
       : finitePrice(facts.failure?.failedLevel)
         ? facts.failure.failedLevel
         : null;
-  const proofTime = proofTimeFromFacts(facts.displacement, facts.failure, facts.reclaim, candles);
+  const proofTime = shelfApplies && shelfWatch.proofTime
+    ? shelfWatch.proofTime
+    : proofTimeFromFacts(facts.displacement, facts.failure, facts.reclaim, candles);
   const evidence = [
     facts.sweep ? `Raid confirmed at ${facts.sweep.sweptLevelLabel || 'mapped level'} ${facts.sweep.level ?? 'unknown'}.` : null,
     facts.failure ? `Failed continuation beyond ${facts.failure.levelLabel || 'mapped level'} ${facts.failure.failedLevel ?? 'unknown'}.` : null,
@@ -167,13 +208,16 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Ra
     facts.displacement ? `Directional displacement confirmed at ${facts.displacement.timestamp || 'unknown time'}.` : null,
     facts.displacement?.leavesImbalance ? 'Displacement left imbalance context.' : null,
     facts.displacement?.breaksStructure ? 'Displacement broke structure.' : null,
+    shelfApplies ? `Protected shelf failure watch: ${shelfWatch.shelfTimeframe} ${shelfWatch.shelfKind} near ${shelfWatch.shelfPrice}.` : null,
+    shelfApplies ? `Protected shelf state: ${shelfWatch.state}.` : null,
+    shelfApplies && shelfWatch.noChaseReason ? shelfWatch.noChaseReason : null,
     proofTime ? `Completed 5M proof time: ${proofTime}.` : null,
     model ? `Model contract: ${model.displayName}.` : null,
   ].filter((line): line is string => Boolean(line));
   const missingEvidence = [
-    facts.sweep ? null : 'Missing raid/sweep fact.',
-    facts.failure ? null : 'Missing failed-continuation fact after raid.',
-    facts.displacement ? null : 'Missing confirmed directional displacement after failure.',
+    facts.sweep || shelfApplies ? null : 'Missing raid/sweep fact.',
+    facts.failure || shelfApplies ? null : 'Missing failed-continuation fact after raid.',
+    facts.displacement || shelfApplies ? null : 'Missing confirmed directional displacement after failure.',
     entry !== null ? null : 'Missing deterministic entry reference.',
     stop !== null ? null : 'Missing protected 5M stop.',
     targets.target1 !== null && targets.target2 !== null ? null : 'Missing valid target math from entry/stop.',
@@ -191,6 +235,7 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Ra
     proofTime,
     raidLevel,
     raidLevelLabel: facts.sweep?.sweptLevelLabel || facts.reclaim?.levelLabel || facts.failure?.levelLabel || null,
+    protectedShelfState: shelfApplies ? shelfWatch.state : null,
     displacementTime: facts.displacement?.timestamp || null,
     displacementQuality: facts.displacement?.quality || null,
     htfContext: htfContextForDirection(context, direction),

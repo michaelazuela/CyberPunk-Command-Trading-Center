@@ -67,8 +67,16 @@ assert.equal(report.summary.eventsDataLimited, 0);
 assert.equal(Object.keys(report.events).length, 2);
 assert.ok(report.events['2026-06-10T12:00:00']);
 assert.ok(report.events['2026-06-10T12:05:00']);
-assert.equal(report.events['2026-06-10T12:05:00'].setupCandidateStatus.statuses.length, 0);
-assert.equal(report.events['2026-06-10T12:05:00'].scannerSummary.candidateCount, 0);
+assert.equal(report.events['2026-06-10T12:05:00'].setupCandidateStatus.statuses.length, 1);
+assert.equal(report.events['2026-06-10T12:05:00'].setupCandidateStatus.statuses[0].setupType, 'RaidFailureDisplacementReversal');
+assert.equal(report.events['2026-06-10T12:05:00'].setupCandidateStatus.statuses[0].detectedStatus, 'Possible');
+assert.equal(report.events['2026-06-10T12:05:00'].setupCandidateStatus.statuses[0].executionStatus, 'Conditional');
+assert.equal(report.events['2026-06-10T12:05:00'].setupCandidateStatus.statuses[0].blockReason, 'EntryTriggerPending');
+assert.equal(report.events['2026-06-10T12:05:00'].setupCandidateStatus.statuses[0].entry, null);
+assert.equal(report.events['2026-06-10T12:05:00'].setupCandidateStatus.statuses[0].stop, null);
+assert.equal(report.events['2026-06-10T12:05:00'].scannerSummary.candidateCount, 1);
+assert.equal(report.events['2026-06-10T12:05:00'].scannerSummary.executableCount, 0);
+assert.equal(report.events['2026-06-10T12:05:00'].scannerSummary.bestConditionalSetupType, 'RaidFailureDisplacementReversal');
 assert.match(report.reportMarkdown, /Research-only local scanner artifact generation/);
 assert.match(report.reportMarkdown, /No Discord posts, Supabase reads\/writes, live bridge reads/);
 

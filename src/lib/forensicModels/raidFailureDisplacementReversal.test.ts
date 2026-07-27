@@ -273,4 +273,76 @@ const scannerResult = scanSetupCandidates({ sessionType: 'morning', chartContext
 }) });
 assert.equal(scannerResult.bestConditionalCandidate?.setupType, 'RaidFailureDisplacementReversal');
 
+function mtfWithFifteenMinute(
+  fiveMinuteCandles: ChartCandleFact[],
+  fifteenMinuteCandles: ChartCandleFact[],
+  alignedDirection: 'LONG' | 'SHORT' | 'NEUTRAL' | 'CONFLICTED' | 'UNKNOWN',
+): MultiTimeframeContext {
+  const fiveMinute = factSet(fiveMinuteCandles);
+  const fifteenMinute = { ...factSet(fifteenMinuteCandles), timeframe: '15m' as const, role: 'liquidity_map' as const };
+  return {
+    source: 'ninjatrader_bridge',
+    authority: 'ohlc_facts_only',
+    fourHour: { ...fifteenMinute, timeframe: '4h', role: 'macro_context' },
+    twoHour: { ...fifteenMinute, timeframe: '2h', role: 'session_structure' },
+    oneHour: { ...fifteenMinute, timeframe: '1h', role: 'session_structure' },
+    fifteenMinute,
+    fiveMinute,
+    alignment: {
+      macroBias: 'NEUTRAL',
+      sessionBias: 'NEUTRAL',
+      liquidityBias: 'NEUTRAL',
+      executionBias: 'NEUTRAL',
+      alignedDirection,
+      conflicts: [],
+      notes: [],
+    },
+    targetMap: { levelsToWatch: [] },
+    rules: {
+      higherTimeframesApproveTrades: false,
+      fiveMinuteExecutionRequired: true,
+      aiMayOverwriteOhlcFacts: false,
+    },
+    notes: [],
+  };
+}
+
+const fridayFiveMinute = [
+  candle(1, '2026-06-26T09:35:00', 7381, 7388.25, 7360, 7370.25),
+  candle(2, '2026-06-26T09:40:00', 7370.25, 7383.25, 7367.25, 7372.75),
+  candle(3, '2026-06-26T09:45:00', 7373, 7386.5, 7368.75, 7384.25),
+  candle(4, '2026-06-26T09:50:00', 7384.25, 7390.25, 7371.25, 7379),
+  candle(5, '2026-06-26T09:55:00', 7378.75, 7389, 7377, 7385.75),
+  candle(6, '2026-06-26T10:00:00', 7386, 7405.5, 7384, 7403.5),
+];
+const fridayFifteenMinute = [
+  candle(1, '2026-06-26T08:45:00', 7394.5, 7397, 7383.5, 7384),
+  candle(2, '2026-06-26T09:00:00', 7383.75, 7386.75, 7380, 7383.75),
+  candle(3, '2026-06-26T09:15:00', 7384.25, 7385, 7373.25, 7376.75),
+  candle(4, '2026-06-26T09:30:00', 7376.75, 7382.75, 7364.5, 7380.75),
+  candle(5, '2026-06-26T09:45:00', 7381, 7388.25, 7360, 7384.25),
+  candle(6, '2026-06-26T10:00:00', 7384.25, 7405.5, 7371.25, 7403.5),
+];
+
+const protectedShelfFallback = detectRaidFailureDisplacementReversal(context({
+  tradeDate: '2026-06-26',
+  chartTimestamp: '2026-06-26T10:00:00',
+  candles: fridayFiveMinute,
+  keyLevels: {
+    currentPrice: 7403.5,
+    activeSwingLow: 7360,
+    activeSwingHigh: 7405.5,
+  },
+  multiTimeframeContext: mtfWithFifteenMinute(fridayFiveMinute, fridayFifteenMinute, 'LONG'),
+}));
+assert.equal(protectedShelfFallback.detected, true);
+assert.equal(protectedShelfFallback.direction, 'LONG');
+assert.equal(protectedShelfFallback.entry, 7383);
+assert.equal(protectedShelfFallback.stop, 7368.5);
+assert.equal(protectedShelfFallback.target1, 7404.75);
+assert.equal(protectedShelfFallback.target2, 7412);
+assert.equal(protectedShelfFallback.proofTime, '2026-06-26T09:45:00');
+assert.equal(protectedShelfFallback.protectedShelfState, 'proof_completed');
+assert.ok(protectedShelfFallback.evidence.some((line) => /protected shelf state: proof_completed/i.test(line)));
+
 console.log('raid failure displacement reversal detector contract verified');
