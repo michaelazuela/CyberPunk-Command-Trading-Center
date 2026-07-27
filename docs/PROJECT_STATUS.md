@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-27
+Task: Gate scanner Discord refresh noise to one scanner-owned session card unless the public trade action materially changes.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The July 27 Discord audit found repeated scanner-owned `desk_play` POST_REVIEW cards where only the completed 5M candle/timestamp changed, plus legacy `trade_alert` posts competing after a scanner-owned desk card already existed for the same session.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. Focused scanner alert coverage verifies that same-side candle-only Desk Play refreshes are held local while material entry changes remain eligible, and that legacy `trade_alert` is held after a scanner-owned Desk Play exists for the session.
+Trading logic changed: No. This changes Discord publish policy only. It does not change setup detection, model rules, canExecute, entry, stop, targets, risk, bridge data, Supabase schema, or automated execution.
+Bridge impact: None.
+Discord impact: Same-session same-side Desk Play refreshes are held local unless direction, model/scenario, entry, stop, T1/T2, approval/readiness, trigger, invalidation, or key public levels materially change. Legacy `trade_alert` is held local once scanner-owned Desk Play already owns that session/instrument on Discord.
+Journal/RAG impact: Legacy alert RAG pending saves are skipped when the legacy alert is held by the scanner-owned Desk Play guard.
+Supabase impact: None.
+Known risks: Active runtime must be restarted/deployed separately before this policy affects the running scanner.
+Next recommended action: Commit/push this Discord publish-policy cleanup, then perform a controlled scanner restart/readback when approved.
+
+Date: 2026-07-27
 Task: Remove the legacy fixed-risk blocker surface from code, tests, and docs.
 Files changed: src/types.ts, src/config/tradeRules.ts, src/components/FinalTradePlanCard.tsx, src/agents/conditionalCandidateRiskAgent.ts, src/agents/scannerPlanSelectionAgent.ts, src/agents/researchExtractorAgent.ts, src/agents/researchHumanReviewCaptureAgent.ts, src/lib/scenarioSelection.ts, src/lib/tradeDecisionPipeline.ts, src/lib/localScannerEngine.ts, src/lib/gemini.ts, src/lib/multiTimeframeCampaignEvidence.ts, tests/research tools, docs.
 Reason: The approved live rule is nearest protected completed 5M structure stop plus actual entry-to-stop risk. The old fixed-risk blocker vocabulary was still present in compatibility types, tests, docs, and research parsers.

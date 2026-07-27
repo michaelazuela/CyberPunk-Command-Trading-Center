@@ -283,6 +283,8 @@ export interface ScannerDeskPlanRefreshLedgerRecord {
   instrument: Instrument;
   session: string;
   activeCampaignId: string | null;
+  setupType?: string | null;
+  scenarioLabel?: string | null;
   direction: string;
   latestCompleted5m: string | null;
   lineInSand: number | null;
@@ -5922,6 +5924,8 @@ function scannerDeskPlanRefreshRecord(args: {
     instrument: args.instrument,
     session: args.session,
     activeCampaignId,
+    setupType: primaryLifecycle?.setupType ?? null,
+    scenarioLabel: primaryLifecycle?.scenarioLabel ?? null,
     direction: play.direction,
     latestCompleted5m: args.latestCompleted5m || null,
     lineInSand: play.lineInSand,
@@ -6563,6 +6567,8 @@ function scannerDeskPlanRefreshHasCompletePricedPlan(record: ScannerDeskPlanRefr
 function scannerDeskPlayPublicActionFingerprint(record: ScannerDeskPlanRefreshLedgerRecord): string {
   return [
     record.activeCampaignId || 'no-campaign',
+    record.setupType || 'no-setup',
+    normalizeDeskPlayInstructionText(record.scenarioLabel) || 'no-scenario',
     record.direction,
     `line=${deskPlanRefreshPrice(record.lineInSand)}`,
     `tactical=${deskPlanRefreshPrice(record.activeTacticalLine)}`,
@@ -6574,6 +6580,50 @@ function scannerDeskPlayPublicActionFingerprint(record: ScannerDeskPlanRefreshLe
     `reaction=${deskPlanRefreshPrice(record.targetReactionLevel)}`,
     `readiness=${normalizeDeskPlayInstructionText(record.readiness) || 'none'}`,
   ].join('|');
+}
+
+function scannerDeskPlanRefreshIsNoCampaign(record: ScannerDeskPlanRefreshLedgerRecord): boolean {
+  return !record.activeCampaignId || record.activeCampaignId === 'no-campaign';
+}
+
+function scannerDeskPlanRefreshMaterialChangeReason(
+  previous: ScannerDeskPlanRefreshLedgerRecord,
+  current: ScannerDeskPlanRefreshLedgerRecord,
+): string | null {
+  if (previous.direction !== current.direction) return 'direction changed';
+  if ((previous.setupType || null) !== (current.setupType || null)) return 'model changed';
+  if (normalizeDeskPlayInstructionText(previous.scenarioLabel) !== normalizeDeskPlayInstructionText(current.scenarioLabel)) return 'model scenario changed';
+  if (!priceMateriallyEqual(previous.entry, current.entry)) return 'entry changed';
+  if (!priceMateriallyEqual(previous.stop, current.stop)) return 'stop changed';
+  if (!priceMateriallyEqual(previous.target1, current.target1)) return 'T1 changed';
+  if (!priceMateriallyEqual(previous.target2, current.target2)) return 'T2 changed';
+  if (normalizeDeskPlayInstructionText(previous.readiness) !== normalizeDeskPlayInstructionText(current.readiness)) return 'approval/readiness state changed';
+  if (!priceMateriallyEqual(previous.lineInSand, current.lineInSand)) return 'line in the sand changed';
+  if (!priceMateriallyEqual(previous.activeTacticalLine, current.activeTacticalLine)) return 'active tactical line changed';
+  if (!priceMateriallyEqual(previous.activeTacticalZoneLow ?? null, current.activeTacticalZoneLow ?? null)) return 'active tactical zone changed';
+  if (!priceMateriallyEqual(previous.activeTacticalZoneHigh ?? null, current.activeTacticalZoneHigh ?? null)) return 'active tactical zone changed';
+  if (normalizeDeskPlayInstructionText(previous.nextTrigger) !== normalizeDeskPlayInstructionText(current.nextTrigger)) return 'trigger instruction changed';
+  if (normalizeDeskPlayInstructionText(previous.invalidation) !== normalizeDeskPlayInstructionText(current.invalidation)) return 'invalidation changed';
+  if (normalizeDeskPlayInstructionText(previous.standDown) !== normalizeDeskPlayInstructionText(current.standDown)) return 'stand-down instruction changed';
+  return null;
+}
+
+export function scannerDeskPlanSameSideRefreshHoldReason(args: {
+  previous: ScannerDeskPlanRefreshLedgerRecord | null;
+  current: ScannerDeskPlanRefreshLedgerRecord;
+  now?: Date;
+}): string | null {
+  const previous = args.previous;
+  if (!previous) return null;
+  if (previous.direction !== args.current.direction) return null;
+  const materialChange = scannerDeskPlanRefreshMaterialChangeReason(previous, args.current);
+  if (materialChange) return null;
+  const elapsedMinutes = minutesBetweenIso(previous.sentAt, args.now || new Date());
+  const elapsed = elapsedMinutes === null ? 'unknown' : `${elapsedMinutes.toFixed(1)} minutes`;
+  const campaignText = scannerDeskPlanRefreshIsNoCampaign(previous) && scannerDeskPlanRefreshIsNoCampaign(args.current)
+    ? 'no-campaign POST_REVIEW'
+    : 'scanner-owned';
+  return `Desk Play kept local: latest ${campaignText} ${args.current.direction} card for this session already published the same model, entry, stop, targets, approval/readiness state, trigger, and invalidation. Only the candle timestamp/session refresh changed (${elapsed} since prior post).`;
 }
 
 function scannerDeskPlayPublicCadenceHoldReason(args: {
@@ -6642,6 +6692,23 @@ function latestDeskPlanRefreshRecord(args: {
       record.tradeDate === args.tradeDate &&
       record.instrument === args.instrument &&
       record.session === args.session
+    )
+    .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())[0] || null;
+}
+
+function latestSameSideDeskPlanRefreshRecord(args: {
+  sent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+  direction: string;
+}): ScannerDeskPlanRefreshLedgerRecord | null {
+  return Object.values(args.sent)
+    .filter((record) =>
+      record.tradeDate === args.tradeDate &&
+      record.instrument === args.instrument &&
+      record.session === args.session &&
+      record.direction === args.direction
     )
     .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())[0] || null;
 }
@@ -7123,11 +7190,30 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     instrument: args.instrument,
     session: args.session,
   });
+  const previousSameSideRecord = latestSameSideDeskPlanRefreshRecord({
+    sent: args.deskPlanRefreshSent,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+    direction: currentRecord.direction,
+  });
   if (previousRecord && scannerDeskPlanRefreshMateriallyMatches(previousRecord, currentRecord)) {
     return scannerDeskPlaySuppressionBlocked(
       'duplicate_refresh',
       'Desk Play suppressed because primary side, readiness, HTF context/conflict, action state, and protected-structure map are unchanged from the latest posted Desk Play.',
       previousRecord.materialCadenceFingerprint || previousRecord.fingerprint,
+    );
+  }
+  const sameSideHoldReason = scannerDeskPlanSameSideRefreshHoldReason({
+    previous: previousSameSideRecord,
+    current: currentRecord,
+    now: args.now || new Date(),
+  });
+  if (sameSideHoldReason) {
+    return scannerDeskPlaySuppressionBlocked(
+      'duplicate_refresh',
+      sameSideHoldReason,
+      previousSameSideRecord?.materialCadenceFingerprint || previousSameSideRecord?.fingerprint || null,
     );
   }
   const publicCadenceHoldReason = scannerDeskPlayPublicCadenceHoldReason({
@@ -9666,6 +9752,36 @@ export function applyScannerCompletedFiveMinuteZoneFailureSuppression(args: {
   return args.alertDecision;
 }
 
+export function applyScannerTradeAlertSuppressionAfterDeskPlay(args: {
+  alertDecision: ScannerAlertDecision;
+  deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession | string;
+  planVersionId: string;
+}): ScannerAlertDecision {
+  if (!args.alertDecision.shouldSend) return args.alertDecision;
+  const priorDeskPlan = latestDeskPlanRefreshRecord({
+    sent: args.deskPlanRefreshSent,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+  });
+  if (!priorDeskPlan) return args.alertDecision;
+  return {
+    shouldSend: false,
+    reason: [
+      args.alertDecision.reason,
+      'legacy_trade_alert_suppressed_after_scanner_owned_desk_play',
+      `priorDeskPlanDirection=${priorDeskPlan.direction}`,
+      `priorDeskPlanModel=${priorDeskPlan.setupType || 'no-setup'}`,
+      `priorDeskPlanSentAt=${priorDeskPlan.sentAt}`,
+      `currentPlanVersionId=${args.planVersionId}`,
+      'Scanner-owned Desk Play already owns this session/instrument on Discord; legacy trade_alert is held local so it cannot compete with the desk card.',
+    ].join(' | '),
+  };
+}
+
 export function shouldSuppressScannerDataQualityNoticeForReason(args: {
   session: LiveSession | 'market_mapping';
   reason: string;
@@ -11648,6 +11764,23 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       error: previousDelivery.error || 'Discord delivery failed earlier; setup is now stale, so no retry will be attempted.',
     };
     console.warn(`[scanner-delivery] Failed alert delivery is now stale; no retry will be attempted: ${alertKey}`);
+  }
+
+  const scannerOwnedDeskPlayGuardedAlertDecision = applyScannerTradeAlertSuppressionAfterDeskPlay({
+    alertDecision,
+    deskPlanRefreshSent: state.deskPlanRefreshSent,
+    tradeDate,
+    instrument: config.instrument,
+    session: window.session,
+    planVersionId,
+  });
+  if (scannerOwnedDeskPlayGuardedAlertDecision.shouldSend !== alertDecision.shouldSend || scannerOwnedDeskPlayGuardedAlertDecision.reason !== alertDecision.reason) {
+    alertDecision = scannerOwnedDeskPlayGuardedAlertDecision;
+    console.log(scannerSuppressionSummaryLine({
+      label: 'Legacy trade alert',
+      category: 'duplicate_refresh',
+      reason: alertDecision.reason,
+    }));
   }
 
   if (alertDecision.shouldSend) {

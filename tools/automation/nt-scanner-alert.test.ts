@@ -14,15 +14,18 @@ import {
   fiveModelProductionScannerSummaryLine,
   readFiveModelProductionScannerSurface,
   writeFiveModelProductionScannerReadback,
+  applyScannerTradeAlertSuppressionAfterDeskPlay,
   normalizeScannerBarTimestampMode,
   normalizeScannerOperatorDeliveryReason,
   readUnifiedDeskOutputProductionScannerSurface,
+  scannerDeskPlanSameSideRefreshHoldReason,
   scannerDiscordDryRunSummaryLine,
   scannerMarketBarsUpsertSkipAuditLine,
   scannerSuppressionSummaryLine,
   shouldLogBridgeInstrumentResolution,
   unifiedDeskOutputProductionScannerSummaryLine,
   writeUnifiedDeskOutputProductionScannerReadback,
+  type ScannerDeskPlanRefreshLedgerRecord,
 } from './nt-scanner';
 
 const outputDir = path.join(os.tmpdir(), `nt-scanner-alert-blank-${Date.now()}`);
@@ -271,6 +274,74 @@ try {
   });
   assert.match(suppressionSummary, /Desk Play refresh suppressed/);
   assert.ok(suppressionSummary.length < 320);
+
+  const priorDeskPlan: ScannerDeskPlanRefreshLedgerRecord = {
+    fingerprint: '2026-07-27:MES:lunch:DESK_PLAN_REFRESH:14:20:no-campaign:SHORT',
+    tradeDate: '2026-07-27',
+    instrument: 'MES',
+    session: 'lunch',
+    activeCampaignId: null,
+    setupType: SetupType.StructureShiftContinuation,
+    scenarioLabel: 'Structure shift continuation',
+    direction: 'SHORT',
+    latestCompleted5m: '2026-07-27T18:20:00.000Z',
+    lineInSand: 7458,
+    activeTacticalLine: 7458,
+    activeTacticalZoneLow: 7454,
+    activeTacticalZoneHigh: 7458,
+    activeTacticalZoneState: 'waiting_for_retest',
+    longLine: 7462,
+    shortLine: 7458,
+    entry: 7457.5,
+    stop: 7464.5,
+    target1: 7447,
+    target2: 7443.5,
+    targetReactionLevel: 7447,
+    nextTrigger: 'completed 5M rejection below 7458',
+    invalidation: 'completed 5M acceptance above 7464.50',
+    standDown: 'stand down if protected 5M short structure fails',
+    readiness: 'human_review_ready',
+    tacticalCampaignFingerprint: null,
+    mainPlayFingerprint: 'prior-main-play',
+    materialCadenceFingerprint: 'prior-material-play',
+    sentAt: '2026-07-27T18:25:00.000Z',
+  };
+  const candleOnlyRefresh: ScannerDeskPlanRefreshLedgerRecord = {
+    ...priorDeskPlan,
+    fingerprint: '2026-07-27:MES:lunch:DESK_PLAN_REFRESH:14:25:no-campaign:SHORT',
+    latestCompleted5m: '2026-07-27T18:25:00.000Z',
+    sentAt: '2026-07-27T18:30:00.000Z',
+  };
+  assert.match(scannerDeskPlanSameSideRefreshHoldReason({
+    previous: priorDeskPlan,
+    current: candleOnlyRefresh,
+    now: new Date('2026-07-27T18:30:00.000Z'),
+  }), /Only the candle timestamp\/session refresh changed/);
+  assert.equal(scannerDeskPlanSameSideRefreshHoldReason({
+    previous: priorDeskPlan,
+    current: { ...candleOnlyRefresh, entry: 7455.25 },
+    now: new Date('2026-07-27T18:30:00.000Z'),
+  }), null);
+
+  const legacyAlertSuppressed = applyScannerTradeAlertSuppressionAfterDeskPlay({
+    alertDecision: { shouldSend: true, reason: 'fixture trade alert would send' },
+    deskPlanRefreshSent: { prior: priorDeskPlan },
+    tradeDate: '2026-07-27',
+    instrument: 'MES',
+    session: 'lunch',
+    planVersionId: 'fixture-plan-version',
+  });
+  assert.equal(legacyAlertSuppressed.shouldSend, false);
+  assert.match(legacyAlertSuppressed.reason, /legacy_trade_alert_suppressed_after_scanner_owned_desk_play/);
+  const legacyAlertAllowedWithoutDeskPlan = applyScannerTradeAlertSuppressionAfterDeskPlay({
+    alertDecision: { shouldSend: true, reason: 'fixture trade alert would send' },
+    deskPlanRefreshSent: {},
+    tradeDate: '2026-07-27',
+    instrument: 'MES',
+    session: 'lunch',
+    planVersionId: 'fixture-plan-version',
+  });
+  assert.equal(legacyAlertAllowedWithoutDeskPlan.shouldSend, true);
 
   assert.equal(shouldLogBridgeInstrumentResolution({
     instrument: 'MES 09-26',
