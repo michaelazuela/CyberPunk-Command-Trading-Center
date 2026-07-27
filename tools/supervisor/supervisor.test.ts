@@ -646,6 +646,7 @@ assert.equal(preloadResult.ok, true);
 assert.equal(preloadResult.attempted, true);
 assert.equal(preloadResult.attempts, 2);
 assert.equal(preloadResult.assurance.ok, true);
+assert.equal(preloadResult.assurance.contextPolicy, 'shared_rolling_30_day_window_ignore_outside_window_no_delete');
 assert.deepEqual(preloadResult.assurance.missingTimeframes, []);
 assert.deepEqual(preloadResult.assurance.noBarsTimeframes, []);
 assert.deepEqual(preloadResult.assurance.operatorActions, []);

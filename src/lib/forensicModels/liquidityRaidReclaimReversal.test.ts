@@ -134,7 +134,7 @@ assert.equal(longDetected.target2, 7444.5);
 assert.equal(longDetected.htfContext, 'support');
 assert.equal(longDetected.installsScannerCandidate, true);
 assert.equal(longDetected.installsPromotion, true);
-assert.equal(longDetected.installsDiscordPublishing, false);
+assert.equal(longDetected.installsDiscordPublishing, true);
 assert.equal(longDetected.installsExecutionApproval, false);
 
 const shortDetected = detectLiquidityRaidReclaimReversal(context({

@@ -7,6 +7,8 @@ import { buildWindowsSafeSpawnCommand } from './preWindowBackfill';
 
 const REQUIRED_HTF_PRELOAD_TIMEFRAMES = ['5m', '15m', '60m', '120m', '240m'] as const;
 type RequiredHtfPreloadTimeframe = typeof REQUIRED_HTF_PRELOAD_TIMEFRAMES[number];
+export const HTF_PRELOAD_LOOKBACK_DAYS = 30;
+export const HTF_PRELOAD_CONTEXT_POLICY = 'shared_rolling_30_day_window_ignore_outside_window_no_delete' as const;
 
 export interface HtfPreloadResult {
   enabled: boolean;
@@ -29,6 +31,7 @@ export interface HtfPreloadAssurance {
   ok: boolean;
   reason: string;
   operatorActions: string[];
+  contextPolicy: typeof HTF_PRELOAD_CONTEXT_POLICY;
 }
 
 export type HtfPreloadRunner = (
@@ -69,7 +72,7 @@ export function buildHtfPreloadCommand(config: SupervisorConfig): { command: str
       '--bridge-url',
       bridgeUrl,
       '--days',
-      String(config.htfPreload.days),
+      String(HTF_PRELOAD_LOOKBACK_DAYS),
       '--delay-ms',
       String(config.htfPreload.delayMs),
     ],
@@ -98,7 +101,7 @@ function buildOperatorActions(input: {
   const affected = uniqueTimeframes([...input.missingTimeframes, ...input.noBarsTimeframes]);
   return [
     'Confirm NinjaTrader is connected to the live/historical data provider and the active futures contract is selected.',
-    `Load or refresh at least 30 calendar days of ${affected.length ? affected.join(', ') : '5m, 15m, 60m, 120m, and 240m'} history for the active bridge contract in NinjaTrader.`,
+    `Load or refresh at least ${HTF_PRELOAD_LOOKBACK_DAYS} calendar days of ${affected.length ? affected.join(', ') : '5m, 15m, 60m, 120m, and 240m'} history for the active bridge contract in NinjaTrader.`,
     'Run the supervisor HTF preload/backfill again, or restart Quant Desk Supervisor so it reruns the startup preload.',
     'If the provider still returns no bars, treat HTF structure as data-limited and do not promote HTF/MSS candidates until real bars are available.',
   ];
@@ -155,6 +158,7 @@ export function parseHtfPreloadAssurance(stdoutText: string, stderrText = ''): H
     ok,
     reason,
     operatorActions,
+    contextPolicy: HTF_PRELOAD_CONTEXT_POLICY,
   };
 }
 
@@ -192,6 +196,7 @@ export function runHtfPreloadStartup(
     ok: true,
     reason: 'HTF preload assurance not run because startup preload is disabled.',
     operatorActions: [],
+    contextPolicy: HTF_PRELOAD_CONTEXT_POLICY,
   };
   if (!config.htfPreload.enabled) {
     return {
@@ -209,7 +214,7 @@ export function runHtfPreloadStartup(
 
   fs.mkdirSync(config.logsDir, { recursive: true });
   logger.log('info', 'HTF preload startup backfill requested.', {
-    days: config.htfPreload.days,
+    days: HTF_PRELOAD_LOOKBACK_DAYS,
     delayMs: config.htfPreload.delayMs,
     timeoutMs: config.htfPreload.timeoutMs,
     maxAttempts: config.htfPreload.maxAttempts,

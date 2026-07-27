@@ -154,7 +154,7 @@ assert.equal(longDetected.htfContext, 'support');
 assert.equal(longDetected.displacementQuality, 'high_quality');
 assert.equal(longDetected.installsScannerCandidate, true);
 assert.equal(longDetected.installsPromotion, true);
-assert.equal(longDetected.installsDiscordPublishing, false);
+assert.equal(longDetected.installsDiscordPublishing, true);
 assert.equal(longDetected.installsExecutionApproval, false);
 
 const shortDetected = detectRaidFailureDisplacementReversal(context({

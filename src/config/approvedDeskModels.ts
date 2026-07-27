@@ -24,7 +24,7 @@ export interface ApprovedDeskModelDefinition {
   sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md';
   installsScannerDetection: boolean;
   installsPromotion: boolean;
-  installsDiscordPublishing: false;
+  installsDiscordPublishing: boolean;
   installsExecutionApproval: false;
 }
 
@@ -50,7 +50,7 @@ export const APPROVED_DESK_MODEL_DEFINITIONS: readonly ApprovedDeskModelDefiniti
     sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
     installsScannerDetection: true,
     installsPromotion: true,
-    installsDiscordPublishing: false,
+    installsDiscordPublishing: true,
     installsExecutionApproval: false,
   },
   {
@@ -74,7 +74,7 @@ export const APPROVED_DESK_MODEL_DEFINITIONS: readonly ApprovedDeskModelDefiniti
     sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
     installsScannerDetection: true,
     installsPromotion: true,
-    installsDiscordPublishing: false,
+    installsDiscordPublishing: true,
     installsExecutionApproval: false,
   },
   {
@@ -98,7 +98,7 @@ export const APPROVED_DESK_MODEL_DEFINITIONS: readonly ApprovedDeskModelDefiniti
     sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
     installsScannerDetection: true,
     installsPromotion: true,
-    installsDiscordPublishing: false,
+    installsDiscordPublishing: true,
     installsExecutionApproval: false,
   },
   {
@@ -122,7 +122,7 @@ export const APPROVED_DESK_MODEL_DEFINITIONS: readonly ApprovedDeskModelDefiniti
     sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
     installsScannerDetection: true,
     installsPromotion: true,
-    installsDiscordPublishing: false,
+    installsDiscordPublishing: true,
     installsExecutionApproval: false,
   },
   {
@@ -146,7 +146,7 @@ export const APPROVED_DESK_MODEL_DEFINITIONS: readonly ApprovedDeskModelDefiniti
     sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
     installsScannerDetection: true,
     installsPromotion: true,
-    installsDiscordPublishing: false,
+    installsDiscordPublishing: true,
     installsExecutionApproval: false,
   },
 ] as const;

@@ -29,7 +29,7 @@ for (const id of expectedIds) {
   assert.equal(definition.sourceOfTruth, 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md');
   assert.equal(definition.installsScannerDetection, true);
   assert.equal(definition.installsPromotion, true);
-  assert.equal(definition.installsDiscordPublishing, false);
+  assert.equal(definition.installsDiscordPublishing, true);
   assert.equal(definition.installsExecutionApproval, false);
   assert.ok(definition.requiredEvidence.length >= 5, `${id} must carry concrete evidence requirements`);
 }

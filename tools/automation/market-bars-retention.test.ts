@@ -76,8 +76,23 @@ const applied = await runMarketBarsRetention({
   batchSize: 1,
 });
 assert.equal(applied.productionDeletionPerformed, true);
+assert.equal(applied.htfRetentionPolicy, 'ignore_outside_rolling_30_day_window_do_not_delete_htf_rows');
 assert.equal(applied.buckets[0].deletedRows, 1);
 assert.deepEqual(applyClient.rowsRef.rows.map((row) => row.id).sort(), ['jul1', 'jun2', 'other-tf-old', 'other-user-old']);
+
+const htfApplyClient = new Client(fixtureRows());
+const htfApplied = await runMarketBarsRetention({
+  client: htfApplyClient,
+  config: { userId: 'u1', supabaseUrl: 'https://example.supabase.co', serviceRoleKey: 'secret' },
+  apply: true,
+  scope: { timeframes: ['15m'] },
+  now: new Date('2026-07-01T16:00:00Z'),
+  batchSize: 1,
+});
+assert.equal(htfApplied.productionDeletionPerformed, false);
+assert.equal(htfApplied.buckets[0].selectedForDelete, 1);
+assert.equal(htfApplied.buckets[0].deletedRows, 0);
+assert.ok(htfApplyClient.rowsRef.rows.some((row) => row.id === 'other-tf-old'));
 
 const timeoutClient = new Client(fixtureRows(), true);
 const timeoutRun = await runMarketBarsRetention({

@@ -106,6 +106,64 @@ const publishDecision = buildDeskPublishDecision({
 assert.equal(publishDecision.shouldPost, false);
 assert.equal(publishDecision.discordAction, 'hold');
 
+const eveningApprovedCandidate = candidate({
+  setupType: SetupType.RaidFailureDisplacementReversal,
+  scenarioLabel: 'Raid Failure Displacement Reversal',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Detected,
+  confidence: 'High',
+  priority: 100,
+  entry: 7551.25,
+  stop: 7556.25,
+  target1: 7543.75,
+  target2: 7541.25,
+  riskPoints: 5,
+  invalidation: 'Invalid above protected 5M structure stop 7556.25.',
+  rankScore: 100,
+  decisionQualityScore: 95,
+  evidence: ['Completed evening 5M proof.'],
+  missingEvidence: [],
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: null,
+  requiredTrigger: 'Completed 5M close-through or retest after displacement confirms direction.',
+  nextAction: 'Approved model proof exists. Use as a conditional desk plan; existing execution, Discord, and risk gates still apply.',
+  humanReview: {
+    status: 'HumanReviewReady',
+    canExecute: false,
+    requiresTraderConfirmation: true,
+    discordTradePlanEligible: true,
+    reason: 'Five-model scanner detection installed; execution approval remains controlled by existing deterministic gates.',
+  },
+});
+const eveningVisibility = classifyScannerVisibility({
+  state: 'Conditional',
+  candidate: eveningApprovedCandidate,
+  window: eveningWindow,
+  alertDecision: { shouldSend: false, reason: 'Scanner-owned conditional desk plan.' },
+  canExecute: false,
+});
+const eveningLifecycle = buildCandidateLifecycleTrace({
+  candidates: [eveningApprovedCandidate],
+  selectedCandidate: eveningApprovedCandidate,
+  state: 'Conditional',
+  window: eveningWindow,
+  alertDecision: { shouldSend: false, reason: 'Scanner-owned conditional desk plan.' },
+  canExecute: false,
+});
+const eveningDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: eveningApprovedCandidate,
+  visibilityMetadata: eveningVisibility,
+  candidateLifecycleTrace: eveningLifecycle,
+  canExecute: false,
+});
+const eveningPublishDecision = buildDeskPublishDecision({ deskState: eveningDeskState });
+assert.equal(eveningPublishDecision.shouldPost, true);
+assert.equal(eveningPublishDecision.discordAction, 'post_review');
+assert.equal(eveningPublishDecision.canExecute, false);
+assert.equal(eveningPublishDecision.direction, 'SHORT');
+assert.equal(eveningPublishDecision.setupType, SetupType.RaidFailureDisplacementReversal);
+
 assert.equal(shouldSendScannerAlert({
   state: 'Blocked',
   candidate: blankCandidate,

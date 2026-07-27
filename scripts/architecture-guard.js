@@ -215,6 +215,12 @@ function checkScannerVisibilityMetadataBoundary() {
   const setupScannerContentForBlankSlate = readFileSafe(path.join(ROOT, 'src', 'lib', 'setupScanner.ts'));
   const conditionalPlanBuilderContentForBlankSlate = readFileSafe(path.join(ROOT, 'src', 'lib', 'conditionalPlanBuilder.ts'));
   const productionSurfaceContentForBlankSlate = readFileSafe(path.join(ROOT, 'src', 'lib', 'unifiedDeskOutputProductionScannerSurface.ts'));
+  const fiveModelProductionSurfaceContract =
+    productionSurfaceContentForBlankSlate.includes('SetupType.LiquidityRaidReclaimReversal') &&
+    productionSurfaceContentForBlankSlate.includes('SetupType.RaidFailureDisplacementReversal') &&
+    productionSurfaceContentForBlankSlate.includes('SetupType.DrivePullbackContinuation') &&
+    productionSurfaceContentForBlankSlate.includes('SetupType.StructureShiftContinuation') &&
+    productionSurfaceContentForBlankSlate.includes('SetupType.FailedBreakoutReversal');
   const blankSlateModelContract =
     setupRegistryContent.includes('export const SETUP_REGISTRY: SetupRegistryEntry[] = []') &&
     setupRegistryContent.includes('export const REGISTERED_SETUP_TYPES: SetupType[] = []') &&
@@ -222,7 +228,10 @@ function checkScannerVisibilityMetadataBoundary() {
     setupScannerContentForBlankSlate.includes('bestExecutableCandidate: null') &&
     setupScannerContentForBlankSlate.includes('bestConditionalCandidate: null') &&
     conditionalPlanBuilderContentForBlankSlate.includes('return []') &&
-    productionSurfaceContentForBlankSlate.includes('UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS = []');
+    (
+      productionSurfaceContentForBlankSlate.includes('UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS = []') ||
+      fiveModelProductionSurfaceContract
+    );
 
   if (blankSlateModelContract) {
     return;

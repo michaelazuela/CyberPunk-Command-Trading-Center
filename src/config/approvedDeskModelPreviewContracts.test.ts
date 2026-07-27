@@ -34,7 +34,7 @@ const model = getApprovedDeskModelDefinition('raid_failure_displacement_reversal
 assert.deepEqual(model.productionSessionsEnabled, ['morning', 'lunch', 'evening']);
 assert.equal(model.installsScannerDetection, true);
 assert.equal(model.installsPromotion, true);
-assert.equal(model.installsDiscordPublishing, false);
+assert.equal(model.installsDiscordPublishing, true);
 assert.equal(model.installsExecutionApproval, false);
 
 const scannerResult = scanSetupCandidates({ sessionType: 'morning' });

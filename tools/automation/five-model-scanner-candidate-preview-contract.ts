@@ -79,7 +79,7 @@ export function buildFiveModelScannerCandidatePreviewContract(args: Args) {
       productionSessionsEnabled: definition.productionSessionsEnabled,
       scannerCandidateEligible: definition.installsScannerDetection,
       promotionEligible: definition.installsPromotion,
-      discordEligible: false,
+      discordEligible: definition.installsDiscordPublishing,
       executionApprovalEligible: false,
       canExecuteEligible: false,
       candidatePreviewReason: role === 'primary_candidate_lane'
@@ -122,7 +122,7 @@ export function buildFiveModelScannerCandidatePreviewContract(args: Args) {
       notSelectedLanes: notSelectedLanes.length,
       scannerCandidateEligibleRows: lanes.filter((lane) => lane.scannerCandidateEligible).length,
       promotionEligibleRows: lanes.filter((lane) => lane.promotionEligible).length,
-      discordEligibleRows: 0,
+      discordEligibleRows: lanes.filter((lane) => lane.discordEligible).length,
       executionApprovalEligibleRows: 0,
       canExecuteEligibleRows: 0,
       leadingModelId,

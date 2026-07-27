@@ -52,9 +52,11 @@ assert.deepEqual(report.summary.contextOnlyModelIds, [
   'failed_breakout_reversal',
 ]);
 assert.equal(report.summary.scannerCandidateEligibleRows, 5);
+assert.equal(report.summary.discordEligibleRows, 5);
 assert.equal(report.summary.executionApprovalEligibleRows, 0);
 assert.equal(report.lanes.every((lane) => lane.productionSessionsEnabled.join(',') === 'morning,lunch,evening'), true);
 assert.equal(report.lanes.every((lane) => lane.scannerCandidateEligible === true), true);
+assert.equal(report.lanes.every((lane) => lane.discordEligible === true), true);
 assert.equal(report.lanes.every((lane) => lane.canExecuteEligible === false), true);
 assert.equal(report.recommendation, 'scanner_candidate_detection_installed_validate_completed_5m_proof_before_visibility');
 

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createMarketDataClient, loadMarketDataConfig, normalizeCandleTimeEt, type MarketBarTimeframe, type MarketDataConfig } from './market-data-store';
 
 export const MARKET_BAR_RETENTION_TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
+export const HTF_MARKET_BAR_RETENTION_PRESERVED_TIMEFRAMES: MarketBarTimeframe[] = ['15m', '60m', '120m', '240m'];
 
 export interface MarketBarsRetentionClient {
   from(table: string): any;
@@ -58,6 +59,7 @@ export interface MarketBarsRetentionRunReport {
   riskStatus: 'ready' | 'partial' | 'blocked';
   productionDeletionPerformed: boolean;
   boundary: 'market_bars_cache_only_no_trading_logic_changed';
+  htfRetentionPolicy: 'ignore_outside_rolling_30_day_window_do_not_delete_htf_rows';
 }
 
 export function computeRollingRetentionCutoffEt(now = new Date(), retentionDays = 30): string {
@@ -71,6 +73,10 @@ export function computeRollingRetentionCutoffEt(now = new Date(), retentionDays 
   const cutoffNoonUtc = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
   cutoffNoonUtc.setUTCDate(cutoffNoonUtc.getUTCDate() - Math.max(0, retentionDays - 1));
   return `${cutoffNoonUtc.toISOString().slice(0, 10)}T00:00:00`;
+}
+
+export function isHtfMarketBarRetentionPreserved(timeframe: MarketBarTimeframe): boolean {
+  return HTF_MARKET_BAR_RETENTION_PRESERVED_TIMEFRAMES.includes(timeframe);
 }
 
 function errorMessage(error: unknown): string | null {
@@ -272,7 +278,7 @@ export async function runMarketBarsRetention(args: {
     const bucketErrors = [total.error, older.error, oldest.error, newest.error].filter((item): item is string => Boolean(item));
     let deletedRows = 0;
     let batches = 0;
-    if (args.apply && !bucketErrors.length) {
+    if (args.apply && !bucketErrors.length && !isHtfMarketBarRetentionPreserved(timeframe)) {
       for (let index = 0; index < maxBatchesPerTimeframe; index += 1) {
         const selected = await selectDeleteIds({ client: args.client, config: args.config, scope, timeframe, cutoffEt, batchSize });
         if (selected.error) {
@@ -319,6 +325,7 @@ export async function runMarketBarsRetention(args: {
     riskStatus: errors.length ? 'partial' : 'ready',
     productionDeletionPerformed: Boolean(args.apply && buckets.some((bucket) => bucket.deletedRows > 0)),
     boundary: 'market_bars_cache_only_no_trading_logic_changed',
+    htfRetentionPolicy: 'ignore_outside_rolling_30_day_window_do_not_delete_htf_rows',
   };
 }
 

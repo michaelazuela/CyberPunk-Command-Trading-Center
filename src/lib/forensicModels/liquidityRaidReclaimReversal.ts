@@ -19,7 +19,7 @@ export interface LiquidityRaidReclaimReversalDetection {
   missingEvidence: string[];
   installsScannerCandidate: true;
   installsPromotion: true;
-  installsDiscordPublishing: false;
+  installsDiscordPublishing: boolean;
   installsExecutionApproval: false;
 }
 
@@ -163,7 +163,7 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Li
     missingEvidence,
     installsScannerCandidate: true,
     installsPromotion: true,
-    installsDiscordPublishing: false,
+    installsDiscordPublishing: Boolean(model?.installsDiscordPublishing),
     installsExecutionApproval: false,
   };
 }

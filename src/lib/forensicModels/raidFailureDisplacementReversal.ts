@@ -28,7 +28,7 @@ export interface RaidFailureDisplacementReversalDetection {
   missingEvidence: string[];
   installsScannerCandidate: true;
   installsPromotion: true;
-  installsDiscordPublishing: false;
+  installsDiscordPublishing: boolean;
   installsExecutionApproval: false;
 }
 
@@ -206,7 +206,7 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Ra
     missingEvidence,
     installsScannerCandidate: true,
     installsPromotion: true,
-    installsDiscordPublishing: false,
+    installsDiscordPublishing: Boolean(model?.installsDiscordPublishing),
     installsExecutionApproval: false,
   };
 }

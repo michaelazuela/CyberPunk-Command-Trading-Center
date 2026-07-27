@@ -19,7 +19,7 @@ export interface DrivePullbackContinuationDetection {
   missingEvidence: string[];
   installsScannerCandidate: true;
   installsPromotion: true;
-  installsDiscordPublishing: false;
+  installsDiscordPublishing: boolean;
   installsExecutionApproval: false;
 }
 
@@ -181,7 +181,7 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Dr
     missingEvidence,
     installsScannerCandidate: true,
     installsPromotion: true,
-    installsDiscordPublishing: false,
+    installsDiscordPublishing: Boolean(model?.installsDiscordPublishing),
     installsExecutionApproval: false,
   };
 }

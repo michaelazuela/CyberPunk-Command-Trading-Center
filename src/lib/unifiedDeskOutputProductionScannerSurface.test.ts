@@ -32,7 +32,7 @@ const checklist: UnifiedDeskOutputFinalProductionReadinessChecklistInput = {
     date: '2026-07-22',
     session: 'morning',
     state: 'APPROVED_DESK_PLAN',
-    model: 'NoInstalledSetup',
+    model: 'RaidFailureDisplacementReversal',
     direction: 'LONG',
     proofTime: '2026-07-22T09:10:00.0000000',
     entry: 7519.5,
@@ -45,7 +45,7 @@ const checklist: UnifiedDeskOutputFinalProductionReadinessChecklistInput = {
     date: '2026-07-22',
     session: 'lunch',
     state: 'APPROVED_DESK_PLAN',
-    model: 'NoInstalledSetup',
+    model: 'DrivePullbackContinuation',
     direction: 'LONG',
     proofTime: '2026-07-22T15:45:00.0000000',
     entry: 7540,
@@ -86,8 +86,8 @@ assert.equal(active.summary.supabaseWriteRows, 0);
 assert.equal(active.summary.liveBridgeReadRows, 0);
 assert.equal(active.summary.canExecuteTrueRows, 0);
 assert.equal(active.summary.tradingLogicChangedRows, 0);
-assert.equal(active.rows[0]?.headline, 'Approved Desk Plan | MORNING | LONG | NoInstalledSetup');
-assert.equal(active.rows[1]?.headline, 'Approved Desk Plan | LUNCH | LONG | NoInstalledSetup');
+assert.equal(active.rows[0]?.headline, 'Approved Desk Plan | MORNING | LONG | RaidFailureDisplacementReversal');
+assert.equal(active.rows[1]?.headline, 'Approved Desk Plan | LUNCH | LONG | DrivePullbackContinuation');
 assert.equal(active.rows.every((row) => row.publishDiscord === false), true);
 assert.equal(active.rows.every((row) => row.canExecute === false), true);
 assert.deepEqual(active.blockers, []);
@@ -124,7 +124,7 @@ const eveningActive = buildUnifiedDeskOutputProductionScannerSurfaceActivation({
       date: '2026-07-22',
       session: 'evening',
       state: 'APPROVED_DESK_PLAN',
-      model: 'NoInstalledSetup',
+      model: 'FailedBreakoutReversal',
       direction: 'SHORT',
       proofTime: '2026-07-22T20:15:00.0000000',
       entry: 7537,
@@ -140,7 +140,7 @@ assert.equal(eveningActive.status, 'active');
 assert.equal(eveningActive.summary.selectedRows, 3);
 assert.equal(eveningActive.summary.eveningRows, 1);
 assert.equal(eveningActive.summary.approvedDeskPlanRows, 3);
-assert.equal(eveningActive.rows[2]?.headline, 'Approved Desk Plan | EVENING | SHORT | NoInstalledSetup');
+assert.equal(eveningActive.rows[2]?.headline, 'Approved Desk Plan | EVENING | SHORT | FailedBreakoutReversal');
 
 const blocked = buildUnifiedDeskOutputProductionScannerSurfaceActivation({
   finalReadinessChecklistPath: 'final-readiness.json',
@@ -171,6 +171,6 @@ const blockedThirdModel = buildUnifiedDeskOutputProductionScannerSurfaceActivati
 
 assert.equal(blockedThirdModel.status, 'blocked');
 assert.equal(blockedThirdModel.rows.length, 0);
-assert.ok(blockedThirdModel.blockers.some((blocker) => blocker.includes('not approved for Unified Desk Output production visibility')));
+assert.ok(blockedThirdModel.blockers.some((blocker) => blocker.includes('not an approved five-model production desk plan')));
 
 console.log('Unified Desk Output production scanner surface activation verified.');
