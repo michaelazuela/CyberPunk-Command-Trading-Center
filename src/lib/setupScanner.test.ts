@@ -201,6 +201,74 @@ for (const sessionType of ['morning', 'lunch', 'evening'] as const) {
   assert.equal(scan.bestConditionalCandidate?.setupType, SetupType.RaidFailureDisplacementReversal);
 }
 
+const extendedStructuralRiskScan = scanSetupCandidates({
+  sessionType: 'morning',
+  chartContext: {
+    ...context('morning'),
+    keyLevels: {
+      currentPrice: 7509.25,
+      activeSwingLow: 7490,
+      activeSwingHigh: 7515.25,
+    },
+    liquiditySweeps: [{
+      type: 'sweep',
+      direction: 'SHORT',
+      level: 7514.5,
+      sweptLevelLabel: 'recent swing high',
+      reclaimed: true,
+      timestamp: '2026-07-27T09:15:00-04:00',
+      confidence: 'High',
+    }],
+    reclaimEvents: [{
+      direction: 'SHORT',
+      reclaimedLevel: 7514.5,
+      levelLabel: 'recent swing high',
+      timestamp: '2026-07-27T09:15:00-04:00',
+      confidence: 'High',
+    }],
+    failedBreakEvents: [{
+      direction: 'SHORT',
+      failedLevel: 7514.5,
+      levelLabel: 'recent swing high',
+      sweptExtreme: 7515.25,
+      timestamp: '2026-07-27T09:15:00-04:00',
+      confidence: 'High',
+    }],
+    displacementCandles: [{
+      direction: 'SHORT',
+      candleIndex: 2,
+      timestamp: '2026-07-27T09:20:00-04:00',
+      open: 7512.5,
+      high: 7514,
+      low: 7504.75,
+      close: 7505.5,
+      bodyPoints: 7,
+      rangePoints: 9.25,
+      bodyToRange: 0.76,
+      closeLocation: 'bottom_quarter',
+      displacementScore: 88,
+      quality: 'confirmed',
+      leavesImbalance: true,
+      breaksStructure: true,
+      confidence: 'High',
+    }],
+    multiTimeframeContext: mtf([
+      candle(1, '2026-07-27T09:15:00-04:00', 7512.25, 7515.25, 7511.5, 7512.25),
+      candle(2, '2026-07-27T09:20:00-04:00', 7512.5, 7514, 7504.75, 7505.5),
+    ]),
+  },
+});
+const extendedStructuralRiskCandidate = extendedStructuralRiskScan.bestConditionalCandidate;
+assert.equal(extendedStructuralRiskCandidate?.setupType, SetupType.RaidFailureDisplacementReversal);
+assert.equal(extendedStructuralRiskCandidate?.direction, 'SHORT');
+assert.equal(extendedStructuralRiskCandidate?.entry, 7505.5);
+assert.equal(extendedStructuralRiskCandidate?.stop, 7515.5);
+assert.equal(extendedStructuralRiskCandidate?.riskPoints, 10);
+assert.equal(extendedStructuralRiskCandidate?.riskPolicy, 'STRUCTURAL_RISK_ACKNOWLEDGED');
+assert.equal(extendedStructuralRiskCandidate?.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
+assert.equal(extendedStructuralRiskCandidate?.blockReason, null);
+assert.equal(extendedStructuralRiskCandidate?.missingEvidence.some((line) => /RiskTooWide|exceeds standard/i.test(line)), false);
+
 const formingFiveMinute = [
   candle(1, '2026-06-25T09:15:00', 7484.25, 7489, 7478.75, 7483.75),
   candle(2, '2026-06-25T09:20:00', 7483.75, 7486.75, 7480, 7482),

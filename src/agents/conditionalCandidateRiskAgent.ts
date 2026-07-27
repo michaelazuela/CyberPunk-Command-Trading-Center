@@ -176,7 +176,7 @@ export function scoreConditionalCandidateRisk(
   if (input.priceExtended) {
     score -= 15;
     reasons.push('Current price is extended or would require chasing the reclaim candle.');
-    advisoryNotes.push('Do not chase. Wait for a fresh completed 5M trigger/retest that brings risk inside limits.');
+    advisoryNotes.push('Do not chase. Wait for a fresh completed 5M trigger/retest against protected 5M structure.');
   }
 
   if (input.freshRetestCouldTightenRisk) {
@@ -185,7 +185,7 @@ export function scoreConditionalCandidateRisk(
 
   if (isRiskTooWide(candidate)) {
     score = Math.min(score, input.priceExtended ? 49 : 64);
-    advisoryNotes.push('Risk exceeds standard limit. Human final decision required; this advisory score does not approve risk.');
+    advisoryNotes.push('Extended structural risk. Use the nearest protected 5M structure stop; this advisory score does not approve execution.');
   }
 
   if (candidate.executionStatus !== ExecutionStatus.Executable) {

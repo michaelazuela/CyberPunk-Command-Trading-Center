@@ -227,17 +227,14 @@ function candidateFromDetection(
   const registryEntry = getAllowedSetupRegistry(chartContext.sessionType).find((entry) => entry.setupType === setupType);
   if (!registryEntry) return null;
 
-  const riskTooWide = detection.riskPoints > TRADE_RULES.maxRiskPoints;
-  const missingEvidence = [
-    ...detection.missingEvidence,
-    ...(riskTooWide ? [`Risk ${detection.riskPoints.toFixed(2)} exceeds standard ${TRADE_RULES.maxRiskPoints.toFixed(2)}.`] : []),
-  ];
+  const structuralRiskExtended = detection.riskPoints > TRADE_RULES.maxRiskPoints;
+  const missingEvidence = [...detection.missingEvidence];
 
   return applyCandidateGeometryValidation({
     setupType,
     scenarioLabel: registryEntry.label,
     direction: detection.direction,
-    detectedStatus: riskTooWide ? SetupCandidateStatus.Conditional : SetupCandidateStatus.Detected,
+    detectedStatus: SetupCandidateStatus.Detected,
     confidence: detection.htfContext === 'support' ? 'High' : detection.htfContext === 'conflict' ? 'Medium' : 'High',
     priority,
     entry: detection.entry,
@@ -245,8 +242,8 @@ function candidateFromDetection(
     target1,
     target2,
     riskPoints: detection.riskPoints,
-    riskAdvisoryStatus: riskTooWide ? 'RISK_ABOVE_STANDARD_LIMIT' : 'RISK_WITHIN_STANDARD_LIMIT',
-    riskPolicy: riskTooWide ? 'STRUCTURAL_RISK_ACKNOWLEDGED' : 'STANDARD_RISK',
+    riskAdvisoryStatus: structuralRiskExtended ? 'RISK_EXTENDED_STRUCTURAL' : 'RISK_WITHIN_STANDARD_LIMIT',
+    riskPolicy: structuralRiskExtended ? 'STRUCTURAL_RISK_ACKNOWLEDGED' : 'STANDARD_RISK',
     invalidation: detection.direction === 'LONG'
       ? `Invalid below protected 5M structure stop ${detection.stop}.`
       : `Invalid above protected 5M structure stop ${detection.stop}.`,
@@ -261,10 +258,10 @@ function candidateFromDetection(
     ],
     missingEvidence,
     executionStatus: ExecutionStatus.Conditional,
-    blockReason: riskTooWide ? NoTradeReason.RiskTooWide : null,
+    blockReason: null,
     requiredTrigger: registryEntry.defaultRequiredTrigger,
-    nextAction: riskTooWide
-      ? 'Review only: model proof exists, but risk is above the standard cap. Do not execute unless a tighter protected 5M plan forms.'
+    nextAction: structuralRiskExtended
+      ? `Approved model proof exists with extended structural risk (${detection.riskPoints.toFixed(2)} pts). Use the nearest protected 5M structure stop and size/stand down at trader discretion; no automated orders.`
       : 'Approved model proof exists. Use as a conditional desk plan; existing execution, Discord, and risk gates still apply.',
     reducedRiskPlan: null,
     humanReview: {

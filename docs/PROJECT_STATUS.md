@@ -2,6 +2,20 @@
 
 ## Latest Change
 
+Date: 2026-07-27
+Task: Stop suppressing five-model plans with the old fixed-risk `RiskTooWide` gate.
+Files changed: src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, docs/PROJECT_STATUS.md.
+Reason: The July 27 morning scanner detected a valid `RaidFailureDisplacementReversal` SHORT, but the selected candidate was held local as `NoTrade` because the older fixed-risk cap emitted `RiskTooWide` even though the approved rule is nearest protected completed 5M structure stop plus actual entry-to-stop risk.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsx src/lib/tradeDecisionPipeline.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsx src/agents/conditionalCandidateRiskAgent.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test.
+Result: Passed. A regression case matching the July 27 short shape now remains a selected five-model conditional candidate with entry 7505.50, nearest protected 5M stop 7515.50, actual risk 10.00 points, T1/T2 from actual risk, `riskPolicy=STRUCTURAL_RISK_ACKNOWLEDGED`, and no `RiskTooWide` block or missing-evidence wording. User-facing UI/Discord/advisory wording now says extended structural risk and nearest protected 5M structure stop instead of old fixed-cap language. Local supervisor runtime was restarted after the fix; scanner and candle recorder are running with fresh PIDs, bridge is reachable, scanner health is READY, and 30-day 5M/15M/60M/120M/240M context is sufficient.
+Trading logic changed: Yes. Five approved model candidates are no longer suppressed solely because actual protected-structure risk exceeds the old fixed 5-point standard. Stop selection, entry, T1/T2, invalidation, 5M proof, HTF map-only authority, canExecute=false, and no automated orders remain unchanged.
+Bridge impact: None.
+Discord impact: Candidate publish eligibility can now see the valid structural plan instead of receiving a local `NoTrade` from the old risk blocker. No Discord post was made by this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Historical/research code still contains the legacy `RiskTooWide` enum/string for old artifact compatibility. The live five-model candidate path and user-facing messaging no longer use it to bury valid structural plans.
+Next recommended action: Monitor the next fresh setup cycle for a valid five-model candidate with completed 5M proof; if it suppresses, inspect the non-risk blocker only.
+
 Date: 2026-07-26
 Task: Add protected 15M shelf failure watch and proof-completed routing for Raid Failure Displacement Reversal.
 Files changed: src/lib/protectedShelfWatch.ts, src/lib/protectedShelfWatch.test.ts, src/lib/forensicModels/raidFailureDisplacementReversal.ts, src/lib/forensicModels/raidFailureDisplacementReversal.test.ts, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, tools/automation/protected-shelf-watch-replay.ts, tools/automation/protected-shelf-watch-replay.test.ts, tools/automation/raw-ohlc-scanner-artifact-generator.test.ts, docs/PROJECT_STATUS.md.

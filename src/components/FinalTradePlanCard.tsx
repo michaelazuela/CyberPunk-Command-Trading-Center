@@ -108,7 +108,7 @@ function statusTone(candidate: SetupCandidate): string {
 
 function formatBlockReason(reason: NoTradeReason | null): string {
   if (!reason) return '';
-  if (reason === NoTradeReason.RiskTooWide) return 'RiskTooWide';
+  if (reason === NoTradeReason.RiskTooWide) return 'Extended structural risk';
   return String(reason).replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
@@ -124,7 +124,7 @@ function formatCandidateExecutionStatus(candidate: SetupCandidate, finalCanExecu
 
 function candidateReason(candidate: SetupCandidate): string {
   if (candidate.blockReason === NoTradeReason.RiskTooWide) {
-    return 'RiskTooWide - setup remains detected, but execution is blocked until risk is reduced.';
+    return 'Extended structural risk - use the nearest protected 5M structure stop; size or stand down at trader discretion.';
   }
   if (candidate.blockReason) return formatBlockReason(candidate.blockReason);
   if (candidate.executionStatus === ExecutionStatus.Conditional && candidate.requiredTrigger) return candidate.requiredTrigger;
@@ -548,7 +548,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
               <div><span className="text-[var(--txt)]">Next Action:</span> {candidate.nextAction || candidate.reducedRiskPlan?.reasoning || 'No action required.'}</div>
               {candidate.blockReason === NoTradeReason.RiskTooWide && (
                 <div className="mt-1 text-[var(--orange)]">
-                  RiskTooWide blocks execution only. It does not erase this setup candidate.
+                  Extended structural risk uses the protected 5M stop. It does not erase this setup candidate.
                 </div>
               )}
               {candidate.requiredTrigger && (

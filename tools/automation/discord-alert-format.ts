@@ -1301,7 +1301,7 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
     `Stop: ${priceLine(levels.stop)}`,
     `Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,
     ...(riskAboveStandard ? [
-      'Risk exceeds standard limit. Human final decision required.',
+      'Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.',
     ] : []),
     '',
     ...compactTargetLadderLines(candidate, normalized),
@@ -1351,7 +1351,7 @@ function compactReviewPlanLines(candidate: SetupCandidate, normalized: CompactNo
       `${priceLine(htfLine)} - Required structure line.`,
     ] : []),
     `Entry: ${priceLine(candidate.entry)} | Stop: ${priceLine(levels.stop)} | Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,
-    ...(riskAboveStandard ? ['Risk exceeds standard limit. Human final decision required.'] : []),
+    ...(riskAboveStandard ? ['Extended structural risk: nearest protected 5M structure stop. Size or stand down at trader discretion.'] : []),
     ...compactTargetLadderLines(candidate, normalized),
     ...missingProofLines(candidate),
     '',
@@ -3857,7 +3857,7 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
 function compactRiskScoreReason(riskScore: ConditionalCandidateRiskScore): string {
   const hardBlock = riskScore.blockReason
     ? riskScore.blockReason === NoTradeReason.RiskTooWide
-      ? 'Risk is advisory above the standard limit.'
+      ? 'Risk is extended to the nearest protected 5M structure.'
       : `Risk remains blocked by ${riskScore.blockReason}.`
     : 'This score is advisory only.';
   const mainReason = riskScore.reasons[0] || hardBlock;
@@ -3877,7 +3877,7 @@ function conditionalRiskLines(candidate: SetupCandidate, normalized: CompactNorm
   return [
     'Risk Advisory:',
     `Decision: ${getEffectiveCanExecute(normalized) ? 'STRUCTURALLY COMPLETE' : 'WAIT'} | App plan review: ${getEffectiveCanExecute(normalized) ? 'YES' : 'NO'} | canExecute: ${getEffectiveCanExecute(normalized) ? 'true' : 'false'}`,
-    `Risk State: ${candidate.riskAdvisoryStatus || 'RISK_ABOVE_STANDARD_LIMIT'}`,
+    `Risk State: ${candidate.riskAdvisoryStatus || 'RISK_EXTENDED_STRUCTURAL'}`,
     `Risk Score: ${score.score}/100 - ${score.label}`,
     `Reason: ${compactLine(compactRiskScoreReason(score), 85)}`,
     'Human final decision. Do not chase.',

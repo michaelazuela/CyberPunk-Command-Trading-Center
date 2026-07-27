@@ -2771,7 +2771,7 @@ eveningMissedCandidate.target2 = 7570;
 eveningMissedCandidate.riskPoints = 6;
 eveningMissedCandidate.modelConfidenceScore = 85;
 eveningMissedCandidate.requiredTrigger = 'Bullish no installed model path: sell-side sweep below 7548.5, reclaim back above the swept low, then confirm upward rejection or expansion.';
-eveningMissedCandidate.nextAction = 'Preferred plan: take only the reclaim-confirmed reversal or the retrace after expansion; do not chase the first reversal candle. Risk exceeds standard limit. Human final decision required. Normalized app-owned plan is not executable. Wait for a fresh completed 5M trigger/retest before human review.';
+eveningMissedCandidate.nextAction = 'Preferred plan: take only the reclaim-confirmed reversal or the retrace after expansion; do not chase the first reversal candle. Extended structural risk requires the nearest protected 5M structure stop. Normalized app-owned plan is not executable. Wait for a fresh completed 5M trigger/retest before human review.';
 eveningMissedCandidate.invalidation = 'Invalid if price trades below the sweep wick structure stop near 7546.5.';
 const eveningMissed = compactDiscordSummary({
   session: 'evening',
