@@ -153,6 +153,23 @@ export function targetsFromEntryStop(
   };
 }
 
+export function nearestProtectedStructureStopFromLevels(
+  direction: 'LONG' | 'SHORT' | 'NO TRADE' | null | undefined,
+  entry: number | null | undefined,
+  protectedLevels: Array<number | null | undefined>,
+  offsetTicks = TRADE_RULES.executionParameters.stopOffsetTicks
+): number | null {
+  if (!isValidPrice(entry) || (direction !== 'LONG' && direction !== 'SHORT')) return null;
+  const offset = stopOffsetPoints(offsetTicks);
+  const stops = protectedLevels
+    .filter(isValidPrice)
+    .map((level) => direction === 'LONG' ? roundToTradeTick(level - offset) : roundToTradeTick(level + offset))
+    .filter((stop) => direction === 'LONG' ? stop < entry : stop > entry);
+
+  if (stops.length === 0) return null;
+  return direction === 'LONG' ? Math.max(...stops) : Math.min(...stops);
+}
+
 export function fixedRiskStopForDirection(direction: 'LONG' | 'SHORT' | 'NO TRADE' | null | undefined, entry: number | null | undefined): number | null {
   if (!isValidPrice(entry)) return null;
   if (direction === 'LONG') return roundToTradeTick(entry - TRADE_RULES.fixedRiskPoints);

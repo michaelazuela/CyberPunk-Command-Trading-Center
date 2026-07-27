@@ -1,5 +1,5 @@
 import { APPROVED_DESK_MODEL_DEFINITIONS } from '../../config/approvedDeskModels';
-import { roundToTradeTick, stopOffsetPoints, targetsFromEntryStop } from '../../config/tradeRules';
+import { nearestProtectedStructureStopFromLevels, roundToTradeTick, targetsFromEntryStop } from '../../config/tradeRules';
 import type { ChartCandleFact, ChartContext, FailedBreakEventFact, ReclaimEventFact } from '../../types';
 
 export interface FailedBreakoutReversalDetection {
@@ -88,16 +88,16 @@ function entryFromFacts(failure: FailedBreakEventFact | null, reclaim: ReclaimEv
   return null;
 }
 
-function stopFromFacts(context: ChartContext, direction: 'LONG' | 'SHORT', failure: FailedBreakEventFact | null): number | null {
-  const offset = stopOffsetPoints();
-  if (finitePrice(failure?.sweptExtreme)) {
-    return direction === 'LONG'
-      ? roundToTradeTick(failure.sweptExtreme - offset)
-      : roundToTradeTick(failure.sweptExtreme + offset);
-  }
-  if (direction === 'LONG' && finitePrice(context.keyLevels.activeSwingLow)) return roundToTradeTick(context.keyLevels.activeSwingLow - offset);
-  if (direction === 'SHORT' && finitePrice(context.keyLevels.activeSwingHigh)) return roundToTradeTick(context.keyLevels.activeSwingHigh + offset);
-  return null;
+function stopFromFacts(
+  context: ChartContext,
+  direction: 'LONG' | 'SHORT',
+  failure: FailedBreakEventFact | null,
+  entry: number | null
+): number | null {
+  const protectedLevels = direction === 'LONG'
+    ? [failure?.sweptExtreme, context.keyLevels.activeSwingLow]
+    : [failure?.sweptExtreme, context.keyLevels.activeSwingHigh];
+  return nearestProtectedStructureStopFromLevels(direction, entry, protectedLevels);
 }
 
 function htfContextForDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): FailedBreakoutReversalDetection['htfContext'] {
@@ -112,7 +112,7 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Fa
   const model = APPROVED_DESK_MODEL_DEFINITIONS.find((item) => item.id === 'failed_breakout_reversal');
   const facts = latestDirectionalFacts(context, direction);
   const entry = entryFromFacts(facts.failure, facts.reclaim, facts.proofCandle);
-  const stop = stopFromFacts(context, direction, facts.failure);
+  const stop = stopFromFacts(context, direction, facts.failure, entry);
   const targets = targetsFromEntryStop(direction, entry, stop);
   const proofTime = facts.reclaim?.timestamp || facts.proofCandle?.timestamp || facts.failure?.timestamp || null;
   const evidence = [

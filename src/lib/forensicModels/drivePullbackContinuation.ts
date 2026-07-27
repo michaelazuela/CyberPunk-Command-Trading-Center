@@ -1,5 +1,5 @@
 import { APPROVED_DESK_MODEL_DEFINITIONS } from '../../config/approvedDeskModels';
-import { roundToTradeTick, stopOffsetPoints, targetsFromEntryStop } from '../../config/tradeRules';
+import { nearestProtectedStructureStopFromLevels, roundToTradeTick, targetsFromEntryStop } from '../../config/tradeRules';
 import type { ChartCandleFact, ChartContext, DisplacementCandleFact, FvgZoneFact } from '../../types';
 
 export interface DrivePullbackContinuationDetection {
@@ -97,17 +97,16 @@ function latestDirectionalFacts(context: ChartContext, direction: 'LONG' | 'SHOR
   };
 }
 
-function stopFromFacts(context: ChartContext, direction: 'LONG' | 'SHORT', proofCandle: ChartCandleFact | null): number | null {
-  const offset = stopOffsetPoints();
-  if (direction === 'LONG') {
-    if (finitePrice(context.keyLevels.activeSwingLow)) return roundToTradeTick(context.keyLevels.activeSwingLow - offset);
-    if (finitePrice(proofCandle?.low)) return roundToTradeTick(proofCandle.low - offset);
-  }
-  if (direction === 'SHORT') {
-    if (finitePrice(context.keyLevels.activeSwingHigh)) return roundToTradeTick(context.keyLevels.activeSwingHigh + offset);
-    if (finitePrice(proofCandle?.high)) return roundToTradeTick(proofCandle.high + offset);
-  }
-  return null;
+function stopFromFacts(
+  context: ChartContext,
+  direction: 'LONG' | 'SHORT',
+  proofCandle: ChartCandleFact | null,
+  entry: number | null
+): number | null {
+  const protectedLevels = direction === 'LONG'
+    ? [context.keyLevels.activeSwingLow, proofCandle?.low]
+    : [context.keyLevels.activeSwingHigh, proofCandle?.high];
+  return nearestProtectedStructureStopFromLevels(direction, entry, protectedLevels);
 }
 
 function entryFromFacts(direction: 'LONG' | 'SHORT', proofCandle: ChartCandleFact | null, zone: FvgZoneFact | null): number | null {
@@ -140,7 +139,7 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Dr
   const model = APPROVED_DESK_MODEL_DEFINITIONS.find((item) => item.id === 'drive_pullback_continuation');
   const facts = latestDirectionalFacts(context, direction);
   const entry = entryFromFacts(direction, facts.proofCandle, facts.zone);
-  const stop = stopFromFacts(context, direction, facts.proofCandle);
+  const stop = stopFromFacts(context, direction, facts.proofCandle, entry);
   const targets = targetsFromEntryStop(direction, entry, stop);
   const midpoint = facts.zone ? zoneMidpoint(facts.zone) : null;
   const proofTime = facts.proofCandle?.timestamp || facts.zone?.reclaimTimestamp || null;

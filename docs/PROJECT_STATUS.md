@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-26
+Task: Replace five-model stop placement with nearest protected 5M structure risk.
+Files changed: src/config/tradeRules.ts, src/config/tradeRules.test.ts, src/lib/forensicModels/drivePullbackContinuation.ts, src/lib/forensicModels/failedBreakoutReversal.ts, src/lib/forensicModels/liquidityRaidReclaimReversal.ts, src/lib/forensicModels/raidFailureDisplacementReversal.ts, src/lib/forensicModels/structureShiftContinuation.ts, src/lib/forensicModels/structureShiftContinuation.test.ts, docs/PROJECT_STATUS.md.
+Reason: The five-model detectors still had model-local stop placement behavior that could preserve an older/farther protected swing before considering the completed 5M proof structure. The approved rule is that stop placement uses the nearest valid protected 5M structure on the correct side of entry; actual risk is then measured from entry to that stop and validated by the existing risk gate.
+Tests run: npx tsx src/config/tradeRules.test.ts; npx tsx src/lib/forensicModels/liquidityRaidReclaimReversal.test.ts; npx tsx src/lib/forensicModels/raidFailureDisplacementReversal.test.ts; npx tsx src/lib/forensicModels/failedBreakoutReversal.test.ts; npx tsx src/lib/forensicModels/drivePullbackContinuation.test.ts; npx tsx src/lib/forensicModels/structureShiftContinuation.test.ts; npx tsx src/lib/setupScanner.test.ts; npx tsx src/lib/tradeDecisionPipeline.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run test; npm run build; git diff --check.
+Result: Passed. The shared trade rule now selects the nearest protected structure stop from approved 5M structure levels and the five detectors all consume that shared rule. Structure Shift Continuation test expectations were updated to prove the proof-candle structure stop is selected over the farther full-window swing when valid.
+Trading logic changed: Yes. Stop placement for the five approved model detectors now uses nearest valid protected 5M structure first. T1/T2 still use actual entry-to-stop risk, and the existing max-risk gate remains validation only. No canExecute, automated execution, Discord policy, Supabase behavior, bridge behavior, HTF context window, or model eligibility change was made.
+Bridge impact: None.
+Discord impact: None. No Discord post was made by this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The cap can still mark a structurally correct candidate as risk-too-wide if nearest protected structure exceeds the configured max risk. That is intentional validation, not stop placement.
+Next recommended action: Run the next live-window scanner readback and verify any posted five-model card shows entry, protected 5M stop, and risk from actual entry-to-stop distance.
+
+Date: 2026-07-26
 Task: Enable approved five-model Discord production eligibility and shared rolling 30-day HTF context.
 Files changed: src/config/approvedDeskModels.ts, src/config/approvedDeskModels.test.ts, src/config/approvedDeskModelPreviewContracts.test.ts, src/lib/forensicModels/*.ts, src/lib/forensicModels/*.test.ts, src/lib/localScannerEngine.test.ts, src/lib/unifiedDeskOutputProductionScannerSurface.ts, src/lib/unifiedDeskOutputProductionScannerSurface.test.ts, tools/automation/five-model-scanner-candidate-preview-contract.ts, tools/automation/five-model-scanner-candidate-preview-contract.test.ts, tools/automation/market-bars-retention-core.ts, tools/automation/market-bars-retention.test.ts, tools/supervisor/htfPreload.ts, tools/supervisor/supervisor.test.ts, docs/PROJECT_STATUS.md.
 Reason: The scanner could detect and promote the five approved models for morning/lunch/evening, but the model registry and production surface still carried Discord-off/blank-slate contract residue. HTF preload also needed an explicit shared rolling 30-day context contract, and older HTF bars must be ignored outside that window rather than deleted.

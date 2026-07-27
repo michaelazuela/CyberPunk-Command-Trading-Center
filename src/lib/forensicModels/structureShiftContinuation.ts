@@ -1,5 +1,5 @@
 import { APPROVED_DESK_MODEL_DEFINITIONS } from '../../config/approvedDeskModels';
-import { roundToTradeTick, stopOffsetPoints, targetsFromEntryStop } from '../../config/tradeRules';
+import { nearestProtectedStructureStopFromLevels, roundToTradeTick, targetsFromEntryStop } from '../../config/tradeRules';
 import type { ChartCandleFact, ChartContext } from '../../types';
 
 export interface StructureShiftContinuationDetection {
@@ -98,17 +98,16 @@ function entryFromProof(proofCandle: ChartCandleFact | null): number | null {
   return roundToTradeTick(proofCandle.close);
 }
 
-function stopFromFacts(context: ChartContext, direction: 'LONG' | 'SHORT', proofCandle: ChartCandleFact | null): number | null {
-  const offset = stopOffsetPoints();
-  if (direction === 'LONG') {
-    if (finitePrice(context.keyLevels.activeSwingLow)) return roundToTradeTick(context.keyLevels.activeSwingLow - offset);
-    if (finitePrice(proofCandle?.low)) return roundToTradeTick(proofCandle.low - offset);
-  }
-  if (direction === 'SHORT') {
-    if (finitePrice(context.keyLevels.activeSwingHigh)) return roundToTradeTick(context.keyLevels.activeSwingHigh + offset);
-    if (finitePrice(proofCandle?.high)) return roundToTradeTick(proofCandle.high + offset);
-  }
-  return null;
+function stopFromFacts(
+  context: ChartContext,
+  direction: 'LONG' | 'SHORT',
+  proofCandle: ChartCandleFact | null,
+  entry: number | null
+): number | null {
+  const protectedLevels = direction === 'LONG'
+    ? [context.keyLevels.activeSwingLow, proofCandle?.low]
+    : [context.keyLevels.activeSwingHigh, proofCandle?.high];
+  return nearestProtectedStructureStopFromLevels(direction, entry, protectedLevels);
 }
 
 function htfContextForDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): StructureShiftContinuationDetection['htfContext'] {
@@ -123,7 +122,7 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): St
   const model = APPROVED_DESK_MODEL_DEFINITIONS.find((item) => item.id === 'structure_shift_continuation');
   const facts = latestDirectionalFacts(context, direction);
   const entry = entryFromProof(facts.proofCandle);
-  const stop = stopFromFacts(context, direction, facts.proofCandle);
+  const stop = stopFromFacts(context, direction, facts.proofCandle, entry);
   const targets = targetsFromEntryStop(direction, entry, stop);
   const evidence = [
     facts.shift ? `Completed ${direction} structure shift at ${facts.shift.candle.timestamp || 'unknown time'} through ${facts.shift.level}.` : null,

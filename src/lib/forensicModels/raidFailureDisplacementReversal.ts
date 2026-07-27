@@ -1,5 +1,5 @@
 import { APPROVED_DESK_MODEL_DEFINITIONS } from '../../config/approvedDeskModels';
-import { roundToTradeTick, stopOffsetPoints, targetsFromEntryStop } from '../../config/tradeRules';
+import { nearestProtectedStructureStopFromLevels, roundToTradeTick, targetsFromEntryStop } from '../../config/tradeRules';
 import type {
   ChartCandleFact,
   ChartContext,
@@ -104,21 +104,13 @@ function latestDirectionalFacts(context: ChartContext, direction: 'LONG' | 'SHOR
 function stopFromFacts(
   context: ChartContext,
   direction: 'LONG' | 'SHORT',
-  failure: FailedBreakEventFact | null
+  failure: FailedBreakEventFact | null,
+  entry: number | null
 ): number | null {
-  const offset = stopOffsetPoints();
-  if (finitePrice(failure?.sweptExtreme)) {
-    return direction === 'LONG'
-      ? roundToTradeTick(failure.sweptExtreme - offset)
-      : roundToTradeTick(failure.sweptExtreme + offset);
-  }
-  if (direction === 'LONG' && finitePrice(context.keyLevels.activeSwingLow)) {
-    return roundToTradeTick(context.keyLevels.activeSwingLow - offset);
-  }
-  if (direction === 'SHORT' && finitePrice(context.keyLevels.activeSwingHigh)) {
-    return roundToTradeTick(context.keyLevels.activeSwingHigh + offset);
-  }
-  return null;
+  const protectedLevels = direction === 'LONG'
+    ? [failure?.sweptExtreme, context.keyLevels.activeSwingLow]
+    : [failure?.sweptExtreme, context.keyLevels.activeSwingHigh];
+  return nearestProtectedStructureStopFromLevels(direction, entry, protectedLevels);
 }
 
 function entryFromFacts(
@@ -158,7 +150,7 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Ra
   const facts = latestDirectionalFacts(context, direction);
   const candles = allFiveMinuteCandles(context);
   const entry = entryFromFacts(direction, facts.displacement, facts.reclaim, facts.failure, candles);
-  const stop = stopFromFacts(context, direction, facts.failure);
+  const stop = stopFromFacts(context, direction, facts.failure, entry);
   const targets = targetsFromEntryStop(direction, entry, stop);
   const raidLevel = finitePrice(facts.sweep?.level)
     ? facts.sweep.level
