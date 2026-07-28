@@ -7108,6 +7108,16 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   if (args.deskState.canExecute) {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play refresh suppressed because executable approval should use the trade-alert path, not review-map Discord refresh.');
   }
+  const play = args.deskState.primaryDeskPlay;
+  const activeCampaignId = normalizeActiveCampaignIdForTradeDate(args.deskState.activeCampaign?.id, args.tradeDate);
+  const noCampaignPostReviewHoldReason = scannerNoCampaignPostReviewDeskPlayHoldReason({
+    activeCampaignId,
+    discordAction: args.deskState.discordAction,
+    visibilityMode: args.deskState.visibilityMode,
+  });
+  if (noCampaignPostReviewHoldReason) {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', noCampaignPostReviewHoldReason);
+  }
   if (args.publishDecision?.shouldPost && args.publishDecision.hasCompletePlan) {
     return scannerDeskPlaySuppressionPost(args.publishDecision.discordReason);
   }
@@ -7126,16 +7136,6 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     isFiniteTradePrice(referenceLevels.stop) &&
     isFiniteTradePrice(referenceLevels.target1) &&
     isFiniteTradePrice(referenceLevels.target2);
-  const play = args.deskState.primaryDeskPlay;
-  const activeCampaignId = normalizeActiveCampaignIdForTradeDate(args.deskState.activeCampaign?.id, args.tradeDate);
-  const noCampaignPostReviewHoldReason = scannerNoCampaignPostReviewDeskPlayHoldReason({
-    activeCampaignId,
-    discordAction: args.deskState.discordAction,
-    visibilityMode: args.deskState.visibilityMode,
-  });
-  if (noCampaignPostReviewHoldReason) {
-    return scannerDeskPlaySuppressionBlocked('low_quality_map', noCampaignPostReviewHoldReason);
-  }
   const freshReentryBest = play.freshReentryCandidates?.approvalStatus === 'approved_discord_conditional_display' &&
     play.freshReentryCandidates.bestCandidate?.status === 'ready_for_owner_review' &&
     play.freshReentryCandidates.bestCandidate.direction === play.direction

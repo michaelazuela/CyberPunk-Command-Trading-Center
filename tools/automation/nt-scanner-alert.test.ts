@@ -370,6 +370,46 @@ try {
   });
   assert.equal(noCampaignPostReviewDecision.shouldPost, false);
   assert.match(noCampaignPostReviewDecision.reason, /no active scanner campaign/);
+  const noCampaignCanonicalPostReviewDecision = evaluateScannerDeskPlayDiscordSuppression({
+    tradeDate: '2026-07-28',
+    instrument: 'MES',
+    session: 'morning',
+    deskPlayKey: 'fixture-no-campaign-canonical-post-review',
+    deskState: {
+      canExecute: false,
+      discordAction: 'post_review',
+      visibilityMode: 'POST_REVIEW',
+      activeCampaign: null,
+      dataQualityStatus: 'sufficient',
+      htfContextStatus: 'sufficient',
+      primaryDeskPlay: {
+        direction: 'SHORT',
+        lineInSand: 7428,
+        activeTacticalZone: { anchorLine: 7428 },
+        longBias: { state: 'not_present' },
+        shortBias: { state: 'primary', tradeReadiness: { status: 'not_aligned' } },
+        freshReentryCandidates: null,
+      },
+    } as any,
+    normalized: {
+      entry: 7428,
+      stop: 7456,
+      target1: 7386,
+      target2: 7372,
+    } as any,
+    publishDecision: {
+      shouldPost: true,
+      action: 'POST_REVIEW',
+      hasCompletePlan: true,
+      discordReason: 'High-Quality Trade Plan qualified for Discord.',
+    } as any,
+    deskPlanRefreshSent: {},
+    currentPrice: 7451.5,
+    latestCompleted5m: '2026-07-28T10:50:00.0000000',
+    now: new Date('2026-07-28T14:58:03.000Z'),
+  });
+  assert.equal(noCampaignCanonicalPostReviewDecision.shouldPost, false);
+  assert.match(noCampaignCanonicalPostReviewDecision.reason, /no active scanner campaign/);
 
   const legacyAlertSuppressed = applyScannerTradeAlertSuppressionAfterDeskPlay({
     alertDecision: { shouldSend: true, reason: 'fixture trade alert would send' },
