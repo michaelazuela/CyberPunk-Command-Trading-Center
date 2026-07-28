@@ -45,6 +45,19 @@ interface CandidateRow {
   evidence: string[];
 }
 
+interface SelectorLaneSummary {
+  lane: string;
+  description: string;
+  rawRows: number;
+  firstPerWindowRows: number;
+  rawOneMesDollars: number;
+  firstPerWindowOneMesDollars: number;
+  targets: number;
+  stops: number;
+  sessionClose: number;
+  noFutureBars: number;
+}
+
 const POINT_VALUE_BY_INSTRUMENT: Record<Args['instrument'], number> = {
   MES: 5,
   MNQ: 2,
@@ -326,6 +339,50 @@ function groupBy<T>(rows: T[], keyFor: (row: T) => string): Record<string, T[]> 
   }, {});
 }
 
+function firstRowsByWindow(rows: CandidateRow[]): CandidateRow[] {
+  return Object.values(groupBy(rows, (row) => `${row.date}|${row.session}`))
+    .map((items) => items.sort((left, right) => left.proofTime.localeCompare(right.proofTime))[0])
+    .filter(Boolean);
+}
+
+function summarizeLane(lane: string, description: string, rows: CandidateRow[]): SelectorLaneSummary {
+  const firstPerWindow = firstRowsByWindow(rows);
+  return {
+    lane,
+    description,
+    rawRows: rows.length,
+    firstPerWindowRows: firstPerWindow.length,
+    rawOneMesDollars: rows.reduce((sum, row) => sum + row.oneMesDollars, 0),
+    firstPerWindowOneMesDollars: firstPerWindow.reduce((sum, row) => sum + row.oneMesDollars, 0),
+    targets: firstPerWindow.filter((row) => row.outcome === 'T1_HIT' || row.outcome === 'T2_HIT').length,
+    stops: firstPerWindow.filter((row) => row.outcome === 'STOP_HIT').length,
+    sessionClose: firstPerWindow.filter((row) => row.outcome === 'SESSION_CLOSE').length,
+    noFutureBars: firstPerWindow.filter((row) => row.outcome === 'NO_FUTURE_BARS').length,
+  };
+}
+
+function selectorLanes(rows: CandidateRow[]): SelectorLaneSummary[] {
+  const lunchRows = rows.filter((row) => row.session === 'lunch');
+  const htfNotConflict = (row: CandidateRow) => row.htfContext !== 'conflict' && row.htfContext !== 'data_limited';
+  const reasonableRisk30 = (row: CandidateRow) => row.riskPoints <= 30;
+  const tightRisk20 = (row: CandidateRow) => row.riskPoints <= 20;
+  const shortOnly = (row: CandidateRow) => row.direction === 'SHORT';
+  const longOnly = (row: CandidateRow) => row.direction === 'LONG';
+  const htfSupport = (row: CandidateRow) => row.htfContext === 'support';
+  const htfCaution = (row: CandidateRow) => row.htfContext === 'caution';
+  return [
+    summarizeLane('all_rows', 'Every raw validation row across selected sessions.', rows),
+    summarizeLane('lunch_only', 'Lunch only, no added filter.', lunchRows),
+    summarizeLane('lunch_htf_not_conflict', 'Lunch only, HTF context cannot be conflict or data-limited.', lunchRows.filter(htfNotConflict)),
+    summarizeLane('lunch_htf_not_conflict_max_risk_30', 'Lunch only, HTF not conflict, protected 5M risk <= 30 points.', lunchRows.filter((row) => htfNotConflict(row) && reasonableRisk30(row))),
+    summarizeLane('lunch_htf_not_conflict_max_risk_20', 'Lunch only, HTF not conflict, protected 5M risk <= 20 points.', lunchRows.filter((row) => htfNotConflict(row) && tightRisk20(row))),
+    summarizeLane('lunch_short_htf_not_conflict_max_risk_30', 'Lunch shorts only, HTF not conflict, protected 5M risk <= 30 points.', lunchRows.filter((row) => shortOnly(row) && htfNotConflict(row) && reasonableRisk30(row))),
+    summarizeLane('lunch_short_htf_support_max_risk_30', 'Lunch shorts only, HTF support only, protected 5M risk <= 30 points.', lunchRows.filter((row) => shortOnly(row) && htfSupport(row) && reasonableRisk30(row))),
+    summarizeLane('lunch_short_htf_caution_max_risk_30', 'Lunch shorts only, HTF caution only, protected 5M risk <= 30 points.', lunchRows.filter((row) => shortOnly(row) && htfCaution(row) && reasonableRisk30(row))),
+    summarizeLane('lunch_long_htf_not_conflict_max_risk_30', 'Lunch longs only, HTF not conflict, protected 5M risk <= 30 points.', lunchRows.filter((row) => longOnly(row) && htfNotConflict(row) && reasonableRisk30(row))),
+  ];
+}
+
 export function buildTwoLeggedPullbackValidationProof(args: Args) {
   const bars = loadBars(args.marketBarsJson);
   const candidateName = loadCandidateName(args.candidatePack);
@@ -418,9 +475,7 @@ export function buildTwoLeggedPullbackValidationProof(args: Args) {
     }
   }
 
-  const firstPerWindow = Object.values(groupBy(rows, (row) => `${row.date}|${row.session}`))
-    .map((items) => items.sort((left, right) => left.proofTime.localeCompare(right.proofTime))[0])
-    .filter(Boolean);
+  const firstPerWindow = firstRowsByWindow(rows);
   const byOutcome = groupBy(rows, (row) => row.outcome);
   const bySession = Object.fromEntries(
     Object.entries(groupBy(rows, (row) => row.session)).map(([session, items]) => [
@@ -472,6 +527,7 @@ export function buildTwoLeggedPullbackValidationProof(args: Args) {
       blocked,
       bySession,
     },
+    selectorLanes: selectorLanes(rows),
     firstPerWindow,
     rows,
   };
@@ -501,6 +557,14 @@ function markdownReport(report: ReturnType<typeof buildTwoLeggedPullbackValidati
     '| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | ---: | --- |',
     ...report.firstPerWindow.map((row) =>
       `| ${row.date} | ${row.session} | ${row.direction} | ${row.proofTime.slice(11, 16)} | ${row.entry.toFixed(2)} | ${row.stop.toFixed(2)} | ${row.target1.toFixed(2)} | ${row.target2.toFixed(2)} | ${row.riskPoints.toFixed(2)} | ${row.outcome} | ${row.oneMesDollars.toFixed(2)} | ${row.htfContext} |`
+    ),
+    '',
+    '## Selector Lane Comparison',
+    '',
+    '| Lane | Raw Rows | First/Window | First/Window $MES | Targets | Stops | Session Close | No Future Bars |',
+    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    ...report.selectorLanes.map((lane) =>
+      `| ${lane.lane} | ${lane.rawRows} | ${lane.firstPerWindowRows} | ${lane.firstPerWindowOneMesDollars.toFixed(2)} | ${lane.targets} | ${lane.stops} | ${lane.sessionClose} | ${lane.noFutureBars} |`
     ),
     '',
     '## Blocked Counts',

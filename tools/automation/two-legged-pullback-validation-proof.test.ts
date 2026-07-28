@@ -58,5 +58,7 @@ assert.equal(report.rows[0]?.riskPoints, 9.75);
 assert.equal(report.rows[0]?.target1, 123.25);
 assert.equal(report.rows[0]?.target2, 128);
 assert.equal(report.firstPerWindow[0]?.proofTime, '2026-06-08T09:55:00');
+assert.ok(report.selectorLanes.some((lane) => lane.lane === 'lunch_htf_not_conflict_max_risk_30'));
+assert.equal(report.selectorLanes.find((lane) => lane.lane === 'all_rows')?.rawRows, 2);
 
 console.log('two-legged pullback validation proof verified');
