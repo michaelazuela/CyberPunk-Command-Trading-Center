@@ -211,6 +211,7 @@
     "research:formal-backtest-design": "tsx tools/automation/formal-backtest-design.ts",
     "research:formal-backtest-contract": "tsx tools/automation/formal-backtest-contract.ts",
     "research:formal-replay": "tsx tools/automation/formal-replay-research-runner.ts",
+    "research:two-legged-pullback-validation": "tsx tools/automation/two-legged-pullback-validation-proof.ts",
     "research:formal-ohlc-master-desk": "tsx tools/automation/formal-ohlc-master-desk-audit.ts",
     "research:discord-review": "tsx tools/automation/research-discord-review.ts",
     "research:discord-review:post": "tsx tools/automation/research-discord-review-post.ts",

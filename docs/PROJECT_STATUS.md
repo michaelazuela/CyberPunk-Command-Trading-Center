@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-27
+Task: Add validation-only proof tooling for the video-derived Two-Legged Pullback Continuation candidate.
+Files changed: tools/automation/two-legged-pullback-validation-proof.ts, tools/automation/two-legged-pullback-validation-proof.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The video-collaboration workflow produced a new Two-Legged Pullback Continuation candidate. The desk needed a durable local proof tool before any scanner, Discord, Supabase, or live trading workflow discussion.
+Tests run: npx tsx tools/automation/two-legged-pullback-validation-proof.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/two-legged-pullback-validation-proof.ts --market-bars-json tools/automation/diagnostic-reports/controlled-htf-ohlc-source-MES-2026-06-01-to-2026-07-02-1784594514789.json --candidate-pack C:\Users\Mike\Downloads\video-review-output\other-ideas-6-12-20-fixed\project-validation-pack\project-validation-pack.json --start-date 2026-06-08 --end-date 2026-06-26 --instrument MES --sessions morning,lunch,evening --json.
+Result: Passed. The validation report was written to tools/automation/diagnostic-reports/two-legged-pullback-validation-proof-MES-2026-06-08-to-2026-06-26-1785200781480.json and .md. The run loaded 12119 5M bars, 4052 15M bars, 1025 60M bars, 527 120M bars, and 266 240M bars. It evaluated 1547 completed 5M bars and found 103 raw validation rows, with 35 first-per-day/session rows. Stricter session-close accounting produced all-row one-MES P/L of +$207.50 and first-per-window one-MES P/L of +$556.25. First-per-window by session: morning +$198.75, lunch +$451.25, evening -$93.75.
+Trading logic changed: No. This is validation-only local replay tooling. It does not install a model, change setup detection, scanner promotion, canExecute, entries, stops, targets, risk, bridge behavior, Supabase, Discord, or automated execution.
+Bridge impact: None. The proof reads the saved controlled HTF OHLC JSON only.
+Discord impact: None. No Discord post or webhook call was made.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The detector is intentionally a first-pass validation hypothesis from video-derived rules. Lunch is the only clearly positive first-pass lane; morning is marginal and evening is negative in this June range. Do not promote this live without a stricter selector/filter validation.
+Next recommended action: Validate the lunch-only subset with tighter pre-proof filters: HTF not-conflict, reasonable protected-stop distance, and target room still available after completed 5M proof.
+
+Date: 2026-07-27
 Task: Gate scanner Discord refresh noise to one scanner-owned session card unless the public trade action materially changes.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The July 27 Discord audit found repeated scanner-owned `desk_play` POST_REVIEW cards where only the completed 5M candle/timestamp changed, plus legacy `trade_alert` posts competing after a scanner-owned desk card already existed for the same session.
