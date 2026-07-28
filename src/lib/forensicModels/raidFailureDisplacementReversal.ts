@@ -249,8 +249,7 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Ra
 }
 
 export function detectRaidFailureDisplacementReversal(context: ChartContext): RaidFailureDisplacementReversalDetection {
-  const longResult = detectDirection(context, 'LONG');
-  const shortResult = detectDirection(context, 'SHORT');
+  const [longResult, shortResult] = detectRaidFailureDisplacementReversalDirections(context);
   if (longResult.detected && !shortResult.detected) return longResult;
   if (shortResult.detected && !longResult.detected) return shortResult;
   if (longResult.detected && shortResult.detected) {
@@ -259,4 +258,11 @@ export function detectRaidFailureDisplacementReversal(context: ChartContext): Ra
     return longTime >= shortTime ? longResult : shortResult;
   }
   return longResult.evidence.length >= shortResult.evidence.length ? longResult : shortResult;
+}
+
+export function detectRaidFailureDisplacementReversalDirections(context: ChartContext): RaidFailureDisplacementReversalDetection[] {
+  return [
+    detectDirection(context, 'LONG'),
+    detectDirection(context, 'SHORT'),
+  ];
 }

@@ -12,8 +12,8 @@ import { getAllowedSetupRegistry } from '../config/setupRegistry';
 import { TRADE_RULES } from '../config/tradeRules';
 import { detectDrivePullbackContinuation } from './forensicModels/drivePullbackContinuation';
 import { detectFailedBreakoutReversal } from './forensicModels/failedBreakoutReversal';
-import { detectLiquidityRaidReclaimReversal } from './forensicModels/liquidityRaidReclaimReversal';
-import { detectRaidFailureDisplacementReversal } from './forensicModels/raidFailureDisplacementReversal';
+import { detectLiquidityRaidReclaimReversalDirections } from './forensicModels/liquidityRaidReclaimReversal';
+import { detectRaidFailureDisplacementReversalDirections } from './forensicModels/raidFailureDisplacementReversal';
 import { detectStructureShiftContinuation } from './forensicModels/structureShiftContinuation';
 import { detectProtectedShelfWatch, type ProtectedShelfBar } from './protectedShelfWatch';
 
@@ -289,8 +289,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
     };
   }
   const detections: InstalledModelDetection[] = [
-    detectRaidFailureDisplacementReversal(chartContext),
-    detectLiquidityRaidReclaimReversal(chartContext),
+    ...detectRaidFailureDisplacementReversalDirections(chartContext),
+    ...detectLiquidityRaidReclaimReversalDirections(chartContext),
     detectFailedBreakoutReversal(chartContext),
     detectStructureShiftContinuation(chartContext),
     detectDrivePullbackContinuation(chartContext),
@@ -307,7 +307,7 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
   const watchCandidate = candidates.length
     ? null
     : protectedShelfWatchCandidate(chartContext, priorityByType.get(SetupType.RaidFailureDisplacementReversal) ?? 0);
-  const selectedCandidates = (candidates.length ? candidates : watchCandidate ? [watchCandidate] : []).slice(0, 1);
+  const selectedCandidates = candidates.length ? candidates : watchCandidate ? [watchCandidate] : [];
   return {
     candidates: selectedCandidates,
     bestExecutableCandidate: null,

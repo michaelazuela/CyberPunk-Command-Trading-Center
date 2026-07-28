@@ -269,6 +269,185 @@ assert.equal(extendedStructuralRiskCandidate?.riskAdvisoryStatus, 'RISK_EXTENDED
 assert.equal(extendedStructuralRiskCandidate?.blockReason, null);
 assert.equal(extendedStructuralRiskCandidate?.missingEvidence.some((line) => /extended structural risk blocker|fixed risk cap/i.test(line)), false);
 
+const symmetricRaidScan = scanSetupCandidates({
+  sessionType: 'morning',
+  chartContext: {
+    ...context('morning'),
+    keyLevels: {
+      currentPrice: 7500,
+      activeSwingLow: 7480,
+      activeSwingHigh: 7520,
+    },
+    liquiditySweeps: [
+      {
+        type: 'sweep',
+        direction: 'LONG',
+        level: 7482,
+        sweptLevelLabel: 'overnight low',
+        reclaimed: true,
+        timestamp: '2026-07-28T09:50:00-04:00',
+        confidence: 'High',
+      },
+      {
+        type: 'sweep',
+        direction: 'SHORT',
+        level: 7518,
+        sweptLevelLabel: 'overnight high',
+        reclaimed: true,
+        timestamp: '2026-07-28T10:55:00-04:00',
+        confidence: 'High',
+      },
+    ],
+    reclaimEvents: [],
+    failedBreakEvents: [
+      {
+        direction: 'LONG',
+        failedLevel: 7482,
+        levelLabel: 'overnight low',
+        sweptExtreme: 7478,
+        timestamp: '2026-07-28T09:50:00-04:00',
+        confidence: 'High',
+      },
+      {
+        direction: 'SHORT',
+        failedLevel: 7518,
+        levelLabel: 'overnight high',
+        sweptExtreme: 7522,
+        timestamp: '2026-07-28T10:55:00-04:00',
+        confidence: 'High',
+      },
+    ],
+    displacementCandles: [
+      {
+        direction: 'LONG',
+        candleIndex: 3,
+        timestamp: '2026-07-28T10:45:00-04:00',
+        open: 7485,
+        high: 7501,
+        low: 7484,
+        close: 7498,
+        bodyPoints: 13,
+        rangePoints: 17,
+        bodyToRange: 0.76,
+        closeLocation: 'top_quarter',
+        displacementScore: 90,
+        quality: 'confirmed',
+        leavesImbalance: true,
+        breaksStructure: true,
+        confidence: 'High',
+      },
+      {
+        direction: 'SHORT',
+        candleIndex: 4,
+        timestamp: '2026-07-28T11:00:00-04:00',
+        open: 7516,
+        high: 7517,
+        low: 7498,
+        close: 7501,
+        bodyPoints: 15,
+        rangePoints: 19,
+        bodyToRange: 0.79,
+        closeLocation: 'bottom_quarter',
+        displacementScore: 90,
+        quality: 'confirmed',
+        leavesImbalance: true,
+        breaksStructure: true,
+        confidence: 'High',
+      },
+    ],
+    multiTimeframeContext: mtf([
+      candle(1, '2026-07-28T09:50:00-04:00', 7484, 7486, 7478, 7483),
+      candle(2, '2026-07-28T10:45:00-04:00', 7485, 7501, 7484, 7498),
+      candle(3, '2026-07-28T10:55:00-04:00', 7515, 7522, 7514, 7517),
+      candle(4, '2026-07-28T11:00:00-04:00', 7516, 7517, 7498, 7501),
+    ]),
+  },
+});
+const symmetricRaidCandidates = symmetricRaidScan.candidates.filter((item) => item.setupType === SetupType.RaidFailureDisplacementReversal);
+assert.equal(symmetricRaidCandidates.length, 2);
+assert.ok(symmetricRaidCandidates.some((item) => item.direction === 'LONG' && item.entry === 7498 && item.stop === 7479.75));
+assert.ok(symmetricRaidCandidates.some((item) => item.direction === 'SHORT' && item.entry === 7501 && item.stop === 7520.25));
+assert.equal(symmetricRaidCandidates.every((item) => item.executionStatus === ExecutionStatus.Conditional), true);
+assert.equal(symmetricRaidScan.bestExecutableCandidate, null);
+
+const july28SellSideRaidLongScan = scanSetupCandidates({
+  sessionType: 'morning',
+  chartContext: {
+    ...context('morning'),
+    tradeDate: '2026-07-28',
+    chartTimestamp: '2026-07-28T10:45:00-04:00',
+    keyLevels: {
+      currentPrice: 7440,
+      activeSwingLow: 7417,
+      activeSwingHigh: 7455.75,
+    },
+    candles: [
+      candle(1, '2026-07-28T09:50:00-04:00', 7428, 7433.5, 7417, 7433),
+      candle(2, '2026-07-28T10:00:00-04:00', 7427.75, 7430.25, 7418.75, 7421.75),
+      candle(3, '2026-07-28T10:30:00-04:00', 7430.5, 7435, 7428.25, 7434.75),
+      candle(4, '2026-07-28T10:45:00-04:00', 7432.5, 7443.5, 7431.25, 7440),
+    ],
+    liquiditySweeps: [{
+      type: 'sweep',
+      direction: 'LONG',
+      level: 7419,
+      sweptLevelLabel: 'ETH/overnight low',
+      reclaimed: true,
+      timestamp: '2026-07-28T09:50:00-04:00',
+      confidence: 'High',
+    }],
+    reclaimEvents: [{
+      direction: 'LONG',
+      reclaimedLevel: 7419,
+      levelLabel: 'ETH/overnight low',
+      timestamp: '2026-07-28T09:50:00-04:00',
+      confidence: 'High',
+    }],
+    failedBreakEvents: [{
+      direction: 'LONG',
+      failedLevel: 7419,
+      levelLabel: 'ETH/overnight low',
+      sweptExtreme: 7417,
+      timestamp: '2026-07-28T09:50:00-04:00',
+      confidence: 'High',
+    }],
+    displacementCandles: [{
+      direction: 'LONG',
+      candleIndex: 4,
+      timestamp: '2026-07-28T10:45:00-04:00',
+      open: 7432.5,
+      high: 7443.5,
+      low: 7431.25,
+      close: 7440,
+      bodyPoints: 7.5,
+      rangePoints: 12.25,
+      bodyToRange: 0.61,
+      closeLocation: 'top_quarter',
+      displacementScore: 82,
+      quality: 'confirmed',
+      leavesImbalance: true,
+      breaksStructure: true,
+      confidence: 'High',
+    }],
+    multiTimeframeContext: mtf([
+      candle(1, '2026-07-28T09:50:00-04:00', 7428, 7433.5, 7417, 7433),
+      candle(2, '2026-07-28T10:00:00-04:00', 7427.75, 7430.25, 7418.75, 7421.75),
+      candle(3, '2026-07-28T10:30:00-04:00', 7430.5, 7435, 7428.25, 7434.75),
+      candle(4, '2026-07-28T10:45:00-04:00', 7432.5, 7443.5, 7431.25, 7440),
+    ]),
+  },
+});
+const july28SellSideRaidLong = july28SellSideRaidLongScan.candidates.find((item) =>
+  item.setupType === SetupType.RaidFailureDisplacementReversal &&
+  item.direction === 'LONG'
+);
+assert.ok(july28SellSideRaidLong);
+assert.equal(july28SellSideRaidLong.entry, 7430);
+assert.equal(july28SellSideRaidLong.stop, 7428);
+assert.equal(july28SellSideRaidLong.executionStatus, ExecutionStatus.Conditional);
+assert.equal(july28SellSideRaidLong.humanReview?.canExecute, false);
+assert.ok(july28SellSideRaidLong.evidence.some((line) => /ETH\/overnight low/i.test(line)));
+
 const formingFiveMinute = [
   candle(1, '2026-06-25T09:15:00', 7484.25, 7489, 7478.75, 7483.75),
   candle(2, '2026-06-25T09:20:00', 7483.75, 7486.75, 7480, 7482),

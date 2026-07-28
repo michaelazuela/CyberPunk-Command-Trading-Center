@@ -161,8 +161,7 @@ function detectDirection(context: ChartContext, direction: 'LONG' | 'SHORT'): Li
 }
 
 export function detectLiquidityRaidReclaimReversal(context: ChartContext): LiquidityRaidReclaimReversalDetection {
-  const longResult = detectDirection(context, 'LONG');
-  const shortResult = detectDirection(context, 'SHORT');
+  const [longResult, shortResult] = detectLiquidityRaidReclaimReversalDirections(context);
   if (longResult.detected && !shortResult.detected) return longResult;
   if (shortResult.detected && !longResult.detected) return shortResult;
   if (longResult.detected && shortResult.detected) {
@@ -171,4 +170,11 @@ export function detectLiquidityRaidReclaimReversal(context: ChartContext): Liqui
     return longTime >= shortTime ? longResult : shortResult;
   }
   return longResult.evidence.length >= shortResult.evidence.length ? longResult : shortResult;
+}
+
+export function detectLiquidityRaidReclaimReversalDirections(context: ChartContext): LiquidityRaidReclaimReversalDetection[] {
+  return [
+    detectDirection(context, 'LONG'),
+    detectDirection(context, 'SHORT'),
+  ];
 }
