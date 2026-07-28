@@ -16,6 +16,7 @@ import {
   writeFiveModelProductionScannerReadback,
   applyScannerTradeAlertSuppressionForScannerOwnedSurface,
   applyScannerTradeAlertSuppressionAfterDeskPlay,
+  evaluateScannerDeskPlayDiscordSuppression,
   normalizeScannerBarTimestampMode,
   normalizeScannerOperatorDeliveryReason,
   readUnifiedDeskOutputProductionScannerSurface,
@@ -334,6 +335,41 @@ try {
     discordAction: 'post_review',
     visibilityMode: 'POST_REVIEW',
   }), null);
+  const noCampaignPostReviewDecision = evaluateScannerDeskPlayDiscordSuppression({
+    tradeDate: '2026-07-28',
+    instrument: 'MES',
+    session: 'morning',
+    deskPlayKey: 'fixture-no-campaign-post-review',
+    deskState: {
+      canExecute: false,
+      discordAction: 'post_review',
+      visibilityMode: 'POST_REVIEW',
+      activeCampaign: null,
+      dataQualityStatus: 'sufficient',
+      htfContextStatus: 'sufficient',
+      primaryDeskPlay: {
+        direction: 'SHORT',
+        lineInSand: 7428,
+        activeTacticalZone: { anchorLine: 7428 },
+        longBias: { state: 'not_present' },
+        shortBias: { state: 'primary', tradeReadiness: { status: 'not_aligned' } },
+        freshReentryCandidates: null,
+      },
+    } as any,
+    normalized: {
+      entry: 7428,
+      stop: 7439.75,
+      target1: 7410.5,
+      target2: 7404.5,
+    } as any,
+    publishDecision: null,
+    deskPlanRefreshSent: {},
+    currentPrice: 7430.25,
+    latestCompleted5m: '2026-07-28T10:15:00.0000000',
+    now: new Date('2026-07-28T14:22:15.000Z'),
+  });
+  assert.equal(noCampaignPostReviewDecision.shouldPost, false);
+  assert.match(noCampaignPostReviewDecision.reason, /no active scanner campaign/);
 
   const legacyAlertSuppressed = applyScannerTradeAlertSuppressionAfterDeskPlay({
     alertDecision: { shouldSend: true, reason: 'fixture trade alert would send' },

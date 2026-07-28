@@ -7127,6 +7127,15 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     isFiniteTradePrice(referenceLevels.target1) &&
     isFiniteTradePrice(referenceLevels.target2);
   const play = args.deskState.primaryDeskPlay;
+  const activeCampaignId = normalizeActiveCampaignIdForTradeDate(args.deskState.activeCampaign?.id, args.tradeDate);
+  const noCampaignPostReviewHoldReason = scannerNoCampaignPostReviewDeskPlayHoldReason({
+    activeCampaignId,
+    discordAction: args.deskState.discordAction,
+    visibilityMode: args.deskState.visibilityMode,
+  });
+  if (noCampaignPostReviewHoldReason) {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', noCampaignPostReviewHoldReason);
+  }
   const freshReentryBest = play.freshReentryCandidates?.approvalStatus === 'approved_discord_conditional_display' &&
     play.freshReentryCandidates.bestCandidate?.status === 'ready_for_owner_review' &&
     play.freshReentryCandidates.bestCandidate.direction === play.direction
@@ -7303,15 +7312,6 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   if (readiness === 'not_aligned' && !tacticalCampaignMap.eligible && !highQualityReviewCandidate && !htfFvgReviewMapReason) {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}: ${tacticalCampaignMap.reason}`);
   }
-  const noCampaignPostReviewHoldReason = scannerNoCampaignPostReviewDeskPlayHoldReason({
-    activeCampaignId: currentRecord.activeCampaignId,
-    discordAction: args.deskState.discordAction,
-    visibilityMode: args.deskState.visibilityMode,
-  });
-  if (noCampaignPostReviewHoldReason) {
-    return scannerDeskPlaySuppressionBlocked('low_quality_map', noCampaignPostReviewHoldReason);
-  }
-
   const dataLimitedReview = args.deskState.dataQualityStatus === 'data_limited' || args.deskState.htfContextStatus === 'insufficient';
   return scannerDeskPlaySuppressionPost(dataLimitedReview
     ? 'Desk Play reference map is eligible for Discord as review-only because completed 5M is ready and app-owned reference entry/stop/T1/T2 are available; HTF promotion remains blocked.'
