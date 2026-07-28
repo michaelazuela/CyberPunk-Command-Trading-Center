@@ -5882,15 +5882,31 @@ export function scannerDeskPlanRefreshKey(args: {
 }): string {
   const play = args.deskState.primaryDeskPlay;
   const protected5m = play.htfProtectedStructureMap.rows.find((row) => row.timeframe === '5M') || null;
+  const primaryLifecycle = play.direction === 'LONG'
+    ? args.deskState.bestLongPlan
+    : play.direction === 'SHORT'
+    ? args.deskState.bestShortPlan
+    : args.deskState.selectedCandidate || args.deskState.bestLongPlan || args.deskState.bestShortPlan;
+  const primaryBias = scannerDeskPlayPrimaryBias(args.deskState);
   const activeCampaignId = normalizeActiveCampaignIdForTradeDate(args.deskState.activeCampaign?.id, args.tradeDate);
   const parts = [
     args.tradeDate,
     args.instrument,
     args.session,
     'DESK_PLAN_REFRESH',
-    args.latestCompleted5m || 'no-completed-5m',
     activeCampaignId || 'no-campaign',
     play.direction,
+    `model=${primaryLifecycle?.setupType ?? 'no-setup'}`,
+    `scenario=${normalizeDeskPlayInstructionText(primaryLifecycle?.scenarioLabel) || 'no-scenario'}`,
+    `line=${deskPlanRefreshPrice(play.lineInSand)}`,
+    `activeLine=${deskPlanRefreshPrice(play.activeTacticalLine?.activeLine ?? null)}`,
+    `entry=${deskPlanRefreshPrice(primaryLifecycle?.entry ?? null)}`,
+    `stop=${deskPlanRefreshPrice(primaryLifecycle?.stop ?? null)}`,
+    `t1=${deskPlanRefreshPrice(primaryLifecycle?.target1 ?? null)}`,
+    `t2=${deskPlanRefreshPrice(primaryLifecycle?.target2 ?? null)}`,
+    `readiness=${normalizeDeskPlayInstructionText(primaryBias?.tradeReadiness?.status || null) || 'none'}`,
+    `trigger=${normalizeDeskPlayInstructionText(play.nextTrigger || args.deskState.nextTrigger || primaryLifecycle?.nextTrigger || primaryLifecycle?.requiredTrigger || null) || 'none'}`,
+    `invalid=${normalizeDeskPlayInstructionText(play.invalidation || args.deskState.invalidation || primaryLifecycle?.invalidation || null) || 'none'}`,
     `visibility=${args.deskState.visibilityMode || 'unknown'}:${args.deskState.discordAction || 'unknown'}`,
     `quality=${args.deskState.htfContextStatus || 'unknown'}:${args.deskState.dataQualityStatus || 'unknown'}`,
     `long=${play.longBias.state}`,
@@ -6626,6 +6642,16 @@ export function scannerDeskPlanSameSideRefreshHoldReason(args: {
   return `Desk Play kept local: latest ${campaignText} ${args.current.direction} card for this session already published the same model, entry, stop, targets, approval/readiness state, trigger, and invalidation. Only the candle timestamp/session refresh changed (${elapsed} since prior post).`;
 }
 
+export function scannerNoCampaignPostReviewDeskPlayHoldReason(args: {
+  activeCampaignId?: string | null;
+  discordAction?: string | null;
+  visibilityMode?: string | null;
+}): string | null {
+  const isPostReview = args.discordAction === 'post_review' || args.visibilityMode === 'POST_REVIEW';
+  if (args.activeCampaignId || !isPostReview) return null;
+  return 'Desk Play kept local: no active scanner campaign is attached to this POST_REVIEW trade-plan card. Production Discord only accepts scanner-owned campaign cards or explicit session-map artifacts, not no-campaign review refreshes.';
+}
+
 function scannerDeskPlayPublicCadenceHoldReason(args: {
   previous: ScannerDeskPlanRefreshLedgerRecord | null;
   current: ScannerDeskPlanRefreshLedgerRecord;
@@ -7276,6 +7302,14 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   }
   if (readiness === 'not_aligned' && !tacticalCampaignMap.eligible && !highQualityReviewCandidate && !htfFvgReviewMapReason) {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}: ${tacticalCampaignMap.reason}`);
+  }
+  const noCampaignPostReviewHoldReason = scannerNoCampaignPostReviewDeskPlayHoldReason({
+    activeCampaignId: currentRecord.activeCampaignId,
+    discordAction: args.deskState.discordAction,
+    visibilityMode: args.deskState.visibilityMode,
+  });
+  if (noCampaignPostReviewHoldReason) {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', noCampaignPostReviewHoldReason);
   }
 
   const dataLimitedReview = args.deskState.dataQualityStatus === 'data_limited' || args.deskState.htfContextStatus === 'insufficient';
@@ -9782,6 +9816,29 @@ export function applyScannerTradeAlertSuppressionAfterDeskPlay(args: {
   };
 }
 
+export function applyScannerTradeAlertSuppressionForScannerOwnedSurface(args: {
+  alertDecision: ScannerAlertDecision;
+  scannerOwnedSurfaceActive: boolean;
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession | string;
+  planVersionId: string;
+}): ScannerAlertDecision {
+  if (!args.alertDecision.shouldSend || !args.scannerOwnedSurfaceActive) return args.alertDecision;
+  return {
+    shouldSend: false,
+    reason: [
+      args.alertDecision.reason,
+      'legacy_trade_alert_suppressed_by_scanner_owned_surface',
+      `tradeDate=${args.tradeDate}`,
+      `instrument=${args.instrument}`,
+      `session=${args.session}`,
+      `currentPlanVersionId=${args.planVersionId}`,
+      'Scanner-owned five-model/Desk Play surface owns production Discord; legacy trade_alert is held local to prevent competing cards and per-candle alert churn.',
+    ].join(' | '),
+  };
+}
+
 export function shouldSuppressScannerDataQualityNoticeForReason(args: {
   session: LiveSession | 'market_mapping';
   reason: string;
@@ -11776,6 +11833,22 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   });
   if (scannerOwnedDeskPlayGuardedAlertDecision.shouldSend !== alertDecision.shouldSend || scannerOwnedDeskPlayGuardedAlertDecision.reason !== alertDecision.reason) {
     alertDecision = scannerOwnedDeskPlayGuardedAlertDecision;
+    console.log(scannerSuppressionSummaryLine({
+      label: 'Legacy trade alert',
+      category: 'duplicate_refresh',
+      reason: alertDecision.reason,
+    }));
+  }
+  const scannerOwnedSurfaceGuardedAlertDecision = applyScannerTradeAlertSuppressionForScannerOwnedSurface({
+    alertDecision,
+    scannerOwnedSurfaceActive: Boolean(fiveModelSurface || unifiedDeskOutputSurface),
+    tradeDate,
+    instrument: config.instrument,
+    session: window.session,
+    planVersionId,
+  });
+  if (scannerOwnedSurfaceGuardedAlertDecision.shouldSend !== alertDecision.shouldSend || scannerOwnedSurfaceGuardedAlertDecision.reason !== alertDecision.reason) {
+    alertDecision = scannerOwnedSurfaceGuardedAlertDecision;
     console.log(scannerSuppressionSummaryLine({
       label: 'Legacy trade alert',
       category: 'duplicate_refresh',
