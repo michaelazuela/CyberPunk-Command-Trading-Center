@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Add Intraday MSS Micro Continuation back as a sixth approved primary model.
+Files changed: src/types.ts, src/config/approvedDeskModels.ts, src/config/setupRegistry.ts, src/config/tradeRules.ts, src/lib/forensicModels/intradayMssMicroContinuation.ts, src/lib/setupScanner.ts, src/lib/tradeDecisionPipeline.ts, src/lib/collisionFirstArbitration.ts, src/lib/unifiedDeskOutputProductionScannerSurface.ts, focused tests, tools/automation/five-model-scanner-candidate-preview-dry-run.ts, docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Intraday MSS Micro Continuation had useful forensic evidence, but it should not return as a loose supporting label. It is now a primary approved model with its own definition, setup type, scanner detector, registry entry, and collision priority.
+Tests run: npx tsx src/lib/forensicModels/intradayMssMicroContinuation.test.ts; npx tsx src/config/approvedDeskModels.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsx src/lib/setupScanner.test.ts; npx tsx src/lib/collisionFirstArbitration.test.ts; npx tsx src/lib/tradeDecisionPipeline.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsx src/lib/scannerModelE2EHealth.test.ts; npx tsx src/lib/unifiedDeskOutputProductionScannerSurface.test.ts; npx tsx tools/automation/five-model-scanner-candidate-preview-dry-run.test.ts; npx tsx src/config/approvedDeskModelPreviewContracts.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. The new detector requires completed intraday 5M MSS plus fast micro retest/hold or continuation proof within 15 minutes, uses the completed proof close for entry, uses nearest protected 5M structure for stop, computes T1/T2 from actual risk, and remains canExecute=false / decision-support only. Full guard/lint/build/test stack passed after updating stale five-count audit expectations.
+Trading logic changed: Yes. The approved primary model surface now includes IntradayMssMicroContinuation. The scanner can create a conditional candidate only from structured completed 5M proof; HTF remains support/caution/context only.
+Bridge impact: None. No live bridge read, repair, or restart was performed.
+Discord impact: None. No webhook call was made and Discord posting policy was not changed.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Existing running scanner processes must be restarted separately before they load this new code. Historical tools and artifact filenames that say five-model remain compatibility names unless a later cleanup phase renames them.
+Next recommended action: Run full guard/lint/build/test verification, commit/push, then perform a controlled local scanner restart/readback in a separate approved runtime phase if you want the running scanner to load the sixth model.
+
+Date: 2026-07-29
 Task: Install collision-first arbitration for same-window LONG/SHORT desk candidates.
 Files changed: src/lib/collisionFirstArbitration.ts, src/lib/tradeDecisionPipeline.ts, src/lib/tradePlan.ts, src/agents/scannerPlanSelectionAgent.ts, tools/automation/collision-first-arbitration-pdf-window-replay.ts, focused tests, docs/PROJECT_STATUS.md.
 Reason: June PDF forensic replay showed profitable model ingredients were present, but same-window opposite-side candidates could still become the visible desk plan. The desk now detects long/short candidate collisions before final ranking and blocks forced promotion unless only one side has a complete 5M proof contract.

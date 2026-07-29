@@ -12,12 +12,13 @@ const expectedIds: ApprovedDeskModelId[] = [
   'liquidity_raid_reclaim_reversal',
   'raid_failure_displacement_reversal',
   'drive_pullback_continuation',
+  'intraday_mss_micro_continuation',
   'structure_shift_continuation',
   'failed_breakout_reversal',
 ];
 
-assert.deepEqual(APPROVED_DESK_MODEL_IDS, expectedIds, 'approved desk model registry must expose exactly the five forensic models');
-assert.equal(new Set(APPROVED_DESK_MODEL_IDS).size, 5, 'approved desk model ids must be unique');
+assert.deepEqual(APPROVED_DESK_MODEL_IDS, expectedIds, 'approved desk model registry must expose the approved forensic models');
+assert.equal(new Set(APPROVED_DESK_MODEL_IDS).size, expectedIds.length, 'approved desk model ids must be unique');
 
 for (const id of expectedIds) {
   assert.equal(isApprovedDeskModelId(id), true, `${id} must be recognized`);
@@ -37,7 +38,6 @@ for (const id of expectedIds) {
 const blockedIds = [
   ['Turtle', 'Soup'],
   ['Sweep', 'Mss', 'Fvg', 'Retrace'],
-  ['Intraday', 'Mss', 'Micro', 'Continuation'],
   ['Opening', 'Drive', 'Fvg', 'Continuation'],
   ['After', 'Lunch', 'Drive', 'Fvg', 'Continuation'],
   ['Failed', 'Plan', 'Reversal'],
@@ -51,7 +51,7 @@ for (const blocked of blockedIds) {
 
 const scannerResult = scanSetupCandidates({ sessionType: 'morning' });
 assert.deepEqual(scannerResult.candidates, [], 'scanner detection must still require structured completed 5M chart context');
-assert.equal(scannerResult.bestExecutableCandidate, null, 'five-model scanner install must not create executable candidates without separate execution approval');
+assert.equal(scannerResult.bestExecutableCandidate, null, 'approved-model scanner install must not create executable candidates without separate execution approval');
 assert.equal(scannerResult.bestConditionalCandidate, null, 'scanner detection must not invent conditional candidates from missing chart context');
 
 console.log('approvedDeskModels scanner-installed contract verified');

@@ -8,6 +8,7 @@ const expectedSetupTypes = [
   SetupType.LiquidityRaidReclaimReversal,
   SetupType.RaidFailureDisplacementReversal,
   SetupType.DrivePullbackContinuation,
+  SetupType.IntradayMssMicroContinuation,
   SetupType.StructureShiftContinuation,
   SetupType.FailedBreakoutReversal,
 ];

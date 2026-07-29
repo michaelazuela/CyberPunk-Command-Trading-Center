@@ -143,6 +143,7 @@ function setupFromText(...parts: Array<unknown>): SetupType {
   if (text.includes('liquidity raid reclaim reversal')) return SetupType.LiquidityRaidReclaimReversal;
   if (text.includes('raid failure displacement reversal')) return SetupType.RaidFailureDisplacementReversal;
   if (text.includes('drive pullback continuation')) return SetupType.DrivePullbackContinuation;
+  if (text.includes('intraday mss micro continuation')) return SetupType.IntradayMssMicroContinuation;
   if (text.includes('structure shift continuation')) return SetupType.StructureShiftContinuation;
   if (text.includes('failed breakout reversal')) return SetupType.FailedBreakoutReversal;
   return SetupType.NoSetup;
@@ -417,6 +418,7 @@ function confidenceScore(confidence: Confidence): number {
 function setupScore(setupType: SetupType): number {
   switch (setupType) {
     case SetupType.RaidFailureDisplacementReversal: return 100;
+    case SetupType.IntradayMssMicroContinuation: return 98;
     case SetupType.LiquidityRaidReclaimReversal: return 95;
     case SetupType.FailedBreakoutReversal: return 94;
     case SetupType.StructureShiftContinuation: return 92;
@@ -670,8 +672,8 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
       max: 25,
       status: qualityStatus(modelScore, 25),
       note: modelScore > 0
-        ? 'Approved five-model scanner contract matched completed 5M proof.'
-        : 'No approved five-model scanner contract matched completed 5M proof.',
+        ? 'Approved-model scanner contract matched completed 5M proof.'
+        : 'No approved-model scanner contract matched completed 5M proof.',
     },
     {
       label: '5M execution quality',

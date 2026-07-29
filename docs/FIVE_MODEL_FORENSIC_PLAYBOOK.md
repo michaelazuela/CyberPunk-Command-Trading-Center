@@ -1,9 +1,9 @@
-# Five-Model Forensic Playbook
+# Approved Forensic Model Playbook
 
-Date: 2026-07-25
-Status: Micro-Phase 1 source-of-truth definitions only
+Date: 2026-07-29
+Status: Six approved forensic model definitions with scanner-installed detection
 
-This playbook defines the five approved forensic desk models that will be installed in later micro-phases. This file is documentation only. It does not install scanner detection, promotion, Discord publishing, Supabase writes, bridge reads, execution approval, or automated orders.
+This playbook defines the approved forensic desk models. The historical filename is retained for compatibility. The active approved-model surface now includes six primary models. It does not approve automated orders.
 
 ## Operating Contract
 
@@ -114,7 +114,7 @@ Session restrictions:
 
 Forensic examples:
 - June 9: raid/failure behavior with directional displacement after the failure.
-- June 16 and June 18 research pockets showed overnight-high raid plus bearish displacement as a strong short story, but this model must be validated as a five-model detector before any scanner promotion.
+- June 16 and June 18 research pockets showed overnight-high raid plus bearish displacement as a strong short story, but this model must be validated as an approved-model detector before any scanner promotion.
 
 ## Model 3: Drive Pullback Continuation
 
@@ -167,7 +167,55 @@ Forensic examples:
 - June 10: lunch pullback, pause, and bearish continuation behavior.
 - June 16: afternoon continuation winner evidence should be evaluated through this model family unless a cleaner reversal definition fits the candles.
 
-## Model 4: Structure Shift Continuation
+## Model 4: Intraday MSS Micro Continuation
+
+Definition: Price completes an intraday 5M market-structure shift, quickly retests or holds the shifted structure, and resumes in the shifted direction inside the micro window.
+
+Long version:
+- Completed bullish 5M MSS.
+- Fast pullback/retest/hold above the shifted level or immediate continuation expansion.
+- Continuation proof completes on a closed 5M candle within the micro window.
+
+Short version:
+- Completed bearish 5M MSS.
+- Fast pullback/retest/hold below the shifted level or immediate continuation expansion.
+- Continuation proof completes on a closed 5M candle within the micro window.
+
+Required evidence:
+- Completed intraday 5M MSS.
+- Fast post-shift 5M micro retest, hold, or continuation proof.
+- Entry from the completed 5M proof candle.
+- Nearest protected 5M structure stop.
+- T1/T2 from actual entry-to-stop risk.
+
+Entry trigger:
+- Completed 5M retest/hold or continuation close within 15 minutes after the MSS.
+
+Stop rule:
+- Nearest protected 5M structure swing on the opposite side of the micro continuation proof.
+
+T1/T2 target rules:
+- T1 = 1.5R.
+- T2 = 2.0R.
+- HTF/session levels remain context and cannot replace app target math.
+
+Invalidation/cancel rules:
+- Cancel if micro proof arrives too late after the MSS.
+- Cancel if price accepts back through protected 5M MSS structure.
+- Cancel if nearest protected 5M stop or target room is missing.
+
+AQ/scoring notes:
+- Stronger when the MSS follows a raid, failed breakout, or protected-shelf rejection.
+- Stronger when 15M context supports the shifted direction.
+- Weaker when the MSS prints after the move has already reached nearby targets.
+
+Session restrictions:
+- Morning, lunch, and evening are approved for replay and production visibility.
+
+Forensic examples:
+- June 15 and June 17 PDF research contained intraday MSS continuation evidence that should be re-tested against this stricter micro-window version.
+
+## Model 5: Structure Shift Continuation
 
 Definition: Price breaks or shifts structure in one direction, then offers a completed 5M continuation entry after retest, hold, or imbalance reaction.
 
@@ -214,7 +262,7 @@ Session restrictions:
 Forensic examples:
 - June 15 and June 17 contained profitable structure-shift/continuation evidence in the PDF forensic pass and should be used as validation fixtures later.
 
-## Model 5: Failed Breakout Reversal
+## Model 6: Failed Breakout Reversal
 
 Definition: Price breaks beyond a meaningful range or decision level, cannot hold the breakout, returns back inside or through the level, and then confirms reversal with completed 5M proof.
 
@@ -266,10 +314,10 @@ Forensic examples:
 
 ## Next Install Order
 
-1. Add a typed code registry with exactly these five names and no detector behavior.
+1. Keep the typed code registry aligned to the approved forensic model names.
 2. Add a no-legacy test proving old context-role labels are absent from active code.
 3. Install one detector at a time, starting with Liquidity Raid Reclaim Reversal.
 4. Replay June 8-28 after each detector.
-5. Wire scanner candidates only after all five detectors pass isolated proof.
+5. Wire scanner candidates only after approved detectors pass isolated proof.
 6. Add selector/promotion only after candidate inventory is clean.
 7. Add local Discord preview before any production post.

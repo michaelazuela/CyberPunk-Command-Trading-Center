@@ -55,7 +55,7 @@ assert.equal(scannerContextState(morningWindow), 'MapReady');
 
 const audit = buildTradeDecisionMapAudit(SETUP_REGISTRY);
 assert.equal(audit.sourceOfTruth, 'setup_registry_trade_decision_map_audit');
-assert.equal(audit.entries.length, 5);
+assert.equal(audit.entries.length, 6);
 assert.equal(audit.entries.every((entry) => entry.role === 'primary_model'), true);
 assert.equal(audit.tradingLogicChanged, false);
 
@@ -132,7 +132,7 @@ const eveningApprovedCandidate = candidate({
     canExecute: false,
     requiresTraderConfirmation: true,
     discordTradePlanEligible: true,
-    reason: 'Five-model scanner detection installed; execution approval remains controlled by existing deterministic gates.',
+    reason: 'Approved-model scanner detection installed; execution approval remains controlled by existing deterministic gates.',
   },
 });
 const eveningVisibility = classifyScannerVisibility({
@@ -197,4 +197,4 @@ assert.equal(scannerStateFromDecision({
   candidate: null,
 }), 'NoTrade');
 
-console.log('localScannerEngine five-model compatibility verified');
+console.log('localScannerEngine approved-model compatibility verified');

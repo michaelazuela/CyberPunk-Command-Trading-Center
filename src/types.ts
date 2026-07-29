@@ -27,6 +27,7 @@ export enum SetupType {
   LiquidityRaidReclaimReversal = 'LiquidityRaidReclaimReversal',
   RaidFailureDisplacementReversal = 'RaidFailureDisplacementReversal',
   DrivePullbackContinuation = 'DrivePullbackContinuation',
+  IntradayMssMicroContinuation = 'IntradayMssMicroContinuation',
   StructureShiftContinuation = 'StructureShiftContinuation',
   FailedBreakoutReversal = 'FailedBreakoutReversal',
   NoSetup = 'NoSetup',

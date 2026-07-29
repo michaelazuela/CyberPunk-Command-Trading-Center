@@ -171,6 +171,6 @@ const blockedThirdModel = buildUnifiedDeskOutputProductionScannerSurfaceActivati
 
 assert.equal(blockedThirdModel.status, 'blocked');
 assert.equal(blockedThirdModel.rows.length, 0);
-assert.ok(blockedThirdModel.blockers.some((blocker) => blocker.includes('not an approved five-model production desk plan')));
+assert.ok(blockedThirdModel.blockers.some((blocker) => blocker.includes('not an approved production desk plan')));
 
 console.log('Unified Desk Output production scanner surface activation verified.');

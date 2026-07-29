@@ -61,7 +61,7 @@ interface SelectorReport {
   rows?: SelectorRow[];
 }
 
-const selectorSourceByModel: Record<ApprovedDeskModelId, keyof NonNullable<ComparisonReport['source']>> = {
+const selectorSourceByModel: Partial<Record<ApprovedDeskModelId, keyof NonNullable<ComparisonReport['source']>>> = {
   liquidity_raid_reclaim_reversal: 'liquidityRaidReclaimSelectorJson',
   raid_failure_displacement_reversal: 'raidFailureDisplacementSelectorJson',
   drive_pullback_continuation: 'drivePullbackContinuationSelectorJson',

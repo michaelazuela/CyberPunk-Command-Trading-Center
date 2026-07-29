@@ -498,6 +498,7 @@ assert.deepEqual(getScannedSetupTypes(), [
   SetupType.RaidFailureDisplacementReversal,
   SetupType.LiquidityRaidReclaimReversal,
   SetupType.FailedBreakoutReversal,
+  SetupType.IntradayMssMicroContinuation,
   SetupType.StructureShiftContinuation,
   SetupType.DrivePullbackContinuation,
 ]);
@@ -511,4 +512,4 @@ assert.deepEqual(buildCompletedFiveMinuteProofSelectionSignals([
   },
 ]), {});
 
-console.log('setupScanner five-model contract verified');
+console.log('setupScanner approved-model contract verified');

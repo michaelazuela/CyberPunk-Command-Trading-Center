@@ -2,6 +2,7 @@ export type ApprovedDeskModelId =
   | 'liquidity_raid_reclaim_reversal'
   | 'raid_failure_displacement_reversal'
   | 'drive_pullback_continuation'
+  | 'intraday_mss_micro_continuation'
   | 'structure_shift_continuation'
   | 'failed_breakout_reversal';
 
@@ -95,6 +96,30 @@ export const APPROVED_DESK_MODEL_DEFINITIONS: readonly ApprovedDeskModelDefiniti
     stopRule: 'Protected 5M pullback swing.',
     targetRule: 'T1 = 1.5R and T2 = 2.0R from actual entry to protected stop.',
     invalidationRule: 'Acceptance through protected pullback structure, no target room, or no real drive.',
+    sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
+    installsScannerDetection: true,
+    installsPromotion: true,
+    installsDiscordPublishing: true,
+    installsExecutionApproval: false,
+  },
+  {
+    id: 'intraday_mss_micro_continuation',
+    displayName: 'Intraday MSS Micro Continuation',
+    definition: 'Price completes an intraday 5M market-structure shift, gives fast micro retest/hold proof, then continues in the shifted direction.',
+    directions: ['LONG', 'SHORT'],
+    approvedSessionsForReplay: ['morning', 'lunch', 'evening'],
+    productionSessionsEnabled: ['morning', 'lunch', 'evening'],
+    requiredEvidence: [
+      'Completed intraday 5M market-structure shift',
+      'Fast post-shift 5M micro retest, hold, or continuation proof',
+      'Entry from completed 5M proof candle',
+      'Nearest protected 5M structure stop',
+      'T1/T2 from actual entry-to-stop risk',
+    ],
+    entryTrigger: 'Completed 5M retest/hold or continuation close within the micro window after intraday MSS.',
+    stopRule: 'Nearest protected 5M structure swing on the opposite side of the micro continuation proof.',
+    targetRule: 'T1 = 1.5R and T2 = 2.0R from actual entry to protected stop.',
+    invalidationRule: 'Acceptance back through protected 5M MSS structure or missing target room.',
     sourceOfTruth: 'docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md',
     installsScannerDetection: true,
     installsPromotion: true,

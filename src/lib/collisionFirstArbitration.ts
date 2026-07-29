@@ -25,6 +25,7 @@ export interface CollisionArbitrationResult {
 }
 
 const MODEL_PRIORITY: Partial<Record<SetupType, number>> = {
+  [SetupType.IntradayMssMicroContinuation]: 700,
   [SetupType.StructureShiftContinuation]: 600,
   [SetupType.LiquidityRaidReclaimReversal]: 500,
   [SetupType.RaidFailureDisplacementReversal]: 400,

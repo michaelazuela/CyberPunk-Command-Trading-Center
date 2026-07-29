@@ -5,6 +5,7 @@ export const FIVE_MODEL_ALLOWED_SETUPS = [
   SetupType.LiquidityRaidReclaimReversal,
   SetupType.RaidFailureDisplacementReversal,
   SetupType.DrivePullbackContinuation,
+  SetupType.IntradayMssMicroContinuation,
   SetupType.StructureShiftContinuation,
   SetupType.FailedBreakoutReversal,
 ] as const;

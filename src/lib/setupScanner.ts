@@ -12,6 +12,7 @@ import { getAllowedSetupRegistry } from '../config/setupRegistry';
 import { TRADE_RULES } from '../config/tradeRules';
 import { detectDrivePullbackContinuation } from './forensicModels/drivePullbackContinuation';
 import { detectFailedBreakoutReversal } from './forensicModels/failedBreakoutReversal';
+import { detectIntradayMssMicroContinuation } from './forensicModels/intradayMssMicroContinuation';
 import { detectLiquidityRaidReclaimReversalDirections } from './forensicModels/liquidityRaidReclaimReversal';
 import { detectRaidFailureDisplacementReversalDirections } from './forensicModels/raidFailureDisplacementReversal';
 import { detectStructureShiftContinuation } from './forensicModels/structureShiftContinuation';
@@ -93,6 +94,7 @@ type InstalledModelDetection = {
     | 'liquidity_raid_reclaim_reversal'
     | 'raid_failure_displacement_reversal'
     | 'drive_pullback_continuation'
+    | 'intraday_mss_micro_continuation'
     | 'structure_shift_continuation'
     | 'failed_breakout_reversal';
   detected: boolean;
@@ -112,6 +114,7 @@ const SETUP_TYPE_BY_MODEL_ID: Record<InstalledModelDetection['modelId'], SetupTy
   liquidity_raid_reclaim_reversal: SetupType.LiquidityRaidReclaimReversal,
   raid_failure_displacement_reversal: SetupType.RaidFailureDisplacementReversal,
   drive_pullback_continuation: SetupType.DrivePullbackContinuation,
+  intraday_mss_micro_continuation: SetupType.IntradayMssMicroContinuation,
   structure_shift_continuation: SetupType.StructureShiftContinuation,
   failed_breakout_reversal: SetupType.FailedBreakoutReversal,
 };
@@ -269,7 +272,7 @@ function candidateFromDetection(
       canExecute: false,
       requiresTraderConfirmation: true,
       discordTradePlanEligible: true,
-      reason: 'Five-model scanner detection installed; execution approval remains controlled by existing deterministic gates.',
+      reason: 'Approved-model scanner detection installed; execution approval remains controlled by existing deterministic gates.',
     },
   });
 }
@@ -292,6 +295,7 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
     ...detectRaidFailureDisplacementReversalDirections(chartContext),
     ...detectLiquidityRaidReclaimReversalDirections(chartContext),
     detectFailedBreakoutReversal(chartContext),
+    detectIntradayMssMicroContinuation(chartContext),
     detectStructureShiftContinuation(chartContext),
     detectDrivePullbackContinuation(chartContext),
   ];
@@ -320,6 +324,7 @@ export function getScannedSetupTypes(): SetupType[] {
     SetupType.RaidFailureDisplacementReversal,
     SetupType.LiquidityRaidReclaimReversal,
     SetupType.FailedBreakoutReversal,
+    SetupType.IntradayMssMicroContinuation,
     SetupType.StructureShiftContinuation,
     SetupType.DrivePullbackContinuation,
   ];

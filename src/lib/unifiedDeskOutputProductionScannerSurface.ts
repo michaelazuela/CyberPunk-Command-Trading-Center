@@ -9,6 +9,7 @@ export const UNIFIED_DESK_OUTPUT_APPROVED_PRODUCTION_MODELS = [
   SetupType.LiquidityRaidReclaimReversal,
   SetupType.RaidFailureDisplacementReversal,
   SetupType.DrivePullbackContinuation,
+  SetupType.IntradayMssMicroContinuation,
   SetupType.StructureShiftContinuation,
   SetupType.FailedBreakoutReversal,
 ] as const;
@@ -119,7 +120,7 @@ function candidateBlockers(candidate: UnifiedDeskOutputFinalReadinessCandidate):
     candidate.state === 'APPROVED_DESK_PLAN' || candidate.state === 'FORMING_DESK_READ' ? null : `${candidate.cardId || '<candidate>'} has unsupported desk state.`,
     candidate.model ? null : `${candidate.cardId || '<candidate>'} missing model.`,
     candidate.model && !isUnifiedDeskOutputApprovedProductionModel(candidate.model)
-      ? `${candidate.cardId || '<candidate>'} model ${candidate.model} is not an approved five-model production desk plan.`
+      ? `${candidate.cardId || '<candidate>'} model ${candidate.model} is not an approved production desk plan.`
       : null,
     candidate.direction === 'LONG' || candidate.direction === 'SHORT' ? null : `${candidate.cardId || '<candidate>'} missing direction.`,
     candidate.proofTime ? null : `${candidate.cardId || '<candidate>'} missing completed 5M proof time.`,
@@ -148,7 +149,7 @@ function surfaceRow(candidate: UnifiedDeskOutputFinalReadinessCandidate): Unifie
     direction: candidate.direction,
     headline: `${label} | ${candidate.session.toUpperCase()} | ${candidate.direction} | ${candidate.model}`,
     bodyLines: [
-      `${candidate.session} ${candidate.direction.toLowerCase()} desk plan from the approved five-model scanner surface.`,
+      `${candidate.session} ${candidate.direction.toLowerCase()} desk plan from the approved-model scanner surface.`,
       'Blank-slate mode has no scanner-owned lane for this window.',
     ],
     levelLine: `Entry ${candidate.entry} | Stop ${candidate.stop} | T1 ${candidate.target1} | T2 ${candidate.target2}`,
@@ -205,7 +206,7 @@ export function buildUnifiedDeskOutputProductionScannerSurfaceActivation(args: {
     rows.filter((row) => row.session === 'lunch').length === 1 ? null : 'Production surface must have exactly one lunch row.',
     rows.filter((row) => row.session === 'evening').length <= 1 ? null : 'Production surface must have no more than one evening row.',
     rows.every((row) => row.state === 'APPROVED_DESK_PLAN') ? null : 'Production surface contains non-Approved Desk Plan rows.',
-    rows.every((row) => isUnifiedDeskOutputApprovedProductionModel(row.model)) ? null : 'Production surface contains a non-approved five-model production desk plan.',
+    rows.every((row) => isUnifiedDeskOutputApprovedProductionModel(row.model)) ? null : 'Production surface contains a non-approved production desk plan.',
     rows.every((row) => !row.publishDiscord) ? null : 'Production surface would publish Discord.',
     rows.every((row) => !row.writesSupabase) ? null : 'Production surface would write Supabase.',
     rows.every((row) => !row.readsLiveBridge) ? null : 'Production surface would read live bridge.',

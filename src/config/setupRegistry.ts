@@ -78,6 +78,25 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     defaultNextAction: 'Use only after completed 5M pullback proof, protected stop, and app target math are present.',
   },
   {
+    setupType: SetupType.IntradayMssMicroContinuation,
+    role: 'primary_model',
+    label: 'Intraday MSS Micro Continuation',
+    aliases: ['Intraday MSS Micro Continuation'],
+    priority: 101,
+    allowedSessions: ['morning', 'lunch', 'evening', 'replay_morning', 'replay_lunch'],
+    detectionKeywords: ['intraday mss', 'micro continuation', 'micro retest'],
+    possibleKeywords: ['mss', 'market structure shift', 'retest', 'hold', 'continuation'],
+    requiredEvidence: [
+      'Completed intraday 5M market-structure shift',
+      'Fast post-shift 5M micro retest, hold, or continuation proof',
+      'Entry from completed 5M proof candle',
+      'Nearest protected 5M structure stop',
+      'T1/T2 from actual entry-to-stop risk',
+    ],
+    defaultRequiredTrigger: 'Completed 5M retest/hold or continuation close within the micro window after intraday MSS.',
+    defaultNextAction: 'Use only after fast completed 5M MSS micro proof, nearest protected 5M stop, and app target math are present.',
+  },
+  {
     setupType: SetupType.StructureShiftContinuation,
     role: 'primary_model',
     label: 'Structure Shift Continuation',
@@ -119,7 +138,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
 export const REGISTERED_SETUP_TYPES: SetupType[] = SETUP_REGISTRY.map((entry) => entry.setupType);
 
 /**
- * Compatibility alias for older callers. The desk now exposes only the five
+ * Compatibility alias for older callers. The desk now exposes only the
  * approved forensic model contracts.
  */
 export const APPROVED_SETUP_TYPES = REGISTERED_SETUP_TYPES;

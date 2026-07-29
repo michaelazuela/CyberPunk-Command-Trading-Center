@@ -183,4 +183,4 @@ assert.equal(structuredProof.finalTradePlan.target2, 7503.5);
 assert.equal(structuredProof.opportunitySelection.bestConditionalCandidate?.executionStatus, ExecutionStatus.Conditional);
 assert.equal(structuredProof.opportunitySelection.bestConditionalCandidate?.humanReview?.canExecute, false);
 
-console.log('tradeDecisionPipeline five-model scanner contract verified');
+console.log('tradeDecisionPipeline approved-model scanner contract verified');
