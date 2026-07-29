@@ -163,7 +163,7 @@ try {
 
   const fiveModelSurface = await readFiveModelProductionScannerSurface(fiveModelSurfacePath);
   assert.notEqual(fiveModelSurface, null);
-  assert.match(fiveModelProductionScannerSummaryLine(fiveModelSurface), /Five-model production surface active: rows=19/);
+  assert.match(fiveModelProductionScannerSummaryLine(fiveModelSurface), /6-model production surface active: rows=19/);
   const fiveModelReadbackPath = path.join(outputDir, 'five-model-readback.json');
   await writeFiveModelProductionScannerReadback({
     tradeDate: '2026-07-22',

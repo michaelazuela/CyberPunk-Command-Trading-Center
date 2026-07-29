@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Fix approved model surface scanner log wording after sixth-model install.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The live scanner registry now includes six approved primary models, but the runtime readback/log summary still printed the stale "Five-model production surface active" phrase. The summary now derives the model count from `APPROVED_DESK_MODEL_DEFINITIONS.length`.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. Controlled local supervisor restart/readback was performed after verification. Supervisor, candle recorder, scanner, and read-only NinjaTrader bridge are healthy; the scanner log now prints `6-model production surface active`.
+Trading logic changed: No. This is runtime wording/readback alignment only. It does not change model detection, ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase behavior, Discord publish policy, or automated execution.
+Bridge impact: Health/readback only; no bridge behavior change.
+Discord impact: None. No manual Discord webhook call was made by this phase.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Historical artifact filenames and compatibility helper names may still say five-model; runtime operator wording now reflects the six-model registry.
+Next recommended action: Monitor the current live scanner window for a fresh completed 5M proof candidate and confirm any scanner-owned card references only approved six-model behavior.
+
+Date: 2026-07-29
 Task: Add Intraday MSS Micro Continuation back as a sixth approved primary model.
 Files changed: src/types.ts, src/config/approvedDeskModels.ts, src/config/setupRegistry.ts, src/config/tradeRules.ts, src/lib/forensicModels/intradayMssMicroContinuation.ts, src/lib/setupScanner.ts, src/lib/tradeDecisionPipeline.ts, src/lib/collisionFirstArbitration.ts, src/lib/unifiedDeskOutputProductionScannerSurface.ts, focused tests, tools/automation/five-model-scanner-candidate-preview-dry-run.ts, docs/FIVE_MODEL_FORENSIC_PLAYBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Intraday MSS Micro Continuation had useful forensic evidence, but it should not return as a loose supporting label. It is now a primary approved model with its own definition, setup type, scanner detector, registry entry, and collision priority.

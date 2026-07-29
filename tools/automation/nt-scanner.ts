@@ -1644,6 +1644,7 @@ export async function writeUnifiedDeskOutputProductionScannerReadback(args: {
 }
 
 const FIVE_MODEL_APPROVED_DISPLAY_NAMES = new Set(APPROVED_DESK_MODEL_DEFINITIONS.map((model) => model.displayName));
+const APPROVED_MODEL_SURFACE_LABEL = `${APPROVED_DESK_MODEL_DEFINITIONS.length}-model production surface`;
 
 function fiveModelProductionSurfaceBlockers(
   surface: FiveModelProductionScannerSurfaceActivation | null,
@@ -1689,7 +1690,9 @@ function fiveModelProductionSurfaceBlockers(
     surface.summary.tradingLogicChangedRows === 0 ? null : 'Five-model production surface changed trading logic.',
     surface.summary.automatedOrderRows === 0 ? null : 'Five-model production surface has automated order rows.',
     surface.summary.blockedRows === 0 ? null : 'Five-model production surface has blocked rows.',
-    surface.rows.every((row) => FIVE_MODEL_APPROVED_DISPLAY_NAMES.has(row.model)) ? null : 'Five-model production surface includes a model outside the approved five-model registry.',
+    surface.rows.every((row) => FIVE_MODEL_APPROVED_DISPLAY_NAMES.has(row.model))
+      ? null
+      : `${APPROVED_MODEL_SURFACE_LABEL} includes a model outside the approved ${APPROVED_DESK_MODEL_DEFINITIONS.length}-model registry.`,
     surface.rows.every((row) => !row.publishDiscord) ? null : 'Five-model production surface rows would post Discord.',
     surface.rows.every((row) => !row.writesSupabase) ? null : 'Five-model production surface rows would write Supabase.',
     surface.rows.every((row) => !row.readsLiveBridge) ? null : 'Five-model production surface rows would read live bridge.',
@@ -1715,7 +1718,7 @@ export function fiveModelProductionScannerSummaryLine(
 ): string {
   if (!surface) return 'five-model-output=unavailable';
   const models = [...new Set(surface.rows.map((row) => row.model))].join(', ');
-  return `[scanner] Five-model production surface active: rows=${surface.summary.selectedRows} approved=${surface.summary.approvedDeskPlanRows} forming=${surface.summary.formingDeskReadRows} models=${models} | Discord guarded, canExecute audit-only, no automated orders.`;
+  return `[scanner] ${APPROVED_MODEL_SURFACE_LABEL} active: rows=${surface.summary.selectedRows} approved=${surface.summary.approvedDeskPlanRows} forming=${surface.summary.formingDeskReadRows} models=${models} | Discord guarded, canExecute audit-only, no automated orders.`;
 }
 
 export async function writeFiveModelProductionScannerReadback(args: {
