@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Prevent stale selected candidates from masking fresh scanner plans.
+Files changed: src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts, docs/PROJECT_STATUS.md.
+Reason: July 29 morning replay showed bearish evidence was present, but the scanner-selected candidate stayed on an old SHORT LiquidityRaidReclaimReversal around 7484.25 while current price was already far past its T1. Fresh same-side candidates such as RaidFailureDisplacementReversal and StructureShiftContinuation had complete entry/stop/T1/T2 levels near the active price, but the stale high-score selected candidate masked them before publish/readiness review.
+Tests run: npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. Scanner plan selection now filters stale/no-chase candidates at the current price before final scenario scoring when fresh eligible candidates exist. The no-chase guard remains intact; stale candidates still fall back only when no fresher concrete candidate is available.
+Trading logic changed: Yes. File: src/agents/scannerPlanSelectionAgent.ts. Function: selectBestScannerCandidate. Behavior changed: current-price stale candidates cannot outrank fresh complete candidates in scanner plan selection. Entry, stop, target, risk math, canExecute, model definitions, bridge data, Supabase, Discord webhook behavior, and automated execution were not changed.
+Bridge impact: None.
+Discord impact: No Discord call was made. This changes which scanner candidate can reach the existing publish/readiness boundary after the runtime reloads.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is a selection fix. It still needs a controlled scanner restart/readback before the live process can use it.
+Next recommended action: Run full test stack, commit/push, then restart/readback the scanner so the live morning/lunch/evening runtime loads the selector fix.
+
+Date: 2026-07-29
 Task: Block HTF desk-map artifacts from production Discord.
 Files changed: src/lib/liveDiscordPostEligibility.ts, src/lib/liveDiscordPostEligibility.test.ts, tools/automation/nt-scanner.ts, docs/PROJECT_STATUS.md.
 Reason: The latest production Discord receipt showed a `session_htf_desk_map` card posted to the scanner webhook even though the decision tape was `no_trade` / `canExecuteNow=false`. The card was review-only, but it looked like a trade plan because it carried direction, entry, stop, T1, and T2.

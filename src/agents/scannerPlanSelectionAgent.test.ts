@@ -105,6 +105,40 @@ assert.equal(fiveModelSelection.visibilityMetadata?.authority.registeredModel, t
 assert.equal(fiveModelSelection.visibilityMetadata?.authority.canExecute, false);
 assert.doesNotMatch(fiveModelSelection.stale.reason || '', /Blank-slate mode/);
 
+const staleHighScoreShort = candidate({
+  setupType: SetupType.LiquidityRaidReclaimReversal,
+  scenarioLabel: 'Old liquidity raid short',
+  priority: 1000,
+  entry: 7484.25,
+  stop: 7485,
+  target1: 7483.25,
+  target2: 7482.75,
+  riskPoints: 0.75,
+  requiredTrigger: 'Completed 5M close, retest, or hold beyond the reclaim/failure line.',
+});
+const freshStructureShort = candidate({
+  setupType: SetupType.StructureShiftContinuation,
+  scenarioLabel: 'Fresh structure shift short',
+  priority: 100,
+  entry: 7452.5,
+  stop: 7457.25,
+  target1: 7445.5,
+  target2: 7443,
+  riskPoints: 4.75,
+  requiredTrigger: 'Completed 5M bearish structure shift with protected 5M stop.',
+});
+const staleCandidateDoesNotMaskFreshPlan = selectScannerPlan({
+  normalized: normalized({
+    decision: 'SHORT',
+    decisionLabel: 'SHORT',
+    setupCandidates: [staleHighScoreShort, freshStructureShort],
+  }),
+  currentPrice: 7452.5,
+});
+
+assert.equal(staleCandidateDoesNotMaskFreshPlan.candidate, freshStructureShort);
+assert.equal(staleCandidateDoesNotMaskFreshPlan.state, 'Conditional');
+
 const collisionSelection = selectScannerPlan({
   normalized: normalized({
     decisionLabel: 'WAIT / COLLISION',

@@ -47,10 +47,32 @@ function candidateSelectionReason(candidate: SetupCandidate | null, fallback: st
   return candidate.blockReason || candidate.requiredTrigger || candidate.nextAction || fallback;
 }
 
-function selectBestScannerCandidate(candidates: SetupCandidate[] | undefined): SetupCandidate | null {
+function staleAtCurrentPrice(candidate: SetupCandidate, currentPrice: number | null): boolean {
+  if (typeof currentPrice !== 'number' || !Number.isFinite(currentPrice)) return false;
+  if (!candidateHasConcretePlan(candidate)) return false;
+  if (
+    typeof candidate.entry !== 'number' ||
+    typeof candidate.stop !== 'number' ||
+    typeof candidate.target1 !== 'number'
+  ) return false;
+
+  const buffer = 0.25;
+  if (candidate.direction === 'LONG') {
+    if (currentPrice <= candidate.stop + buffer) return true;
+    if (currentPrice >= candidate.target1 - buffer) return true;
+  }
+  if (candidate.direction === 'SHORT') {
+    if (currentPrice >= candidate.stop - buffer) return true;
+    if (currentPrice <= candidate.target1 + buffer) return true;
+  }
+
+  return Math.abs(candidate.target1 - currentPrice) < Math.abs(currentPrice - candidate.entry);
+}
+
+function selectBestScannerCandidate(candidates: SetupCandidate[] | undefined, currentPrice: number | null): SetupCandidate | null {
   const arbitration = applyCollisionFirstArbitration(candidates);
   if (arbitration.state === 'collision_wait') return null;
-  return (candidates || [])
+  const eligible = (candidates || [])
     .filter((candidate) => {
       if (arbitration.allowedDirection && candidate.direction !== arbitration.allowedDirection) return false;
       if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return false;
@@ -61,7 +83,9 @@ function selectBestScannerCandidate(candidates: SetupCandidate[] | undefined): S
         candidate.detectedStatus === SetupCandidateStatus.Possible ||
         Boolean(candidate.blockReason);
     })
-    .sort((a, b) => scenarioScore(b) - scenarioScore(a))[0] || null;
+    .sort((a, b) => scenarioScore(b) - scenarioScore(a));
+  const freshEligible = eligible.filter((candidate) => !staleAtCurrentPrice(candidate, currentPrice));
+  return (freshEligible[0] || eligible[0]) ?? null;
 }
 
 export function selectScannerPlan(args: {
@@ -100,7 +124,7 @@ export function selectScannerPlan(args: {
       }),
     };
   }
-  const candidate = selectBestScannerCandidate(args.normalized.setupCandidates);
+  const candidate = selectBestScannerCandidate(args.normalized.setupCandidates, args.currentPrice);
   const state = candidate ? stateFromCandidate(candidate, args.normalized) : stateFromNormalizedPlan(args.normalized);
   const staleReason = candidateSelectionReason(
     candidate,
