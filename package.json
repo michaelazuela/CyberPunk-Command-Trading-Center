@@ -47,6 +47,7 @@
     "diagnostic:protected-structure-trend-confirmation": "tsx tools/automation/protected-structure-trend-confirmation-replay.test.ts",
     "diagnostic:protected-structure-trade-review": "tsx tools/automation/protected-structure-trade-review.ts",
     "diagnostic:scanner-behavior-audit": "tsx tools/automation/scanner-behavior-audit.ts",
+    "diagnostic:stopped-trade-workflow-audit": "tsx tools/automation/stopped-trade-workflow-audit.ts",
     "diagnostic:scanner-discord-family-audit": "tsx tools/automation/scanner-discord-family-audit.ts",
     "diagnostic:obsolete-dirty-code-cleanup": "tsx tools/automation/obsolete-dirty-code-cleanup-audit.ts",
     "diagnostic:authority-language": "tsx tools/automation/authority-language-audit.ts",

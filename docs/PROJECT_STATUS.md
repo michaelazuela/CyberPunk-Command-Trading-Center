@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Add stopped-trade workflow audit for scanner-posted candidates.
+Files changed: tools/automation/stopped-trade-workflow-audit.ts, tools/automation/stopped-trade-workflow-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: July 28 replay showed stopped scanner-posted candidates, but the prior manual review did not trace each loss through the workflow stages: completed 5M candle, selected model, HTF/MTF read, publish state, entry fill timing, target-before-entry, same-candle entry/stop ambiguity, duplicate campaign, and protected-structure stop distance.
+Tests run: npx tsx tools/automation/stopped-trade-workflow-audit.test.ts; npm run diagnostic:stopped-trade-workflow-audit -- --trade-date 2026-07-28 --instrument MES --sessions morning,lunch,evening --json.
+Result: Passed. The read-only audit reviewed 3 saved decision tapes, 111 posted/review candidates, and 28 stopped rows. Failure buckets: 9 late/extended protected-stop rows, 17 mixed/counter MTF rows, 12 duplicate campaign rows, 11 same-candle entry/stop rows, and 7 stale entries where T1/T2 had already been touched before entry filled. Focus rows confirmed: 09:35 SHORT was aligned HTF but late/extended with 35.50 pts protected-stop risk; 10:50 SHORT was mixed MTF with no T1 after entry; 14:15 LONG was same-candle entry/stop noise; 21:25 and 21:30 LONG were stale target-before-entry cases, with 21:30 also a duplicate campaign. Report path: tools/automation/diagnostic-reports/stopped-trade-workflow-audit-MES-2026-07-28-1785361236999.json.
+Trading logic changed: No. This is diagnostic/read-only tooling. It does not change setup definitions, model rules, candidate selection, collision arbitration, canExecute, entry, stop, target, risk, bridge behavior, Supabase, Discord posting, or automated execution.
+Bridge impact: None. The tool reads saved local decision-tape artifacts only.
+Discord impact: None. No webhook call was made.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The audit currently uses saved decision-tape completed 5M bars and conservative stop-first same-candle ordering. It identifies workflow failure classes but does not install live gates yet.
+Next recommended action: Install the narrow live-boundary guards in small chunks: block target-before-entry stale plans, collapse duplicate campaigns, hold same-candle entry/stop ambiguity for a fresh 5M retest/hold, and keep late/extended protected-stop candidates as forming evidence until a closer protected 5M stop and target room appear.
+
+Date: 2026-07-29
 Task: Prevent stale selected candidates from masking fresh scanner plans.
 Files changed: src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts, docs/PROJECT_STATUS.md.
 Reason: July 29 morning replay showed bearish evidence was present, but the scanner-selected candidate stayed on an old SHORT LiquidityRaidReclaimReversal around 7484.25 while current price was already far past its T1. Fresh same-side candidates such as RaidFailureDisplacementReversal and StructureShiftContinuation had complete entry/stop/T1/T2 levels near the active price, but the stale high-score selected candidate masked them before publish/readiness review.
