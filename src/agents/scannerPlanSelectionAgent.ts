@@ -7,6 +7,7 @@ import {
   type TargetCascadeResult,
 } from '../lib/localScannerEngine';
 import { candidateHasConcretePlan, scenarioScore } from '../lib/scenarioSelection';
+import { COLLISION_WAIT_MESSAGE, applyCollisionFirstArbitration } from '../lib/collisionFirstArbitration';
 import type { NormalizedTradePlan } from '../lib/tradePlan';
 
 export interface ScannerPlanSelection {
@@ -47,8 +48,11 @@ function candidateSelectionReason(candidate: SetupCandidate | null, fallback: st
 }
 
 function selectBestScannerCandidate(candidates: SetupCandidate[] | undefined): SetupCandidate | null {
+  const arbitration = applyCollisionFirstArbitration(candidates);
+  if (arbitration.state === 'collision_wait') return null;
   return (candidates || [])
     .filter((candidate) => {
+      if (arbitration.allowedDirection && candidate.direction !== arbitration.allowedDirection) return false;
       if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return false;
       if (!candidateHasConcretePlan(candidate)) return false;
       return candidate.executionStatus === ExecutionStatus.Executable ||
@@ -70,6 +74,32 @@ export function selectScannerPlan(args: {
   guards?: unknown;
   targetCascade?: TargetCascadeResult | null;
 }): ScannerPlanSelection {
+  const collisionArbitration = args.normalized.collisionArbitration || applyCollisionFirstArbitration(args.normalized.setupCandidates);
+  if (collisionArbitration.state === 'collision_wait') {
+    const state: ScannerState = 'NoTrade';
+    const stale: StaleChaseResult = {
+      state,
+      stale: false,
+      reason: COLLISION_WAIT_MESSAGE,
+    };
+    return {
+      candidate: null,
+      stale,
+      state,
+      stateForAlert: state,
+      reviewStatus: null,
+      auditWarnings: [
+        COLLISION_WAIT_MESSAGE,
+        'Opposite-side model evidence is context only until one side completes the full 5M proof contract.',
+      ],
+      visibilityMetadata: classifyScannerVisibility({
+        state,
+        candidate: null,
+        canExecute: false,
+        staleReason: stale.reason,
+      }),
+    };
+  }
   const candidate = selectBestScannerCandidate(args.normalized.setupCandidates);
   const state = candidate ? stateFromCandidate(candidate, args.normalized) : stateFromNormalizedPlan(args.normalized);
   const staleReason = candidateSelectionReason(

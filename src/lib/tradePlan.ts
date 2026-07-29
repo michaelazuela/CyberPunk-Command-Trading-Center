@@ -5,6 +5,7 @@ import { getWindowStatus } from '../config/timeWindows';
 import { getEffectiveCanExecute } from './effectiveExecution';
 import { normalizeIctModelLabel } from './ictModelLabels';
 import { PipelineSessionType, runTradeDecisionPipeline, TradeDecisionStepResult } from './tradeDecisionPipeline';
+import type { CollisionArbitrationResult } from './collisionFirstArbitration';
 
 export type TradeDecision = "LONG" | "SHORT" | "NO TRADE";
 export type TriggerState = "TRIGGERED" | "PENDING_TRIGGER" | "NO_TRIGGER";
@@ -51,6 +52,7 @@ export interface NormalizedTradePlan {
   decisionAuditTrail?: TradeDecisionStepResult[];
   setupCandidates?: SetupCandidate[];
   opportunitySelection?: FinalOpportunitySelection;
+  collisionArbitration?: CollisionArbitrationResult;
   earlyMoveReview?: EarlyMoveReview | null;
   sessionLevelContext?: SessionLevelContext;
   sessionStory?: SessionStory;
@@ -195,6 +197,14 @@ function decisionPresentation(args: {
     };
   }
   if (hasConditionalPlans) {
+    if (args.pipeline.collisionArbitration?.state === 'collision_wait') {
+      return {
+        decisionLabel: 'WAIT / COLLISION',
+        executionDecision: 'NO EXECUTABLE TRADE',
+        planningDecision: 'COLLISION WAIT',
+        hasConditionalPlans: true,
+      };
+    }
     return {
       decisionLabel: "WAIT / CONDITIONAL",
       executionDecision: "NO EXECUTABLE TRADE",
@@ -253,6 +263,7 @@ export function normalizeTradePlan(
     decisionAuditTrail: pipeline.auditTrail,
     setupCandidates: pipeline.setupCandidates || [],
     opportunitySelection: pipeline.opportunitySelection,
+    collisionArbitration: pipeline.collisionArbitration,
     earlyMoveReview: pipeline.earlyMoveReview,
     sessionLevelContext: pipeline.chartContext.sessionLevelContext,
     sessionStory: pipeline.chartContext.sessionStory,
@@ -502,6 +513,7 @@ export function normalizeTradePlan(
       invalidation: result.current_rule_analysis?.no_trade_reason || defaultPlan.invalidation,
       setupCandidates: pipeline.setupCandidates || [],
       opportunitySelection: pipeline.opportunitySelection,
+      collisionArbitration: pipeline.collisionArbitration,
       earlyMoveReview: pipeline.earlyMoveReview,
       sessionLevelContext: pipeline.chartContext.sessionLevelContext,
       sessionStory: pipeline.chartContext.sessionStory,
@@ -556,6 +568,7 @@ export function normalizeTradePlan(
     decisionAuditTrail: pipeline.auditTrail,
     setupCandidates: pipeline.setupCandidates || [],
     opportunitySelection: pipeline.opportunitySelection,
+    collisionArbitration: pipeline.collisionArbitration,
     earlyMoveReview: pipeline.earlyMoveReview,
     sessionLevelContext: pipeline.chartContext.sessionLevelContext,
     sessionStory: pipeline.chartContext.sessionStory,

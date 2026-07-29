@@ -105,4 +105,34 @@ assert.equal(fiveModelSelection.visibilityMetadata?.authority.registeredModel, t
 assert.equal(fiveModelSelection.visibilityMetadata?.authority.canExecute, false);
 assert.doesNotMatch(fiveModelSelection.stale.reason || '', /Blank-slate mode/);
 
+const collisionSelection = selectScannerPlan({
+  normalized: normalized({
+    decisionLabel: 'WAIT / COLLISION',
+    setupCandidates: [
+      candidate({
+        direction: 'LONG',
+        entry: 7510,
+        stop: 7502,
+        target1: 7522,
+        target2: 7526,
+        executionStatus: ExecutionStatus.Conditional,
+        blockReason: null,
+        missingEvidence: ['Wait for completed 5M proof.'],
+      }),
+      candidate({
+        direction: 'SHORT',
+        executionStatus: ExecutionStatus.Conditional,
+        blockReason: null,
+        missingEvidence: ['Wait for completed 5M proof.'],
+      }),
+    ],
+  }),
+  currentPrice: 7504,
+});
+
+assert.equal(collisionSelection.candidate, null);
+assert.equal(collisionSelection.state, 'NoTrade');
+assert.match(collisionSelection.stale.reason || '', /Both LONG and SHORT evidence are active/);
+assert.ok(collisionSelection.auditWarnings.some((warning) => warning.includes('Opposite-side model evidence')));
+
 console.log('scannerPlanSelectionAgent installed-model selection contract verified');

@@ -2,6 +2,20 @@
 
 ## Latest Change
 
+Date: 2026-07-29
+Task: Install collision-first arbitration for same-window LONG/SHORT desk candidates.
+Files changed: src/lib/collisionFirstArbitration.ts, src/lib/tradeDecisionPipeline.ts, src/lib/tradePlan.ts, src/agents/scannerPlanSelectionAgent.ts, tools/automation/collision-first-arbitration-pdf-window-replay.ts, focused tests, docs/PROJECT_STATUS.md.
+Reason: June PDF forensic replay showed profitable model ingredients were present, but same-window opposite-side candidates could still become the visible desk plan. The desk now detects long/short candidate collisions before final ranking and blocks forced promotion unless only one side has a complete 5M proof contract.
+Tests run: npx tsx src/lib/collisionFirstArbitration.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsx src/lib/tradeDecisionPipeline.test.ts; npx tsx src/lib/setupScanner.test.ts; npx tsx tools/automation/collision-first-arbitration-pdf-window-replay.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/collision-first-arbitration-pdf-window-replay.ts --pdf C:\Users\Mike\Downloads\206257_Monthly_20260630.pdf --start-date 2026-06-08 --end-date 2026-06-26 --json.
+Result: Passed. Real June 8-26 PDF-window replay loaded 40 profitable PDF trades and 1209 saved replay rows. It found 168 rows inside PDF windows, 99 same-proof clusters, and 6 directional collision clusters. Naive ranking had 3 opposite-side promotions; collision-first arbitration reduced opposite-side promotions to 0, converted all 6 collision clusters to collision_wait, and preserved winning-side evidence in all 6 clusters. Report path: tools/automation/diagnostic-reports/collision-first-arbitration-pdf-window-replay-2026-06-08-to-2026-06-26-1785334823689.json.
+Trading logic changed: Yes. Local deterministic selection now gates same-window long/short collisions before final candidate ranking. If both sides are active and neither side is uniquely complete, the desk outputs collision_wait. It does not change canExecute, entry math, stop math, target math, risk math, bridge behavior, Supabase writes, automated orders, or Discord publish policy.
+Bridge impact: None.
+Discord impact: None in this phase. No webhook call was made and production Discord policy was not changed.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is intentionally conservative. If both directions look complete in the same 5M decision window, the desk waits for a fresh separator/retest instead of choosing a side.
+Next recommended action: Run live-local readback for the current morning scanner cycle after full guards pass, then decide whether a controlled scanner restart is needed to load the new arbitration code.
+
 Date: 2026-07-27
 Task: Add validation-only proof tooling for the video-derived Two-Legged Pullback Continuation candidate.
 Files changed: tools/automation/two-legged-pullback-validation-proof.ts, tools/automation/two-legged-pullback-validation-proof.test.ts, package.json, docs/PROJECT_STATUS.md.

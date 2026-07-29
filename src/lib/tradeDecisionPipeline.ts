@@ -29,6 +29,7 @@ import { buildConditionalPlans } from './conditionalPlanBuilder';
 import { applyTargetObjectivesToCandidates } from './targetObjectiveEngine';
 import { applyLevelSanity } from './levelSanityEngine';
 import { buildHtfLiquidityDrawStateFromChartContext } from './htfLiquidityDrawEngine';
+import { applyCollisionFirstArbitration, type CollisionArbitrationResult } from './collisionFirstArbitration';
 
 export type PipelineSessionType = ChartContext['sessionType'];
 type Direction = 'LONG' | 'SHORT' | 'NO TRADE';
@@ -58,6 +59,7 @@ export interface TradeDecisionPipelineResult extends TradeDecision {
   auditTrail: TradeDecisionStepResult[];
   target1: number | null;
   target2: number | null;
+  collisionArbitration?: CollisionArbitrationResult;
 }
 
 interface CandidateInput {
@@ -956,11 +958,20 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     blockInvalidatedCandidates(mergeSetupCandidates(setupScan.candidates, buildConditionalPlans(chartContext)), chartContext),
     chartContext.structuralLevels || []
   ), chartContext).sort(qualitySort);
-  const finalSelectionCandidates = [...setupCandidates].sort(finalSelectionSort);
+  const collisionArbitration = applyCollisionFirstArbitration(setupCandidates);
+  const finalSelectionCandidates = [...setupCandidates]
+    .filter((candidate) => {
+      if (collisionArbitration.state === 'collision_wait') return false;
+      if (!collisionArbitration.allowedDirection) return true;
+      return candidate.direction === collisionArbitration.allowedDirection;
+    })
+    .sort(finalSelectionSort);
   const selectedExecutable = finalSelectionCandidates.find(isApprovalEligibleCandidate) || null;
   const selectedConditional = finalSelectionCandidates.find(isConditionalVisibilityCandidate) || null;
   const selectedCandidate = selectedExecutable || selectedConditional;
-  const displayCandidate = selectedCandidate || chooseDisplayCandidate(setupCandidates);
+  const displayCandidate = collisionArbitration.state === 'collision_wait'
+    ? null
+    : selectedCandidate || chooseDisplayCandidate(setupCandidates);
   const blockedCandidates = setupCandidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Blocked);
   const bias = inferBias(input.result);
   const riskAssessment = makeRiskAssessmentFromSetup(selectedCandidate || displayCandidate);
@@ -1007,8 +1018,10 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     confidence: selectedCandidate?.confidence || displayCandidate?.confidence || 'Low',
     entryTrigger: selectedCandidate?.requiredTrigger || displayCandidate?.requiredTrigger || null,
     invalidation: selectedCandidate?.invalidation || displayCandidate?.invalidation || 'No valid invalidation defined.',
-    reasoning: selectedCandidate?.nextAction || displayCandidate?.nextAction || 'No executable or conditional setup survived deterministic scan.',
-    noTradeReason: selectedCandidate?.blockReason || displayCandidate?.blockReason || null,
+    reasoning: collisionArbitration.message || selectedCandidate?.nextAction || displayCandidate?.nextAction || 'No executable or conditional setup survived deterministic scan.',
+    noTradeReason: collisionArbitration.state === 'collision_wait'
+      ? NoTradeReason.ConflictingStructure
+      : selectedCandidate?.blockReason || displayCandidate?.blockReason || null,
     decisionQualityScore: selectedCandidate?.decisionQualityScore ?? displayCandidate?.decisionQualityScore ?? null,
     decisionQualityRecommendation: selectedCandidate?.decisionQualityRecommendation ?? displayCandidate?.decisionQualityRecommendation ?? null,
     decisionQualityScorecard: selectedCandidate?.decisionQualityScorecard ?? displayCandidate?.decisionQualityScorecard ?? [],
@@ -1044,6 +1057,7 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
   const preliminaryFailure = firstFailure(auditTrail);
   const finalStatus = finalStatusFromSelection(selectedExecutable, selectedConditional, preliminaryFailure, hasLowQualityScreenshot, hasNoClearBias);
   const finalNoTradeReason =
+    (collisionArbitration.state === 'collision_wait' ? NoTradeReason.ConflictingStructure : undefined) ||
     (finalStatus === TradeDecisionStatus.NoTrade || finalStatus === TradeDecisionStatus.InvalidScreenshot || finalStatus === TradeDecisionStatus.OutsideRules
       ? preliminaryFailure?.noTradeReason
       : undefined) ||
@@ -1064,9 +1078,11 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     makeStep(
       TradeDecisionStep.ValidateEntryTrigger,
       selectedIsExecutable && isValidPrice(selectedCandidate?.entry) ? 'pass' : selectedIsConditional ? 'warning' : 'fail',
-      selectedCandidate?.requiredTrigger || (selectedIsConditional ? 'Conditional setup requires trigger confirmation.' : 'No measurable entry trigger.'),
+      collisionArbitration.message || selectedCandidate?.requiredTrigger || (selectedIsConditional ? 'Conditional setup requires trigger confirmation.' : 'No measurable entry trigger.'),
       true,
-      selectedIsConditional ? selectedCandidate?.blockReason || NoTradeReason.EntryTriggerPending : NoTradeReason.EntryTriggerMissing
+      collisionArbitration.state === 'collision_wait'
+        ? NoTradeReason.ConflictingStructure
+        : selectedIsConditional ? selectedCandidate?.blockReason || NoTradeReason.EntryTriggerPending : NoTradeReason.EntryTriggerMissing
     ),
     makeStep(
       TradeDecisionStep.ValidateStopLocation,
@@ -1109,10 +1125,10 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     target: selectedIsExecutable || finalStatus === TradeDecisionStatus.ConditionalTrade ? computedTargets.target : null,
     target1: selectedIsExecutable || finalStatus === TradeDecisionStatus.ConditionalTrade ? computedTargets.target1 : null,
     target2: selectedIsExecutable || finalStatus === TradeDecisionStatus.ConditionalTrade ? computedTargets.target2 : null,
-    invalidation: selectedCandidate?.invalidation || preliminaryFailure?.message || 'No valid invalidation defined.',
+    invalidation: selectedCandidate?.invalidation || collisionArbitration.message || preliminaryFailure?.message || 'No valid invalidation defined.',
     risk: riskAssessment,
     confidence: selectedCandidate?.confidence || displayCandidate?.confidence || 'Low',
-    reasoning: selectedCandidate?.nextAction || displayCandidate?.nextAction || preliminaryFailure?.message || 'No executable or conditional opportunity.',
+    reasoning: collisionArbitration.message || selectedCandidate?.nextAction || displayCandidate?.nextAction || preliminaryFailure?.message || 'No executable or conditional opportunity.',
     noTradeReason: finalNoTradeReason,
     executionRefinement1m: oneMinuteRefinement,
   };
@@ -1149,6 +1165,7 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     setupCandidates,
     opportunitySelection,
     earlyMoveReview,
+    collisionArbitration,
     riskAssessment,
     finalTradePlan: finalPlan,
     noTradeReason: finalPlan.noTradeReason,
