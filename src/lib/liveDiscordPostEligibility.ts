@@ -85,6 +85,7 @@ function deskStateBoundaryPreserved(deskState: DeskState | null): boolean {
 
 const LIVE_POST_ACTIONS = new Set(['post_plan', 'post_review', 'post_conditional', 'post_watch']);
 const LIVE_POST_VISIBILITY_MODES = new Set(['POST_PLAN', 'POST_REVIEW', 'POST_CONDITIONAL', 'POST_WATCH']);
+const PRODUCTION_DISCORD_LOCAL_ONLY_POST_KINDS = new Set(['session_htf_desk_map']);
 
 function deskStateLivePostActionable(deskState: DeskState | null, postKind = 'trade_alert'): boolean {
   if (postKind !== 'trade_alert' && postKind !== 'desk_play') {
@@ -251,17 +252,23 @@ export function evaluateLiveDiscordPostEligibility(input: LiveDiscordEligibility
   ];
 
   const blockers = checks.filter((item) => !item.passed).map((item) => item.reason);
+  const localOnlyBlockers = PRODUCTION_DISCORD_LOCAL_ONLY_POST_KINDS.has(String(input.postKind || 'trade_alert'))
+    ? [
+        'Session HTF Desk Map is local/audit-only for production Discord. Production Discord is reserved for scanner-owned approved trade-plan cards.',
+      ]
+    : [];
 
   return {
     sourceOfTruth: 'phase_11a_live_discord_post_eligibility_policy',
-    eligible: blockers.length === 0,
+    eligible: blockers.length === 0 && localOnlyBlockers.length === 0,
     checks,
-    blockers,
+    blockers: [...blockers, ...localOnlyBlockers],
     notes: [
       'Phase 11A/11E is a policy contract only; it does not create scanner candidates or approve trades.',
       'Eligibility does not approve trades, alter scanner ranking, or change canExecute.',
       'Phase 11B may wire this policy to the send boundary after review.',
       'Phase 11E only allows live scanner posts when the existing DeskState is fresh, actionable, non-duplicate, and not missed/no-chase.',
+      'Session HTF Desk Maps remain local/audit-only and must not post to the production scanner trade-plan webhook.',
     ],
     authorityBoundary: {
       changesTradingLogic: false,

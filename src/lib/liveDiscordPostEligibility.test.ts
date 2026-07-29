@@ -321,6 +321,30 @@ assert.equal(reversalWatchUsesOwnSuppressionPath.eligible, true);
 assert.equal(reversalWatchUsesOwnSuppressionPath.blockers.length, 0);
 assert.ok(!reversalWatchUsesOwnSuppressionPath.blockers.some((item) => item.includes('POST_PLAN')));
 
+const sessionHtfDeskMapBlockedFromProductionDiscord = evaluateLiveDiscordPostEligibility(input({
+  postKind: 'session_htf_desk_map',
+  deskState: {
+    ...deskState(),
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      visibilityMode: 'POST_REVIEW',
+      discordAction: 'post_review',
+      authority: {
+        ...deskState().visibilityMetadata.authority,
+        planEligible: false,
+        discordEligible: true,
+        executionEligible: false,
+        canExecute: false,
+      },
+    },
+  },
+}));
+assert.equal(sessionHtfDeskMapBlockedFromProductionDiscord.eligible, false);
+assert.ok(sessionHtfDeskMapBlockedFromProductionDiscord.blockers.some((item) => item.includes('local/audit-only')));
+assert.equal(sessionHtfDeskMapBlockedFromProductionDiscord.authorityBoundary.createsTradeApproval, false);
+
 const highQualitySelectedPlanIgnoresNonSelectedPromotionNoise = evaluateLiveDiscordPostEligibility(input({
   deskState: {
     ...deskState(),

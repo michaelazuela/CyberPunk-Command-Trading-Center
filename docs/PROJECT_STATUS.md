@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Block HTF desk-map artifacts from production Discord.
+Files changed: src/lib/liveDiscordPostEligibility.ts, src/lib/liveDiscordPostEligibility.test.ts, tools/automation/nt-scanner.ts, docs/PROJECT_STATUS.md.
+Reason: The latest production Discord receipt showed a `session_htf_desk_map` card posted to the scanner webhook even though the decision tape was `no_trade` / `canExecuteNow=false`. The card was review-only, but it looked like a trade plan because it carried direction, entry, stop, T1, and T2.
+Tests run: npx tsx src/lib/liveDiscordPostEligibility.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. Session HTF Desk Maps are now local/audit-only for production Discord and the scanner send path routes that post kind through the live Discord boundary.
+Trading logic changed: No. This changes Discord publish policy only. It does not change setup detection, model rules, canExecute, entry, stop, targets, risk, bridge data, Supabase schema, or automated execution.
+Bridge impact: None.
+Discord impact: Production scanner Discord is reserved for scanner-owned approved trade-plan cards; HTF desk maps remain local/audit-only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The running scanner process must be restarted after verification for this policy to affect live runtime.
+Next recommended action: Commit/push, then perform a controlled scanner restart/readback if production runtime should load this fix immediately.
+
+Date: 2026-07-29
 Task: Fix approved model surface scanner log wording after sixth-model install.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The live scanner registry now includes six approved primary models, but the runtime readback/log summary still printed the stale "Five-model production surface active" phrase. The summary now derives the model count from `APPROVED_DESK_MODEL_DEFINITIONS.length`.

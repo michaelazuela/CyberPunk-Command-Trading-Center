@@ -6652,7 +6652,7 @@ export function scannerNoCampaignPostReviewDeskPlayHoldReason(args: {
 }): string | null {
   const isPostReview = args.discordAction === 'post_review' || args.visibilityMode === 'POST_REVIEW';
   if (args.activeCampaignId || !isPostReview) return null;
-  return 'Desk Play kept local: no active scanner campaign is attached to this POST_REVIEW trade-plan card. Production Discord only accepts scanner-owned campaign cards or explicit session-map artifacts, not no-campaign review refreshes.';
+  return 'Desk Play kept local: no active scanner campaign is attached to this POST_REVIEW trade-plan card. Production Discord only accepts scanner-owned approved trade-plan cards, not no-campaign review refreshes or session-map artifacts.';
 }
 
 function scannerDeskPlayPublicCadenceHoldReason(args: {
@@ -11475,12 +11475,14 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         completed5m,
         currentPrice,
       });
+      const htfMapLiveBoundary = liveDiscordSendBoundary(decisionTapePath, 'session_htf_desk_map');
       const receipt = await postScannerDiscordManaged({
         kind: 'session_htf_desk_map',
         key: morningMapKey,
         payload: htfMapArtifacts.payload,
         files: htfMapArtifacts.files,
         config,
+        liveSendBoundary: htfMapLiveBoundary,
       });
       if (receipt.deliveryStatus === 'sent') {
         const sentAt = new Date().toISOString();
