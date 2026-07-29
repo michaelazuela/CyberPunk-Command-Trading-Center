@@ -761,8 +761,32 @@ export function scannerActiveCampaignKey(candidate: SetupCandidate | null | unde
   return typeof id === 'string' && id.trim() ? id.trim() : null;
 }
 
-export function scannerActiveCampaignKeyForTradeDate(candidate: SetupCandidate | null | undefined, tradeDate: string): string | null {
-  const campaignId = scannerActiveCampaignKey(candidate);
+function scannerImplicitCampaignKey(candidate: SetupCandidate | null | undefined, session?: string | null): string | null {
+  const direction = candidate?.direction === 'LONG' || candidate?.direction === 'SHORT'
+    ? candidate.direction
+    : null;
+  const setupType = typeof candidate?.setupType === 'string' && candidate.setupType.trim()
+    ? candidate.setupType.trim()
+    : null;
+  if (!direction || !setupType) return null;
+  if (
+    !isFiniteTradePrice(candidate?.entry) ||
+    !isFiniteTradePrice(candidate?.stop) ||
+    !isFiniteTradePrice(candidate?.target1) ||
+    !isFiniteTradePrice(candidate?.target2)
+  ) {
+    return null;
+  }
+  const sessionKey = typeof session === 'string' && session.trim() ? session.trim() : 'session_unknown';
+  return `implicit-session-campaign:${sessionKey}:${setupType}:${direction}`;
+}
+
+export function scannerActiveCampaignKeyForTradeDate(
+  candidate: SetupCandidate | null | undefined,
+  tradeDate: string,
+  session?: string | null,
+): string | null {
+  const campaignId = scannerActiveCampaignKey(candidate) || scannerImplicitCampaignKey(candidate, session);
   return normalizeActiveCampaignIdForTradeDate(campaignId, tradeDate);
 }
 
@@ -812,7 +836,9 @@ function activeCampaignPublicActionFingerprint(candidate?: SetupCandidate | null
 function activeCampaignMaterialUpdateAllowed(args: {
   candidate?: SetupCandidate | null;
   previousFingerprint?: string | null;
+  campaignId?: string | null;
 }): boolean {
+  if (args.campaignId?.includes(':implicit-session-campaign:')) return false;
   const currentFingerprint = activeCampaignPublicActionFingerprint(args.candidate);
   return Boolean(currentFingerprint && args.previousFingerprint && currentFingerprint !== args.previousFingerprint);
 }
@@ -821,6 +847,7 @@ export function shouldSuppressActiveCampaignScannerAlert(args: {
   activeCampaignSent?: Record<string, ScannerActiveCampaignLedgerRecord>;
   candidate?: SetupCandidate | null;
   tradeDate?: string;
+  session?: string | null;
 }): {
   shouldSuppress: boolean;
   campaignId: string | null;
@@ -828,7 +855,7 @@ export function shouldSuppressActiveCampaignScannerAlert(args: {
   record: ScannerActiveCampaignLedgerRecord | null;
 } {
   const campaignId = args.tradeDate
-    ? scannerActiveCampaignKeyForTradeDate(args.candidate, args.tradeDate)
+    ? scannerActiveCampaignKeyForTradeDate(args.candidate, args.tradeDate, args.session)
     : scannerActiveCampaignKey(args.candidate);
   if (!campaignId) {
     return { shouldSuppress: false, campaignId: null, reason: null, record: null };
@@ -837,7 +864,11 @@ export function shouldSuppressActiveCampaignScannerAlert(args: {
   if (!record) {
     return { shouldSuppress: false, campaignId, reason: null, record: null };
   }
-  if (activeCampaignMaterialUpdateAllowed({ candidate: args.candidate, previousFingerprint: record.publicActionFingerprint || null })) {
+  if (activeCampaignMaterialUpdateAllowed({
+    candidate: args.candidate,
+    previousFingerprint: record.publicActionFingerprint || null,
+    campaignId,
+  })) {
     return {
       shouldSuppress: false,
       campaignId,
@@ -857,12 +888,13 @@ export function recordActiveCampaignScannerAlertSent(args: {
   activeCampaignSent: Record<string, ScannerActiveCampaignLedgerRecord>;
   candidate?: SetupCandidate | null;
   tradeDate: string;
+  session?: string | null;
   state: ScannerState;
   confidence: number;
   alertKey: string;
   sentAt?: string;
 }): void {
-  const campaignId = scannerActiveCampaignKeyForTradeDate(args.candidate, args.tradeDate);
+  const campaignId = scannerActiveCampaignKeyForTradeDate(args.candidate, args.tradeDate, args.session);
   if (!campaignId) return;
   const sentAt = args.sentAt || new Date().toISOString();
   const previous = args.activeCampaignSent[campaignId];
@@ -1017,7 +1049,7 @@ export async function claimDurableActiveCampaignScannerAlert(args: {
   planVersionId: string;
   fetchImpl?: FetchLike;
 }): Promise<ScannerActiveCampaignClaimResult> {
-  const campaignId = scannerActiveCampaignKeyForTradeDate(args.candidate, args.tradeDate);
+  const campaignId = scannerActiveCampaignKeyForTradeDate(args.candidate, args.tradeDate, args.session);
   if (!campaignId) {
     return { source: 'none', claimed: true, shouldSuppress: false, campaignId: null, reason: null, durableAvailable: false };
   }
@@ -1075,6 +1107,7 @@ export async function claimDurableActiveCampaignScannerAlert(args: {
   const currentPublicActionFingerprint = activeCampaignPublicActionFingerprint(args.candidate);
   if (
     status === 'sent' &&
+    !campaignId.includes(':implicit-session-campaign:') &&
     currentPublicActionFingerprint &&
     previousPublicActionFingerprint &&
     currentPublicActionFingerprint !== previousPublicActionFingerprint
@@ -11140,7 +11173,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     reason: null,
     durableAvailable: Boolean(durableLedgerConfig),
   };
-  if (alertDecision.shouldSend && scannerActiveCampaignKey(candidate)) {
+  if (alertDecision.shouldSend && scannerActiveCampaignKeyForTradeDate(candidate, tradeDate, session)) {
     try {
       activeCampaignClaim = await claimDurableActiveCampaignScannerAlert({
         config: durableLedgerConfig,
@@ -11158,7 +11191,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         source: 'blocked',
         claimed: false,
         shouldSuppress: true,
-        campaignId: scannerActiveCampaignKeyForTradeDate(candidate, tradeDate),
+        campaignId: scannerActiveCampaignKeyForTradeDate(candidate, tradeDate, session),
         reason: `ActiveCampaign alert blocked: durable Supabase ledger is unavailable (${sanitizedError(error)}). No local-only campaign de-dup fallback is allowed.`,
         durableAvailable: false,
       };
@@ -11969,6 +12002,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           activeCampaignSent: state.activeCampaignSent,
           candidate,
           tradeDate,
+          session,
           state: stateForAlert,
           confidence: confidence.score,
           alertKey,

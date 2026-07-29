@@ -11357,6 +11357,21 @@ Next recommended action: Review the generated research-only outcome report and D
 
 ## Latest Change
 
+Date: 2026-07-29
+Task: Add implicit same-session campaign lock for no-campaign scanner trade alerts.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: July 28 replay showed repeated RaidFailureDisplacementReversal SHORT Discord candidates in the same morning session because no-campaign variants bypassed the ActiveCampaign de-dup ledger.
+Result: No-campaign candidates with complete entry/stop/T1/T2 now receive an implicit trade-date/session/model/side campaign key. The first valid model/side/session ticket may publish; later same-model/side/session variants are suppressed as the same active campaign instead of posting separate Discord cards.
+Replay proof: July 28 saved-tape replay changed morning would-publish rows from six RaidFailureDisplacementReversal SHORT variants to one 09:20 SHORT candidate; 10 later variants were suppressed by campaign memory. Lunch and evening remained no-publish because collision_wait held mixed LONG/SHORT evidence.
+Trading logic changed: Yes, limited to scanner Discord publish de-duplication/campaign locking. Model definitions, 5M proof authority, entry/stop/T1/T2/risk math, canExecute, bridge reads, Supabase schema, and automated execution were not loosened.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: Uses existing durable ActiveCampaign alert ledger with a new implicit campaign id for complete no-campaign candidates; no schema change.
+Known risks: Explicit ActiveCampaign material-update behavior is preserved. If a same model/side session genuinely needs a later replacement post after stop/invalid/re-entry, that should be installed as a separate approved replacement rule.
+Next recommended action: Restart/read back scanner, then rerun yesterday/today bar-by-bar through the live-boundary replay and confirm Discord would only show one active model/side campaign per session.
+
+## Previous Change
+
 Date: 2026-07-25
 Task: Remove retired trading-model runtime surface and lock the five active model contract.
 Files changed: active setup registry/types, scanner/pipeline/model-label consumers, Discord/card/test helpers, research automation commands, package test wiring, architecture guard, and project status.

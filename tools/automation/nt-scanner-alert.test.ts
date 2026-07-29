@@ -20,10 +20,13 @@ import {
   normalizeScannerBarTimestampMode,
   normalizeScannerOperatorDeliveryReason,
   readUnifiedDeskOutputProductionScannerSurface,
+  recordActiveCampaignScannerAlertSent,
+  scannerActiveCampaignKeyForTradeDate,
   scannerDeskPlanSameSideRefreshHoldReason,
   scannerDiscordDryRunSummaryLine,
   scannerMarketBarsUpsertSkipAuditLine,
   scannerNoCampaignPostReviewDeskPlayHoldReason,
+  shouldSuppressActiveCampaignScannerAlert,
   scannerSuppressionSummaryLine,
   shouldLogBridgeInstrumentResolution,
   unifiedDeskOutputProductionScannerSummaryLine,
@@ -451,6 +454,77 @@ try {
     planVersionId: 'fixture-plan-version',
   });
   assert.equal(scannerOwnedSurfaceAlertAllowedWhenInactive.shouldSend, true);
+
+  const implicitMorningShort: SetupCandidate = {
+    setupType: SetupType.RaidFailureDisplacementReversal,
+    scenarioLabel: 'Raid Failure Displacement Reversal',
+    direction: 'SHORT',
+    detectedStatus: SetupCandidateStatus.Detected,
+    confidence: 'High',
+    priority: 100,
+    entry: 7451.5,
+    stop: 7460.75,
+    target1: 7437.75,
+    target2: 7433,
+    riskPoints: 9.25,
+    invalidation: 'Invalid above protected 5M structure stop 7460.75.',
+    rankScore: 0,
+    evidence: ['Completed 5M bearish proof.'],
+    missingEvidence: [],
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: null,
+    requiredTrigger: 'Completed 5M close-through or retest after displacement confirms direction.',
+    nextAction: 'Wait for entry to trade after completed 5M proof.',
+    reducedRiskPlan: null,
+  };
+  const implicitCampaignKey = scannerActiveCampaignKeyForTradeDate(
+    implicitMorningShort,
+    '2026-07-28',
+    'morning',
+  );
+  assert.equal(
+    implicitCampaignKey,
+    '2026-07-28:implicit-session-campaign:morning:RaidFailureDisplacementReversal:SHORT',
+  );
+  const activeCampaignSent = {};
+  recordActiveCampaignScannerAlertSent({
+    activeCampaignSent,
+    candidate: implicitMorningShort,
+    tradeDate: '2026-07-28',
+    session: 'morning',
+    state: 'Conditional',
+    confidence: 95,
+    alertKey: 'first-raid-failure-short',
+    sentAt: '2026-07-28T13:20:00.000Z',
+  });
+  const repricedMorningShort = {
+    ...implicitMorningShort,
+    entry: 7423.25,
+    stop: 7441.5,
+    target1: 7396,
+    target2: 7386.75,
+    riskPoints: 18.25,
+  };
+  const implicitDuplicate = shouldSuppressActiveCampaignScannerAlert({
+    activeCampaignSent,
+    candidate: repricedMorningShort,
+    tradeDate: '2026-07-28',
+    session: 'morning',
+  });
+  assert.equal(implicitDuplicate.shouldSuppress, true);
+  assert.match(implicitDuplicate.reason || '', /one trade alert already sent/);
+  assert.equal(implicitDuplicate.campaignId, implicitCampaignKey);
+  const implicitLunchSeparateSession = shouldSuppressActiveCampaignScannerAlert({
+    activeCampaignSent,
+    candidate: repricedMorningShort,
+    tradeDate: '2026-07-28',
+    session: 'lunch',
+  });
+  assert.equal(implicitLunchSeparateSession.shouldSuppress, false);
+  assert.equal(
+    implicitLunchSeparateSession.campaignId,
+    '2026-07-28:implicit-session-campaign:lunch:RaidFailureDisplacementReversal:SHORT',
+  );
 
   assert.equal(shouldLogBridgeInstrumentResolution({
     instrument: 'MES 09-26',
