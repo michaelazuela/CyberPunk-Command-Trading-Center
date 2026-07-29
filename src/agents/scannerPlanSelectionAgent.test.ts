@@ -139,6 +139,116 @@ const staleCandidateDoesNotMaskFreshPlan = selectScannerPlan({
 assert.equal(staleCandidateDoesNotMaskFreshPlan.candidate, freshStructureShort);
 assert.equal(staleCandidateDoesNotMaskFreshPlan.state, 'Conditional');
 
+const targetAlreadyHitBeforeEntryCandidate = candidate({
+  direction: 'LONG',
+  entry: 7471.5,
+  stop: 7468.5,
+  target1: 7476,
+  target2: 7477.5,
+  riskPoints: 3,
+  riskAdvisoryStatus: null,
+  requiredTrigger: 'Completed 5M close, retest, or hold beyond the reclaim/failure line.',
+});
+const targetBeforeEntrySelection = selectScannerPlan({
+  normalized: normalized({
+    decision: 'LONG',
+    decisionLabel: 'LONG',
+    setupCandidates: [targetAlreadyHitBeforeEntryCandidate],
+  }),
+  currentPrice: 7471.5,
+  latestCompletedBar: { high: 7473.75, low: 7467 },
+  recentCompletedBars: [
+    { time: '2026-07-28T21:25:00.0000000', open: 7472.75, high: 7481, low: 7472.75, close: 7480, volume: 1 },
+    { time: '2026-07-28T21:30:00.0000000', open: 7480.25, high: 7481.25, low: 7478, close: 7478.25, volume: 1 },
+    { time: '2026-07-28T21:45:00.0000000', open: 7473.75, high: 7473.75, low: 7467, close: 7467.5, volume: 1 },
+  ],
+});
+
+assert.equal(targetBeforeEntrySelection.candidate, null);
+assert.equal(targetBeforeEntrySelection.state, 'NoTrade');
+assert.match(targetBeforeEntrySelection.stale.reason || '', /T1\/T2 was already touched before the old entry could fill/);
+assert.ok(targetBeforeEntrySelection.auditWarnings.some((warning) => warning.includes('Stale/no-chase')));
+assert.equal(targetBeforeEntrySelection.visibilityMetadata?.visibilityMode, 'NO_TRADE_WITH_REASON');
+
+const sameCandleAmbiguousSelection = selectScannerPlan({
+  normalized: normalized({
+    decision: 'LONG',
+    decisionLabel: 'LONG',
+    setupCandidates: [candidate({
+      direction: 'LONG',
+      entry: 7463.75,
+      stop: 7462.25,
+      target1: 7466,
+      target2: 7466.75,
+      riskPoints: 1.5,
+      riskAdvisoryStatus: null,
+      requiredTrigger: 'Completed 5M close, retest, or hold beyond the reclaim/failure line.',
+    })],
+  }),
+  currentPrice: 7462.25,
+  latestCompletedBar: { high: 7467.25, low: 7462 },
+});
+
+assert.equal(sameCandleAmbiguousSelection.candidate, null);
+assert.match(sameCandleAmbiguousSelection.stale.reason || '', /Same-candle ambiguity/);
+assert.equal(sameCandleAmbiguousSelection.visibilityMetadata?.visibilityMode, 'NO_TRADE_WITH_REASON');
+
+const extendedProtectedStopSelection = selectScannerPlan({
+  normalized: normalized({
+    decision: 'SHORT',
+    decisionLabel: 'SHORT',
+    setupCandidates: [candidate({
+      entry: 7425.25,
+      stop: 7460.75,
+      target1: 7372,
+      target2: 7354.25,
+      riskPoints: 35.5,
+      riskAdvisoryStatus: 'RISK_EXTENDED_STRUCTURAL',
+      requiredTrigger: 'Completed 5M close-through or retest after displacement confirms direction.',
+    })],
+  }),
+  currentPrice: 7428.25,
+  latestCompletedBar: { high: 7441.25, low: 7423.25 },
+});
+
+assert.equal(extendedProtectedStopSelection.candidate, null);
+assert.match(extendedProtectedStopSelection.stale.reason || '', /Forming evidence only/);
+
+const duplicateOne = candidate({
+  setupType: SetupType.StructureShiftContinuation,
+  scenarioLabel: 'Fresh duplicate structure shift short',
+  priority: 100,
+  entry: 7452.5,
+  stop: 7457.25,
+  target1: 7445.5,
+  target2: 7443,
+  riskPoints: 4.75,
+  riskAdvisoryStatus: null,
+});
+const duplicateTwo = candidate({
+  setupType: SetupType.StructureShiftContinuation,
+  scenarioLabel: 'Fresh duplicate structure shift short',
+  priority: 90,
+  entry: 7452.5,
+  stop: 7457.25,
+  target1: 7445.5,
+  target2: 7443,
+  riskPoints: 4.75,
+  riskAdvisoryStatus: null,
+});
+const duplicateCollapseSelection = selectScannerPlan({
+  normalized: normalized({
+    decision: 'SHORT',
+    decisionLabel: 'SHORT',
+    setupCandidates: [duplicateOne, duplicateTwo],
+  }),
+  currentPrice: 7452,
+  latestCompletedBar: { high: 7453, low: 7448 },
+});
+
+assert.equal(duplicateCollapseSelection.candidate, duplicateOne);
+assert.ok(duplicateCollapseSelection.auditWarnings.some((warning) => warning.includes('Collapsed 1 duplicate')));
+
 const collisionSelection = selectScannerPlan({
   normalized: normalized({
     decisionLabel: 'WAIT / COLLISION',

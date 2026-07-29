@@ -187,7 +187,7 @@ function deskStateOperationallySuppressed(deskState: DeskState | null, postKind 
   if (!isTradeLikePost) {
     return /\b(duplicate|ledger|already\s+pending)\b/i.test(text);
   }
-  return /\b(duplicate|ledger|already\s+pending|missed|no[-\s]?chase|stale|chasing|already\s+reached|target\s+already|T1\s+was\s+already\s+reached)\b/i.test(text);
+  return /\b(duplicate|ledger|already\s+pending|missed|no[-\s]?chase|stale|chasing|already\s+reached|target\s+already|T1\s+was\s+already\s+reached|same[-\s]?candle\s+ambiguity|old\s+entry)\b/i.test(text);
 }
 
 export function evaluateLiveDiscordPostEligibility(input: LiveDiscordEligibilityInput): LiveDiscordEligibilityReport {

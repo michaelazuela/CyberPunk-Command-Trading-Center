@@ -10998,6 +10998,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     normalized,
     currentPrice,
     latestCompletedBar: completed5m,
+    recentCompletedBars: bars['5m'],
     guards: scannerGuards,
   });
   let initialCandidate = initialSelection.candidate;
@@ -11011,6 +11012,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     normalized,
     currentPrice,
     latestCompletedBar: completed5m,
+    recentCompletedBars: bars['5m'],
     guards: scannerGuards,
     targetCascade,
   });

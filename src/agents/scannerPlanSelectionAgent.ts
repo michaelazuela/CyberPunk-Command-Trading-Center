@@ -9,6 +9,7 @@ import {
 import { candidateHasConcretePlan, scenarioScore } from '../lib/scenarioSelection';
 import { COLLISION_WAIT_MESSAGE, applyCollisionFirstArbitration } from '../lib/collisionFirstArbitration';
 import type { NormalizedTradePlan } from '../lib/tradePlan';
+import type { NinjaBridgeBar } from '../lib/ninjaTraderBridge';
 
 export interface ScannerPlanSelection {
   candidate: SetupCandidate | null;
@@ -22,6 +23,17 @@ export interface ScannerPlanSelection {
   auditWarnings: string[];
   visibilityMetadata?: ScannerVisibilityMetadata;
 }
+
+interface ScannerPlanSelectionResult {
+  candidate: SetupCandidate | null;
+  blockedReason: string | null;
+  auditWarnings: string[];
+}
+
+type PlanLevelBar = {
+  high?: number | null;
+  low?: number | null;
+};
 
 function stateFromNormalizedPlan(normalized: NormalizedTradePlan): ScannerState {
   if (normalized.decisionStatus === TradeDecisionStatus.OutsideRules) return 'MarketMapping';
@@ -69,10 +81,119 @@ function staleAtCurrentPrice(candidate: SetupCandidate, currentPrice: number | n
   return Math.abs(candidate.target1 - currentPrice) < Math.abs(currentPrice - candidate.entry);
 }
 
-function selectBestScannerCandidate(candidates: SetupCandidate[] | undefined, currentPrice: number | null): SetupCandidate | null {
+function candidateSide(candidate: SetupCandidate): 'LONG' | 'SHORT' | null {
+  return candidate.direction === 'LONG' || candidate.direction === 'SHORT' ? candidate.direction : null;
+}
+
+function priceTouchesPlanLevel(candidate: SetupCandidate, bar: PlanLevelBar | null | undefined, level: 'entry' | 'stop' | 'target1' | 'target2'): boolean {
+  const price = candidate[level];
+  return typeof price === 'number' &&
+    Number.isFinite(price) &&
+    typeof bar?.high === 'number' &&
+    Number.isFinite(bar.high) &&
+    typeof bar?.low === 'number' &&
+    Number.isFinite(bar.low) &&
+    bar.low <= price &&
+    bar.high >= price;
+}
+
+function targetTouchedBeforeEntry(candidate: SetupCandidate, recentCompletedBars: NinjaBridgeBar[] | undefined): boolean {
+  const side = candidateSide(candidate);
+  if (!side || !candidateHasConcretePlan(candidate)) return false;
+  const bars = (recentCompletedBars || []).slice(-20);
+  let firstTargetIndex = -1;
+  let firstEntryIndex = -1;
+  for (let index = 0; index < bars.length; index += 1) {
+    if (firstTargetIndex < 0 && (priceTouchesPlanLevel(candidate, bars[index], 'target1') || priceTouchesPlanLevel(candidate, bars[index], 'target2'))) {
+      firstTargetIndex = index;
+    }
+    if (firstEntryIndex < 0 && priceTouchesPlanLevel(candidate, bars[index], 'entry')) {
+      firstEntryIndex = index;
+    }
+  }
+  return firstTargetIndex >= 0 && firstEntryIndex >= 0 && firstTargetIndex < firstEntryIndex;
+}
+
+function sameCandleEntryStop(candidate: SetupCandidate, latestCompletedBar: PlanLevelBar | null | undefined): boolean {
+  return priceTouchesPlanLevel(candidate, latestCompletedBar, 'entry') && priceTouchesPlanLevel(candidate, latestCompletedBar, 'stop');
+}
+
+function extendedProtectedStopWithoutFreshCompression(candidate: SetupCandidate): boolean {
+  const risk = candidate.riskPoints;
+  if (typeof risk !== 'number' || !Number.isFinite(risk) || risk < 20) return false;
+  const text = [
+    candidate.riskAdvisoryStatus,
+    candidate.riskPolicy,
+    candidate.requiredTrigger,
+    candidate.nextAction,
+    candidate.blockReason,
+  ].filter(Boolean).join(' ');
+  return /extended structural|protected 5M structure stop|nearest protected 5M structure/i.test(text);
+}
+
+function freshnessBlockReason(args: {
+  candidate: SetupCandidate;
+  currentPrice: number | null;
+  latestCompletedBar?: PlanLevelBar | null;
+  recentCompletedBars?: NinjaBridgeBar[];
+}): string | null {
+  if (targetTouchedBeforeEntry(args.candidate, args.recentCompletedBars)) {
+    return 'Stale/no-chase: T1/T2 was already touched before the old entry could fill. Wait for a fresh completed 5M setup.';
+  }
+  if (sameCandleEntryStop(args.candidate, args.latestCompletedBar)) {
+    return 'Same-candle ambiguity: entry and protected 5M stop were both touched in the completed 5M candle. Wait for a fresh completed 5M retest/hold.';
+  }
+  if (staleAtCurrentPrice(args.candidate, args.currentPrice)) {
+    return 'Stale/no-chase: current price is already beyond the fresh entry/target room for this candidate.';
+  }
+  if (extendedProtectedStopWithoutFreshCompression(args.candidate)) {
+    return 'Forming evidence only: nearest protected 5M structure stop is extended from entry. Wait for a fresh retest/hold that gives a closer protected 5M stop and target room.';
+  }
+  return null;
+}
+
+function duplicateCampaignKey(candidate: SetupCandidate): string {
+  return [
+    candidate.setupType,
+    candidate.scenarioLabel || 'no-scenario',
+    candidate.direction,
+    candidate.entry,
+    candidate.stop,
+  ].join('|');
+}
+
+function collapseDuplicateCandidates(candidates: SetupCandidate[]): { candidates: SetupCandidate[]; suppressed: number } {
+  const byKey = new Map<string, SetupCandidate>();
+  let suppressed = 0;
+  for (const candidate of candidates) {
+    const key = duplicateCampaignKey(candidate);
+    const previous = byKey.get(key);
+    if (!previous) {
+      byKey.set(key, candidate);
+      continue;
+    }
+    suppressed += 1;
+    if (scenarioScore(candidate) > scenarioScore(previous)) byKey.set(key, candidate);
+  }
+  return { candidates: [...byKey.values()], suppressed };
+}
+
+function selectBestScannerCandidate(args: {
+  candidates: SetupCandidate[] | undefined;
+  currentPrice: number | null;
+  latestCompletedBar?: PlanLevelBar | null;
+  recentCompletedBars?: NinjaBridgeBar[];
+}): ScannerPlanSelectionResult {
+  const candidates = args.candidates || [];
   const arbitration = applyCollisionFirstArbitration(candidates);
-  if (arbitration.state === 'collision_wait') return null;
-  const eligible = (candidates || [])
+  if (arbitration.state === 'collision_wait') {
+    return {
+      candidate: null,
+      blockedReason: COLLISION_WAIT_MESSAGE,
+      auditWarnings: [COLLISION_WAIT_MESSAGE],
+    };
+  }
+  const eligibleBeforeCollapse = candidates
     .filter((candidate) => {
       if (arbitration.allowedDirection && candidate.direction !== arbitration.allowedDirection) return false;
       if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return false;
@@ -84,8 +205,39 @@ function selectBestScannerCandidate(candidates: SetupCandidate[] | undefined, cu
         Boolean(candidate.blockReason);
     })
     .sort((a, b) => scenarioScore(b) - scenarioScore(a));
-  const freshEligible = eligible.filter((candidate) => !staleAtCurrentPrice(candidate, currentPrice));
-  return (freshEligible[0] || eligible[0]) ?? null;
+  const collapsed = collapseDuplicateCandidates(eligibleBeforeCollapse);
+  const eligible = collapsed.candidates.sort((a, b) => scenarioScore(b) - scenarioScore(a));
+  const freshEligible = eligible.filter((candidate) => !freshnessBlockReason({
+    candidate,
+    currentPrice: args.currentPrice,
+    latestCompletedBar: args.latestCompletedBar,
+    recentCompletedBars: args.recentCompletedBars,
+  }));
+  if (freshEligible[0]) {
+    return {
+      candidate: freshEligible[0],
+      blockedReason: null,
+      auditWarnings: collapsed.suppressed > 0
+        ? [`Collapsed ${collapsed.suppressed} duplicate same-session/model/side/entry/stop candidate(s) before scanner plan selection.`]
+        : [],
+    };
+  }
+  const blockedReason = eligible
+    .map((candidate) => freshnessBlockReason({
+      candidate,
+      currentPrice: args.currentPrice,
+      latestCompletedBar: args.latestCompletedBar,
+      recentCompletedBars: args.recentCompletedBars,
+    }))
+    .find((reason): reason is string => Boolean(reason)) || null;
+  return {
+    candidate: null,
+    blockedReason,
+    auditWarnings: [
+      ...(collapsed.suppressed > 0 ? [`Collapsed ${collapsed.suppressed} duplicate same-session/model/side/entry/stop candidate(s) before scanner plan selection.`] : []),
+      ...(blockedReason ? [blockedReason] : []),
+    ],
+  };
 }
 
 export function selectScannerPlan(args: {
@@ -95,6 +247,7 @@ export function selectScannerPlan(args: {
     high?: number | null;
     low?: number | null;
   } | null;
+  recentCompletedBars?: NinjaBridgeBar[];
   guards?: unknown;
   targetCascade?: TargetCascadeResult | null;
 }): ScannerPlanSelection {
@@ -124,11 +277,17 @@ export function selectScannerPlan(args: {
       }),
     };
   }
-  const candidate = selectBestScannerCandidate(args.normalized.setupCandidates, args.currentPrice);
+  const selectionResult = selectBestScannerCandidate({
+    candidates: args.normalized.setupCandidates,
+    currentPrice: args.currentPrice,
+    latestCompletedBar: args.latestCompletedBar,
+    recentCompletedBars: args.recentCompletedBars,
+  });
+  const candidate = selectionResult.candidate;
   const state = candidate ? stateFromCandidate(candidate, args.normalized) : stateFromNormalizedPlan(args.normalized);
   const staleReason = candidateSelectionReason(
     candidate,
-    candidate ? null : 'Blank-slate mode: scanner plan selection has no installed model candidate for this cycle.',
+    candidate ? null : selectionResult.blockedReason || 'Blank-slate mode: scanner plan selection has no installed model candidate for this cycle.',
   );
   const stale: StaleChaseResult = {
     state,
@@ -141,9 +300,9 @@ export function selectScannerPlan(args: {
     state,
     stateForAlert: state,
     reviewStatus: null,
-    auditWarnings: candidate ? [] : [
-      'Blank-slate mode: no installed scanner candidate is available for selection.',
-    ],
+    auditWarnings: candidate ? selectionResult.auditWarnings : selectionResult.auditWarnings.length
+      ? selectionResult.auditWarnings
+      : ['Blank-slate mode: no installed scanner candidate is available for selection.'],
     visibilityMetadata: classifyScannerVisibility({
       state,
       candidate,

@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Install stopped-trade live-boundary guards.
+Files changed: src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts, src/lib/liveDiscordPostEligibility.ts, src/lib/liveDiscordPostEligibility.test.ts, tools/automation/nt-scanner.ts, docs/PROJECT_STATUS.md.
+Reason: The stopped-trade workflow audit showed scanner-posted candidates losing from stale target-before-entry plans, duplicate same-campaign rows, same-candle entry/stop ambiguity, and late/extended protected-stop ideas. The live scanner needed to keep those as evidence/forming states instead of selecting them as Discord-visible trade plans.
+Tests run: npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsx src/lib/liveDiscordPostEligibility.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. Scanner selection now uses recent completed 5M bars to block stale/no-chase candidates when T1/T2 were already touched before the old entry could fill, holds same-candle entry/stop ambiguity until a fresh completed 5M retest/hold, collapses duplicate same-session/model/side/entry/stop candidates before final selection, and keeps extended protected-stop candidates as forming evidence until a closer protected 5M stop and target room appear. The live Discord eligibility boundary also blocks same-candle ambiguity/old-entry wording if it reaches egress.
+Trading logic changed: Yes. File: src/agents/scannerPlanSelectionAgent.ts. Function: selectScannerPlan/selectBestScannerCandidate. Behavior changed: stale target-before-entry, same-candle entry/stop, duplicate same-level, and late/extended protected-stop candidates cannot become the selected scanner plan. File: src/lib/liveDiscordPostEligibility.ts. Function: deskStateOperationallySuppressed. Behavior changed: same-candle ambiguity/old-entry suppression text blocks trade-like Discord eligibility. Entry, stop, target, risk math, model definitions, canExecute, bridge reads, Supabase behavior, Discord webhook configuration, and automated execution were not changed.
+Bridge impact: None. The scanner passes already-loaded recent 5M bars into selection; no new bridge reads or repair writes were added.
+Discord impact: No webhook call was made. Production Discord should receive fewer stale/noisy trade-plan cards after scanner restart/readback.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is intentionally conservative. Some extended protected-stop ideas may be held as forming evidence until a fresh retest compresses risk.
+Next recommended action: Commit/push, then perform controlled scanner restart/readback so live morning/lunch/evening runtime loads the guard.
+
+Date: 2026-07-29
 Task: Add stopped-trade workflow audit for scanner-posted candidates.
 Files changed: tools/automation/stopped-trade-workflow-audit.ts, tools/automation/stopped-trade-workflow-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: July 28 replay showed stopped scanner-posted candidates, but the prior manual review did not trace each loss through the workflow stages: completed 5M candle, selected model, HTF/MTF read, publish state, entry fill timing, target-before-entry, same-candle entry/stop ambiguity, duplicate campaign, and protected-structure stop distance.

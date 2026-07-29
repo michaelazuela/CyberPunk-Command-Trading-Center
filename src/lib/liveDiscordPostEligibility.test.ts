@@ -263,6 +263,28 @@ const missedNoChaseBlocked = evaluateLiveDiscordPostEligibility(input({
 assert.equal(missedNoChaseBlocked.eligible, false);
 assert.ok(missedNoChaseBlocked.blockers.some((item) => item.includes('missed/no-chase')));
 
+const sameCandleAmbiguityBlocked = evaluateLiveDiscordPostEligibility(input({
+  deskState: {
+    ...deskState(),
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    suppressionReason: 'Same-candle ambiguity: entry and protected 5M stop were both touched in the completed 5M candle.',
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      visibilityMode: 'POST_REVIEW',
+      discordAction: 'post_review',
+      suppressionReason: 'Same-candle ambiguity: entry and protected 5M stop were both touched in the completed 5M candle.',
+      authority: {
+        ...deskState().visibilityMetadata.authority,
+        planEligible: true,
+        discordEligible: true,
+      },
+    },
+  },
+}));
+assert.equal(sameCandleAmbiguityBlocked.eligible, false);
+assert.ok(sameCandleAmbiguityBlocked.blockers.some((item) => item.includes('stale/chasing')));
+
 const deskPlayBlocksMissedNoChaseLikeTradeAlerts = evaluateLiveDiscordPostEligibility(input({
   postKind: 'desk_play',
   deskState: {
