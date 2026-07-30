@@ -1,6 +1,6 @@
 {
   "reportType": "unified_desk_output_production_scanner_surface_activation",
-  "generatedAt": "2026-07-24T16:30:03.000Z",
+  "generatedAt": "2026-07-30T04:28:51.852Z",
   "status": "active",
   "approval": {
     "explicitProductionApproval": true,
@@ -23,7 +23,7 @@
     "automatedOrders": false
   },
   "source": {
-    "finalReadinessChecklistPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\diagnostic-reports\\unified-desk-output-final-production-readiness-checklist-1784765295249.json"
+    "finalReadinessChecklistPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\.five-model-production-scanner-surface.json"
   },
   "summary": {
     "selectedRows": 2,
@@ -43,22 +43,22 @@
   },
   "rows": [
     {
-      "cardId": "unified-desk-output-disabled|2026-07-22|morning|APPROVED_DESK_PLAN|SweepMssFvgRetrace|LONG|2026-07-22T09:10:00.0000000",
-      "date": "2026-07-22",
+      "cardId": "unified-refresh-dry-run|five-model-visibility-contract|five-model-ui-adapter|five-model|2026-06-15|morning|structure_shift_continuation|LONG|2026-06-15T10:05:00|candidate_entry_vs_body_origin",
+      "date": "2026-06-15",
       "session": "morning",
       "state": "APPROVED_DESK_PLAN",
       "stateLabel": "Approved Desk Plan",
-      "model": "SweepMssFvgRetrace",
+      "model": "StructureShiftContinuation",
       "direction": "LONG",
-      "headline": "Approved Desk Plan | MORNING | LONG | SweepMssFvgRetrace",
+      "headline": "Approved Desk Plan | MORNING | LONG | StructureShiftContinuation",
       "bodyLines": [
-        "morning long desk plan from the approved Unified Desk Output go-live gate.",
-        "SweepMssFvgRetrace is the selected scanner-owned lane for this window."
+        "morning long desk plan from the approved-model scanner surface.",
+        "Blank-slate mode has no scanner-owned lane for this window."
       ],
-      "levelLine": "Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528",
-      "riskLine": "Risk 4.25 points from scanner-owned entry/stop.",
-      "proofLine": "Completed 5M proof: 09:10 ET.",
-      "invalidationLine": "Invalid if price violates the protected 5M stop line at 7515.25.",
+      "levelLine": "Entry 7617.75 | Stop 7614.25 | T1 7623 | T2 7624.75",
+      "riskLine": "Risk 3.5 points from scanner-owned entry/stop.",
+      "proofLine": "Completed 5M proof: 10:05 ET.",
+      "invalidationLine": "Invalid if price violates the protected 5M stop line at 7614.25.",
       "authorityLine": "Decision support only. Discord posting remains separately guarded; canExecute is audit-only for this surface; Supabase, bridge, and automated orders remain off.",
       "scannerVisibleNow": true,
       "publishDiscord": false,
@@ -67,22 +67,22 @@
       "canExecute": false
     },
     {
-      "cardId": "unified-desk-output-disabled|2026-07-22|lunch|APPROVED_DESK_PLAN|IntradayMssMicroContinuation|LONG|2026-07-22T15:45:00.0000000",
-      "date": "2026-07-22",
+      "cardId": "unified-refresh-dry-run|five-model-visibility-contract|five-model-ui-adapter|five-model|2026-06-26|lunch|raid_failure_displacement_reversal|SHORT|2026-06-26T13:25:00|candidate_entry_vs_body_origin",
+      "date": "2026-06-26",
       "session": "lunch",
       "state": "APPROVED_DESK_PLAN",
       "stateLabel": "Approved Desk Plan",
-      "model": "IntradayMssMicroContinuation",
-      "direction": "LONG",
-      "headline": "Approved Desk Plan | LUNCH | LONG | IntradayMssMicroContinuation",
+      "model": "RaidFailureDisplacementReversal",
+      "direction": "SHORT",
+      "headline": "Approved Desk Plan | LUNCH | SHORT | RaidFailureDisplacementReversal",
       "bodyLines": [
-        "lunch long desk plan from the approved Unified Desk Output go-live gate.",
-        "IntradayMssMicroContinuation is the selected scanner-owned lane for this window."
+        "lunch short desk plan from the approved-model scanner surface.",
+        "Blank-slate mode has no scanner-owned lane for this window."
       ],
-      "levelLine": "Entry 7540 | Stop 7535.75 | T1 7546.5 | T2 7548.5",
+      "levelLine": "Entry 7434 | Stop 7438.25 | T1 7427.75 | T2 7425.5",
       "riskLine": "Risk 4.25 points from scanner-owned entry/stop.",
-      "proofLine": "Completed 5M proof: 15:45 ET.",
-      "invalidationLine": "Invalid if price violates the protected 5M stop line at 7535.75.",
+      "proofLine": "Completed 5M proof: 13:25 ET.",
+      "invalidationLine": "Invalid if price violates the protected 5M stop line at 7438.25.",
       "authorityLine": "Decision support only. Discord posting remains separately guarded; canExecute is audit-only for this surface; Supabase, bridge, and automated orders remain off.",
       "scannerVisibleNow": true,
       "publishDiscord": false,
@@ -91,7 +91,5 @@
       "canExecute": false
     }
   ],
-  "blockers": [],
-  "runtimeSurfacePath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\.unified-desk-output-production-scanner-surface.json",
-  "markdown": "# Unified Desk Output Production Go-Live Gate\n\nStatus: active\n\nAuthority: production scanner surface activation only. This writes the runtime scanner surface file for one morning, one lunch, and optionally one evening Approved Desk Plan row. It does not post Discord, write Supabase, read live bridge data, change trading logic, change canExecute, change entry/stop/targets, or place/manage orders.\n\n## Summary\n- Scanner visible now: true.\n- Selected rows: 2.\n- Morning rows: 1.\n- Lunch rows: 1.\n- Evening rows: 0.\n- Approved Desk Plan rows: 2.\n- Discord-post rows: 0.\n- Supabase-write rows: 0.\n- Live-bridge-read rows: 0.\n- canExecute true rows: 0.\n- Trading-logic changed rows: 0.\n- Runtime surface: C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\.unified-desk-output-production-scanner-surface.json.\n\n## Rows\n| Session | Model | Direction | Proof | Levels |\n|---|---|---|---|---|\n| morning | SweepMssFvgRetrace | LONG | Completed 5M proof: 09:10 ET. | Entry 7519.5 | Stop 7515.25 | T1 7526 | T2 7528 |\n| lunch | IntradayMssMicroContinuation | LONG | Completed 5M proof: 15:45 ET. | Entry 7540 | Stop 7535.75 | T1 7546.5 | T2 7548.5 |\n\n## Blockers\n- None."
+  "blockers": []
 }

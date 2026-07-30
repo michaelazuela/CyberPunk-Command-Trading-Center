@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Activate the Unified Desk Output production scanner surface.
+Files changed: tools/automation/.unified-desk-output-production-scanner-surface.json, .gitignore, docs/PROJECT_STATUS.md.
+Reason: The scanner-to-Discord cleanup proved the stale Unified Desk Output surface was the only blocker preventing removal of the older five-model production surface fallback. The controlled refresh writes a current approved-model scanner surface from the active production fallback, with a timestamped local backup.
+Tests run: npx tsx tools/automation/scanner-unified-surface-refresh.ts --write-runtime-surface; npx tsx tools/automation/scanner-production-surface-redundancy-report.ts; npx tsx src/lib/unifiedDeskOutputProductionScannerSurface.test.ts; npx tsx tools/automation/scanner-unified-surface-refresh.test.ts; npx tsx tools/automation/scanner-production-surface-redundancy-report.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-28,2026-07-29 --sessions all --instrument MES --json.
+Result: Passed. The Unified Desk Output surface is active with StructureShiftContinuation and RaidFailureDisplacementReversal rows, zero blockers, and the redundancy report now marks the five-model production surface redundant. Live-flow parity replay still passes with 0 trade-alert mismatches, 0 DeskPublish divergences, 0 authority violations, and 0 blocking mismatches.
+Trading logic changed: No. This changes scanner-visible surface readback only. It does not change setup detection, model rules, candidate ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase, Discord webhook configuration, Discord publish eligibility, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The older five-model surface file and fallback branch still exist until the next cleanup chunk removes them after this activation checkpoint is committed.
+Next recommended action: Commit this activation checkpoint, then remove the redundant five-model production surface branch in a separate small cleanup with parity replay and full verification.
+
+Date: 2026-07-29
 Task: Refresh Unified Desk Output go-live fixtures to current approved model names.
 Files changed: tools/automation/unified-desk-output-production-go-live-gate.test.ts, tools/automation/unified-desk-output-final-production-readiness-checklist.test.ts, docs/PROJECT_STATUS.md.
 Reason: The scanner production surface redundancy proof showed the tracked Unified Desk Output surface is blocked by stale model names. The go-live/readiness tooling tests still used `NoInstalledSetup` fixtures, so future surface-refresh work needed current approved model fixtures before any fallback removal is safe.

@@ -36,3 +36,4 @@ tools/automation/research-review-packs/*
 tools/automation/weekly-reports/
 tools/automation/live-desk-observer-reports/
 tools/automation/.weekly-trading-report-state.json
+tools/automation/.unified-desk-output-production-scanner-surface.json.bak-*
