@@ -11484,6 +11484,20 @@ Next recommended action: Review the generated research-only outcome report and D
 ## Latest Change
 
 Date: 2026-07-29
+Task: Add temp-surface redundancy proof for scanner production surfaces.
+Files changed: tools/automation/scanner-production-surface-redundancy-report.ts, tools/automation/scanner-production-surface-redundancy-report.test.ts, docs/PROJECT_STATUS.md.
+Reason: Before touching the tracked scanner runtime surface or deleting old fallback logic, the desk needs a local proof that fallback redundancy becomes true only when the Unified Desk Output surface is valid and active.
+Result: The redundancy report now exposes a parameterized builder while preserving the existing CLI behavior. A focused temp-file test copies the active fallback surface, verifies redundancy is false before unified activation, runs the controlled refresh against a temp unified surface, and verifies redundancy becomes true with zero blockers.
+Trading logic changed: No. This is diagnostic tooling and documentation only. It does not change candidate selection, model definitions, 5M proof authority, entry/stop/T1/T2/risk math, canExecute, campaign locking, live Discord eligibility, Supabase schema, bridge behavior, or automated execution.
+Bridge impact: None. The test reads saved artifacts and temp files only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The tracked runtime surface is still not refreshed by this checkpoint; live redundancy remains false until an explicitly gated activation updates the tracked Unified Desk Output surface.
+Next recommended action: Run the controlled tracked-surface activation with backup, then rerun redundancy/parity/readback. Delete the fallback branch only after that real redundancy report passes.
+
+## Previous Change
+
+Date: 2026-07-29
 Task: Add backup proof to the controlled Unified Desk Output scanner surface refresh gate.
 Files changed: tools/automation/scanner-unified-surface-refresh.ts, tools/automation/scanner-unified-surface-refresh.test.ts, docs/PROJECT_STATUS.md.
 Reason: The eventual unified-surface activation needs a rollback artifact before the old fallback branch can be considered for deletion.

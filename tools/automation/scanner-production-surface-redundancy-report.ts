@@ -26,21 +26,26 @@ function rowModels(surface: JsonRecord | null): string[] {
     .filter((model): model is string => typeof model === 'string' && model.trim().length > 0))];
 }
 
-async function main(): Promise<void> {
-  const unifiedRaw = await readJsonOrNull(UNIFIED_DESK_OUTPUT_PRODUCTION_SURFACE_FILE);
-  const fiveModelRaw = await readJsonOrNull(FIVE_MODEL_PRODUCTION_SURFACE_FILE);
-  const unifiedSurface = await readUnifiedDeskOutputProductionScannerSurface();
-  const fiveModelSurface = await readFiveModelProductionScannerSurface();
+export async function buildScannerProductionSurfaceRedundancyReport(args: {
+  unifiedSurfaceFile?: string;
+  fiveModelSurfaceFile?: string;
+} = {}): Promise<JsonRecord> {
+  const unifiedSurfaceFile = args.unifiedSurfaceFile || UNIFIED_DESK_OUTPUT_PRODUCTION_SURFACE_FILE;
+  const fiveModelSurfaceFile = args.fiveModelSurfaceFile || FIVE_MODEL_PRODUCTION_SURFACE_FILE;
+  const unifiedRaw = await readJsonOrNull(unifiedSurfaceFile);
+  const fiveModelRaw = await readJsonOrNull(fiveModelSurfaceFile);
+  const unifiedSurface = await readUnifiedDeskOutputProductionScannerSurface(unifiedSurfaceFile);
+  const fiveModelSurface = await readFiveModelProductionScannerSurface(fiveModelSurfaceFile);
   const unifiedBlockers = unifiedDeskOutputProductionSurfaceBlockers(unifiedRaw as any);
   const fiveModelBlockers = fiveModelProductionSurfaceBlockers(fiveModelRaw as any);
   const fiveModelRedundant = Boolean(unifiedSurface) && Boolean(fiveModelRaw) && fiveModelBlockers.length === 0;
-  const report = {
+  return {
     reportType: 'scanner_production_surface_redundancy_report',
     generatedAt: new Date().toISOString(),
     status: fiveModelRedundant ? 'five_model_surface_redundant' : 'five_model_surface_not_redundant',
     files: {
-      unifiedDeskOutputProductionSurfaceFile: path.relative(process.cwd(), UNIFIED_DESK_OUTPUT_PRODUCTION_SURFACE_FILE),
-      fiveModelProductionSurfaceFile: path.relative(process.cwd(), FIVE_MODEL_PRODUCTION_SURFACE_FILE),
+      unifiedDeskOutputProductionSurfaceFile: path.relative(process.cwd(), unifiedSurfaceFile),
+      fiveModelProductionSurfaceFile: path.relative(process.cwd(), fiveModelSurfaceFile),
     },
     summary: {
       unifiedSurfaceReadable: Boolean(unifiedRaw),
@@ -73,6 +78,10 @@ async function main(): Promise<void> {
       automatedOrders: false,
     },
   };
+}
+
+async function main(): Promise<void> {
+  const report = await buildScannerProductionSurfaceRedundancyReport();
   console.log(JSON.stringify(report, null, 2));
 }
 
