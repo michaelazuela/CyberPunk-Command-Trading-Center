@@ -10006,39 +10006,6 @@ export function applyScannerCompletedFiveMinuteZoneFailureSuppression(args: {
   return args.alertDecision;
 }
 
-export function applyScannerTradeAlertSuppressionAfterDeskPlay(args: {
-  alertDecision: ScannerAlertDecision;
-  scannerDeskOutput?: ScannerDeskOutputContract | null;
-  deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
-  tradeDate: string;
-  instrument: Instrument;
-  session: LiveSession | string;
-  planVersionId: string;
-}): ScannerAlertDecision {
-  const publishIntent = args.scannerDeskOutput?.publishToDiscord === true;
-  if (!publishIntent) return args.alertDecision;
-  const priorDeskPlan = latestDeskPlanRefreshRecord({
-    sent: args.deskPlanRefreshSent,
-    tradeDate: args.tradeDate,
-    instrument: args.instrument,
-    session: args.session,
-  });
-  if (!priorDeskPlan) return args.alertDecision;
-  return {
-    shouldSend: false,
-    reason: [
-      args.alertDecision.reason,
-      'legacy_trade_alert_suppressed_after_scanner_owned_desk_play',
-      `priorDeskPlanDirection=${priorDeskPlan.direction}`,
-      `priorDeskPlanModel=${priorDeskPlan.setupType || 'no-setup'}`,
-      `priorDeskPlanSentAt=${priorDeskPlan.sentAt}`,
-      `currentPlanVersionId=${args.planVersionId}`,
-      `scannerDeskOutputStatus=${args.scannerDeskOutput?.status || 'not_provided'}`,
-      'Scanner-owned Desk Play already owns this session/instrument on Discord; legacy trade_alert is held local so it cannot compete with the desk card.',
-    ].join(' | '),
-  };
-}
-
 export function applyScannerTradeAlertSuppressionForScannerOwnedSurface(args: {
   alertDecision: ScannerAlertDecision;
   scannerDeskOutput?: ScannerDeskOutputContract | null;
@@ -12087,23 +12054,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     console.warn(`[scanner-delivery] Failed alert delivery is now stale; no retry will be attempted: ${alertKey}`);
   }
 
-  const scannerOwnedDeskPlayGuardedAlertDecision = applyScannerTradeAlertSuppressionAfterDeskPlay({
-    alertDecision,
-    scannerDeskOutput,
-    deskPlanRefreshSent: state.deskPlanRefreshSent,
-    tradeDate,
-    instrument: config.instrument,
-    session: window.session,
-    planVersionId,
-  });
-  if (scannerOwnedDeskPlayGuardedAlertDecision.shouldSend !== alertDecision.shouldSend || scannerOwnedDeskPlayGuardedAlertDecision.reason !== alertDecision.reason) {
-    alertDecision = scannerOwnedDeskPlayGuardedAlertDecision;
-    console.log(scannerSuppressionSummaryLine({
-      label: 'Legacy trade alert',
-      category: 'duplicate_refresh',
-      reason: alertDecision.reason,
-    }));
-  }
   const scannerOwnedSurfaceGuardedAlertDecision = applyScannerTradeAlertSuppressionForScannerOwnedSurface({
     alertDecision,
     scannerDeskOutput,

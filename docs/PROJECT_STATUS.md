@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Remove the duplicate after-Desk-Play legacy trade-alert suppression helper.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: After Unified Desk Output became the active scanner-owned production surface, legacy `trade_alert` suppression no longer needs a separate prior Desk Play branch. The scanner-owned surface suppression now provides the single downstream boundary when `scannerDeskOutput.publishToDiscord=true`.
+Tests run: npx tsc --noEmit --pretty false; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-28,2026-07-29 --sessions all --instrument MES --json; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. The retired helper and runtime call are removed, and focused tests now cover the remaining canonical scanner-owned surface suppression path. Live-flow parity replay still passes with 0 trade-alert mismatches, 0 DeskPublish divergences, 0 authority violations, and 0 blocking mismatches.
+Trading logic changed: No. This is downstream Discord suppression cleanup only. It does not change setup detection, model rules, candidate ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase, Discord webhook configuration, Discord publish eligibility, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Historical/pre-contract decision tape rows remain non-comparable for scannerDeskOutput parity, which is expected for rows recorded before the unified contract existed.
+Next recommended action: Commit this checkpoint, then continue classifying remaining legacy tooling as runtime, diagnostic, or test-only before deleting anything else.
+
+Date: 2026-07-29
 Task: Remove the redundant five-model scanner runtime readback branch.
 Files changed: tools/automation/nt-scanner.ts, docs/PROJECT_STATUS.md.
 Reason: After the Unified Desk Output production scanner surface was activated and redundancy proof passed, the scanner cycle no longer needs to read and write a second five-model production surface readback on every completed 5M cycle.
