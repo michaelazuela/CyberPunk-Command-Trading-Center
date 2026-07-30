@@ -16,6 +16,7 @@ import {
   writeFiveModelProductionScannerReadback,
   applyScannerTradeAlertSuppressionForScannerOwnedSurface,
   applyScannerTradeAlertSuppressionAfterDeskPlay,
+  buildScannerLiveDiscordSendBoundaryReport,
   evaluateScannerDeskPlayDiscordSuppression,
   buildScannerDeskOutputContract,
   normalizeScannerBarTimestampMode,
@@ -688,6 +689,59 @@ try {
     approvedScannerDeskOutput,
   );
   assert.equal(approvedDeskPlayHold, null);
+
+  const eligibleVisibility = classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: { ...implicitMorningShort, modelConfidenceScore: 95 } as SetupCandidate,
+    window: resolveScannerWindow(new Date('2026-07-28T09:35:00-04:00')),
+    alertDecision: { shouldSend: true, reason: 'POST_READY: eligible scanner alert.' },
+    canExecute: false,
+  });
+  const eligibleLifecycle = buildCandidateLifecycleTrace({
+    candidates: [{ ...implicitMorningShort, modelConfidenceScore: 95 } as SetupCandidate],
+    selectedCandidate: { ...implicitMorningShort, modelConfidenceScore: 95 } as SetupCandidate,
+    state: 'Conditional',
+    window: resolveScannerWindow(new Date('2026-07-28T09:35:00-04:00')),
+    alertDecision: { shouldSend: true, reason: 'POST_READY: eligible scanner alert.' },
+    canExecute: false,
+  });
+  const eligibleDeskState = buildDeskState({
+    state: 'Conditional',
+    candidate: { ...implicitMorningShort, modelConfidenceScore: 95 } as SetupCandidate,
+    visibilityMetadata: eligibleVisibility,
+    candidateLifecycleTrace: eligibleLifecycle,
+    canExecute: false,
+  });
+  const baseLiveBoundary = {
+    config: { dryRun: false, liveDiscordPolicyConfirmed: true },
+    healthReport: { status: 'READY' } as any,
+    bridgeConnected: true,
+    bridgeInstrumentResolved: true,
+    completedFiveMinuteFresh: true,
+    htfContextPresent: true,
+    deskState: eligibleDeskState,
+    decisionTapePath: path.join(outputDir, 'decision-tape.json'),
+    auditPath: path.join(outputDir, 'discord-audit.json'),
+    discordPayloadValidated: true,
+    webhookConfigured: true,
+    unifiedDeskOutputProductionSurfaceActive: true,
+  };
+  const approvedOutputBoundary = buildScannerLiveDiscordSendBoundaryReport({
+    ...baseLiveBoundary,
+    postKind: 'desk_play',
+    scannerDeskOutput: approvedScannerDeskOutput,
+  });
+  assert.equal(approvedOutputBoundary.blockers.some((item) => /legacy scanner trade-plan Discord posts are production-suppressed/i.test(item)), false);
+  assert.match(approvedOutputBoundary.notes.join(' | '), /scannerDeskOutput\.publishToDiscord=true/);
+
+  const staleOutputBoundary = buildScannerLiveDiscordSendBoundaryReport({
+    ...baseLiveBoundary,
+    postKind: 'desk_play',
+    scannerDeskOutput: staleScannerDeskOutput,
+  });
+  assert.equal(staleOutputBoundary.eligible, false);
+  assert.match(staleOutputBoundary.blockers.join(' | '), /scannerDeskOutputStatus=held/);
+  assert.match(staleOutputBoundary.blockers.join(' | '), /HELD_STALE_NO_CHASE/);
 
   const malformedHtfSkipLine = scannerMarketBarsUpsertSkipAuditLine({
     label: 'scanner-cache',

@@ -171,6 +171,6 @@ const pass = await buildScannerDeskOutputLiveFlowParityReplayReport({
 
 assert.equal(pass.status, 'pass');
 assert.equal(pass.summary.blockingMismatchRows, 0);
-assert.equal(pass.summary.nextRecommendedBranch, 'desk_play_pre_delivery_hold');
+assert.equal(pass.summary.nextRecommendedBranch, 'next_downstream_branch');
 
 console.log('Scanner desk output live-flow parity replay verified.');

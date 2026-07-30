@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Move live Discord boundary to scannerDeskOutput for unified trade-plan lanes.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/scanner-desk-output-live-flow-parity-replay.ts, tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts, docs/PROJECT_STATUS.md.
+Reason: The scanner-to-Discord flow is being simplified to `select candidate -> approve/hold -> publish`. After moving legacy trade-alert suppression and Desk Play pre-delivery holds to the unified contract, the live Discord boundary should also consume `scannerDeskOutput` directly for trade-alert/desk-play lanes when the unified production surface is active.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-28,2026-07-29 --sessions all --instrument MES --json; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. `buildScannerLiveDiscordSendBoundaryReport` now accepts `scannerDeskOutput`; when the unified production surface is active, publish-approved scanner output is allowed through the normal guarded eligibility checks and held scanner output adds an explicit local-only blocker with the output status/operator code. Legacy DeskState inference remains as fallback when the output contract is not present. The replay recommendation label now advances generically to `next_downstream_branch` after a clean parity run. Real live-flow parity replay passed across July 28-29 saved tapes: 6 tapes, 240 events, 16 comparable post-contract rows, 0 trade-alert mismatches, 0 DeskPublish divergences, 0 authority violations, and 0 blocking mismatches.
+Trading logic changed: No. This changes Discord boundary source-of-truth handling only. It does not change setup detection, model rules, candidate ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase, Discord webhook configuration, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made. Future trade-alert/desk-play live boundary checks use scanner-owned output status when available.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Older downstream branches still exist until each is proven redundant by parity replay.
+Next recommended action: Continue one branch at a time: move the next downstream receipt/audit or RAG-adjacent branch to consume `scannerDeskOutput`, rerun parity, then delete only proven redundant old logic.
+
+Date: 2026-07-29
 Task: Move Desk Play pre-delivery hold branch to scannerDeskOutput.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The scanner-to-Discord flow is being simplified to `select candidate -> approve/hold -> publish`. Desk Play pre-delivery holds should consume the canonical `scannerDeskOutput` contract instead of re-deciding through scattered downstream state.

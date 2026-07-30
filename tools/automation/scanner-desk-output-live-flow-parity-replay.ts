@@ -97,7 +97,7 @@ export interface ScannerDeskOutputLiveFlowParityReplayReport {
     deskPublishDivergenceRows: number;
     authorityViolationRows: number;
     blockingMismatchRows: number;
-    nextRecommendedBranch: 'desk_play_pre_delivery_hold' | 'none_until_mismatches_are_fixed';
+    nextRecommendedBranch: 'next_downstream_branch' | 'none_until_mismatches_are_fixed';
   };
   rows: ScannerDeskOutputLiveFlowParityRow[];
   blockers: string[];
@@ -363,7 +363,7 @@ export async function buildScannerDeskOutputLiveFlowParityReplayReport(options: 
     nextRecommendedBranch: 'none_until_mismatches_are_fixed',
   };
   summary.nextRecommendedBranch = summary.blockingMismatchRows === 0
-    ? 'desk_play_pre_delivery_hold'
+    ? 'next_downstream_branch'
     : 'none_until_mismatches_are_fixed';
 
   const blockers = [
