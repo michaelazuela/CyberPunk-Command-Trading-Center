@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Refresh Unified Desk Output go-live fixtures to current approved model names.
+Files changed: tools/automation/unified-desk-output-production-go-live-gate.test.ts, tools/automation/unified-desk-output-final-production-readiness-checklist.test.ts, docs/PROJECT_STATUS.md.
+Reason: The scanner production surface redundancy proof showed the tracked Unified Desk Output surface is blocked by stale model names. The go-live/readiness tooling tests still used `NoInstalledSetup` fixtures, so future surface-refresh work needed current approved model fixtures before any fallback removal is safe.
+Tests run: npx tsx src/lib/unifiedDeskOutputProductionScannerSurface.test.ts; npx tsx tools/automation/unified-desk-output-production-go-live-gate.test.ts; npx tsx tools/automation/unified-desk-output-final-production-readiness-checklist.test.ts; npx tsx tools/automation/scanner-production-surface-redundancy-report.ts.
+Result: Passed. The focused surface/go-live/readiness tests now use approved `SetupType` model names. The redundancy report still correctly says the live tracked Unified Desk Output surface is not active and the five-model/six-model surface fallback is not redundant.
+Trading logic changed: No. This updates test fixtures only. It does not change setup detection, model rules, candidate ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase, Discord webhook configuration, Discord publish eligibility, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The actual tracked runtime Unified Desk Output surface JSON remains stale until a separate explicit surface-refresh phase is run.
+Next recommended action: Run a controlled surface-refresh phase only after deciding whether to activate Unified Desk Output as the production scanner surface; then rerun redundancy proof before deleting the fallback.
+
+Date: 2026-07-29
 Task: Add scanner production surface redundancy proof gate.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/scanner-production-surface-redundancy-report.ts, docs/PROJECT_STATUS.md.
 Reason: Continue scanner-to-Discord downstream cleanup without deleting an active scanner visibility fallback by mistake. The next proposed cleanup was to remove another legacy production-surface branch, but deletion must be blocked unless Unified Desk Output fully validates as the active scanner surface.

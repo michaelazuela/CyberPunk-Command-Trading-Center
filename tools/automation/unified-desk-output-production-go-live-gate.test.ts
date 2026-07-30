@@ -7,6 +7,7 @@ import {
   writeUnifiedDeskOutputProductionGoLiveGate,
 } from './unified-desk-output-production-go-live-gate';
 import type { UnifiedDeskOutputFinalProductionReadinessChecklistInput } from '../../src/lib/unifiedDeskOutputProductionScannerSurface';
+import { SetupType } from '../../src/types';
 
 const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'unified-desk-output-go-live-'));
 const runtimeSurfacePath = path.join(outDir, '.surface.json');
@@ -40,7 +41,7 @@ const checklist: UnifiedDeskOutputFinalProductionReadinessChecklistInput = {
     date: '2026-07-22',
     session: 'morning',
     state: 'APPROVED_DESK_PLAN',
-    model: 'NoInstalledSetup',
+    model: SetupType.RaidFailureDisplacementReversal,
     direction: 'LONG',
     proofTime: '2026-07-22T09:10:00.0000000',
     entry: 7519.5,
@@ -53,7 +54,7 @@ const checklist: UnifiedDeskOutputFinalProductionReadinessChecklistInput = {
     date: '2026-07-22',
     session: 'lunch',
     state: 'APPROVED_DESK_PLAN',
-    model: 'NoInstalledSetup',
+    model: SetupType.IntradayMssMicroContinuation,
     direction: 'LONG',
     proofTime: '2026-07-22T15:45:00.0000000',
     entry: 7540,
@@ -128,6 +129,6 @@ const thirdModelBlocked = await writeUnifiedDeskOutputProductionGoLiveGate({
 });
 assert.equal(thirdModelBlocked.report.status, 'blocked');
 assert.equal(fs.existsSync(thirdModelBlockedPath), false);
-assert.ok(thirdModelBlocked.report.blockers.some((blocker) => blocker.includes('not approved for Unified Desk Output production visibility')));
+assert.ok(thirdModelBlocked.report.blockers.some((blocker) => blocker.includes('not an approved production desk plan')));
 
 console.log('Unified Desk Output production go-live gate verified.');

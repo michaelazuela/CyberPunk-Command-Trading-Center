@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   buildUnifiedDeskOutputFinalProductionReadinessChecklistReport,
 } from './unified-desk-output-final-production-readiness-checklist';
+import { SetupType } from '../../src/types';
 
 const source = (reportType: string, summary: Record<string, unknown> = {}) => ({
   reportType,
@@ -28,13 +29,13 @@ const source = (reportType: string, summary: Record<string, unknown> = {}) => ({
   selectedCandidates: [
     {
       session: 'morning',
-      model: 'NoInstalledSetup',
+      model: SetupType.RaidFailureDisplacementReversal,
       direction: 'LONG',
       proofTime: '2026-07-22T09:10:00',
     },
     {
       session: 'lunch',
-      model: 'NoInstalledSetup',
+      model: SetupType.IntradayMssMicroContinuation,
       direction: 'LONG',
       proofTime: '2026-07-22T15:45:00',
     },
