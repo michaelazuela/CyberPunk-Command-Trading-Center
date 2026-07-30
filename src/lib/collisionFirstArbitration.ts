@@ -90,6 +90,30 @@ export function hasFullCollisionProof(candidate: SetupCandidate): boolean {
   return true;
 }
 
+function hasActionableCollisionEvidence(candidate: SetupCandidate): boolean {
+  if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return false;
+  if (candidate.executionStatus === ExecutionStatus.Blocked) return false;
+  if (candidate.blockReason || candidate.decisionQualityHardBlocker) return false;
+  if (candidate.targetRoom?.targetRoomStatus === 'blocked_before_t1') return false;
+  if (!candidateHasConcretePlan(candidate)) return false;
+  if (!isValidPrice(candidate.entry) || !isValidPrice(candidate.stop) || !isValidPrice(candidate.target1) || !isValidPrice(candidate.target2)) {
+    return false;
+  }
+  if (candidate.direction === 'LONG' && candidate.stop >= candidate.entry) return false;
+  if (candidate.direction === 'SHORT' && candidate.stop <= candidate.entry) return false;
+
+  const text = textFor(candidate);
+  if (/(no chase|stale|missing trigger|entry trigger missing|no entry\/stop|not executable)/i.test(text)) {
+    return false;
+  }
+
+  return (
+    candidate.executionStatus === ExecutionStatus.Executable ||
+    candidate.executionStatus === ExecutionStatus.Conditional ||
+    candidate.detectedStatus === SetupCandidateStatus.Detected
+  );
+}
+
 function completedProofStrength(candidate: SetupCandidate): number {
   const text = textFor(candidate);
   let score = 0;
@@ -144,9 +168,12 @@ export function applyCollisionFirstArbitration(candidates: SetupCandidate[] | un
   const cluster = (candidates || []).filter(isDirectionalCollisionCandidate);
   const longCluster = cluster.filter((candidate) => candidate.direction === 'LONG');
   const shortCluster = cluster.filter((candidate) => candidate.direction === 'SHORT');
-  const hasCollision = longCluster.length > 0 && shortCluster.length > 0;
+  const actionableLongCluster = longCluster.filter(hasActionableCollisionEvidence);
+  const actionableShortCluster = shortCluster.filter(hasActionableCollisionEvidence);
+  const rawHasCollision = longCluster.length > 0 && shortCluster.length > 0;
+  const hasCollision = actionableLongCluster.length > 0 && actionableShortCluster.length > 0;
   const base = {
-    hasCollision,
+    hasCollision: rawHasCollision,
     longClusterCount: longCluster.length,
     shortClusterCount: shortCluster.length,
     readyLongCount: 0,
@@ -154,7 +181,7 @@ export function applyCollisionFirstArbitration(candidates: SetupCandidate[] | un
     supportingContextCandidates: [] as SetupCandidate[],
   };
 
-  if (!hasCollision) {
+  if (!rawHasCollision) {
     return {
       ...base,
       state: 'no_collision',
@@ -165,8 +192,44 @@ export function applyCollisionFirstArbitration(candidates: SetupCandidate[] | un
     };
   }
 
-  const readyLong = longCluster.filter(hasFullCollisionProof);
-  const readyShort = shortCluster.filter(hasFullCollisionProof);
+  if (actionableLongCluster.length === 0 && actionableShortCluster.length === 0) {
+    return {
+      ...base,
+      state: 'collision_wait',
+      message: COLLISION_WAIT_MESSAGE,
+      allowedDirection: null,
+      selectedCandidate: null,
+      supportingContextCandidates: cluster,
+      reasons: ['Collision exists, but both sides are stale, blocked, missing-trigger, or otherwise non-actionable.'],
+    };
+  }
+
+  if (actionableLongCluster.length > 0 && actionableShortCluster.length === 0) {
+    return {
+      ...base,
+      state: 'single_side_ready',
+      message: null,
+      allowedDirection: 'LONG',
+      selectedCandidate: bestReady(actionableLongCluster),
+      supportingContextCandidates: shortCluster,
+      reasons: ['Opposite-side evidence is stale, blocked, missing-trigger, or otherwise non-actionable; allow LONG candidates to rank.'],
+    };
+  }
+
+  if (actionableShortCluster.length > 0 && actionableLongCluster.length === 0) {
+    return {
+      ...base,
+      state: 'single_side_ready',
+      message: null,
+      allowedDirection: 'SHORT',
+      selectedCandidate: bestReady(actionableShortCluster),
+      supportingContextCandidates: longCluster,
+      reasons: ['Opposite-side evidence is stale, blocked, missing-trigger, or otherwise non-actionable; allow SHORT candidates to rank.'],
+    };
+  }
+
+  const readyLong = actionableLongCluster.filter(hasFullCollisionProof);
+  const readyShort = actionableShortCluster.filter(hasFullCollisionProof);
   const readyLongBest = bestReady(readyLong);
   const readyShortBest = bestReady(readyShort);
   const counts = {

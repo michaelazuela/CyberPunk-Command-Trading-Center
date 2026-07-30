@@ -85,6 +85,48 @@ assert.equal(singleSideReady.allowedDirection, 'LONG');
 assert.equal(singleSideReady.selectedCandidate, provenLong);
 assert.equal(singleSideReady.supportingContextCandidates[0], incompleteShort);
 
+const staleBlockedShort = candidate({
+  direction: 'SHORT',
+  entry: 7498,
+  stop: 7507,
+  target1: 7484.5,
+  target2: 7480,
+  executionStatus: ExecutionStatus.Blocked,
+  blockReason: NoTradeReason.InvalidStopLocation,
+  decisionQualityHardBlocker: NoTradeReason.InvalidStopLocation,
+  missingEvidence: ['No chase. Missing trigger from stale opposite-side evidence.'],
+});
+const cleanConditionalLong = candidate({
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: null,
+  requiredTrigger: 'Completed 5M proof with protected 5M structure stop.',
+  evidence: ['Completed 5M proof, protected 5M structure stop, and clean target room are present.'],
+});
+const staleOppositeSideHeldLocal = applyCollisionFirstArbitration([cleanConditionalLong, staleBlockedShort]);
+assert.equal(staleOppositeSideHeldLocal.state, 'single_side_ready');
+assert.equal(staleOppositeSideHeldLocal.allowedDirection, 'LONG');
+assert.equal(staleOppositeSideHeldLocal.selectedCandidate, cleanConditionalLong);
+assert.equal(staleOppositeSideHeldLocal.supportingContextCandidates[0], staleBlockedShort);
+
+const staleLong = candidate({
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  missingEvidence: ['No chase. Missing trigger from stale long evidence.'],
+});
+const staleShort = candidate({
+  direction: 'SHORT',
+  entry: 7498,
+  stop: 7507,
+  target1: 7484.5,
+  target2: 7480,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  missingEvidence: ['No chase. Missing trigger from stale short evidence.'],
+});
+const bothSidesStale = applyCollisionFirstArbitration([staleLong, staleShort]);
+assert.equal(bothSidesStale.state, 'collision_wait');
+assert.equal(bothSidesStale.allowedDirection, null);
+
 const htfOnlyShort = candidate({
   direction: 'SHORT',
   setupType: SetupType.RaidFailureDisplacementReversal,

@@ -2,6 +2,20 @@
 
 ## Latest Change
 
+Date: 2026-07-30
+Task: Narrow collision arbitration so stale/blocked opposite-side evidence cannot suppress a cleaner active side by itself.
+Files changed: src/lib/collisionFirstArbitration.ts, src/lib/collisionFirstArbitration.test.ts, docs/PROJECT_STATUS.md.
+Reason: This morning's scanner tape showed LONG and SHORT evidence present together while every cycle stayed held local. The collision gate was treating blocked, stale/no-chase, missing-trigger, or invalid-stop opposite-side rows as full collision blockers. The gate now separates raw context from actionable collision evidence before it blocks promotion.
+Tests run: npx tsx src/lib/collisionFirstArbitration.test.ts; npx tsx src/lib/tradeDecisionPipeline.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-30 --sessions morning --instrument MES --json.
+Result: Passed. The focused contract now proves a clean same-window side can rank when the opposite side is stale/blocked/non-actionable, while two stale/non-actionable sides still produce collision_wait. Saved live-flow parity for the July 30 morning tape still has 0 Discord publish rows, 0 legacy trade-alert sends, 0 DeskPublish posts, 0 parity mismatches, 0 divergences, 0 authority violations, and 0 blocking mismatches.
+Trading logic changed: Yes. Collision arbitration only. The change does not alter setup definitions, 5M execution authority, entry math, protected-structure stop math, T1/T2 target math, canExecute, bridge behavior, Supabase, Discord webhook configuration, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Saved decision tapes contain already-written scannerDeskOutput, so parity replay proves downstream safety but not regenerated post-change promotion. A controlled scanner restart/readback is required before the live runtime uses this new arbitration code.
+Next recommended action: Run full guards/build, commit/push, then perform a controlled scanner restart/readback and fresh morning/lunch replay after the running process loads the new code.
+
 Date: 2026-07-29
 Task: Remove the duplicate after-Desk-Play legacy trade-alert suppression helper.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
