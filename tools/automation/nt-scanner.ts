@@ -2097,6 +2097,50 @@ export type ScannerOperatorDeliveryReasonCode =
   | 'HELD_REVIEW_ONLY'
   | 'HELD_LOCAL';
 
+export type ScannerDeskOutputStatus =
+  | 'approved_plan'
+  | 'forming'
+  | 'no_trade'
+  | 'duplicate'
+  | 'held';
+
+export interface ScannerDeskOutputContract {
+  sourceOfTruth: 'scanner_desk_output_contract';
+  pipeline: 'select_candidate_approve_hold_publish';
+  status: ScannerDeskOutputStatus;
+  publishToDiscord: boolean;
+  reason: string;
+  operatorCode: ScannerOperatorDeliveryReasonCode;
+  session: LiveSession;
+  tradeDate: string;
+  instrument: Instrument;
+  state: ScannerState;
+  model: string | null;
+  direction: SetupCandidate['direction'] | DeskPublishDecision['direction'] | null;
+  entry: number | null;
+  stop: number | null;
+  t1: number | null;
+  t2: number | null;
+  canExecute: boolean;
+  hasCompletePlan: boolean;
+  campaignId: string | null;
+  gates: {
+    selectedCandidate: boolean;
+    alertApproved: boolean;
+    publishDecisionApproved: boolean;
+    completePlan: boolean;
+    duplicateBlocked: boolean;
+    dataQualityBlocked: boolean;
+    reviewOnly: boolean;
+  };
+  authority: {
+    changesTradingLogic: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesDiscordPolicy: false;
+  };
+}
+
 export function normalizeScannerOperatorDeliveryReason(decision: ScannerAlertDecision): {
   code: ScannerOperatorDeliveryReasonCode;
   reason: string;
@@ -2150,6 +2194,74 @@ function withNormalizedScannerOperatorDeliveryReason(decision: ScannerAlertDecis
   return normalized.reason === decision.reason ? decision : { ...decision, reason: normalized.reason };
 }
 
+function scannerDeskOutputStatus(args: {
+  alertDecision: ScannerAlertDecision;
+  publishDecision: DeskPublishDecision | null | undefined;
+  candidate: SetupCandidate | null;
+  operatorCode: ScannerOperatorDeliveryReasonCode;
+}): ScannerDeskOutputStatus {
+  if (args.alertDecision.shouldSend) return 'approved_plan';
+  if (args.operatorCode === 'HELD_DUPLICATE') return 'duplicate';
+  if (args.operatorCode === 'HELD_MISSING_5M_PROOF' || args.publishDecision?.action === 'POST_WATCH') return 'forming';
+  if (!args.candidate || args.publishDecision?.direction === 'WAIT') return 'no_trade';
+  return 'held';
+}
+
+export function buildScannerDeskOutputContract(args: {
+  session: LiveSession;
+  tradeDate: string;
+  instrument: Instrument;
+  state: ScannerState;
+  candidate: SetupCandidate | null;
+  alertDecision: ScannerAlertDecision;
+  publishDecision: DeskPublishDecision | null | undefined;
+  campaignId?: string | null;
+}): ScannerDeskOutputContract {
+  const normalizedReason = normalizeScannerOperatorDeliveryReason(args.alertDecision);
+  const publishDecision = args.publishDecision || null;
+  return {
+    sourceOfTruth: 'scanner_desk_output_contract',
+    pipeline: 'select_candidate_approve_hold_publish',
+    status: scannerDeskOutputStatus({
+      alertDecision: args.alertDecision,
+      publishDecision,
+      candidate: args.candidate,
+      operatorCode: normalizedReason.code,
+    }),
+    publishToDiscord: args.alertDecision.shouldSend,
+    reason: normalizedReason.reason,
+    operatorCode: normalizedReason.code,
+    session: args.session,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    state: args.state,
+    model: args.candidate?.setupType || publishDecision?.setupType || null,
+    direction: args.candidate?.direction || publishDecision?.direction || null,
+    entry: publishDecision?.entry ?? args.candidate?.entry ?? null,
+    stop: publishDecision?.stop ?? args.candidate?.stop ?? null,
+    t1: publishDecision?.t1 ?? args.candidate?.target1 ?? null,
+    t2: publishDecision?.t2 ?? args.candidate?.target2 ?? null,
+    canExecute: Boolean(publishDecision?.canExecute),
+    hasCompletePlan: Boolean(publishDecision?.hasCompletePlan),
+    campaignId: args.campaignId || null,
+    gates: {
+      selectedCandidate: Boolean(args.candidate),
+      alertApproved: args.alertDecision.shouldSend,
+      publishDecisionApproved: Boolean(publishDecision?.shouldPost),
+      completePlan: Boolean(publishDecision?.hasCompletePlan),
+      duplicateBlocked: normalizedReason.code === 'HELD_DUPLICATE',
+      dataQualityBlocked: normalizedReason.code === 'HELD_DATA_LIMITED',
+      reviewOnly: normalizedReason.code === 'HELD_REVIEW_ONLY',
+    },
+    authority: {
+      changesTradingLogic: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesDiscordPolicy: false,
+    },
+  };
+}
+
 function scannerAuditFileLabel(filePath: string | null | undefined): string {
   return filePath ? path.basename(filePath) : 'N/A';
 }
@@ -2166,6 +2278,7 @@ export function scannerCycleSummaryLine(args: {
   currentPrice: number;
   candidate: SetupCandidate | null;
   deskState: DeskState;
+  scannerDeskOutput?: ScannerDeskOutputContract | null;
   stateForAlert: ScannerState;
   confidence: ScannerConfidenceBreakdown;
   sameCompletedCandle: boolean;
@@ -2180,10 +2293,12 @@ export function scannerCycleSummaryLine(args: {
     suppressReason: 'Scanner state is missed/no-chase; prior levels are management/history only.',
   });
   const delivery = args.alertDecision.shouldSend ? 'send' : 'local';
+  const output = args.scannerDeskOutput ? `output ${args.scannerDeskOutput.status}` : `output ${delivery}`;
   const refresh = args.sameCompletedCandle ? 'refresh | ' : '';
   return [
     `[scanner] ${args.session} ${args.completed5m.time}: ${args.stateForAlert} ${args.confidence.score}/100`,
     scannerCandidateLabel(args.candidate, args.deskState),
+    output,
     `current ${money(args.currentPrice)}`,
     `line ${money(ticket.lineInSand)}`,
     `entry ${money(ticket.levels?.entry)}`,
@@ -3147,6 +3262,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
   targetCascade?: TargetCascadeResult | null;
   deskState?: DeskState;
   publishDecision?: DeskPublishDecision | null;
+  scannerDeskOutput?: ScannerDeskOutputContract | null;
   completed5mLatency?: ScannerCompletedFiveMinuteLatencySentinel | null;
   missedMoveReentryWatch?: ScannerMissedMoveReentryWatch | null;
   planVersionId: string;
@@ -3202,6 +3318,15 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     currentPrice: args.currentPrice,
     completed5mTime: args.completed5m?.time || null,
   });
+  const scannerDeskOutput = args.scannerDeskOutput || buildScannerDeskOutputContract({
+    session: args.session,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    state: args.state,
+    candidate: args.candidate,
+    alertDecision: args.alertDecision,
+    publishDecision,
+  });
   const reversalWatchLines = buildScannerReversalWatchLines({
     deskState,
     completed5m: args.completed5m,
@@ -3246,6 +3371,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     tradeDecisionMapAudit,
     deskState,
     deskPublishDecision: publishDecision,
+    scannerDeskOutput,
     counterStructureConditional: deskState.primaryDeskPlay.counterStructureConditional || null,
     mtfPrimarySideArbitration: deskState.primaryDeskPlay.mtfPrimarySideArbitration || null,
     htfTargetToLinePromotion: deskState.primaryDeskPlay.htfTargetToLinePromotion || null,
@@ -11379,6 +11505,16 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     currentPrice,
     completed5mTime: completed5m.time,
   });
+  const scannerDeskOutput = buildScannerDeskOutputContract({
+    session,
+    tradeDate,
+    instrument: config.instrument,
+    state: stateForAlert,
+    candidate,
+    alertDecision,
+    publishDecision: deskPublishDecision,
+    campaignId: activeCampaignClaim.campaignId,
+  });
   if (!alertDecision.shouldSend && activeCampaignClaim.claimed && activeCampaignClaim.campaignId) {
     const suppressedReason = alertDecision.reason || 'Scanner alert suppressed after durable ActiveCampaign claim.';
     state.alertDeliveries[alertKey] = {
@@ -11428,6 +11564,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     targetCascade,
     deskState,
     publishDecision: deskPublishDecision,
+    scannerDeskOutput,
     completed5mLatency,
     missedMoveReentryWatch,
     planVersionId,
@@ -11463,6 +11600,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     currentPrice,
     candidate,
     deskState,
+    scannerDeskOutput,
     stateForAlert,
     confidence,
     sameCompletedCandle,

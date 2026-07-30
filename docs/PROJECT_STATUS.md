@@ -11358,6 +11358,20 @@ Next recommended action: Review the generated research-only outcome report and D
 ## Latest Change
 
 Date: 2026-07-29
+Task: Add unified scanner desk output contract for select/approve/hold/publish flow.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The scanner-to-Discord workflow had too many scattered decision objects. This phase adds one scanner-owned output contract that compresses the handoff into select candidate -> approve/hold -> publish without changing model rules or Discord policy.
+Result: Scanner cycles now write `scannerDeskOutput` into the decision tape with status, publish flag, operator hold/post code, candidate levels, campaign id, gates, and explicit no-drift authority flags. Focused tests prove approved and duplicate-held cases map into the new contract.
+Trading logic changed: No. This is a contract/audit simplification only. Candidate selection, model definitions, 5M proof authority, entry/stop/T1/T2/risk math, canExecute, campaign locking, live Discord gate, Supabase schema, bridge behavior, and automated execution are unchanged.
+Bridge impact: None.
+Journal/RAG impact: Decision tape audit now includes the compressed scanner desk output contract. Existing RAG write behavior is unchanged.
+Supabase impact: None. Existing durable ActiveCampaign ledger behavior is unchanged.
+Known risks: Live posting still reads the existing branches in this block; next phase can route downstream code from `scannerDeskOutput` after replay proves parity.
+Next recommended action: Run focused scanner tests and full guards, then in the next micro-phase replace one legacy publish branch at a time with the unified output contract.
+
+## Previous Change
+
+Date: 2026-07-29
 Task: Add implicit same-session campaign lock for no-campaign scanner trade alerts.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: July 28 replay showed repeated RaidFailureDisplacementReversal SHORT Discord candidates in the same morning session because no-campaign variants bypassed the ActiveCampaign de-dup ledger.

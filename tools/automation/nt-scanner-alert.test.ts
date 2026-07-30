@@ -17,6 +17,7 @@ import {
   applyScannerTradeAlertSuppressionForScannerOwnedSurface,
   applyScannerTradeAlertSuppressionAfterDeskPlay,
   evaluateScannerDeskPlayDiscordSuppression,
+  buildScannerDeskOutputContract,
   normalizeScannerBarTimestampMode,
   normalizeScannerOperatorDeliveryReason,
   readUnifiedDeskOutputProductionScannerSurface,
@@ -348,7 +349,7 @@ try {
       discordAction: 'post_review',
       visibilityMode: 'POST_REVIEW',
       activeCampaign: null,
-      dataQualityStatus: 'sufficient',
+      dataQualityStatus: 'ok',
       htfContextStatus: 'sufficient',
       primaryDeskPlay: {
         direction: 'SHORT',
@@ -383,7 +384,7 @@ try {
       discordAction: 'post_review',
       visibilityMode: 'POST_REVIEW',
       activeCampaign: null,
-      dataQualityStatus: 'sufficient',
+      dataQualityStatus: 'ok',
       htfContextStatus: 'sufficient',
       primaryDeskPlay: {
         direction: 'SHORT',
@@ -532,6 +533,75 @@ try {
     source: 'front-month-rollover',
     warning: null,
   }, 'MES'), false);
+
+  const approvedScannerDeskOutput = buildScannerDeskOutputContract({
+    session: 'morning',
+    tradeDate: '2026-07-28',
+    instrument: 'MES',
+    state: 'Conditional',
+    candidate: implicitMorningShort,
+    alertDecision: { shouldSend: true, reason: 'POST_READY: eligible scanner alert.' },
+    publishDecision: {
+      sourceOfTruth: 'scanner_desk_publish_decision',
+      action: 'POST_CONDITIONAL',
+      discordAction: 'post_conditional',
+      shouldPost: true,
+      reason: 'Complete scanner-owned candidate.',
+      displaySource: 'selected_candidate',
+      candidateKey: 'fixture-candidate',
+      direction: 'SHORT',
+      setupType: SetupType.RaidFailureDisplacementReversal,
+      lineInSand: 7451.5,
+      triggerCondition: 'Completed 5M bearish proof.',
+      entry: 7451.5,
+      stop: 7460.75,
+      t1: 7437.75,
+      t2: 7433,
+      invalidation: 7460.75,
+      invalidationText: 'Invalid above protected 5M structure stop 7460.75.',
+      hasCompletePlan: true,
+      humanReviewOnly: true,
+      canExecute: false,
+      noChaseState: false,
+      htfContextStatus: 'sufficient',
+      dataQualityStatus: 'ok',
+      discordReason: 'Complete scanner-owned candidate.',
+      managementWarnings: [],
+      driftBlocker: null,
+      approvalBoundary: {
+        changesTradeApprovals: false,
+        changesCanExecute: false,
+        changesEntryStopTargets: false,
+        changesRiskRules: false,
+        changesBridgeBehavior: false,
+      },
+    },
+    campaignId: implicitCampaignKey,
+  });
+  assert.equal(approvedScannerDeskOutput.pipeline, 'select_candidate_approve_hold_publish');
+  assert.equal(approvedScannerDeskOutput.status, 'approved_plan');
+  assert.equal(approvedScannerDeskOutput.publishToDiscord, true);
+  assert.equal(approvedScannerDeskOutput.model, SetupType.RaidFailureDisplacementReversal);
+  assert.equal(approvedScannerDeskOutput.entry, 7451.5);
+  assert.equal(approvedScannerDeskOutput.gates.alertApproved, true);
+  assert.equal(approvedScannerDeskOutput.gates.publishDecisionApproved, true);
+  assert.equal(approvedScannerDeskOutput.authority.changesTradingLogic, false);
+  assert.equal(approvedScannerDeskOutput.authority.changesDiscordPolicy, false);
+
+  const duplicateScannerDeskOutput = buildScannerDeskOutputContract({
+    session: 'morning',
+    tradeDate: '2026-07-28',
+    instrument: 'MES',
+    state: 'Conditional',
+    candidate: repricedMorningShort,
+    alertDecision: { shouldSend: false, reason: 'HELD_DUPLICATE: existing Discord/campaign record already covers this setup.' },
+    publishDecision: null,
+    campaignId: implicitCampaignKey,
+  });
+  assert.equal(duplicateScannerDeskOutput.status, 'duplicate');
+  assert.equal(duplicateScannerDeskOutput.publishToDiscord, false);
+  assert.equal(duplicateScannerDeskOutput.gates.duplicateBlocked, true);
+  assert.equal(duplicateScannerDeskOutput.reason, 'HELD_DUPLICATE: existing Discord/campaign record already covers this setup.');
 
   const malformedHtfSkipLine = scannerMarketBarsUpsertSkipAuditLine({
     label: 'scanner-cache',
