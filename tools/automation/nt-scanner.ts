@@ -6613,7 +6613,30 @@ function scannerDeskPlaySuppressionBlocked(
 export function scannerDeskPlayCanonicalPreDeliveryHold(
   publishDecision: DeskPublishDecision | null | undefined,
   alertDecision?: ScannerAlertDecision | null,
+  scannerDeskOutput?: ScannerDeskOutputContract | null,
 ): ScannerDeskPlayDiscordSuppressionDecision | null {
+  if (scannerDeskOutput) {
+    if (scannerDeskOutput.publishToDiscord) return null;
+    if (publishDecision && !publishDecision.shouldPost) {
+      return scannerDeskPlaySuppressionBlocked(
+        publishDecision.action === 'DATA_QUALITY_BLOCKER' ? 'stale_data' : 'low_quality_map',
+        [
+          publishDecision.discordReason || 'Desk Play kept local because the canonical DeskPublishDecision did not approve public posting.',
+          `scannerDeskOutputStatus=${scannerDeskOutput.status}`,
+        ].join(' | '),
+      );
+    }
+    if (scannerDeskOutput.operatorCode === 'HELD_STALE_NO_CHASE') {
+      return scannerDeskPlaySuppressionBlocked('missed_no_chase', scannerDeskOutput.reason);
+    }
+    if (scannerDeskOutput.operatorCode === 'HELD_MISSING_5M_PROOF') {
+      return scannerDeskPlaySuppressionBlocked('low_quality_map', scannerDeskOutput.reason);
+    }
+    if (scannerDeskOutput.operatorCode === 'HELD_DATA_LIMITED') {
+      return scannerDeskPlaySuppressionBlocked('stale_data', scannerDeskOutput.reason);
+    }
+    return null;
+  }
   if (publishDecision && !publishDecision.shouldPost) {
     return scannerDeskPlaySuppressionBlocked(
       publishDecision.action === 'DATA_QUALITY_BLOCKER' ? 'stale_data' : 'low_quality_map',
@@ -11856,7 +11879,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         previousFingerprint: deskPlaySuppression.previousFingerprint,
       }));
     } else if (!state.deskPlanRefreshSent[deskPlayKey]) {
-      const canonicalPreDeliveryHold = scannerDeskPlayCanonicalPreDeliveryHold(deskPublishDecision, alertDecision);
+      const canonicalPreDeliveryHold = scannerDeskPlayCanonicalPreDeliveryHold(deskPublishDecision, alertDecision, scannerDeskOutput);
       if (canonicalPreDeliveryHold) {
         console.log(scannerSuppressionSummaryLine({
           label: 'Desk Play refresh',

@@ -23,6 +23,7 @@ import {
   readUnifiedDeskOutputProductionScannerSurface,
   recordActiveCampaignScannerAlertSent,
   scannerActiveCampaignKeyForTradeDate,
+  scannerDeskPlayCanonicalPreDeliveryHold,
   scannerDeskPlanSameSideRefreshHoldReason,
   scannerDiscordDryRunSummaryLine,
   scannerMarketBarsUpsertSkipAuditLine,
@@ -623,6 +624,70 @@ try {
     planVersionId: 'fixture-plan-version',
   });
   assert.equal(contractHeldLegacySuppression.shouldSend, true);
+
+  const staleScannerDeskOutput = buildScannerDeskOutputContract({
+    session: 'morning',
+    tradeDate: '2026-07-28',
+    instrument: 'MES',
+    state: 'Missed',
+    candidate: repricedMorningShort,
+    alertDecision: { shouldSend: false, reason: 'HELD_STALE_NO_CHASE: no fresh entry; wait for new completed 5M proof.' },
+    publishDecision: {
+      sourceOfTruth: 'scanner_desk_publish_decision',
+      action: 'POST_REVIEW',
+      discordAction: 'post_review',
+      shouldPost: true,
+      reason: 'Desk review candidate exists.',
+      displaySource: 'selected_candidate',
+      candidateKey: 'fixture-stale-candidate',
+      direction: 'SHORT',
+      setupType: SetupType.RaidFailureDisplacementReversal,
+      lineInSand: 7423.25,
+      triggerCondition: 'Completed 5M bearish proof.',
+      entry: 7423.25,
+      stop: 7441.5,
+      t1: 7396,
+      t2: 7386.75,
+      invalidation: 7441.5,
+      invalidationText: 'Invalid above protected 5M structure stop 7441.50.',
+      hasCompletePlan: true,
+      humanReviewOnly: true,
+      canExecute: false,
+      noChaseState: true,
+      htfContextStatus: 'sufficient',
+      dataQualityStatus: 'ok',
+      discordReason: 'Desk review candidate exists.',
+      managementWarnings: [],
+      driftBlocker: null,
+      approvalBoundary: {
+        changesTradeApprovals: false,
+        changesCanExecute: false,
+        changesEntryStopTargets: false,
+        changesRiskRules: false,
+        changesBridgeBehavior: false,
+      },
+    },
+    campaignId: implicitCampaignKey,
+  });
+  const staleDeskPlayHold = scannerDeskPlayCanonicalPreDeliveryHold(
+    null,
+    { shouldSend: true, reason: 'legacy branch would allow this fixture' },
+    staleScannerDeskOutput,
+  );
+  assert.equal(staleDeskPlayHold?.shouldPost, false);
+  assert.equal(staleDeskPlayHold?.category, 'missed_no_chase');
+  assert.match(staleDeskPlayHold?.reason || '', /HELD_STALE_NO_CHASE/);
+
+  const approvedDeskPlayHold = scannerDeskPlayCanonicalPreDeliveryHold(
+    {
+      shouldPost: false,
+      action: 'HOLD_WITH_REASON',
+      discordReason: 'legacy publish decision would hold this fixture',
+    } as any,
+    { shouldSend: false, reason: 'HELD_STALE_NO_CHASE: legacy branch would hold this fixture' },
+    approvedScannerDeskOutput,
+  );
+  assert.equal(approvedDeskPlayHold, null);
 
   const malformedHtfSkipLine = scannerMarketBarsUpsertSkipAuditLine({
     label: 'scanner-cache',

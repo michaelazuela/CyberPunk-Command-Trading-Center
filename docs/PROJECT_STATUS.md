@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Move Desk Play pre-delivery hold branch to scannerDeskOutput.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The scanner-to-Discord flow is being simplified to `select candidate -> approve/hold -> publish`. Desk Play pre-delivery holds should consume the canonical `scannerDeskOutput` contract instead of re-deciding through scattered downstream state.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-28,2026-07-29 --sessions all --instrument MES --json; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. The Desk Play pre-delivery hold helper now honors canonical scanner desk output first: publish-approved output passes through, stale/no-chase output is held as missed/no-chase, missing 5M proof is held as a local low-quality map, and data-limited output is held as stale/data-limited. Legacy fallback remains for older paths without a scanner desk output contract. Live-flow parity replay passed across July 28-29 saved tapes: 6 tapes, 237 events, 13 comparable post-contract rows, 224 pre-contract rows, 0 trade-alert mismatches, 0 DeskPublish divergences, 0 authority violations, and 0 blocking mismatches.
+Trading logic changed: No. This changes a Discord orchestration hold branch to consume the existing scanner-owned output contract. It does not change setup detection, model rules, candidate ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase, Discord webhook configuration, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made. Future Desk Play pre-delivery holds use the same scanner-owned publish/hold contract already proven by replay.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: This is one downstream branch move only. Older scattered branches still exist until each is proven redundant by parity replay.
+Next recommended action: Move the next downstream branch to consume `scannerDeskOutput` directly, then rerun live-flow parity before deleting any old scattered logic.
+
+Date: 2026-07-29
 Task: Install stopped-trade live-boundary guards.
 Files changed: src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts, src/lib/liveDiscordPostEligibility.ts, src/lib/liveDiscordPostEligibility.test.ts, tools/automation/nt-scanner.ts, docs/PROJECT_STATUS.md.
 Reason: The stopped-trade workflow audit showed scanner-posted candidates losing from stale target-before-entry plans, duplicate same-campaign rows, same-candle entry/stop ambiguity, and late/extended protected-stop ideas. The live scanner needed to keep those as evidence/forming states instead of selecting them as Discord-visible trade plans.
