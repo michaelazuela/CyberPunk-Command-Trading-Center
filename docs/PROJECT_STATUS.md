@@ -11358,6 +11358,20 @@ Next recommended action: Review the generated research-only outcome report and D
 ## Latest Change
 
 Date: 2026-07-29
+Task: Add read-only scanner desk output live-flow parity replay.
+Files changed: tools/automation/scanner-desk-output-live-flow-parity-replay.ts, tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts, docs/PROJECT_STATUS.md.
+Reason: Prove the scanner-to-Discord pipe flow step by step from saved decision tapes before moving or deleting more downstream branches.
+Result: Added a local diagnostic replay that follows saved 5M tape rows through completed candle presence, selected candidate, DeskPublishDecision, scannerDeskOutput, legacy trade-alert parity, and Discord-boundary disposition. Real replay across 2026-07-28 and 2026-07-29 morning/lunch/evening reviewed 6 tapes and 235 events. The 11 post-contract comparable rows had 0 trade-alert parity mismatches, 0 authority violations, and 0 blocking mismatches. The remaining 224 rows were pre-contract/not-comparable because those saved tape rows did not yet contain scannerDeskOutput.
+Trading logic changed: No. This is read-only diagnostic tooling and documentation only. It does not change candidate selection, model definitions, 5M proof authority, entry/stop/T1/T2/risk math, canExecute, campaign locking, live Discord eligibility, Supabase schema, bridge behavior, or automated execution.
+Bridge impact: None. The replay reads saved decision tape artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The real parity window is small because scannerDeskOutput was installed late in the available tapes. Older rows remain useful for old-flow behavior but cannot prove unified-output parity.
+Next recommended action: Move the next single downstream branch, `desk_play` pre-delivery hold, to consume scannerDeskOutput directly, then rerun this parity replay before deleting old scattered logic.
+
+## Previous Change
+
+Date: 2026-07-29
 Task: Route legacy trade-alert suppression through the unified scanner desk output contract.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: Continue compressing the scanner-to-Discord workflow so downstream branches read the single `scannerDeskOutput` contract instead of only scattered booleans.
