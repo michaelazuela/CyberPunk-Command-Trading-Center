@@ -876,6 +876,57 @@ function activeCampaignMaterialUpdateAllowed(args: {
   return Boolean(currentFingerprint && args.previousFingerprint && currentFingerprint !== args.previousFingerprint);
 }
 
+function activeCampaignSameDirectionResetAllowed(args: {
+  candidate?: SetupCandidate | null;
+  previousFingerprint?: string | null;
+  campaignId?: string | null;
+}): boolean {
+  if (!args.campaignId?.includes(':implicit-session-campaign:')) return false;
+  const currentFingerprint = activeCampaignPublicActionFingerprint(args.candidate);
+  if (!currentFingerprint || !args.previousFingerprint || currentFingerprint === args.previousFingerprint) return false;
+  const candidate = args.candidate;
+  if (!candidate) return false;
+  if (
+    candidate.executionStatus !== ExecutionStatus.Executable &&
+    candidate.executionStatus !== ExecutionStatus.Conditional
+  ) {
+    return false;
+  }
+  if (candidate.blockReason || candidate.decisionQualityHardBlocker) return false;
+  if (
+    !isFiniteTradePrice(candidate.entry) ||
+    !isFiniteTradePrice(candidate.stop) ||
+    !isFiniteTradePrice(candidate.target1) ||
+    !isFiniteTradePrice(candidate.target2)
+  ) {
+    return false;
+  }
+  const proofText = [
+    candidate.scenarioLabel,
+    candidate.requiredTrigger,
+    candidate.nextAction,
+    candidate.invalidation,
+    candidate.targetRoom?.targetRoomReason,
+    ...(candidate.evidence || []),
+    ...(candidate.activeRuleset?.timeframeMss?.evidence || []),
+  ].filter(Boolean).join(' ').toLowerCase();
+  const pendingText = [
+    candidate.requiredTrigger,
+    candidate.nextAction,
+    ...(candidate.missingEvidence || []),
+    ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
+  ].filter(Boolean).join(' ').toLowerCase();
+  if (/(wait for|waiting for|keep .*local|missing|pending|no completed|not ready|until fresh proof|until .*proof completes)/i.test(pendingText)) {
+    return false;
+  }
+  const hasFreshCompletedProof =
+    /completed 5m/.test(proofText) &&
+    /(proof|mss|structure shift|displacement|retest|hold|close-through|close through)/.test(proofText);
+  const hasResetLanguage =
+    /(same-side reset|fresh same-side campaign|new same-side campaign|new campaign|fresh campaign|prior campaign resolved|prior campaign invalidated|prior campaign complete|after t1|after t2|post-t1|post-t2|new completed 5m proof)/.test(proofText);
+  return hasFreshCompletedProof && hasResetLanguage;
+}
+
 export function shouldSuppressActiveCampaignScannerAlert(args: {
   activeCampaignSent?: Record<string, ScannerActiveCampaignLedgerRecord>;
   candidate?: SetupCandidate | null;
@@ -923,6 +974,18 @@ export function shouldSuppressActiveCampaignScannerAlert(args: {
       campaignId,
       record: effectiveRecord,
       reason: `ActiveCampaign material update allowed for ${campaignId}: new complete entry/stop/T1/T2 differs from prior public action.`,
+    };
+  }
+  if (activeCampaignSameDirectionResetAllowed({
+    candidate: args.candidate,
+    previousFingerprint: effectiveRecord?.publicActionFingerprint || null,
+    campaignId,
+  })) {
+    return {
+      shouldSuppress: false,
+      campaignId,
+      record: effectiveRecord,
+      reason: `ActiveCampaign same-direction reset allowed for ${campaignId}: prior campaign resolved/invalidated and candidate carries fresh completed 5M proof with a new complete entry/stop/T1/T2.`,
     };
   }
   return {

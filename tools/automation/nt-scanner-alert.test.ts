@@ -524,6 +524,27 @@ try {
   assert.equal(implicitSameDirectionModelVariant.shouldSuppress, true);
   assert.equal(implicitSameDirectionModelVariant.campaignId, implicitCampaignKey);
   assert.match(implicitSameDirectionModelVariant.reason || '', /one trade alert already sent/);
+  const freshSameDirectionReset = shouldSuppressActiveCampaignScannerAlert({
+    activeCampaignSent,
+    candidate: {
+      ...sameSessionDifferentModelShort,
+      entry: 7392.25,
+      stop: 7401.25,
+      target1: 7378.75,
+      target2: 7374.25,
+      evidence: [
+        'Prior campaign resolved after T1; fresh same-side campaign reset is allowed only with new completed 5M proof.',
+        'New completed 5M proof passed with protected 5M structure stop and target room.',
+      ],
+      requiredTrigger: 'Completed 5M proof is present for the fresh same-side campaign reset.',
+      nextAction: 'Publish only because prior campaign resolved and this is a new same-side campaign with completed 5M proof.',
+    },
+    tradeDate: '2026-07-28',
+    session: 'morning',
+  });
+  assert.equal(freshSameDirectionReset.shouldSuppress, false);
+  assert.equal(freshSameDirectionReset.campaignId, implicitCampaignKey);
+  assert.match(freshSameDirectionReset.reason || '', /same-direction reset allowed/);
   const legacyImplicitKey = '2026-07-28:implicit-session-campaign:morning:DrivePullbackContinuation:LONG';
   const legacyActiveCampaignSent: Record<string, Parameters<typeof shouldSuppressActiveCampaignScannerAlert>[0]['activeCampaignSent'] extends Record<string, infer RecordType> ? RecordType : never> = {
     [legacyImplicitKey]: {

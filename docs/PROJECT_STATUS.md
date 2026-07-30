@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-30
+Task: Add a conservative same-direction campaign reset rule after first clean campaign ownership.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The prior campaign lock correctly stopped same-session same-direction overposting, but it needed a safe path for a genuinely new same-direction trade later in the same session. The reset must not reopen the floodgate to ordinary repriced variants.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-30 --sessions morning --instrument MES --json; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check; npm run lint; npm run build; npm run test.
+Result: Focused tests, replay parity, guards, lint, build, and full test suite passed. July 30 morning live-flow parity replay passed with 33 comparable rows, 0 trade-alert mismatches, 0 DeskPublish divergences, 0 authority violations, and 0 blocking mismatches. Ordinary same-session same-direction model/level variants remain suppressed after the first implicit campaign. A same-direction reset is allowed only when the candidate has a different complete entry/stop/T1/T2, no pending/missing-proof language, fresh completed 5M proof, and explicit reset/resolved-prior-campaign language. git diff --check reported only expected Windows LF-to-CRLF warnings.
+Trading logic changed: Yes. File: tools/automation/nt-scanner.ts. Functions: activeCampaignSameDirectionResetAllowed, shouldSuppressActiveCampaignScannerAlert. Behavior changed: implicit same-direction campaign suppression now has a narrow reset escape hatch for a proven fresh campaign after prior campaign resolution/invalidation. It does not change model detection, candidate ranking inside a cycle, entry, nearest protected 5M structure stop, T1/T2 math, canExecute, bridge reads, Supabase schema, Discord webhook configuration, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made. Future Discord eligibility remains locked to scanner-owned campaign rules.
+Journal/RAG impact: None.
+Supabase impact: No live read/write was made. Durable campaign claims will receive the same allow/suppress decision from the scanner boundary.
+Known risks: This requires candidate text/evidence to explicitly identify a fresh same-side reset or resolved prior campaign. If a model finds a valid second same-direction trade but does not annotate that reset state, it will still be suppressed until the model evidence is made explicit.
+Next recommended action: Commit/push, then controlled scanner restart/readback so the live process loads the reset rule.
+
+Date: 2026-07-30
 Task: Broaden implicit same-session campaign lock so first clean same-side campaign owns the Discord lane.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The July 30 morning replay showed the correct lesson: first clean campaign wins, later same-side variants should become management/context, and opposite-side reversal requires fresh strong 5M failure proof. The implicit fallback campaign key still separated candidates by setup type, so DrivePullbackContinuation LONG and IntradayMssMicroContinuation LONG could compete as separate same-session Discord plans even when they were the same morning drive.
