@@ -10015,7 +10015,7 @@ export function applyScannerTradeAlertSuppressionAfterDeskPlay(args: {
   session: LiveSession | string;
   planVersionId: string;
 }): ScannerAlertDecision {
-  const publishIntent = args.scannerDeskOutput?.publishToDiscord ?? args.alertDecision.shouldSend;
+  const publishIntent = args.scannerDeskOutput?.publishToDiscord === true;
   if (!publishIntent) return args.alertDecision;
   const priorDeskPlan = latestDeskPlanRefreshRecord({
     sent: args.deskPlanRefreshSent,
@@ -10048,7 +10048,7 @@ export function applyScannerTradeAlertSuppressionForScannerOwnedSurface(args: {
   session: LiveSession | string;
   planVersionId: string;
 }): ScannerAlertDecision {
-  const publishIntent = args.scannerDeskOutput?.publishToDiscord ?? args.alertDecision.shouldSend;
+  const publishIntent = args.scannerDeskOutput?.publishToDiscord === true;
   if (!publishIntent || !args.scannerOwnedSurfaceActive) return args.alertDecision;
   return {
     shouldSend: false,

@@ -419,7 +419,7 @@ try {
   assert.equal(noCampaignCanonicalPostReviewDecision.shouldPost, false);
   assert.match(noCampaignCanonicalPostReviewDecision.reason, /no active scanner campaign/);
 
-  const legacyAlertSuppressed = applyScannerTradeAlertSuppressionAfterDeskPlay({
+  const legacyAlertWithoutScannerOutput = applyScannerTradeAlertSuppressionAfterDeskPlay({
     alertDecision: { shouldSend: true, reason: 'fixture trade alert would send' },
     deskPlanRefreshSent: { prior: priorDeskPlan },
     tradeDate: '2026-07-27',
@@ -427,8 +427,8 @@ try {
     session: 'lunch',
     planVersionId: 'fixture-plan-version',
   });
-  assert.equal(legacyAlertSuppressed.shouldSend, false);
-  assert.match(legacyAlertSuppressed.reason, /legacy_trade_alert_suppressed_after_scanner_owned_desk_play/);
+  assert.equal(legacyAlertWithoutScannerOutput.shouldSend, true);
+  assert.doesNotMatch(legacyAlertWithoutScannerOutput.reason, /legacy_trade_alert_suppressed_after_scanner_owned_desk_play/);
   const legacyAlertAllowedWithoutDeskPlan = applyScannerTradeAlertSuppressionAfterDeskPlay({
     alertDecision: { shouldSend: true, reason: 'fixture trade alert would send' },
     deskPlanRefreshSent: {},
@@ -439,7 +439,7 @@ try {
   });
   assert.equal(legacyAlertAllowedWithoutDeskPlan.shouldSend, true);
 
-  const scannerOwnedSurfaceAlertSuppressed = applyScannerTradeAlertSuppressionForScannerOwnedSurface({
+  const scannerOwnedSurfaceAlertWithoutScannerOutput = applyScannerTradeAlertSuppressionForScannerOwnedSurface({
     alertDecision: { shouldSend: true, reason: 'high-confidence conditional would otherwise send' },
     scannerOwnedSurfaceActive: true,
     tradeDate: '2026-07-28',
@@ -447,9 +447,8 @@ try {
     session: 'morning',
     planVersionId: 'fixture-plan-version',
   });
-  assert.equal(scannerOwnedSurfaceAlertSuppressed.shouldSend, false);
-  assert.match(scannerOwnedSurfaceAlertSuppressed.reason, /legacy_trade_alert_suppressed_by_scanner_owned_surface/);
-  assert.match(scannerOwnedSurfaceAlertSuppressed.reason, /five-model\/Desk Play surface owns production Discord/);
+  assert.equal(scannerOwnedSurfaceAlertWithoutScannerOutput.shouldSend, true);
+  assert.doesNotMatch(scannerOwnedSurfaceAlertWithoutScannerOutput.reason, /legacy_trade_alert_suppressed_by_scanner_owned_surface/);
   const scannerOwnedSurfaceAlertAllowedWhenInactive = applyScannerTradeAlertSuppressionForScannerOwnedSurface({
     alertDecision: { shouldSend: true, reason: 'fixture trade alert would send' },
     scannerOwnedSurfaceActive: false,
@@ -602,6 +601,19 @@ try {
   });
   assert.equal(contractDrivenLegacySuppression.shouldSend, false);
   assert.match(contractDrivenLegacySuppression.reason, /scannerDeskOutputStatus=approved_plan/);
+
+  const contractDrivenSurfaceSuppression = applyScannerTradeAlertSuppressionForScannerOwnedSurface({
+    alertDecision: { shouldSend: true, reason: 'high-confidence conditional would otherwise send' },
+    scannerDeskOutput: approvedScannerDeskOutput,
+    scannerOwnedSurfaceActive: true,
+    tradeDate: '2026-07-28',
+    instrument: 'MES',
+    session: 'morning',
+    planVersionId: 'fixture-plan-version',
+  });
+  assert.equal(contractDrivenSurfaceSuppression.shouldSend, false);
+  assert.match(contractDrivenSurfaceSuppression.reason, /legacy_trade_alert_suppressed_by_scanner_owned_surface/);
+  assert.match(contractDrivenSurfaceSuppression.reason, /scannerDeskOutputStatus=approved_plan/);
 
   const duplicateScannerDeskOutput = buildScannerDeskOutputContract({
     session: 'morning',

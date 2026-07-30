@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Remove legacy alertDecision fallback from scanner-owned trade-alert suppression.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Continue downstream cleanup after making `scannerDeskOutput` the canonical scanner-to-Discord contract. The legacy trade-alert suppression helpers still used `alertDecision.shouldSend` as a fallback when `scannerDeskOutput` was missing, which duplicated old downstream decision authority.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-28,2026-07-29 --sessions all --instrument MES --json; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. `applyScannerTradeAlertSuppressionAfterDeskPlay` and `applyScannerTradeAlertSuppressionForScannerOwnedSurface` now suppress only when `scannerDeskOutput.publishToDiscord=true`. If the canonical output contract is missing, helper-level legacy suppression does not re-decide; the live Discord boundary holds the unified trade-plan lane local. Focused tests prove missing-output helpers do not suppress and approved-output helpers still suppress competing legacy trade alerts. Real live-flow parity replay passed across July 28-29 saved tapes: 6 tapes, 246 events, 22 comparable post-contract rows, 0 trade-alert mismatches, 0 DeskPublish divergences, 0 authority violations, and 0 blocking mismatches.
+Trading logic changed: No. This is downstream Discord suppression cleanup only. It does not change setup detection, model rules, candidate ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase, Discord webhook configuration, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made. Missing scannerDeskOutput is handled by the live boundary, not helper-level legacy fallback.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Historical/pre-contract decision tape rows remain non-comparable for unified-output parity; current live trade-plan lanes require the canonical contract.
+Next recommended action: Finish verification, then continue deleting the next proven redundant downstream branch after parity remains clean.
+
+Date: 2026-07-29
 Task: Remove legacy DeskState fallback from Unified Desk Output Discord boundary.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: After the scanner-to-Discord workflow moved to `scannerDeskOutput`, the live Discord boundary still had a legacy fallback that could infer an approved trade-plan lane from DeskState when `scannerDeskOutput` was missing. That fallback duplicated downstream decision authority and should be retired one branch at a time.
