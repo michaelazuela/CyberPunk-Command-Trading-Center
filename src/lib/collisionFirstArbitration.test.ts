@@ -102,11 +102,29 @@ const cleanConditionalLong = candidate({
   requiredTrigger: 'Completed 5M proof with protected 5M structure stop.',
   evidence: ['Completed 5M proof, protected 5M structure stop, and clean target room are present.'],
 });
+assert.equal(hasFullCollisionProof(cleanConditionalLong), true);
 const staleOppositeSideHeldLocal = applyCollisionFirstArbitration([cleanConditionalLong, staleBlockedShort]);
 assert.equal(staleOppositeSideHeldLocal.state, 'single_side_ready');
 assert.equal(staleOppositeSideHeldLocal.allowedDirection, 'LONG');
 assert.equal(staleOppositeSideHeldLocal.selectedCandidate, cleanConditionalLong);
 assert.equal(staleOppositeSideHeldLocal.supportingContextCandidates[0], staleBlockedShort);
+
+const pendingOppositeShort = candidate({
+  direction: 'SHORT',
+  entry: 7498,
+  stop: 7507,
+  target1: 7484.5,
+  target2: 7480,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: null,
+  evidence: ['SHORT evidence is forming at the shelf.'],
+  missingEvidence: ['Wait for completed 5M proof.'],
+});
+const completedLongBeatsPendingOpposite = applyCollisionFirstArbitration([cleanConditionalLong, pendingOppositeShort]);
+assert.equal(completedLongBeatsPendingOpposite.state, 'single_side_ready');
+assert.equal(completedLongBeatsPendingOpposite.allowedDirection, 'LONG');
+assert.equal(completedLongBeatsPendingOpposite.selectedCandidate, cleanConditionalLong);
+assert.equal(completedLongBeatsPendingOpposite.supportingContextCandidates[0], pendingOppositeShort);
 
 const staleLong = candidate({
   executionStatus: ExecutionStatus.Conditional,

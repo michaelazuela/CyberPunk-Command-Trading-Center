@@ -51,6 +51,15 @@ function textFor(candidate: SetupCandidate): string {
   ].filter(Boolean).join(' ').toLowerCase();
 }
 
+function completedProofTextFor(candidate: SetupCandidate): string {
+  return [
+    candidate.nextAction,
+    candidate.invalidation,
+    candidate.decisionQualityHardBlocker,
+    ...(candidate.evidence || []),
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
 export function isDirectionalCollisionCandidate(candidate: SetupCandidate): boolean {
   if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return false;
   if (candidate.detectedStatus === SetupCandidateStatus.NotDetected || candidate.detectedStatus === SetupCandidateStatus.Invalid) {
@@ -70,7 +79,10 @@ export function isDirectionalCollisionCandidate(candidate: SetupCandidate): bool
 
 export function hasFullCollisionProof(candidate: SetupCandidate): boolean {
   if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return false;
-  if (candidate.executionStatus !== ExecutionStatus.Executable) return false;
+  if (
+    candidate.executionStatus !== ExecutionStatus.Executable &&
+    candidate.executionStatus !== ExecutionStatus.Conditional
+  ) return false;
   if (candidate.blockReason || candidate.decisionQualityHardBlocker) return false;
   if (candidate.targetRoom?.targetRoomStatus === 'blocked_before_t1') return false;
   if (!candidateHasConcretePlan(candidate)) return false;
@@ -81,7 +93,13 @@ export function hasFullCollisionProof(candidate: SetupCandidate): boolean {
   if (candidate.direction === 'SHORT' && candidate.stop <= candidate.entry) return false;
 
   const text = textFor(candidate);
-  if (/(no chase|stale|missing trigger|entry trigger missing|pending trigger|wait for completed|no entry\/stop|not executable)/i.test(text)) {
+  if (/(no chase|stale|missing trigger|entry trigger missing|pending trigger|wait for completed|no completed 5m proof yet|no entry\/stop|not executable)/i.test(text)) {
+    return false;
+  }
+  if (
+    candidate.executionStatus === ExecutionStatus.Conditional &&
+    !/(completed 5m .*proof|completed retest|completed hold|proof already present|proof .*present|proof .*passed)/i.test(completedProofTextFor(candidate))
+  ) {
     return false;
   }
   const timeframeMss = candidate.activeRuleset?.timeframeMss;
@@ -103,7 +121,7 @@ function hasActionableCollisionEvidence(candidate: SetupCandidate): boolean {
   if (candidate.direction === 'SHORT' && candidate.stop <= candidate.entry) return false;
 
   const text = textFor(candidate);
-  if (/(no chase|stale|missing trigger|entry trigger missing|no entry\/stop|not executable)/i.test(text)) {
+  if (/(no chase|stale|missing trigger|entry trigger missing|pending trigger|wait for completed|no completed 5m proof yet|no entry\/stop|not executable)/i.test(text)) {
     return false;
   }
 

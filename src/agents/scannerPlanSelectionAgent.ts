@@ -251,7 +251,11 @@ export function selectScannerPlan(args: {
   guards?: unknown;
   targetCascade?: TargetCascadeResult | null;
 }): ScannerPlanSelection {
-  const collisionArbitration = args.normalized.collisionArbitration || applyCollisionFirstArbitration(args.normalized.setupCandidates);
+  const freshCollisionArbitration = applyCollisionFirstArbitration(args.normalized.setupCandidates);
+  const collisionArbitration =
+    freshCollisionArbitration.state !== 'collision_wait'
+      ? freshCollisionArbitration
+      : args.normalized.collisionArbitration || freshCollisionArbitration;
   if (collisionArbitration.state === 'collision_wait') {
     const state: ScannerState = 'NoTrade';
     const stale: StaleChaseResult = {

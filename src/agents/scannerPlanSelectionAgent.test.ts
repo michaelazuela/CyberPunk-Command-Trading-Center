@@ -279,4 +279,59 @@ assert.equal(collisionSelection.state, 'NoTrade');
 assert.match(collisionSelection.stale.reason || '', /Both LONG and SHORT evidence are active/);
 assert.ok(collisionSelection.auditWarnings.some((warning) => warning.includes('Opposite-side model evidence')));
 
+const stalePrecomputedCollisionSelection = selectScannerPlan({
+  normalized: normalized({
+    decision: 'LONG',
+    decisionLabel: 'LONG',
+    collisionArbitration: {
+      state: 'collision_wait',
+      hasCollision: true,
+      message: 'Stale saved collision state.',
+      allowedDirection: null,
+      selectedCandidate: null,
+      longClusterCount: 1,
+      shortClusterCount: 1,
+      readyLongCount: 0,
+      readyShortCount: 0,
+      supportingContextCandidates: [],
+      reasons: ['Stale saved collision state.'],
+    },
+    setupCandidates: [
+      candidate({
+        direction: 'LONG',
+        setupType: SetupType.StructureShiftContinuation,
+        entry: 7406.5,
+        stop: 7401,
+        target1: 7414.75,
+        target2: 7417.5,
+        riskPoints: 5.5,
+        riskAdvisoryStatus: 'RISK_WITHIN_STANDARD_LIMIT',
+        blockReason: null,
+        requiredTrigger: 'Completed 5M proof with protected 5M structure stop.',
+        evidence: ['Completed 5M proof, protected 5M structure stop, and clean target room are present.'],
+      }),
+      candidate({
+        direction: 'SHORT',
+        setupType: SetupType.RaidFailureDisplacementReversal,
+        entry: 7403.5,
+        stop: 7409.5,
+        target1: 7394.5,
+        target2: 7391.5,
+        riskPoints: 6,
+        riskAdvisoryStatus: 'RISK_WITHIN_STANDARD_LIMIT',
+        executionStatus: ExecutionStatus.Conditional,
+        blockReason: null,
+        missingEvidence: ['Wait for completed 5M proof.'],
+      }),
+    ],
+  }),
+  currentPrice: 7406,
+  latestCompletedBar: { high: 7407, low: 7402 },
+});
+
+assert.equal(stalePrecomputedCollisionSelection.candidate?.direction, 'LONG');
+assert.equal(stalePrecomputedCollisionSelection.candidate?.entry, 7406.5);
+assert.equal(stalePrecomputedCollisionSelection.state, 'Conditional');
+assert.doesNotMatch(stalePrecomputedCollisionSelection.stale.reason || '', /Both LONG and SHORT evidence are active|Stale saved collision/);
+
 console.log('scannerPlanSelectionAgent installed-model selection contract verified');

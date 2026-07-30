@@ -3,18 +3,18 @@
 ## Latest Change
 
 Date: 2026-07-30
-Task: Narrow collision arbitration so stale/blocked opposite-side evidence cannot suppress a cleaner active side by itself.
-Files changed: src/lib/collisionFirstArbitration.ts, src/lib/collisionFirstArbitration.test.ts, docs/PROJECT_STATUS.md.
-Reason: This morning's scanner tape showed LONG and SHORT evidence present together while every cycle stayed held local. The collision gate was treating blocked, stale/no-chase, missing-trigger, or invalid-stop opposite-side rows as full collision blockers. The gate now separates raw context from actionable collision evidence before it blocks promotion.
-Tests run: npx tsx src/lib/collisionFirstArbitration.test.ts; npx tsx src/lib/tradeDecisionPipeline.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-30 --sessions morning --instrument MES --json.
-Result: Passed. The focused contract now proves a clean same-window side can rank when the opposite side is stale/blocked/non-actionable, while two stale/non-actionable sides still produce collision_wait. Saved live-flow parity for the July 30 morning tape still has 0 Discord publish rows, 0 legacy trade-alert sends, 0 DeskPublish posts, 0 parity mismatches, 0 divergences, 0 authority violations, and 0 blocking mismatches.
-Trading logic changed: Yes. Collision arbitration only. The change does not alter setup definitions, 5M execution authority, entry math, protected-structure stop math, T1/T2 target math, canExecute, bridge behavior, Supabase, Discord webhook configuration, or automated execution.
+Task: Prevent stale collision state and pending-proof opposite evidence from burying clean completed-proof candidates.
+Files changed: src/lib/collisionFirstArbitration.ts, src/lib/collisionFirstArbitration.test.ts, src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts, docs/PROJECT_STATUS.md.
+Reason: The July 30 morning tape had profitable raw conditional candidates, but scanner output stayed NoTrade because opposite-side/pending-proof collision context could zero out the selected plan path. The selector also trusted a precomputed collision_wait object before re-arbitrating the current candidate list.
+Tests run: npx tsx src/lib/collisionFirstArbitration.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsx src/lib/tradeDecisionPipeline.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-30 --sessions morning --instrument MES --json; regenerated selector check over 2026-07-30 morning tape rows 09:10, 09:15, and 09:35.
+Result: Focused tests passed. Fresh arbitration now treats pending-trigger / wait-for-completed-proof candidates as context, not promotion blockers. Conditional candidates only count as full proof when non-trigger evidence states completed 5M proof, completed retest/hold, or proof already present. The scanner selector now re-arbitrates the actual candidate list before honoring a saved collision_wait. Regenerated selector proof kept 09:10 and 09:15 held because they only carried trigger-instruction language, while 09:35 selected DrivePullbackContinuation LONG with entry 7417.50, stop 7399.50, T1 7444.50, and T2 7453.50.
+Trading logic changed: Yes. Collision arbitration and scanner selection only. The change does not alter setup definitions, 5M execution authority, entry math, nearest protected-structure stop math, T1/T2 target math, canExecute, bridge behavior, Supabase, Discord webhook configuration, or automated execution.
 Bridge impact: None.
 Discord impact: No webhook call was made.
 Journal/RAG impact: None.
 Supabase impact: None.
-Known risks: Saved decision tapes contain already-written scannerDeskOutput, so parity replay proves downstream safety but not regenerated post-change promotion. A controlled scanner restart/readback is required before the live runtime uses this new arbitration code.
-Next recommended action: Run full guards/build, commit/push, then perform a controlled scanner restart/readback and fresh morning/lunch replay after the running process loads the new code.
+Known risks: Saved decision tapes contain already-written scannerDeskOutput, so live-flow parity proves downstream safety while the regenerated selector check proves post-change selection behavior. A controlled scanner restart/readback is required before the live runtime uses this new code.
+Next recommended action: Run full guards/build, commit/push, then perform a controlled scanner restart/readback and fresh live-window readback after the running process loads the new selector/arbitration code.
 
 Date: 2026-07-29
 Task: Remove the duplicate after-Desk-Play legacy trade-alert suppression helper.
