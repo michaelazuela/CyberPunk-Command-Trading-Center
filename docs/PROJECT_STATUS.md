@@ -11484,6 +11484,20 @@ Next recommended action: Review the generated research-only outcome report and D
 ## Latest Change
 
 Date: 2026-07-29
+Task: Add dry-run proof for refreshing the Unified Desk Output production scanner surface from the active fallback surface.
+Files changed: tools/automation/scanner-unified-surface-refresh-dry-run.ts, tools/automation/scanner-unified-surface-refresh-dry-run.test.ts, docs/PROJECT_STATUS.md.
+Reason: The old five-model scanner surface is still the active runtime fallback because the tracked Unified Desk Output surface is stale. This phase proves, without touching runtime behavior, that the active fallback rows can be converted into a valid Unified Desk Output surface before any deletion or activation work.
+Result: Added a read-only diagnostic builder that reads saved scanner artifacts only, selects one approved row per session, converts current display model names to approved SetupType values, builds a Unified Desk Output activation in memory, and writes only a diagnostic report. Initial dry run selected 1 morning row and 1 lunch row, produced an active in-memory unified surface, and found 0 blockers.
+Trading logic changed: No. This is dry-run diagnostic tooling and documentation only. It does not change candidate selection, model definitions, 5M proof authority, entry/stop/T1/T2/risk math, canExecute, campaign locking, live Discord eligibility, Supabase schema, bridge behavior, or automated execution.
+Bridge impact: None. The dry run reads saved artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The actual tracked Unified Desk Output production surface is still stale/inactive until a later explicitly gated activation phase updates it.
+Next recommended action: After full verification, run a gated surface refresh phase that updates the tracked Unified Desk Output production scanner surface, rerun parity, then remove the old fallback branch only if redundancy proof passes.
+
+## Previous Change
+
+Date: 2026-07-29
 Task: Add read-only scanner desk output live-flow parity replay.
 Files changed: tools/automation/scanner-desk-output-live-flow-parity-replay.ts, tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts, docs/PROJECT_STATUS.md.
 Reason: Prove the scanner-to-Discord pipe flow step by step from saved decision tapes before moving or deleting more downstream branches.
