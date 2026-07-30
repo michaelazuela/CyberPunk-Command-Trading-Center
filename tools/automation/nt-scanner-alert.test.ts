@@ -33,6 +33,7 @@ import {
   scannerSuppressionSummaryLine,
   shouldLogBridgeInstrumentResolution,
   unifiedDeskOutputProductionScannerSummaryLine,
+  writeScannerDiscordFinalDeliveryOutcomeAuditLog,
   writeScannerDiscordReceiptAuditLog,
   writeUnifiedDeskOutputProductionScannerReadback,
   type ScannerDeskPlanRefreshLedgerRecord,
@@ -770,6 +771,34 @@ try {
   assert.equal(receiptAudit.scannerDeskOutput.model, SetupType.RaidFailureDisplacementReversal);
   assert.equal(receiptAudit.scannerDeskOutput.authority.changesTradingLogic, false);
   assert.equal(receiptAudit.recoveryUse.mayApproveTrade, false);
+
+  const finalOutcomeAuditPath = path.join(outputDir, 'final-delivery-outcome-audit.json');
+  await fs.writeFile(finalOutcomeAuditPath, `${JSON.stringify({
+    source: 'live-scanner',
+    planVersionId: 'MORNING-20260728-SCANNER-OUTPUT-FINAL-OUTCOME',
+    deliveryOutcome: {
+      status: 'pending_final_delivery',
+      reason: 'Discord artifact built; final delivery outcome has not been recorded yet.',
+    },
+  }, null, 2)}\n`);
+  const finalOutcomeWritten = await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+    auditLogPath: finalOutcomeAuditPath,
+    outcome: {
+      status: 'sent',
+      reason: 'Discord trade/review artifact delivered.',
+      discordMessageId: 'fixture-discord-message-id',
+      httpStatus: 200,
+      webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+    },
+    scannerDeskOutput: approvedScannerDeskOutput,
+  });
+  assert.equal(finalOutcomeWritten, true);
+  const finalOutcomeAudit = JSON.parse(await fs.readFile(finalOutcomeAuditPath, 'utf8'));
+  assert.equal(finalOutcomeAudit.deliveryOutcome.status, 'sent');
+  assert.equal(finalOutcomeAudit.scannerDeskOutput.status, 'approved_plan');
+  assert.equal(finalOutcomeAudit.scannerDeskOutput.publishToDiscord, true);
+  assert.equal(finalOutcomeAudit.scannerDeskOutput.model, SetupType.RaidFailureDisplacementReversal);
+  assert.equal(finalOutcomeAudit.scannerDeskOutput.authority.changesTradingLogic, false);
 
   const malformedHtfSkipLine = scannerMarketBarsUpsertSkipAuditLine({
     label: 'scanner-cache',

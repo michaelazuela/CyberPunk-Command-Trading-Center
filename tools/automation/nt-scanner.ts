@@ -2824,6 +2824,24 @@ export interface ScannerDiscordFinalDeliveryOutcome {
   priorDiscordMessageId?: string | null;
 }
 
+function scannerDeskOutputAuditSnapshot(output: ScannerDeskOutputContract | null | undefined): Record<string, unknown> | null {
+  if (!output) return null;
+  return {
+    sourceOfTruth: output.sourceOfTruth,
+    pipeline: output.pipeline,
+    status: output.status,
+    operatorCode: output.operatorCode,
+    publishToDiscord: output.publishToDiscord,
+    model: output.model,
+    direction: output.direction,
+    entry: output.entry,
+    stop: output.stop,
+    t1: output.t1,
+    t2: output.t2,
+    authority: output.authority,
+  };
+}
+
 const SCANNER_FINAL_DELIVERY_OUTCOME_STALE_MS = 2 * 60 * 1000;
 const SCANNER_FINAL_DELIVERY_TERMINAL_STATUSES = new Set<ScannerDiscordFinalDeliveryOutcome['status']>([
   'sent',
@@ -2867,6 +2885,7 @@ export function validateScannerDiscordFinalDeliveryOutcome(args: {
 export async function writeScannerDiscordFinalDeliveryOutcomeAuditLog(args: {
   auditLogPath: string | null | undefined;
   outcome: ScannerDiscordFinalDeliveryOutcome;
+  scannerDeskOutput?: ScannerDeskOutputContract | null;
 }): Promise<boolean> {
   if (!args.auditLogPath) return false;
   let parsed: Record<string, unknown>;
@@ -2883,6 +2902,7 @@ export async function writeScannerDiscordFinalDeliveryOutcomeAuditLog(args: {
     ...parsed,
     updatedAt: new Date().toISOString(),
     deliveryOutcome: outcome,
+    scannerDeskOutput: scannerDeskOutputAuditSnapshot(args.scannerDeskOutput) || parsed.scannerDeskOutput || null,
   });
   return true;
 }
@@ -2891,6 +2911,7 @@ export async function writeScannerDiscordFinalDeliveryOutcomeFromReceipt(args: {
   auditLogPath: string | null | undefined;
   artifactLabel: string;
   receipt: ScannerDiscordPostReceipt;
+  scannerDeskOutput?: ScannerDeskOutputContract | null;
 }): Promise<boolean> {
   if (args.receipt.deliveryStatus === 'sent') {
     return writeScannerDiscordFinalDeliveryOutcomeAuditLog({
@@ -2902,6 +2923,7 @@ export async function writeScannerDiscordFinalDeliveryOutcomeFromReceipt(args: {
         httpStatus: args.receipt.httpStatus,
         webhookSource: args.receipt.webhookSource,
       },
+      scannerDeskOutput: args.scannerDeskOutput,
     });
   }
 
@@ -2914,6 +2936,7 @@ export async function writeScannerDiscordFinalDeliveryOutcomeFromReceipt(args: {
       httpStatus: args.receipt.httpStatus,
       webhookSource: args.receipt.webhookSource,
     },
+    scannerDeskOutput: args.scannerDeskOutput,
   });
 }
 
@@ -2921,6 +2944,7 @@ export async function writeScannerDiscordFinalDeliveryFailureOutcome(args: {
   auditLogPath: string | null | undefined;
   artifactLabel: string;
   error: unknown;
+  scannerDeskOutput?: ScannerDeskOutputContract | null;
 }): Promise<boolean> {
   const httpStatus = args.error instanceof ScannerDiscordPostError ? args.error.httpStatus : null;
   const webhookSource = args.error instanceof ScannerDiscordPostError ? args.error.webhookSource : null;
@@ -2932,6 +2956,7 @@ export async function writeScannerDiscordFinalDeliveryFailureOutcome(args: {
       httpStatus,
       webhookSource,
     },
+    scannerDeskOutput: args.scannerDeskOutput,
   });
 }
 
@@ -3024,22 +3049,7 @@ export async function writeScannerDiscordReceiptAuditLog(args: {
       cleanupRecordKey: args.cleanupRecordKey || null,
       ragReceiptAttached: Boolean(args.ragReceiptAttached),
     },
-    scannerDeskOutput: args.scannerDeskOutput
-      ? {
-          sourceOfTruth: args.scannerDeskOutput.sourceOfTruth,
-          pipeline: args.scannerDeskOutput.pipeline,
-          status: args.scannerDeskOutput.status,
-          operatorCode: args.scannerDeskOutput.operatorCode,
-          publishToDiscord: args.scannerDeskOutput.publishToDiscord,
-          model: args.scannerDeskOutput.model,
-          direction: args.scannerDeskOutput.direction,
-          entry: args.scannerDeskOutput.entry,
-          stop: args.scannerDeskOutput.stop,
-          t1: args.scannerDeskOutput.t1,
-          t2: args.scannerDeskOutput.t2,
-          authority: args.scannerDeskOutput.authority,
-        }
-      : null,
+    scannerDeskOutput: scannerDeskOutputAuditSnapshot(args.scannerDeskOutput),
     recoveryUse: {
       mayBackfillRagDiscordMessageId: true,
       mayApproveTrade: false,
@@ -12260,6 +12270,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
             httpStatus: receipt.httpStatus,
             webhookSource: receipt.webhookSource,
           },
+          scannerDeskOutput,
         });
         state.alertDeliveries[alertKey] = markScannerAlertDeliverySent(pendingDelivery, {
           sentAt,
@@ -12277,6 +12288,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
             httpStatus: receipt.httpStatus,
             webhookSource: receipt.webhookSource,
           },
+          scannerDeskOutput,
         });
         state.alertDeliveries[alertKey] = markScannerAlertDeliverySkipped(pendingDelivery, {
           reason: `Discord delivery skipped: ${receipt.webhookSource || 'unknown'}.`,
@@ -12306,6 +12318,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           httpStatus,
           webhookSource,
         },
+        scannerDeskOutput,
       });
       state.alertDeliveries[alertKey] = markScannerAlertDeliveryFailed(pendingDelivery, {
         error,
