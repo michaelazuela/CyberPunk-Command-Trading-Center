@@ -563,9 +563,9 @@ const __dirname = path.dirname(__filename);
 const STATE_FILE = path.join(__dirname, '.nt-scanner-state.json');
 const DISCORD_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const MARKET_DATA_GAP_FALLBACK_LEDGER = path.join(__dirname, '.market-data-gap-events.json');
-const UNIFIED_DESK_OUTPUT_PRODUCTION_SURFACE_FILE = path.join(__dirname, '.unified-desk-output-production-scanner-surface.json');
+export const UNIFIED_DESK_OUTPUT_PRODUCTION_SURFACE_FILE = path.join(__dirname, '.unified-desk-output-production-scanner-surface.json');
 const UNIFIED_DESK_OUTPUT_PRODUCTION_READBACK_FILE = path.join(__dirname, 'diagnostic-reports', 'unified-desk-output-production-scanner-readback.json');
-const FIVE_MODEL_PRODUCTION_SURFACE_FILE = path.join(__dirname, '.five-model-production-scanner-surface.json');
+export const FIVE_MODEL_PRODUCTION_SURFACE_FILE = path.join(__dirname, '.five-model-production-scanner-surface.json');
 const FIVE_MODEL_PRODUCTION_READBACK_FILE = path.join(__dirname, 'diagnostic-reports', 'five-model-production-scanner-readback.json');
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
@@ -1562,7 +1562,7 @@ async function writeState(state: ScannerStateFile): Promise<void> {
   await writeRuntimeJsonAtomic(STATE_FILE, state);
 }
 
-function unifiedDeskOutputProductionSurfaceBlockers(
+export function unifiedDeskOutputProductionSurfaceBlockers(
   surface: UnifiedDeskOutputProductionScannerSurfaceActivation | null,
 ): string[] {
   if (!surface) return ['Unified Desk Output production scanner surface is not active.'];
@@ -1679,7 +1679,7 @@ export async function writeUnifiedDeskOutputProductionScannerReadback(args: {
 const FIVE_MODEL_APPROVED_DISPLAY_NAMES = new Set(APPROVED_DESK_MODEL_DEFINITIONS.map((model) => model.displayName));
 const APPROVED_MODEL_SURFACE_LABEL = `${APPROVED_DESK_MODEL_DEFINITIONS.length}-model production surface`;
 
-function fiveModelProductionSurfaceBlockers(
+export function fiveModelProductionSurfaceBlockers(
   surface: FiveModelProductionScannerSurfaceActivation | null,
 ): string[] {
   if (!surface) return ['Five-model production scanner surface is not active.'];

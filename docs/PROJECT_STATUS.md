@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Add scanner production surface redundancy proof gate.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/scanner-production-surface-redundancy-report.ts, docs/PROJECT_STATUS.md.
+Reason: Continue scanner-to-Discord downstream cleanup without deleting an active scanner visibility fallback by mistake. The next proposed cleanup was to remove another legacy production-surface branch, but deletion must be blocked unless Unified Desk Output fully validates as the active scanner surface.
+Tests run: npx tsx tools/automation/scanner-production-surface-redundancy-report.ts.
+Result: Passed. The new read-only report shows Unified Desk Output surface is readable but not active because it contains a non-approved production model, while the six-model/five-model-named production surface is active with zero blockers. Current recommendation is not to remove the five-model production surface branch yet.
+Trading logic changed: No. This exposes existing scanner surface validator helpers and adds a read-only diagnostic report. It does not change setup detection, model rules, candidate ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase, Discord webhook configuration, Discord publish eligibility, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The live runtime still depends on the five-model/six-model production surface fallback until Unified Desk Output production surface is regenerated with approved model names and validates cleanly.
+Next recommended action: Do not delete the production surface fallback yet. Continue downstream cleanup on a different branch that parity proves redundant, or run a separate surface refresh phase to make Unified Desk Output the active surface before removing the fallback.
+
+Date: 2026-07-29
 Task: Remove legacy alertDecision fallback from scanner-owned trade-alert suppression.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: Continue downstream cleanup after making `scannerDeskOutput` the canonical scanner-to-Discord contract. The legacy trade-alert suppression helpers still used `alertDecision.shouldSend` as a fallback when `scannerDeskOutput` was missing, which duplicated old downstream decision authority.
