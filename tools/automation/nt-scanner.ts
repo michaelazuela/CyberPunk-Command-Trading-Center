@@ -11646,18 +11646,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     });
     console.log(`${unifiedDeskOutputProductionScannerSummaryLine(unifiedDeskOutputSurface)} readback=${readbackPath}`);
   }
-  const fiveModelSurface = await readFiveModelProductionScannerSurface();
-  if (fiveModelSurface) {
-    const readbackPath = await writeFiveModelProductionScannerReadback({
-      tradeDate,
-      instrument: config.instrument,
-      session,
-      completed5mTime: completed5m.time,
-      surface: fiveModelSurface,
-    });
-    console.log(`${fiveModelProductionScannerSummaryLine(fiveModelSurface)} readback=${readbackPath}`);
-  }
-
   console.log(scannerCycleSummaryLine({
     session,
     completed5m,
@@ -12119,7 +12107,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   const scannerOwnedSurfaceGuardedAlertDecision = applyScannerTradeAlertSuppressionForScannerOwnedSurface({
     alertDecision,
     scannerDeskOutput,
-    scannerOwnedSurfaceActive: Boolean(fiveModelSurface || unifiedDeskOutputSurface),
+    scannerOwnedSurfaceActive: Boolean(unifiedDeskOutputSurface),
     tradeDate,
     instrument: config.instrument,
     session: window.session,

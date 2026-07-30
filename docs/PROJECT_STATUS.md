@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Remove the redundant five-model scanner runtime readback branch.
+Files changed: tools/automation/nt-scanner.ts, docs/PROJECT_STATUS.md.
+Reason: After the Unified Desk Output production scanner surface was activated and redundancy proof passed, the scanner cycle no longer needs to read and write a second five-model production surface readback on every completed 5M cycle.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-28,2026-07-29 --sessions all --instrument MES --json; npx tsx tools/automation/scanner-production-surface-redundancy-report.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. The runtime scanner branch now writes/logs only the Unified Desk Output production surface readback. Live-flow parity replay still passes with 0 trade-alert mismatches, 0 DeskPublish divergences, 0 authority violations, and 0 blocking mismatches. The redundancy report still marks the older five-model surface redundant. TypeScript initially caught one dangling local reference to the removed five-model surface branch; that was narrowed to `unifiedDeskOutputSurface` only and all verification passed after the fix.
+Trading logic changed: No. This removes an old scanner-surface readback/log branch only. It does not change setup detection, model rules, candidate ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase, Discord webhook configuration, Discord publish eligibility, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The historical five-model surface tooling remains for diagnostics and rollback proof until a later cleanup decides whether to retire the helper/test surface package.
+Next recommended action: Run parity replay and full verification, then commit/push if clean.
+
+Date: 2026-07-29
 Task: Activate the Unified Desk Output production scanner surface.
 Files changed: tools/automation/.unified-desk-output-production-scanner-surface.json, .gitignore, docs/PROJECT_STATUS.md.
 Reason: The scanner-to-Discord cleanup proved the stale Unified Desk Output surface was the only blocker preventing removal of the older five-model production surface fallback. The controlled refresh writes a current approved-model scanner surface from the active production fallback, with a timestamped local backup.
