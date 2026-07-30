@@ -7,6 +7,11 @@ import { readUnifiedDeskOutputProductionScannerSurface } from './nt-scanner';
 
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'scanner-unified-surface-refresh-'));
 const runtimeSurfacePath = path.join(tempDir, '.unified-desk-output-production-scanner-surface.json');
+const previousRuntimeSurface = {
+  reportType: 'legacy_runtime_surface_fixture',
+  status: 'stale',
+  rows: [{ model: 'stale-model' }],
+};
 
 const dryRun = await runScannerUnifiedSurfaceRefresh({
   writeRuntimeSurface: false,
@@ -17,7 +22,11 @@ const dryRun = await runScannerUnifiedSurfaceRefresh({
 assert.equal(dryRun.status, 'pass');
 assert.equal(dryRun.mode, 'dry_run');
 assert.equal(dryRun.runtimeSurfaceWritten, false);
+assert.equal(dryRun.backupWritten, false);
+assert.equal(dryRun.backupPath, null);
 await assert.rejects(fs.stat(runtimeSurfacePath));
+
+await fs.writeFile(runtimeSurfacePath, `${JSON.stringify(previousRuntimeSurface, null, 2)}\n`);
 
 const writeRun = await runScannerUnifiedSurfaceRefresh({
   writeRuntimeSurface: true,
@@ -28,6 +37,11 @@ const writeRun = await runScannerUnifiedSurfaceRefresh({
 assert.equal(writeRun.status, 'pass');
 assert.equal(writeRun.mode, 'write_runtime_surface');
 assert.equal(writeRun.runtimeSurfaceWritten, true);
+assert.equal(writeRun.backupWritten, true);
+assert.notEqual(writeRun.backupPath, null);
+
+const backupContents = JSON.parse(await fs.readFile(writeRun.backupPath as string, 'utf8'));
+assert.deepEqual(backupContents, previousRuntimeSurface);
 
 const loadedSurface = await readUnifiedDeskOutputProductionScannerSurface(runtimeSurfacePath);
 assert.notEqual(loadedSurface, null);

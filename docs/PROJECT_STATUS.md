@@ -11484,6 +11484,20 @@ Next recommended action: Review the generated research-only outcome report and D
 ## Latest Change
 
 Date: 2026-07-29
+Task: Add backup proof to the controlled Unified Desk Output scanner surface refresh gate.
+Files changed: tools/automation/scanner-unified-surface-refresh.ts, tools/automation/scanner-unified-surface-refresh.test.ts, docs/PROJECT_STATUS.md.
+Reason: The eventual unified-surface activation needs a rollback artifact before the old fallback branch can be considered for deletion.
+Result: The refresh gate now backs up any existing runtime surface before an explicit `--write-runtime-surface` overwrite. The focused test proves dry-run writes nothing, explicit write mode backs up the previous surface, and the refreshed temp surface validates through the normal scanner reader.
+Trading logic changed: No. This is activation safety tooling and documentation only. It does not change candidate selection, model definitions, 5M proof authority, entry/stop/T1/T2/risk math, canExecute, campaign locking, live Discord eligibility, Supabase schema, bridge behavior, or automated execution.
+Bridge impact: None. The command reads saved scanner artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The tracked runtime surface is still not refreshed by this checkpoint.
+Next recommended action: Run the controlled write against the tracked Unified Desk Output production surface only after confirming the backup path and then prove redundancy/parity before deleting the fallback branch.
+
+## Previous Change
+
+Date: 2026-07-29
 Task: Add controlled Unified Desk Output scanner surface refresh command.
 Files changed: tools/automation/scanner-unified-surface-refresh.ts, tools/automation/scanner-unified-surface-refresh.test.ts, docs/PROJECT_STATUS.md.
 Reason: The cleanup needs a safe way to activate the proven Unified Desk Output surface before any old fallback branch can be deleted. This command creates an explicit gate between dry-run proof and runtime-surface write.

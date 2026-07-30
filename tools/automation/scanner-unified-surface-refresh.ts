@@ -30,6 +30,8 @@ export async function runScannerUnifiedSurfaceRefresh(args: RefreshArgs, generat
   mode: 'dry_run' | 'write_runtime_surface';
   diagnosticPath: string;
   runtimeSurfacePath: string;
+  backupPath: string | null;
+  backupWritten: boolean;
   runtimeSurfaceWritten: boolean;
   summary: Record<string, unknown>;
   blockers: string[];
@@ -43,8 +45,19 @@ export async function runScannerUnifiedSurfaceRefresh(args: RefreshArgs, generat
     report.unifiedSurface?.status === 'active' ? null : `Unified surface status is ${report.unifiedSurface?.status || 'missing'}.`,
   ].filter((item): item is string => Boolean(item));
   const canWrite = args.writeRuntimeSurface && blockers.length === 0 && report.unifiedSurface;
+  let backupPath: string | null = null;
+  let backupWritten = false;
   if (canWrite) {
     await fs.mkdir(path.dirname(args.runtimeSurfacePath), { recursive: true });
+    try {
+      const previousRuntimeSurface = await fs.readFile(args.runtimeSurfacePath, 'utf8');
+      backupPath = `${args.runtimeSurfacePath}.bak-${Date.now()}`;
+      await fs.writeFile(backupPath, previousRuntimeSurface);
+      backupWritten = true;
+    } catch {
+      backupPath = null;
+      backupWritten = false;
+    }
     await fs.writeFile(args.runtimeSurfacePath, `${JSON.stringify(report.unifiedSurface, null, 2)}\n`);
   }
   const payload = {
@@ -54,6 +67,8 @@ export async function runScannerUnifiedSurfaceRefresh(args: RefreshArgs, generat
     mode: args.writeRuntimeSurface ? 'write_runtime_surface' as const : 'dry_run' as const,
     sourceDryRun: report,
     runtimeSurfacePath: path.relative(process.cwd(), args.runtimeSurfacePath),
+    backupPath: backupPath ? path.relative(process.cwd(), backupPath) : null,
+    backupWritten,
     runtimeSurfaceWritten: Boolean(canWrite),
     authority: {
       postsDiscord: false,
@@ -72,6 +87,8 @@ export async function runScannerUnifiedSurfaceRefresh(args: RefreshArgs, generat
     mode: payload.mode,
     diagnosticPath,
     runtimeSurfacePath: args.runtimeSurfacePath,
+    backupPath,
+    backupWritten,
     runtimeSurfaceWritten: payload.runtimeSurfaceWritten,
     summary: report.summary,
     blockers,
