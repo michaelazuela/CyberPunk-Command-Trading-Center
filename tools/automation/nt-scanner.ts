@@ -765,6 +765,23 @@ function scannerImplicitCampaignKey(candidate: SetupCandidate | null | undefined
   const direction = candidate?.direction === 'LONG' || candidate?.direction === 'SHORT'
     ? candidate.direction
     : null;
+  if (!direction) return null;
+  if (
+    !isFiniteTradePrice(candidate?.entry) ||
+    !isFiniteTradePrice(candidate?.stop) ||
+    !isFiniteTradePrice(candidate?.target1) ||
+    !isFiniteTradePrice(candidate?.target2)
+  ) {
+    return null;
+  }
+  const sessionKey = typeof session === 'string' && session.trim() ? session.trim() : 'session_unknown';
+  return `implicit-session-campaign:${sessionKey}:${direction}`;
+}
+
+function legacyScannerImplicitCampaignKey(candidate: SetupCandidate | null | undefined, session?: string | null): string | null {
+  const direction = candidate?.direction === 'LONG' || candidate?.direction === 'SHORT'
+    ? candidate.direction
+    : null;
   const setupType = typeof candidate?.setupType === 'string' && candidate.setupType.trim()
     ? candidate.setupType.trim()
     : null;
@@ -779,6 +796,22 @@ function scannerImplicitCampaignKey(candidate: SetupCandidate | null | undefined
   }
   const sessionKey = typeof session === 'string' && session.trim() ? session.trim() : 'session_unknown';
   return `implicit-session-campaign:${sessionKey}:${setupType}:${direction}`;
+}
+
+function legacyScannerImplicitCampaignDirectionPattern(args: {
+  candidate: SetupCandidate | null | undefined;
+  tradeDate?: string;
+  session?: string | null;
+}): RegExp | null {
+  const direction = args.candidate?.direction === 'LONG' || args.candidate?.direction === 'SHORT'
+    ? args.candidate.direction
+    : null;
+  if (!direction) return null;
+  const sessionKey = typeof args.session === 'string' && args.session.trim() ? args.session.trim() : 'session_unknown';
+  const prefix = args.tradeDate && /^\d{4}-\d{2}-\d{2}$/.test(args.tradeDate.trim())
+    ? `${args.tradeDate.trim()}:`
+    : '';
+  return new RegExp(`^${prefix}implicit-session-campaign:${sessionKey}:[^:]+:${direction}$`);
 }
 
 export function scannerActiveCampaignKeyForTradeDate(
@@ -861,26 +894,42 @@ export function shouldSuppressActiveCampaignScannerAlert(args: {
     return { shouldSuppress: false, campaignId: null, reason: null, record: null };
   }
   const record = args.activeCampaignSent?.[campaignId] || null;
-  if (!record) {
+  const legacyCampaignId = args.tradeDate
+    ? normalizeActiveCampaignIdForTradeDate(legacyScannerImplicitCampaignKey(args.candidate, args.session), args.tradeDate)
+    : legacyScannerImplicitCampaignKey(args.candidate, args.session);
+  const legacyPattern = legacyScannerImplicitCampaignDirectionPattern({
+    candidate: args.candidate,
+    tradeDate: args.tradeDate,
+    session: args.session,
+  });
+  const legacyRecordEntry = legacyPattern && args.activeCampaignSent
+    ? Object.entries(args.activeCampaignSent).find(([key]) => legacyPattern.test(key))
+    : null;
+  const legacyRecord = legacyCampaignId
+    ? args.activeCampaignSent?.[legacyCampaignId] || legacyRecordEntry?.[1] || null
+    : legacyRecordEntry?.[1] || null;
+  const legacyRecordId = legacyRecordEntry?.[0] || legacyCampaignId;
+  if (!record && !legacyRecord) {
     return { shouldSuppress: false, campaignId, reason: null, record: null };
   }
+  const effectiveRecord = record || legacyRecord;
   if (activeCampaignMaterialUpdateAllowed({
     candidate: args.candidate,
-    previousFingerprint: record.publicActionFingerprint || null,
+    previousFingerprint: effectiveRecord?.publicActionFingerprint || null,
     campaignId,
   })) {
     return {
       shouldSuppress: false,
       campaignId,
-      record,
+      record: effectiveRecord,
       reason: `ActiveCampaign material update allowed for ${campaignId}: new complete entry/stop/T1/T2 differs from prior public action.`,
     };
   }
   return {
     shouldSuppress: true,
     campaignId,
-    record,
-    reason: `ActiveCampaign duplicate suppressed: one trade alert already sent for ${campaignId}. Reset requires a new trade-date/direction campaign key.`,
+    record: effectiveRecord,
+    reason: `ActiveCampaign duplicate suppressed: one trade alert already sent for ${legacyRecord && !record ? legacyRecordId : campaignId}. Reset requires a new trade-date/direction campaign key.`,
   };
 }
 
@@ -9685,6 +9734,51 @@ function completedCloseCrossedCampaignLine(args: {
     : args.completed5m!.close > args.lineInSand!;
 }
 
+function candidateHasFreshOppositeCampaignFailureProof(candidate: SetupCandidate | null | undefined): boolean {
+  if (!candidate) return false;
+  if (
+    candidate.executionStatus !== ExecutionStatus.Executable &&
+    candidate.executionStatus !== ExecutionStatus.Conditional
+  ) {
+    return false;
+  }
+  if (candidate.blockReason || candidate.decisionQualityHardBlocker) return false;
+  if (
+    !isFiniteTradePrice(candidate.entry) ||
+    !isFiniteTradePrice(candidate.stop) ||
+    !isFiniteTradePrice(candidate.target1) ||
+    !isFiniteTradePrice(candidate.target2)
+  ) {
+    return false;
+  }
+  const proofText = [
+    candidate.scenarioLabel,
+    candidate.requiredTrigger,
+    candidate.nextAction,
+    candidate.invalidation,
+    candidate.targetRoom?.targetRoomReason,
+    ...(candidate.evidence || []),
+    ...(candidate.activeRuleset?.timeframeMss?.evidence || []),
+  ].filter(Boolean).join(' ').toLowerCase();
+  const pendingText = [
+    candidate.requiredTrigger,
+    candidate.nextAction,
+    ...(candidate.missingEvidence || []),
+    ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
+  ].filter(Boolean).join(' ').toLowerCase();
+  if (/(wait for|waiting for|keep .*local|missing|pending|no completed|not ready|until fresh proof|until .*proof completes)/i.test(pendingText)) {
+    return false;
+  }
+  const hasCompleted5mProof =
+    /completed 5m/.test(proofText) &&
+    /(proof|mss|structure shift|displacement|failure|failed|reversal|retest|hold|close-through|close through)/.test(proofText);
+  const hasPassedMssRuleset = candidate.activeRuleset?.timeframeMss?.applied === true &&
+    candidate.activeRuleset.timeframeMss.status === 'passed';
+  const hasFailureOrReversalContext =
+    /(failed|failure|reversal|opposite|invalidat|reclaim|retest|hold|displacement|mss|structure shift)/.test(proofText);
+  return (hasCompleted5mProof || hasPassedMssRuleset) && hasFailureOrReversalContext;
+}
+
 export function evaluateScannerDiscordCampaignTransition(args: {
   candidate?: SetupCandidate | null;
   priorActiveDelivery?: ScannerAlertDeliveryRecord | null;
@@ -9710,10 +9804,22 @@ export function evaluateScannerDiscordCampaignTransition(args: {
     lineInSand: priorLine,
     completed5m: args.completed5m,
   });
+  const hasFailureProof = candidateHasFreshOppositeCampaignFailureProof(args.candidate);
   if (crossed) {
+    if (!hasFailureProof) {
+      return {
+        blocksOppositeDirection: true,
+        reason: [
+          `${priorDirection} campaign line was crossed by completed 5M close at ${args.completed5m?.close?.toFixed(2) ?? 'unknown'} through ${priorLine?.toFixed?.(2) ?? 'unknown'}`,
+          `candidate side ${candidateDirection} is opposite prior Discord campaign ${priorDirection}`,
+          `opposite-side promotion still requires fresh strong completed 5M failure/reversal proof with valid entry, nearest protected 5M stop, and target room`,
+          `keep ${candidateDirection} as local forming/context until that proof is present.`,
+        ].join('; '),
+      };
+    }
     return {
       blocksOppositeDirection: false,
-      reason: `${priorDirection} campaign line crossed by completed 5M close at ${args.completed5m?.close?.toFixed(2) ?? 'unknown'} through ${priorLine?.toFixed?.(2) ?? 'unknown'}; Discord may present the state transition before any ${candidateDirection} review.`,
+      reason: `${priorDirection} campaign line crossed by completed 5M close at ${args.completed5m?.close?.toFixed(2) ?? 'unknown'} through ${priorLine?.toFixed?.(2) ?? 'unknown'} and ${candidateDirection} has fresh strong completed 5M failure/reversal proof; Discord may present the state transition before any ${candidateDirection} review.`,
     };
   }
   return {

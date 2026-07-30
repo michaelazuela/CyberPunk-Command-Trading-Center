@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-30
+Task: Broaden implicit same-session campaign lock so first clean same-side campaign owns the Discord lane.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The July 30 morning replay showed the correct lesson: first clean campaign wins, later same-side variants should become management/context, and opposite-side reversal requires fresh strong 5M failure proof. The implicit fallback campaign key still separated candidates by setup type, so DrivePullbackContinuation LONG and IntradayMssMicroContinuation LONG could compete as separate same-session Discord plans even when they were the same morning drive.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-30 --sessions morning --instrument MES --json.
+Result: Focused tests passed. Implicit campaign IDs now group by trade date, session, and direction. Explicit app-owned campaign IDs are preserved. Regression coverage proves a same-session same-direction model variant is suppressed after the first clean implicit campaign, a same-session legacy setup-specific key still suppresses future same-direction variants, a different session remains eligible, weak opposite-side evidence stays blocked, and an opposite-side candidate can pass only with fresh strong completed 5M failure/reversal proof. July 30 morning live-flow parity replay passed with 33 comparable rows, 0 trade-alert mismatches, 0 DeskPublish divergences, 0 authority violations, and 0 blocking mismatches.
+Trading logic changed: Yes. File: tools/automation/nt-scanner.ts. Functions: scannerImplicitCampaignKey, shouldSuppressActiveCampaignScannerAlert, evaluateScannerDiscordCampaignTransition. Behavior changed: implicit Discord campaign de-duplication now treats same trade-date/session/direction candidates as one campaign regardless of setup model; legacy implicit setup-specific campaign keys are honored so old runtime state cannot leak one duplicate; opposite-side campaign transition now requires fresh strong completed 5M failure/reversal proof instead of line-cross alone. Model detection, candidate ranking inside a single cycle, entry, nearest protected 5M structure stop, T1/T2 math, canExecute, bridge reads, Supabase schema, Discord webhook configuration, and automated execution were not changed.
+Bridge impact: None.
+Discord impact: No webhook call was made. Future implicit campaign posting is narrower: one same-side campaign per session unless an explicit active campaign ID exists.
+Journal/RAG impact: None.
+Supabase impact: No live read/write was made. Durable ledger keys will use the narrowed implicit campaign ID for future claims.
+Known risks: This intentionally prevents multiple same-session same-direction implicit model cards from posting as separate Discord trade plans. If a genuinely new same-direction trade should post later in the same session, it needs an explicit active campaign ID or a later approved reset rule.
+Next recommended action: Run full guards/build/test, commit/push, and controlled scanner restart/readback.
+
+Date: 2026-07-30
 Task: Prevent stale collision state and pending-proof opposite evidence from burying clean completed-proof candidates.
 Files changed: src/lib/collisionFirstArbitration.ts, src/lib/collisionFirstArbitration.test.ts, src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts, docs/PROJECT_STATUS.md.
 Reason: The July 30 morning tape had profitable raw conditional candidates, but scanner output stayed NoTrade because opposite-side/pending-proof collision context could zero out the selected plan path. The selector also trusted a precomputed collision_wait object before re-arbitrating the current candidate list.

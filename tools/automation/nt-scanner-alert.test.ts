@@ -17,6 +17,7 @@ import {
   applyScannerTradeAlertSuppressionForScannerOwnedSurface,
   buildScannerLiveDiscordSendBoundaryReport,
   evaluateScannerDeskPlayDiscordSuppression,
+  evaluateScannerDiscordCampaignTransition,
   buildScannerDeskOutputContract,
   normalizeScannerBarTimestampMode,
   normalizeScannerOperatorDeliveryReason,
@@ -36,6 +37,7 @@ import {
   writeScannerDiscordReceiptAuditLog,
   writeUnifiedDeskOutputProductionScannerReadback,
   type ScannerDeskPlanRefreshLedgerRecord,
+  type ScannerAlertDeliveryRecord,
 } from './nt-scanner';
 
 const outputDir = path.join(os.tmpdir(), `nt-scanner-alert-blank-${Date.now()}`);
@@ -467,7 +469,7 @@ try {
   );
   assert.equal(
     implicitCampaignKey,
-    '2026-07-28:implicit-session-campaign:morning:RaidFailureDisplacementReversal:SHORT',
+    '2026-07-28:implicit-session-campaign:morning:SHORT',
   );
   const activeCampaignSent = {};
   recordActiveCampaignScannerAlertSent({
@@ -506,8 +508,152 @@ try {
   assert.equal(implicitLunchSeparateSession.shouldSuppress, false);
   assert.equal(
     implicitLunchSeparateSession.campaignId,
-    '2026-07-28:implicit-session-campaign:lunch:RaidFailureDisplacementReversal:SHORT',
+    '2026-07-28:implicit-session-campaign:lunch:SHORT',
   );
+  const sameSessionDifferentModelShort = {
+    ...repricedMorningShort,
+    setupType: SetupType.StructureShiftContinuation,
+    scenarioLabel: 'Structure Shift Continuation',
+  };
+  const implicitSameDirectionModelVariant = shouldSuppressActiveCampaignScannerAlert({
+    activeCampaignSent,
+    candidate: sameSessionDifferentModelShort,
+    tradeDate: '2026-07-28',
+    session: 'morning',
+  });
+  assert.equal(implicitSameDirectionModelVariant.shouldSuppress, true);
+  assert.equal(implicitSameDirectionModelVariant.campaignId, implicitCampaignKey);
+  assert.match(implicitSameDirectionModelVariant.reason || '', /one trade alert already sent/);
+  const legacyImplicitKey = '2026-07-28:implicit-session-campaign:morning:DrivePullbackContinuation:LONG';
+  const legacyActiveCampaignSent: Record<string, Parameters<typeof shouldSuppressActiveCampaignScannerAlert>[0]['activeCampaignSent'] extends Record<string, infer RecordType> ? RecordType : never> = {
+    [legacyImplicitKey]: {
+      campaignId: legacyImplicitKey,
+      tradeDate: '2026-07-28',
+      direction: 'LONG',
+      setupType: SetupType.DrivePullbackContinuation,
+      state: 'Conditional',
+      confidence: 92,
+      firstAlertKey: 'legacy-drive-long',
+      firstSentAt: '2026-07-28T13:20:00.000Z',
+      lastSeenAt: '2026-07-28T13:20:00.000Z',
+      suppressedCount: 0,
+      resetPolicy: 'trade_date_direction_campaign',
+      publicActionFingerprint: 'legacy-fingerprint',
+      publicActionComplete: true,
+    },
+  };
+  const legacySameDirectionVariant = shouldSuppressActiveCampaignScannerAlert({
+    activeCampaignSent: legacyActiveCampaignSent,
+    candidate: {
+      ...sameSessionDifferentModelShort,
+      direction: 'LONG',
+      setupType: SetupType.IntradayMssMicroContinuation,
+    },
+    tradeDate: '2026-07-28',
+    session: 'morning',
+  });
+  assert.equal(legacySameDirectionVariant.shouldSuppress, true);
+  assert.equal(legacySameDirectionVariant.campaignId, '2026-07-28:implicit-session-campaign:morning:LONG');
+  assert.match(legacySameDirectionVariant.reason || '', /legacy-drive-long|DrivePullbackContinuation|one trade alert already sent/);
+
+  const priorLongDelivery: ScannerAlertDeliveryRecord = {
+    alertKey: 'prior-long-alert',
+    planVersionId: 'prior-long-plan',
+    instrument: 'MES',
+    tradeDate: '2026-07-28',
+    session: 'morning',
+    state: 'Conditional',
+    confidence: 93,
+    candidate: {
+      setupType: SetupType.DrivePullbackContinuation,
+      direction: 'LONG',
+      entry: 7408,
+      stop: 7401,
+      target1: 7418.5,
+      target2: 7422,
+      activeTimeframeMssRuleset: null,
+      activeCampaign: {
+        id: 'prior-long-campaign',
+        status: 'active',
+        direction: 'LONG',
+        htfRelationship: 'aligned',
+        lineInSand: 7408,
+        deDuplication: {
+          oneTradePerCampaignRecommended: true,
+          enforced: true,
+          resetPolicy: 'trade_date_direction_campaign',
+        },
+      },
+    },
+    deliveryStatus: 'sent',
+    webhookSource: 'dry_run',
+    httpStatus: null,
+    discordMessageId: 'discord-prior-long',
+    error: null,
+    attemptedAt: '2026-07-28T13:20:00.000Z',
+    sentAt: '2026-07-28T13:20:00.000Z',
+    auditLogPath: null,
+    stale: false,
+    retryEligible: false,
+  };
+  const weakOppositeShort: SetupCandidate = {
+    setupType: SetupType.StructureShiftContinuation,
+    scenarioLabel: 'Structure Shift Continuation',
+    direction: 'SHORT',
+    detectedStatus: SetupCandidateStatus.Detected,
+    confidence: 'High',
+    priority: 90,
+    entry: 7402,
+    stop: 7411,
+    target1: 7388.5,
+    target2: 7384,
+    riskPoints: 9,
+    invalidation: 'Invalid above protected 5M structure stop 7411.00.',
+    rankScore: 0,
+    evidence: ['Bearish evidence active.'],
+    missingEvidence: [],
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: null,
+    requiredTrigger: 'Wait for completed 5M failure proof.',
+    nextAction: 'Keep short local until fresh proof completes.',
+    reducedRiskPlan: null,
+  };
+  const weakOppositeTransition = evaluateScannerDiscordCampaignTransition({
+    candidate: weakOppositeShort,
+    priorActiveDelivery: priorLongDelivery,
+    completed5m: {
+      time: '2026-07-28T13:35:00.000Z',
+      open: 7410,
+      high: 7410.25,
+      low: 7402,
+      close: 7406.5,
+      volume: 1000,
+    },
+  });
+  assert.equal(weakOppositeTransition.blocksOppositeDirection, true);
+  assert.match(weakOppositeTransition.reason || '', /requires fresh strong completed 5M failure\/reversal proof/);
+  const provenOppositeTransition = evaluateScannerDiscordCampaignTransition({
+    candidate: {
+      ...weakOppositeShort,
+      evidence: [
+        'Completed 5M bearish failure proof passed after prior LONG line failed.',
+        'Completed 5M MSS displacement confirmed with protected 5M structure stop.',
+      ],
+      requiredTrigger: 'Completed 5M failure proof is present.',
+      nextAction: 'SHORT may publish only after completed 5M failure proof, protected stop, and target room.',
+    },
+    priorActiveDelivery: priorLongDelivery,
+    completed5m: {
+      time: '2026-07-28T13:35:00.000Z',
+      open: 7410,
+      high: 7410.25,
+      low: 7402,
+      close: 7406.5,
+      volume: 1000,
+    },
+  });
+  assert.equal(provenOppositeTransition.blocksOppositeDirection, false);
+  assert.match(provenOppositeTransition.reason || '', /fresh strong completed 5M failure\/reversal proof/);
 
   assert.equal(shouldLogBridgeInstrumentResolution({
     instrument: 'MES 09-26',
