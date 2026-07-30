@@ -11358,6 +11358,20 @@ Next recommended action: Review the generated research-only outcome report and D
 ## Latest Change
 
 Date: 2026-07-29
+Task: Route legacy trade-alert suppression through the unified scanner desk output contract.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Continue compressing the scanner-to-Discord workflow so downstream branches read the single `scannerDeskOutput` contract instead of only scattered booleans.
+Result: Legacy `trade_alert` suppression now consumes `scannerDeskOutput.publishToDiscord` as the publish intent, with fallback to the prior `alertDecision.shouldSend` path for compatibility. Suppression reasons include the scanner desk output status for audit clarity.
+Trading logic changed: No. This only changes scanner Discord orchestration/audit plumbing. Candidate selection, model definitions, 5M proof authority, entry/stop/T1/T2/risk math, canExecute, campaign locking, live Discord eligibility, Supabase schema, bridge behavior, and automated execution are unchanged.
+Bridge impact: None.
+Journal/RAG impact: None. Decision tape contract from the prior phase remains unchanged.
+Supabase impact: None.
+Known risks: This is still a compatibility phase; more downstream branches need to move to `scannerDeskOutput` before older scattered logic can be removed.
+Next recommended action: Replay yesterday/today and compare publish/hold parity, then move the next single branch to `scannerDeskOutput`.
+
+## Previous Change
+
+Date: 2026-07-29
 Task: Add unified scanner desk output contract for select/approve/hold/publish flow.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The scanner-to-Discord workflow had too many scattered decision objects. This phase adds one scanner-owned output contract that compresses the handoff into select candidate -> approve/hold -> publish without changing model rules or Discord policy.

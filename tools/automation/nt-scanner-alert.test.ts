@@ -587,6 +587,17 @@ try {
   assert.equal(approvedScannerDeskOutput.gates.publishDecisionApproved, true);
   assert.equal(approvedScannerDeskOutput.authority.changesTradingLogic, false);
   assert.equal(approvedScannerDeskOutput.authority.changesDiscordPolicy, false);
+  const contractDrivenLegacySuppression = applyScannerTradeAlertSuppressionAfterDeskPlay({
+    alertDecision: { shouldSend: true, reason: 'fixture trade alert would send' },
+    scannerDeskOutput: approvedScannerDeskOutput,
+    deskPlanRefreshSent: { prior: priorDeskPlan },
+    tradeDate: '2026-07-27',
+    instrument: 'MES',
+    session: 'lunch',
+    planVersionId: 'fixture-plan-version',
+  });
+  assert.equal(contractDrivenLegacySuppression.shouldSend, false);
+  assert.match(contractDrivenLegacySuppression.reason, /scannerDeskOutputStatus=approved_plan/);
 
   const duplicateScannerDeskOutput = buildScannerDeskOutputContract({
     session: 'morning',
@@ -602,6 +613,16 @@ try {
   assert.equal(duplicateScannerDeskOutput.publishToDiscord, false);
   assert.equal(duplicateScannerDeskOutput.gates.duplicateBlocked, true);
   assert.equal(duplicateScannerDeskOutput.reason, 'HELD_DUPLICATE: existing Discord/campaign record already covers this setup.');
+  const contractHeldLegacySuppression = applyScannerTradeAlertSuppressionAfterDeskPlay({
+    alertDecision: { shouldSend: true, reason: 'fixture trade alert would send' },
+    scannerDeskOutput: duplicateScannerDeskOutput,
+    deskPlanRefreshSent: { prior: priorDeskPlan },
+    tradeDate: '2026-07-27',
+    instrument: 'MES',
+    session: 'lunch',
+    planVersionId: 'fixture-plan-version',
+  });
+  assert.equal(contractHeldLegacySuppression.shouldSend, true);
 
   const malformedHtfSkipLine = scannerMarketBarsUpsertSkipAuditLine({
     label: 'scanner-cache',

@@ -9950,13 +9950,15 @@ export function applyScannerCompletedFiveMinuteZoneFailureSuppression(args: {
 
 export function applyScannerTradeAlertSuppressionAfterDeskPlay(args: {
   alertDecision: ScannerAlertDecision;
+  scannerDeskOutput?: ScannerDeskOutputContract | null;
   deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
   tradeDate: string;
   instrument: Instrument;
   session: LiveSession | string;
   planVersionId: string;
 }): ScannerAlertDecision {
-  if (!args.alertDecision.shouldSend) return args.alertDecision;
+  const publishIntent = args.scannerDeskOutput?.publishToDiscord ?? args.alertDecision.shouldSend;
+  if (!publishIntent) return args.alertDecision;
   const priorDeskPlan = latestDeskPlanRefreshRecord({
     sent: args.deskPlanRefreshSent,
     tradeDate: args.tradeDate,
@@ -9973,6 +9975,7 @@ export function applyScannerTradeAlertSuppressionAfterDeskPlay(args: {
       `priorDeskPlanModel=${priorDeskPlan.setupType || 'no-setup'}`,
       `priorDeskPlanSentAt=${priorDeskPlan.sentAt}`,
       `currentPlanVersionId=${args.planVersionId}`,
+      `scannerDeskOutputStatus=${args.scannerDeskOutput?.status || 'not_provided'}`,
       'Scanner-owned Desk Play already owns this session/instrument on Discord; legacy trade_alert is held local so it cannot compete with the desk card.',
     ].join(' | '),
   };
@@ -9980,13 +9983,15 @@ export function applyScannerTradeAlertSuppressionAfterDeskPlay(args: {
 
 export function applyScannerTradeAlertSuppressionForScannerOwnedSurface(args: {
   alertDecision: ScannerAlertDecision;
+  scannerDeskOutput?: ScannerDeskOutputContract | null;
   scannerOwnedSurfaceActive: boolean;
   tradeDate: string;
   instrument: Instrument;
   session: LiveSession | string;
   planVersionId: string;
 }): ScannerAlertDecision {
-  if (!args.alertDecision.shouldSend || !args.scannerOwnedSurfaceActive) return args.alertDecision;
+  const publishIntent = args.scannerDeskOutput?.publishToDiscord ?? args.alertDecision.shouldSend;
+  if (!publishIntent || !args.scannerOwnedSurfaceActive) return args.alertDecision;
   return {
     shouldSend: false,
     reason: [
@@ -9996,6 +10001,7 @@ export function applyScannerTradeAlertSuppressionForScannerOwnedSurface(args: {
       `instrument=${args.instrument}`,
       `session=${args.session}`,
       `currentPlanVersionId=${args.planVersionId}`,
+      `scannerDeskOutputStatus=${args.scannerDeskOutput?.status || 'not_provided'}`,
       'Scanner-owned five-model/Desk Play surface owns production Discord; legacy trade_alert is held local to prevent competing cards and per-candle alert churn.',
     ].join(' | '),
   };
@@ -12003,6 +12009,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
 
   const scannerOwnedDeskPlayGuardedAlertDecision = applyScannerTradeAlertSuppressionAfterDeskPlay({
     alertDecision,
+    scannerDeskOutput,
     deskPlanRefreshSent: state.deskPlanRefreshSent,
     tradeDate,
     instrument: config.instrument,
@@ -12019,6 +12026,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   }
   const scannerOwnedSurfaceGuardedAlertDecision = applyScannerTradeAlertSuppressionForScannerOwnedSurface({
     alertDecision,
+    scannerDeskOutput,
     scannerOwnedSurfaceActive: Boolean(fiveModelSurface || unifiedDeskOutputSurface),
     tradeDate,
     instrument: config.instrument,
