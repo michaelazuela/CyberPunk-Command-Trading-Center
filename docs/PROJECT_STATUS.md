@@ -11484,6 +11484,20 @@ Next recommended action: Review the generated research-only outcome report and D
 ## Latest Change
 
 Date: 2026-07-29
+Task: Add controlled Unified Desk Output scanner surface refresh command.
+Files changed: tools/automation/scanner-unified-surface-refresh.ts, tools/automation/scanner-unified-surface-refresh.test.ts, docs/PROJECT_STATUS.md.
+Reason: The cleanup needs a safe way to activate the proven Unified Desk Output surface before any old fallback branch can be deleted. This command creates an explicit gate between dry-run proof and runtime-surface write.
+Result: Added a refresh utility that defaults to dry-run diagnostics and writes the runtime surface only when `--write-runtime-surface` is provided and the generated surface has zero blockers. The focused test proves dry-run leaves the target untouched and explicit write mode creates a valid active surface in a temp path only.
+Trading logic changed: No. This is activation tooling and documentation only. It does not change candidate selection, model definitions, 5M proof authority, entry/stop/T1/T2/risk math, canExecute, campaign locking, live Discord eligibility, Supabase schema, bridge behavior, or automated execution.
+Bridge impact: None. The command reads saved scanner artifacts only.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: The tracked runtime surface has not been refreshed by this checkpoint. A later gated execution must run the command with `--write-runtime-surface`, then rerun redundancy/parity checks.
+Next recommended action: Execute the controlled refresh against the tracked Unified Desk Output production surface only after the safety gate is accepted, then prove the old fallback is redundant before deleting it.
+
+## Previous Change
+
+Date: 2026-07-29
 Task: Add dry-run proof for refreshing the Unified Desk Output production scanner surface from the active fallback surface.
 Files changed: tools/automation/scanner-unified-surface-refresh-dry-run.ts, tools/automation/scanner-unified-surface-refresh-dry-run.test.ts, docs/PROJECT_STATUS.md.
 Reason: The old five-model scanner surface is still the active runtime fallback because the tracked Unified Desk Output surface is stale. This phase proves, without touching runtime behavior, that the active fallback rows can be converted into a valid Unified Desk Output surface before any deletion or activation work.
