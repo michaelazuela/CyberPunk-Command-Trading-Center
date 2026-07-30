@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Add scannerDeskOutput traceability to trade-plan Discord receipt audits.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The scanner-to-Discord flow is being simplified to `select candidate -> approve/hold -> publish`. After moving the live boundary to `scannerDeskOutput`, successful trade-plan receipt audits should also carry the canonical scanner output disposition so forensic review can read the receipt without reconstructing old scattered state.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-28,2026-07-29 --sessions all --instrument MES --json; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. `writeScannerDiscordReceiptAuditLog` now optionally records a compact `scannerDeskOutput` snapshot for trade-plan lanes, including status, operator code, publish flag, model, direction, entry/stop/T1/T2, and authority flags. The live `desk_play` and `trade_alert` receipt paths pass the already-built scanner output into the receipt audit. Recovery permissions remain non-executing. Real live-flow parity replay passed across July 28-29 saved tapes: 6 tapes, 242 events, 18 comparable post-contract rows, 0 trade-alert mismatches, 0 DeskPublish divergences, 0 authority violations, and 0 blocking mismatches.
+Trading logic changed: No. This is receipt/audit traceability only. It does not change setup detection, model rules, candidate ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase, Discord webhook configuration, Discord publish eligibility, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made. Receipt JSON for future sent trade-plan lanes includes scanner-owned output traceability.
+Journal/RAG impact: None. Receipt attachment behavior and RAG persistence gates were not changed.
+Supabase impact: None.
+Known risks: Older historical receipt files do not have this field. New receipts do.
+Next recommended action: Continue one branch at a time with the RAG persistence gate or final delivery outcome audit branch, prove parity again, then delete only proven redundant old logic.
+
+Date: 2026-07-29
 Task: Move live Discord boundary to scannerDeskOutput for unified trade-plan lanes.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/scanner-desk-output-live-flow-parity-replay.ts, tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts, docs/PROJECT_STATUS.md.
 Reason: The scanner-to-Discord flow is being simplified to `select candidate -> approve/hold -> publish`. After moving legacy trade-alert suppression and Desk Play pre-delivery holds to the unified contract, the live Discord boundary should also consume `scannerDeskOutput` directly for trade-alert/desk-play lanes when the unified production surface is active.

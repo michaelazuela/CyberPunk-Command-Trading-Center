@@ -2999,6 +2999,7 @@ export async function writeScannerDiscordReceiptAuditLog(args: {
   postedAt: string;
   cleanupRecordKey?: string | null;
   ragReceiptAttached?: boolean;
+  scannerDeskOutput?: ScannerDeskOutputContract | null;
   auditDir?: string;
 }): Promise<string | null> {
   if (args.receipt.deliveryStatus !== 'sent' || !args.receipt.discordMessageId) return null;
@@ -3023,6 +3024,22 @@ export async function writeScannerDiscordReceiptAuditLog(args: {
       cleanupRecordKey: args.cleanupRecordKey || null,
       ragReceiptAttached: Boolean(args.ragReceiptAttached),
     },
+    scannerDeskOutput: args.scannerDeskOutput
+      ? {
+          sourceOfTruth: args.scannerDeskOutput.sourceOfTruth,
+          pipeline: args.scannerDeskOutput.pipeline,
+          status: args.scannerDeskOutput.status,
+          operatorCode: args.scannerDeskOutput.operatorCode,
+          publishToDiscord: args.scannerDeskOutput.publishToDiscord,
+          model: args.scannerDeskOutput.model,
+          direction: args.scannerDeskOutput.direction,
+          entry: args.scannerDeskOutput.entry,
+          stop: args.scannerDeskOutput.stop,
+          t1: args.scannerDeskOutput.t1,
+          t2: args.scannerDeskOutput.t2,
+          authority: args.scannerDeskOutput.authority,
+        }
+      : null,
     recoveryUse: {
       mayBackfillRagDiscordMessageId: true,
       mayApproveTrade: false,
@@ -12019,6 +12036,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
             postedAt: sentAt,
             cleanupRecordKey: cleanupRecord?.key || null,
             ragReceiptAttached,
+            scannerDeskOutput,
           });
           state.deskPlanRefreshSent[deskPlayKey] = scannerDeskPlanRefreshRecord({
             key: deskPlayKey,
@@ -12231,6 +12249,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           postedAt: sentAt,
           cleanupRecordKey: cleanupRecord?.key || null,
           ragReceiptAttached,
+          scannerDeskOutput,
         });
         await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
           auditLogPath: alertArtifacts.auditLogPath,

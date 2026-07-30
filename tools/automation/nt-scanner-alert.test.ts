@@ -33,6 +33,7 @@ import {
   scannerSuppressionSummaryLine,
   shouldLogBridgeInstrumentResolution,
   unifiedDeskOutputProductionScannerSummaryLine,
+  writeScannerDiscordReceiptAuditLog,
   writeUnifiedDeskOutputProductionScannerReadback,
   type ScannerDeskPlanRefreshLedgerRecord,
 } from './nt-scanner';
@@ -742,6 +743,33 @@ try {
   assert.equal(staleOutputBoundary.eligible, false);
   assert.match(staleOutputBoundary.blockers.join(' | '), /scannerDeskOutputStatus=held/);
   assert.match(staleOutputBoundary.blockers.join(' | '), /HELD_STALE_NO_CHASE/);
+
+  const receiptAuditPath = await writeScannerDiscordReceiptAuditLog({
+    kind: 'desk_play',
+    key: 'fixture-desk-play-key',
+    planVersionId: 'MORNING-20260728-SCANNER-OUTPUT-RECEIPT',
+    tradeDate: '2026-07-28',
+    instrument: 'MES',
+    session: 'morning',
+    receipt: {
+      deliveryStatus: 'sent',
+      webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+      httpStatus: 200,
+      discordMessageId: 'fixture-discord-message-id',
+    },
+    postedAt: '2026-07-28T13:35:00.000Z',
+    cleanupRecordKey: 'fixture-cleanup-key',
+    ragReceiptAttached: true,
+    scannerDeskOutput: approvedScannerDeskOutput,
+    auditDir: outputDir,
+  });
+  assert.ok(receiptAuditPath);
+  const receiptAudit = JSON.parse(await fs.readFile(receiptAuditPath, 'utf8'));
+  assert.equal(receiptAudit.scannerDeskOutput.status, 'approved_plan');
+  assert.equal(receiptAudit.scannerDeskOutput.publishToDiscord, true);
+  assert.equal(receiptAudit.scannerDeskOutput.model, SetupType.RaidFailureDisplacementReversal);
+  assert.equal(receiptAudit.scannerDeskOutput.authority.changesTradingLogic, false);
+  assert.equal(receiptAudit.recoveryUse.mayApproveTrade, false);
 
   const malformedHtfSkipLine = scannerMarketBarsUpsertSkipAuditLine({
     label: 'scanner-cache',
