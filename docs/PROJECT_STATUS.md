@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Add scannerDeskOutput traceability to Desk Play final delivery outcomes.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Continue compressing the scanner-to-Discord workflow around `select candidate -> approve/hold -> publish`. Desk Play already carried scanner-owned output in receipt audits; terminal sent/skipped/failed delivery outcomes should update the same decision tape with the final outcome and compact scanner-owned disposition.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-28,2026-07-29 --sessions all --instrument MES --json; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. Desk Play sent, skipped, and failed delivery paths now write terminal `deliveryOutcome` updates to the scanner decision tape with the existing `scannerDeskOutput` snapshot. The focused alert test now proves sent and skipped terminal outcome audits carry approved/held scanner output. Real live-flow parity replay passed across July 28-29 saved tapes: 6 tapes, 246 events, 22 comparable post-contract rows, 0 trade-alert mismatches, 0 DeskPublish divergences, 0 authority violations, and 0 blocking mismatches.
+Trading logic changed: No. This is Desk Play audit traceability only. It does not change setup detection, model rules, candidate ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase, Discord webhook configuration, Discord publish eligibility, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made. Future Desk Play terminal delivery outcomes are recorded in the decision tape for cleaner forensic review.
+Journal/RAG impact: None. RAG save/receipt attachment gates were not changed.
+Supabase impact: None.
+Known risks: Older historical decision tapes may still lack terminal Desk Play outcome fields.
+Next recommended action: Finish verification, then move the RAG persistence gate only if needed, or begin deleting old redundant downstream logic one proven branch at a time.
+
+Date: 2026-07-29
 Task: Add scannerDeskOutput traceability to final Discord delivery outcomes.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The scanner-to-Discord flow is being simplified to `select candidate -> approve/hold -> publish`. After receipt audits began carrying the canonical scanner output, terminal sent/skipped/failed delivery outcome audits should also carry the same compact scanner-owned decision snapshot for forensic review.

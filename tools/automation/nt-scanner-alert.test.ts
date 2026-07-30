@@ -800,6 +800,34 @@ try {
   assert.equal(finalOutcomeAudit.scannerDeskOutput.model, SetupType.RaidFailureDisplacementReversal);
   assert.equal(finalOutcomeAudit.scannerDeskOutput.authority.changesTradingLogic, false);
 
+  const skippedFinalOutcomeAuditPath = path.join(outputDir, 'final-delivery-outcome-skipped-audit.json');
+  await fs.writeFile(skippedFinalOutcomeAuditPath, `${JSON.stringify({
+    source: 'live-scanner',
+    planVersionId: 'MORNING-20260728-SCANNER-OUTPUT-FINAL-SKIP',
+    deliveryOutcome: {
+      status: 'pending_final_delivery',
+      reason: 'Discord artifact built; final delivery outcome has not been recorded yet.',
+    },
+  }, null, 2)}\n`);
+  const skippedFinalOutcomeWritten = await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+    auditLogPath: skippedFinalOutcomeAuditPath,
+    outcome: {
+      status: 'hard_suppressed',
+      reason: 'Scanner Desk Play delivery skipped: phase11_boundary.',
+      discordMessageId: null,
+      httpStatus: null,
+      webhookSource: 'phase11_boundary',
+    },
+    scannerDeskOutput: staleScannerDeskOutput,
+  });
+  assert.equal(skippedFinalOutcomeWritten, true);
+  const skippedFinalOutcomeAudit = JSON.parse(await fs.readFile(skippedFinalOutcomeAuditPath, 'utf8'));
+  assert.equal(skippedFinalOutcomeAudit.deliveryOutcome.status, 'hard_suppressed');
+  assert.equal(skippedFinalOutcomeAudit.scannerDeskOutput.status, 'held');
+  assert.equal(skippedFinalOutcomeAudit.scannerDeskOutput.publishToDiscord, false);
+  assert.equal(skippedFinalOutcomeAudit.scannerDeskOutput.operatorCode, 'HELD_STALE_NO_CHASE');
+  assert.equal(skippedFinalOutcomeAudit.scannerDeskOutput.authority.changesTradingLogic, false);
+
   const malformedHtfSkipLine = scannerMarketBarsUpsertSkipAuditLine({
     label: 'scanner-cache',
     timeframe: '120m',

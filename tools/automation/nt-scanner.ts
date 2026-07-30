@@ -12048,6 +12048,17 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
             ragReceiptAttached,
             scannerDeskOutput,
           });
+          await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+            auditLogPath: decisionTapePath,
+            outcome: {
+              status: 'sent',
+              reason: 'Scanner Desk Play delivered to Discord.',
+              discordMessageId: receipt.discordMessageId,
+              httpStatus: receipt.httpStatus,
+              webhookSource: receipt.webhookSource,
+            },
+            scannerDeskOutput,
+          });
           state.deskPlanRefreshSent[deskPlayKey] = scannerDeskPlanRefreshRecord({
             key: deskPlayKey,
             tradeDate,
@@ -12065,12 +12076,33 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           state.sent[deskPlayKey] = { state: stateForAlert, confidence: confidence.score, sentAt };
           console.log(`[scanner] Sent Desk Play update: ${deskPlayKey}`);
         } else {
+          await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+            auditLogPath: decisionTapePath,
+            outcome: {
+              status: 'hard_suppressed',
+              reason: `Scanner Desk Play delivery skipped: ${receipt.webhookSource || 'unknown'}.`,
+              discordMessageId: receipt.discordMessageId,
+              httpStatus: receipt.httpStatus,
+              webhookSource: receipt.webhookSource,
+            },
+            scannerDeskOutput,
+          });
           console.log(`[scanner] Desk Play update skipped (${receipt.webhookSource || 'unknown'}): ${deskPlayKey}`);
         }
       } catch (error) {
+        await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+          auditLogPath: decisionTapePath,
+          outcome: {
+            status: 'delivery_failed',
+            reason: `Scanner Desk Play delivery failed: ${sanitizedError(error)}`,
+            httpStatus: error instanceof ScannerDiscordPostError ? error.httpStatus : null,
+            webhookSource: error instanceof ScannerDiscordPostError ? error.webhookSource : null,
+          },
+          scannerDeskOutput,
+        });
         console.warn(`[scanner] Desk Play delivery failed safely; scanner will continue evaluating trade alerts: ${sanitizedError(error)}`);
       }
-      }
+    }
     } else {
       console.log(`[scanner] Desk Plan refresh already sent for ${deskPlayKey}.`);
     }
