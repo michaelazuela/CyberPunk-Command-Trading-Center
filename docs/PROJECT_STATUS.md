@@ -3,6 +3,20 @@
 ## Latest Change
 
 Date: 2026-07-29
+Task: Remove legacy DeskState fallback from Unified Desk Output Discord boundary.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: After the scanner-to-Discord workflow moved to `scannerDeskOutput`, the live Discord boundary still had a legacy fallback that could infer an approved trade-plan lane from DeskState when `scannerDeskOutput` was missing. That fallback duplicated downstream decision authority and should be retired one branch at a time.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.test.ts; npx tsc --noEmit --pretty false; npx tsx tools/automation/scanner-desk-output-live-flow-parity-replay.ts --dates 2026-07-28,2026-07-29 --sessions all --instrument MES --json; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. When Unified Desk Output production surface is active for `desk_play` or `trade_alert`, missing `scannerDeskOutput` now holds the trade-plan lane local instead of falling back to legacy DeskState inference. Focused tests prove the missing-contract path blocks locally. Real live-flow parity replay passed across July 28-29 saved tapes: 6 tapes, 246 events, 22 comparable post-contract rows, 0 trade-alert mismatches, 0 DeskPublish divergences, 0 authority violations, and 0 blocking mismatches.
+Trading logic changed: No. This is downstream Discord boundary cleanup only. It does not change setup detection, model rules, candidate ranking, canExecute, entry, stop, targets, risk, bridge behavior, Supabase, Discord webhook configuration, or automated execution.
+Bridge impact: None.
+Discord impact: No webhook call was made. The live boundary is stricter: unified trade-plan lanes require `scannerDeskOutput`.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Historical/pre-contract decision tape rows can still be replayed as non-comparable; live/current trade-plan lanes now require the canonical contract.
+Next recommended action: Finish verification, then delete the next proven redundant downstream branch only after parity remains clean.
+
+Date: 2026-07-29
 Task: Add scannerDeskOutput traceability to Desk Play final delivery outcomes.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: Continue compressing the scanner-to-Discord workflow around `select candidate -> approve/hold -> publish`. Desk Play already carried scanner-owned output in receipt audits; terminal sent/skipped/failed delivery outcomes should update the same decision tape with the final outcome and compact scanner-owned disposition.

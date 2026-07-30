@@ -745,6 +745,15 @@ try {
   assert.match(staleOutputBoundary.blockers.join(' | '), /scannerDeskOutputStatus=held/);
   assert.match(staleOutputBoundary.blockers.join(' | '), /HELD_STALE_NO_CHASE/);
 
+  const missingOutputBoundary = buildScannerLiveDiscordSendBoundaryReport({
+    ...baseLiveBoundary,
+    postKind: 'desk_play',
+    scannerDeskOutput: null,
+  });
+  assert.equal(missingOutputBoundary.eligible, false);
+  assert.match(missingOutputBoundary.blockers.join(' | '), /scannerDeskOutput is missing/);
+  assert.match(missingOutputBoundary.notes.join(' | '), /scannerDeskOutput is required/);
+
   const receiptAuditPath = await writeScannerDiscordReceiptAuditLog({
     kind: 'desk_play',
     key: 'fixture-desk-play-key',
