@@ -516,7 +516,7 @@ const recoveredWindowStartRecord = recordScannerDiscordCleanupMessage({
   key: '2026-06-05:morning:scanner-window-start',
   now: new Date('2026-06-05T14:20:00.000Z'),
 });
-assert.ok(recoveredWindowStartRecord);
+assert.equal(recoveredWindowStartRecord, null);
 const recoveredDeletes: string[] = [];
 process.env.QUANT_DESK_SCANNER_WEBHOOK_URL = 'https://discord.com/api/webhooks/123/token';
 const recoveredCleanupResult = await cleanupRecoveredScannerOperationalDiscordMessages({
@@ -529,13 +529,11 @@ const recoveredCleanupResult = await cleanupRecoveredScannerOperationalDiscordMe
   },
 });
 restoreOptionalEnv('QUANT_DESK_SCANNER_WEBHOOK_URL', previousScannerWebhook);
-assert.deepEqual(recoveredCleanupResult, { checked: 2, deleted: 2, failed: 0, skipped: 0 });
+assert.deepEqual(recoveredCleanupResult, { checked: 1, deleted: 1, failed: 0, skipped: 0 });
 assert.deepEqual(recoveredDeletes, [
   'DELETE https://discord.com/api/webhooks/123/token/messages/data-quality-message-456',
-  'DELETE https://discord.com/api/webhooks/123/token/messages/window-start-message-456',
 ]);
 assert.equal(cleanupState.discordCleanupMessages[recoveredOperationalRecord!.key].deleteStatus, 'deleted');
-assert.equal(cleanupState.discordCleanupMessages[recoveredWindowStartRecord!.key].deleteStatus, 'deleted');
 assert.equal(cleanupState.discordCleanupMessages['legacy-trade-alert'].deleteStatus, 'skipped');
 const scannerHealthDataQualityRecord = recordScannerDiscordCleanupMessage({
   state: cleanupState,

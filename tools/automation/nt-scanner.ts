@@ -228,7 +228,6 @@ export interface ScannerDiscordCleanupRecord {
 const SCANNER_DISCORD_EPHEMERAL_CLEANUP_KINDS = new Set<ScannerDiscordCleanupKind>([
   'health',
   'data_quality',
-  'window_start',
   'live_hold_notice',
 ]);
 
