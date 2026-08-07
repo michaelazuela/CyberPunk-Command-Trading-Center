@@ -6182,7 +6182,7 @@ export async function cleanupRecoveredScannerOperationalDiscordMessages(args: {
   fetchImpl?: FetchLike;
 }): Promise<{ checked: number; deleted: number; failed: number; skipped: number }> {
   const now = args.now || new Date();
-  const recoverableKinds = new Set(args.kinds || ['health', 'data_quality', 'window_start']);
+  const recoverableKinds = new Set(args.kinds || ['health', 'data_quality', 'live_hold_notice']);
   let checked = 0;
   let deleted = 0;
   let failed = 0;
@@ -6398,7 +6398,7 @@ async function sendScannerHealthAlertIfNeeded(args: {
       const recoveryCleanup = await cleanupRecoveredScannerOperationalDiscordMessages({
         state: args.state,
         config: args.config,
-        kinds: ['health', 'data_quality', 'window_start'],
+        kinds: ['health', 'data_quality', 'live_hold_notice'],
       });
       if (recoveryCleanup.checked > 0) {
         console.log(`[scanner-health] Purged recovered operational Discord notices: deleted=${recoveryCleanup.deleted} failed=${recoveryCleanup.failed} skipped=${recoveryCleanup.skipped}`);
@@ -8142,7 +8142,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           const recoveredOperational = await cleanupRecoveredScannerOperationalDiscordMessages({
             state,
             config,
-            kinds: ['health', 'data_quality', 'window_start'],
+            kinds: ['health', 'data_quality', 'live_hold_notice'],
             now: new Date(sentAt),
           });
           if (recoveredOperational.checked > 0) {
@@ -8299,7 +8299,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         const recoveredOperational = await cleanupRecoveredScannerOperationalDiscordMessages({
           state,
           config,
-          kinds: ['health', 'data_quality', 'window_start'],
+          kinds: ['health', 'data_quality', 'live_hold_notice'],
           now: new Date(sentAt),
         });
         if (recoveredOperational.checked > 0) {
