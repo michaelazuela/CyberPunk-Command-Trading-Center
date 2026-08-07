@@ -21,7 +21,11 @@ import {
 import { buildSupervisorStatus } from './status';
 
 dotenv.config({ quiet: true });
-dotenv.config({ path: '.env.local', override: false, quiet: true });
+const localEnv = dotenv.config({ path: '.env.local', override: false, quiet: true });
+const localBridgeInstrument = localEnv.parsed?.SUPERVISOR_BRIDGE_INSTRUMENT?.trim();
+if (localBridgeInstrument) {
+  process.env.SUPERVISOR_BRIDGE_INSTRUMENT = localBridgeInstrument;
+}
 
 function withCurrentSupervisorPid<T extends { supervisorPid: number }>(state: T): T {
   return { ...state, supervisorPid: process.pid };

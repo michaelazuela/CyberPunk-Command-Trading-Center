@@ -30,6 +30,7 @@ function readMigrations() {
   return files
     .map((file) => fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8'))
     .join('\n\n')
+    .replace(/\r\n/g, '\n')
     .toLowerCase();
 }
 
