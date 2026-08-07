@@ -3408,6 +3408,54 @@ function highConfidenceConditionalBoundaryDeskStateFixture(): DeskState {
   });
 }
 
+function approvedExecutableBoundaryDeskStateFixture(): DeskState {
+  const executableCandidate: SetupCandidate = {
+    ...candidate,
+    executionStatus: ExecutionStatus.Executable,
+    blockReason: null,
+    entry: 7603.25,
+    stop: 7598.75,
+    target1: 7610,
+    target2: 7612.25,
+    decisionQualityScore: 96,
+  };
+  const visibilityMetadata: ScannerVisibilityMetadata = {
+    sourceOfTruth: 'scanner_desk_state_visibility_metadata',
+    visibilityMode: 'POST_PLAN',
+    discordAction: 'post_plan',
+    suppressionReason: null,
+    nextTrigger: executableCandidate.requiredTrigger || null,
+    dataQualityBlocker: null,
+    holdWithReason: null,
+    noTradeWithReason: null,
+    hasMeaningfulStructuredEvidence: true,
+    authority: {
+      registeredModel: true,
+      activeModel: true,
+      watchEligible: true,
+      planEligible: true,
+      discordEligible: true,
+      executionEligible: true,
+      humanReviewOnly: false,
+      canExecute: true,
+    },
+    notes: [],
+  };
+  return buildDeskState({
+    state: 'Approved',
+    candidate: executableCandidate,
+    visibilityMetadata,
+    candidateLifecycleTrace: buildCandidateLifecycleTrace({
+      candidates: [executableCandidate],
+      selectedCandidate: executableCandidate,
+      state: 'Approved',
+      alertDecision: { shouldSend: true, reason: 'Approved executable fixture.' },
+      canExecute: true,
+    }),
+    canExecute: true,
+  });
+}
+
 const liveBoundaryWithoutChecklist = buildScannerLiveDiscordSendBoundaryReport({
   config: {
     dryRun: false,
@@ -3446,10 +3494,33 @@ const highConfidenceConditionalBoundaryWithoutChecklist = buildScannerLiveDiscor
   discordPayloadValidated: true,
   webhookConfigured: true,
 });
-assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.eligible, true);
-assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.blockers.length, 0);
+assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.eligible, false);
+assert.ok(
+  highConfidenceConditionalBoundaryWithoutChecklist.blockers.some((item) => item.includes('POST_PLAN with canExecute=true')),
+);
 assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.authorityBoundary.changesCanExecute, false);
 assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.authorityBoundary.createsTradeApproval, false);
+
+const approvedExecutableBoundaryWithoutChecklist = buildScannerLiveDiscordSendBoundaryReport({
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: false,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: approvedExecutableBoundaryDeskStateFixture(),
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-06-02-MES-morning.json'),
+  auditPath: path.join(auditDir, 'scanner-morning-2026-06-02-MES-APPROVED-EXECUTABLE.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+});
+assert.equal(approvedExecutableBoundaryWithoutChecklist.eligible, true);
+assert.equal(approvedExecutableBoundaryWithoutChecklist.blockers.length, 0);
+assert.equal(approvedExecutableBoundaryWithoutChecklist.authorityBoundary.changesCanExecute, false);
+assert.equal(approvedExecutableBoundaryWithoutChecklist.authorityBoundary.createsTradeApproval, false);
 
 const liveBoundaryWithChecklist = buildScannerLiveDiscordSendBoundaryReport({
   config: {
@@ -3467,8 +3538,8 @@ const liveBoundaryWithChecklist = buildScannerLiveDiscordSendBoundaryReport({
   discordPayloadValidated: true,
   webhookConfigured: true,
 });
-assert.equal(liveBoundaryWithChecklist.eligible, true);
-assert.equal(liveBoundaryWithChecklist.blockers.length, 0);
+assert.equal(liveBoundaryWithChecklist.eligible, false);
+assert.ok(liveBoundaryWithChecklist.blockers.some((item) => item.includes('POST_PLAN with canExecute=true')));
 assert.equal(scannerLiveDiscordHoldNoticeEligible(liveBoundaryWithoutChecklist), false);
 
 const heldDeskState = {

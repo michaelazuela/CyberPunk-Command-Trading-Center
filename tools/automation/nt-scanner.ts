@@ -5812,8 +5812,8 @@ export function buildScannerLiveDiscordSendBoundaryReport(args: {
   discordPayloadValidated: boolean;
   webhookConfigured: boolean;
 }): LiveDiscordEligibilityReport {
-  const highConfidenceConditionalOverride = scannerDeskStateHasHighConfidenceConditionalPlan(args.deskState);
-  const rolloutConfirmed = Boolean(args.config.liveDiscordPolicyConfirmed) || highConfidenceConditionalOverride;
+  const approvedExecutableOverride = scannerDeskStateHasApprovedExecutablePlan(args.deskState);
+  const rolloutConfirmed = Boolean(args.config.liveDiscordPolicyConfirmed) || approvedExecutableOverride;
   return evaluateLiveDiscordPostEligibility({
     scannerHealth: args.healthReport,
     bridgeConnected: args.bridgeConnected,
@@ -5842,20 +5842,16 @@ function scannerLifecycleItemHasFullPlanLevels(item: DeskState['selectedCandidat
   );
 }
 
-function scannerLifecycleItemQualityScore(item: DeskState['selectedCandidate']): number | null {
-  const score = item?.decisionQualityScore ?? item?.modelConfidenceScore ?? null;
-  return typeof score === 'number' && Number.isFinite(score) ? score : null;
-}
-
-function scannerDeskStateHasHighConfidenceConditionalPlan(deskState: DeskState | null): boolean {
+function scannerDeskStateHasApprovedExecutablePlan(deskState: DeskState | null): boolean {
   if (!deskState) return false;
-  if (deskState.canExecute) return false;
-  if (deskState.visibilityMode !== 'POST_CONDITIONAL' || deskState.discordAction !== 'post_conditional') return false;
-  if (deskState.visibilityMetadata?.visibilityMode !== 'POST_CONDITIONAL') return false;
-  if (deskState.visibilityMetadata?.discordAction !== 'post_conditional') return false;
-  if (deskState.visibilityMetadata?.authority?.canExecute !== false) return false;
-  if (deskState.visibilityMetadata?.authority?.discordEligible !== true) return false;
-  if (deskState.visibilityMetadata?.authority?.executionEligible === true) return false;
+  if (deskState.canExecute !== true) return false;
+  if (deskState.visibilityMode !== 'POST_PLAN' || deskState.discordAction !== 'post_plan') return false;
+  if (deskState.visibilityMetadata?.visibilityMode !== 'POST_PLAN') return false;
+  if (deskState.visibilityMetadata?.discordAction !== 'post_plan') return false;
+  const authority = deskState.visibilityMetadata?.authority;
+  if (authority?.canExecute !== true) return false;
+  if (authority?.discordEligible !== true || authority?.executionEligible !== true || authority?.planEligible !== true) return false;
+  if (authority?.humanReviewOnly === true) return false;
   if (deskState.dataQualityStatus === 'data_limited' || deskState.htfContextStatus === 'insufficient') return false;
   const suppressionText = [
     deskState.suppressionReason,
@@ -5868,16 +5864,10 @@ function scannerDeskStateHasHighConfidenceConditionalPlan(deskState: DeskState |
   if (/\b(duplicate|ledger|already\s+pending|missed|no[-\s]?chase|stale|chasing|already\s+reached|target\s+already|T1\s+was\s+already\s+reached)\b/i.test(suppressionText)) {
     return false;
   }
-  const candidates = [
-    deskState.selectedCandidate,
-    deskState.bestLongPlan,
-    deskState.bestShortPlan,
-  ];
-  return candidates.some((item) =>
-    item?.executionStatus === ExecutionStatus.Conditional &&
-    item.blockReason === NoTradeReason.EntryTriggerPending &&
-    scannerLifecycleItemHasFullPlanLevels(item) &&
-    (scannerLifecycleItemQualityScore(item) ?? 0) >= HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE
+  return Boolean(
+    deskState.selectedCandidate?.executionStatus === ExecutionStatus.Executable &&
+    deskState.selectedCandidate.blockReason == null &&
+    scannerLifecycleItemHasFullPlanLevels(deskState.selectedCandidate),
   );
 }
 

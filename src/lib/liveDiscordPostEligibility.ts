@@ -81,17 +81,35 @@ function deskStateBoundaryPreserved(deskState: DeskState | null): boolean {
   );
 }
 
-const LIVE_POST_ACTIONS = new Set(['post_plan', 'post_review', 'post_conditional', 'post_watch']);
-const LIVE_POST_VISIBILITY_MODES = new Set(['POST_PLAN', 'POST_REVIEW', 'POST_CONDITIONAL', 'POST_WATCH']);
+const LIVE_POST_ACTIONS = new Set(['post_plan']);
+const LIVE_POST_VISIBILITY_MODES = new Set(['POST_PLAN']);
+
+function isFiniteTradePrice(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value);
+}
 
 function deskStateLivePostActionable(deskState: DeskState | null): boolean {
+  const authority = deskState?.visibilityMetadata?.authority;
+  const selectedCandidate = deskState?.selectedCandidate;
   return Boolean(
     deskState &&
     LIVE_POST_ACTIONS.has(deskState.discordAction) &&
     LIVE_POST_VISIBILITY_MODES.has(deskState.visibilityMode) &&
     deskState.visibilityMetadata &&
     deskState.visibilityMetadata.discordAction === deskState.discordAction &&
-    deskState.visibilityMetadata.visibilityMode === deskState.visibilityMode,
+    deskState.visibilityMetadata.visibilityMode === deskState.visibilityMode &&
+    deskState.canExecute === true &&
+    authority?.canExecute === true &&
+    authority?.executionEligible === true &&
+    authority?.discordEligible === true &&
+    authority?.planEligible === true &&
+    authority?.humanReviewOnly !== true &&
+    selectedCandidate?.executionStatus === 'Executable' &&
+    selectedCandidate.blockReason == null &&
+    isFiniteTradePrice(selectedCandidate.entry) &&
+    isFiniteTradePrice(selectedCandidate.stop) &&
+    isFiniteTradePrice(selectedCandidate.target1) &&
+    isFiniteTradePrice(selectedCandidate.target2),
   );
 }
 
@@ -158,7 +176,7 @@ export function evaluateLiveDiscordPostEligibility(input: LiveDiscordEligibility
     check(
       'desk_state_live_post_actionable',
       deskStateLivePostActionable(input.deskState),
-      'DeskState must be a scanner-owned POST_PLAN, POST_REVIEW, POST_CONDITIONAL, or POST_WATCH action before live Discord posting.',
+      'DeskState must be a scanner-owned POST_PLAN with canExecute=true, execution eligibility, and complete entry/stop/T1/T2 before live Discord posting.',
     ),
     check(
       'desk_state_not_operationally_suppressed',
@@ -190,7 +208,7 @@ export function evaluateLiveDiscordPostEligibility(input: LiveDiscordEligibility
       'Phase 11A/11E is a policy contract only; it does not create scanner candidates or approve trades.',
       'Eligibility does not approve trades, alter scanner ranking, or change canExecute.',
       'Phase 11B may wire this policy to the send boundary after review.',
-      'Phase 11E only allows live scanner posts when the existing DeskState is fresh, actionable, non-duplicate, and not missed/no-chase.',
+      'Phase 11E only allows live scanner posts when the existing DeskState is a fresh executable POST_PLAN, non-duplicate, and not missed/no-chase.',
     ],
     authorityBoundary: {
       changesTradingLogic: false,

@@ -27,11 +27,18 @@ function health(status: ScannerHealthReport['status'] = 'READY'): ScannerHealthR
 function deskState(): DeskState {
   return {
     sourceOfTruth: 'scanner_desk_state',
-    marketMode: 'watching',
+    marketMode: 'conditional',
     activeCampaign: null,
     bestLongPlan: null,
     bestShortPlan: null,
-    selectedCandidate: null,
+    selectedCandidate: {
+      executionStatus: 'Executable',
+      blockReason: null,
+      entry: 7603.25,
+      stop: 7598.75,
+      target1: 7610,
+      target2: 7612.25,
+    } as DeskState['selectedCandidate'],
     primaryDeskPlay: {
       sourceOfTruth: 'scanner_primary_desk_play',
       direction: 'WAIT',
@@ -95,21 +102,21 @@ function deskState(): DeskState {
     lineInSand: null,
     nextTrigger: null,
     invalidation: null,
-    visibilityMode: 'POST_WATCH',
-    discordAction: 'post_watch',
+    visibilityMode: 'POST_PLAN',
+    discordAction: 'post_plan',
     suppressionReason: null,
     htfContextStatus: 'sufficient',
     dataQualityStatus: 'ok',
-    canExecute: false,
+    canExecute: true,
     promotion: {
       sourceOfTruth: 'scanner_desk_state_promotion_path',
-      currentStage: 'watch',
-      nextStage: 'conditional',
-      promotionReadiness: 'watch_waiting_for_completed_5m',
+      currentStage: 'posted_plan',
+      nextStage: null,
+      promotionReadiness: 'posted_plan_existing_gate_only',
       promotionTrigger: 'Fixture.',
-      requiredProof: ['Completed 5M proof.'],
-      missingProof: ['Completed 5M proof.'],
-      blockedBy: ['Completed 5M proof.'],
+      requiredProof: ['Posted plan must already have passed existing app-owned execution approval.'],
+      missingProof: [],
+      blockedBy: [],
       canPromoteNow: false,
       approvalBoundary: {
         changesTradeApprovals: false,
@@ -122,8 +129,8 @@ function deskState(): DeskState {
     },
     visibilityMetadata: {
       sourceOfTruth: 'scanner_desk_state_visibility_metadata',
-      visibilityMode: 'POST_WATCH',
-      discordAction: 'post_watch',
+      visibilityMode: 'POST_PLAN',
+      discordAction: 'post_plan',
       suppressionReason: null,
       nextTrigger: null,
       dataQualityBlocker: null,
@@ -134,11 +141,11 @@ function deskState(): DeskState {
         registeredModel: true,
         activeModel: true,
         watchEligible: true,
-        planEligible: false,
+        planEligible: true,
         discordEligible: true,
-        executionEligible: false,
-        humanReviewOnly: true,
-        canExecute: false,
+        executionEligible: true,
+        humanReviewOnly: false,
+        canExecute: true,
       },
       notes: [],
     },
@@ -180,6 +187,30 @@ assert.deepEqual(eligible.authorityBoundary, {
   changesCanExecute: false,
   createsTradeApproval: false,
 });
+
+const watchOnlyBlocked = evaluateLiveDiscordPostEligibility(input({
+  deskState: {
+    ...deskState(),
+    visibilityMode: 'POST_WATCH',
+    discordAction: 'post_watch',
+    canExecute: false,
+    selectedCandidate: null,
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      visibilityMode: 'POST_WATCH',
+      discordAction: 'post_watch',
+      authority: {
+        ...deskState().visibilityMetadata.authority,
+        planEligible: false,
+        executionEligible: false,
+        humanReviewOnly: true,
+        canExecute: false,
+      },
+    },
+  },
+}));
+assert.equal(watchOnlyBlocked.eligible, false);
+assert.ok(watchOnlyBlocked.blockers.some((item) => item.includes('POST_PLAN with canExecute=true')));
 
 const dryRunBlocked = evaluateLiveDiscordPostEligibility(input({
   scannerHealth: health('DEGRADED'),

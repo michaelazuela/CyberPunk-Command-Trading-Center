@@ -32,7 +32,6 @@ function assertExactSet(actual: Set<SetupType>, expected: SetupType[], label: st
 }
 
 assertExactSet(setupTypes(SETUP_REGISTRY), REGISTERED_SETUP_TYPES, 'registered setup types');
-assert(APPROVED_SETUP_TYPES === REGISTERED_SETUP_TYPES, 'deprecated approved setup types export must remain a compatibility alias');
 
 const primaryExpected = [
   SetupType.SweepMssFvgRetrace,
@@ -75,6 +74,10 @@ const deprecatedExpected = [
 ];
 
 const noisyCatalog = [...supportingExpected, ...deprecatedExpected];
+assertExactSet(new Set(APPROVED_SETUP_TYPES), primaryExpected, 'approved setup types compatibility export');
+for (const setupType of noisyCatalog) {
+  assert(!APPROVED_SETUP_TYPES.includes(setupType), `approved setup types must not include non-primary ${setupType}`);
+}
 const parentModelFamilies: ParentModelFamily[] = [
   'MODEL_1_SWEEP_MSS_FVG_RETRACE',
   'FAILED_BREAKOUT_REVERSAL',

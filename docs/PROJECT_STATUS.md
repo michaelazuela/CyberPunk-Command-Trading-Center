@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-08-07
+Task: Restore live Discord boundary to executable scanner-owned plans only and clarify approved model registry.
+Files changed: src/lib/liveDiscordPostEligibility.ts/tests, tools/automation/nt-scanner.ts/tests, src/config/setupRegistry.ts/tests, docs/PROJECT_STATUS.md.
+Reason: The restored June 23 runtime was detecting Approved + canExecute=true scanner plans but skipping Discord delivery at the Phase 11 boundary, while the compatibility approved setup export still included supporting/deprecated names.
+Tests run: npx tsx src/lib/liveDiscordPostEligibility.test.ts; npx tsx src/config/setupRegistry.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed.
+Trading logic changed: No. Detection, ranking, canExecute, entry, stop, target, and risk math were not changed.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Discord impact: Production send boundary now allows only fresh scanner-owned POST_PLAN records with canExecute=true, executionEligible=true, full entry/stop/T1/T2, and no stale/duplicate/no-chase suppression. Review/watch/conditional canExecute=false rows stay blocked from live Discord posting.
+Known risks: The running scanner must be restarted to load this code.
+Next recommended action: Restart the scanner under the supervisor and confirm the next approved executable plan no longer records phase11_boundary.
+
+## Previous Change
+
 Date: 2026-06-23
 Task: Clean up cross-timeframe scanner history reliability for open-timestamped OHLC bars.
 Files changed: tools/automation/market-data-ingestion.ts, tools/automation/market-data-ingestion.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
