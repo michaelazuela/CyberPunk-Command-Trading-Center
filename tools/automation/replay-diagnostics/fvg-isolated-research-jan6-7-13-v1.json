@@ -1,0 +1,254 @@
+{
+  "family": "FairValueGapResearchModel",
+  "boundary": "research_only_no_live_scanner_discord_or_trading_rule_change",
+  "generatedAt": "2026-08-09T23:41:07.506Z",
+  "liveSystemsTouched": false,
+  "definitions": [
+    {
+      "family": "FairValueGapResearchModel",
+      "submodel": "FvgWickDefenseContinuation",
+      "purpose": "Trade continuation only after a 15M displacement-created FVG is defended on completed 5M candles.",
+      "requiredEvidence": [
+        "HTF map from 60M/120M/240M is loaded as support, obstacle, draw, or caution only.",
+        "A real 15M displacement creates the parent FVG.",
+        "The displacement candle may be the left, middle, or confirming candle of the 3-candle FVG formation.",
+        "Price returns into the 15M parent FVG or a clean nested 5M FVG aligned inside that 15M zone.",
+        "A completed 5M candle tests the zone and rejects it with wick defense.",
+        "The 5M body does not accept through the zone against the trade direction.",
+        "When multiple same-side FVG rows come from the same parent displacement, the first valid completed 5M proof is the research trade candidate."
+      ],
+      "invalidation": [
+        "The parent 15M FVG accepts through against the trade before completed 5M proof.",
+        "The nested 5M FVG accepts through against the trade before completed 5M proof.",
+        "A later same-parent row appears after an earlier valid completed 5M proof; treat it as management/re-entry context until a reset rule is approved.",
+        "Target room is already gone before entry."
+      ],
+      "entry": "Completed 5M wick-defense or confirmation close.",
+      "stop": "Nearest protected 5M structure for the active side.",
+      "targets": "T1 = 1.5R and T2 = 2.0R from actual entry-to-stop risk.",
+      "publishBoundary": "research_only_no_live_scanner_discord_or_trading_rule_change"
+    },
+    {
+      "family": "FairValueGapResearchModel",
+      "submodel": "FvgFailedAcceptanceReversal",
+      "purpose": "Classify reversal when price fails acceptance through a key FVG/level, then proves the opposite direction on completed 5M candles.",
+      "requiredEvidence": [
+        "HTF map identifies support, obstacle, draw, or caution only.",
+        "A prior high/low, session extreme, or parent FVG area is tested.",
+        "Price fails acceptance beyond that area instead of cleanly continuing.",
+        "A fresh opposite-side displacement or breakdown forms a valid FVG context.",
+        "Completed 5M proof confirms the reversal side."
+      ],
+      "invalidation": [
+        "Price accepts beyond the failed area and holds.",
+        "No completed 5M reversal proof appears.",
+        "The proposed reversal has no protected 5M stop."
+      ],
+      "entry": "Completed 5M reversal proof close after failed acceptance.",
+      "stop": "Nearest protected 5M structure for the reversal side.",
+      "targets": "T1/T2 from actual risk, with nearest real liquidity as management context.",
+      "publishBoundary": "research_only_no_live_scanner_discord_or_trading_rule_change"
+    },
+    {
+      "family": "FairValueGapResearchModel",
+      "submodel": "FvgObjectiveLadderContinuation",
+      "purpose": "Track open, failed, and untouched FVGs plus real liquidity so a valid FVG entry has an objective ladder.",
+      "requiredEvidence": [
+        "5M, 15M, 60M, 120M, and 240M FVG inventory is available when data exists.",
+        "Inventory marks zones as open_untouched, partial_touch, filled, or failed_inverted.",
+        "Prior same-day RTH and morning liquidity levels remain visible during lunch/PM review.",
+        "For shorts, open FVGs/liquidity below are draw context and failed/open zones above are resistance context.",
+        "For longs, open FVGs/liquidity above are draw context and failed/open zones below are support context."
+      ],
+      "invalidation": [
+        "Objective ladder is used to approve a trade by itself.",
+        "T1/T2 are replaced with non-risk-based HTF levels."
+      ],
+      "entry": "No standalone entry. This submodel supports management after a valid FVG entry exists.",
+      "stop": "No standalone stop. Stop remains nearest protected 5M structure from the entry model.",
+      "targets": "T1/T2 remain tactical. FVG inventory and liquidity explain runner/management context.",
+      "publishBoundary": "research_only_no_live_scanner_discord_or_trading_rule_change"
+    }
+  ],
+  "sources": [
+    "tools/automation/replay-diagnostics/fvg-definition-lock-jan6-full-rth-v1.json",
+    "tools/automation/replay-diagnostics/jan7-lunch-fvg-definition-lock-v1.json",
+    "tools/automation/replay-diagnostics/fvg-definition-lock-jan13-full-rth-v1.json"
+  ],
+  "rows": [
+    {
+      "date": "2026-01-06",
+      "session": "full-rth",
+      "submodel": "FvgWickDefenseContinuation",
+      "direction": "LONG",
+      "parentFvg": "7056.75-7058.00",
+      "parentCreatedAt": "2026-01-06T09:45:00",
+      "parentDisplacementTime": "2026-01-06T09:30:00",
+      "firstReturnTime": "2026-01-06T09:45:00",
+      "wickDefenseTimes": [
+        "2026-01-06T09:45:00"
+      ],
+      "proofTime": "2026-01-06T09:45:00",
+      "entry": 7065.5,
+      "stop": 7058,
+      "riskPoints": 7.5,
+      "target1": 7076.75,
+      "target2": 7080.5,
+      "outcome": "T1",
+      "outcomeTime": "2026-01-06T09:55:00",
+      "oneMesPnl": 56.25,
+      "nearestLiquidity": "nearest prior high liquidity 7065.75"
+    },
+    {
+      "date": "2026-01-06",
+      "session": "full-rth",
+      "submodel": "FvgWickDefenseContinuation",
+      "direction": "LONG",
+      "parentFvg": "7059.50-7065.25",
+      "parentCreatedAt": "2026-01-06T10:00:00",
+      "parentDisplacementTime": "2026-01-06T09:30:00",
+      "firstReturnTime": "2026-01-06T11:10:00",
+      "wickDefenseTimes": [
+        "2026-01-06T11:10:00"
+      ],
+      "proofTime": "2026-01-06T11:10:00",
+      "entry": 7069,
+      "stop": 7063,
+      "riskPoints": 6,
+      "target1": 7078,
+      "target2": 7081,
+      "outcome": "T1",
+      "outcomeTime": "2026-01-06T12:10:00",
+      "oneMesPnl": 45,
+      "nearestLiquidity": "nearest prior high liquidity 7069.25"
+    },
+    {
+      "date": "2026-01-06",
+      "session": "full-rth",
+      "submodel": "FvgWickDefenseContinuation",
+      "direction": "LONG",
+      "parentFvg": "7067.00-7080.75",
+      "parentCreatedAt": "2026-01-06T10:15:00",
+      "parentDisplacementTime": "2026-01-06T09:45:00",
+      "firstReturnTime": "2026-01-06T10:40:00",
+      "wickDefenseTimes": [
+        "2026-01-06T10:50:00",
+        "2026-01-06T11:00:00",
+        "2026-01-06T11:10:00",
+        "2026-01-06T11:20:00",
+        "2026-01-06T11:25:00",
+        "2026-01-06T11:40:00",
+        "2026-01-06T12:00:00",
+        "2026-01-06T12:05:00"
+      ],
+      "proofTime": "2026-01-06T12:25:00",
+      "entry": 7084.25,
+      "stop": 7063,
+      "riskPoints": 21.25,
+      "target1": 7116.25,
+      "target2": 7126.75,
+      "outcome": "SessionClose",
+      "outcomeTime": "2026-01-06T16:00:00",
+      "oneMesPnl": 75,
+      "nearestLiquidity": "nearest prior high liquidity 7085.00"
+    },
+    {
+      "date": "2026-01-07",
+      "session": "lunch",
+      "submodel": "FvgWickDefenseContinuation",
+      "direction": "SHORT",
+      "parentFvg": "7109.75-7113.00",
+      "parentCreatedAt": "2026-01-07T13:15:00",
+      "parentDisplacementTime": "2026-01-07T13:00:00",
+      "firstReturnTime": "2026-01-07T13:55:00",
+      "wickDefenseTimes": [
+        "2026-01-07T13:55:00"
+      ],
+      "proofTime": "2026-01-07T13:55:00",
+      "entry": 7109.5,
+      "stop": 7111,
+      "riskPoints": 1.5,
+      "target1": 7107.25,
+      "target2": 7106.5,
+      "outcome": "T2",
+      "outcomeTime": "2026-01-07T14:00:00",
+      "oneMesPnl": 15,
+      "nearestLiquidity": "nearest prior low liquidity 7108.75"
+    },
+    {
+      "date": "2026-01-07",
+      "session": "lunch",
+      "submodel": "FvgWickDefenseContinuation",
+      "direction": "SHORT",
+      "parentFvg": "7100.00-7105.50",
+      "parentCreatedAt": "2026-01-07T14:30:00",
+      "parentDisplacementTime": "2026-01-07T14:15:00",
+      "firstReturnTime": "2026-01-07T14:35:00",
+      "wickDefenseTimes": [
+        "2026-01-07T14:40:00"
+      ],
+      "proofTime": "2026-01-07T14:45:00",
+      "entry": 7099,
+      "stop": 7101.25,
+      "riskPoints": 2.25,
+      "target1": 7095.75,
+      "target2": 7094.5,
+      "outcome": "T1",
+      "outcomeTime": "2026-01-07T15:05:00",
+      "oneMesPnl": 16.25,
+      "nearestLiquidity": "nearest prior low liquidity 7098.75"
+    },
+    {
+      "date": "2026-01-13",
+      "session": "full-rth",
+      "submodel": "FvgWickDefenseContinuation",
+      "direction": "SHORT",
+      "parentFvg": "7127.75-7130.75",
+      "parentCreatedAt": "2026-01-13T10:00:00",
+      "parentDisplacementTime": "2026-01-13T09:30:00",
+      "firstReturnTime": "2026-01-13T12:00:00",
+      "wickDefenseTimes": [
+        "2026-01-13T12:00:00"
+      ],
+      "proofTime": "2026-01-13T12:00:00",
+      "entry": 7125.25,
+      "stop": 7128,
+      "riskPoints": 2.75,
+      "target1": 7121.25,
+      "target2": 7119.75,
+      "outcome": "T2",
+      "outcomeTime": "2026-01-13T12:20:00",
+      "oneMesPnl": 27.5,
+      "nearestLiquidity": "nearest prior low liquidity 7125.00"
+    },
+    {
+      "date": "2026-01-13",
+      "session": "full-rth",
+      "submodel": "FvgFailedAcceptanceReversal",
+      "direction": "SHORT",
+      "parentFvg": "7121.00-7124.75",
+      "parentCreatedAt": "2026-01-13T10:15:00",
+      "parentDisplacementTime": "2026-01-13T10:00:00",
+      "firstReturnTime": "2026-01-13T12:00:00",
+      "wickDefenseTimes": [
+        "2026-01-13T12:00:00"
+      ],
+      "proofTime": "2026-01-13T12:20:00",
+      "entry": 7118.25,
+      "stop": 7128,
+      "riskPoints": 9.75,
+      "target1": 7103.75,
+      "target2": 7098.75,
+      "outcome": "T1",
+      "outcomeTime": "2026-01-13T13:00:00",
+      "oneMesPnl": 72.5,
+      "nearestLiquidity": "nearest prior low liquidity 7118.00"
+    }
+  ],
+  "summary": {
+    "eligibleRows": 7,
+    "wins": 7,
+    "losses": 0,
+    "oneMesNet": 307.5
+  }
+}

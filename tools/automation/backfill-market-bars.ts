@@ -18,6 +18,10 @@ function argValue(name: string): string | null {
   return matched ? matched.slice(prefix.length) : null;
 }
 
+function hasArg(name: string): boolean {
+  return process.argv.includes(`--${name}`);
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -65,18 +69,28 @@ async function main() {
   const instrument = ((argValue('instrument') || 'MES') as Instrument);
   let bridgeInstrument = argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || instrument;
   const delayMs = Math.max(0, Number(argValue('delay-ms') || '250'));
+  const skipResolve = hasArg('skip-resolve');
+  const historicalContractBackfill = hasArg('historical-contract-backfill');
   const config = loadMarketDataConfig();
   if (!config) {
     throw new Error('Market backfill requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DISCORD_RAG_USER_ID in .env.local.');
   }
 
-  const instrumentResolution = await resolveCurrentBridgeInstrument({
-    bridgeUrl,
-    appInstrument: instrument,
-    requestedBridgeInstrument: bridgeInstrument,
-  });
-  bridgeInstrument = instrumentResolution.instrument;
-  if (instrumentResolution.warning) console.warn(`[backfill] ${instrumentResolution.warning}`);
+  if (skipResolve && !historicalContractBackfill) {
+    throw new Error('Refusing --skip-resolve without --historical-contract-backfill. Historical replay/backfill must default to the active NinjaTrader chart contract from bridge health so cached research matches the chart under review.');
+  }
+
+  if (!skipResolve) {
+    const instrumentResolution = await resolveCurrentBridgeInstrument({
+      bridgeUrl,
+      appInstrument: instrument,
+      requestedBridgeInstrument: bridgeInstrument,
+    });
+    bridgeInstrument = instrumentResolution.instrument;
+    if (instrumentResolution.warning) console.warn(`[backfill] ${instrumentResolution.warning}`);
+  } else {
+    console.log(`[backfill] explicit historical contract mode: using ${bridgeInstrument} without active-contract resolution. This is for rollover-contract research only, not chart-aligned visual review.`);
+  }
 
   const dates = buildDates();
   console.log(`Quant Desk market backfill: ${dates.length} trade date(s), ${bridgeInstrument}, ${TIMEFRAMES.join(', ')}.`);

@@ -100,6 +100,28 @@ If bridge data is incomplete or invalid, the system should fail safely instead o
 
 ---
 
+## Historical Replay And Backfill Contract Rule
+
+Historical replay, forensic review, and research backfill must use the same NinjaTrader chart contract the trader is reviewing unless the user explicitly asks for rollover-contract research.
+
+Default standard:
+
+* Resolve the active chart contract from NinjaTrader bridge health first.
+* Use the bridge-reported active contract, such as `MES 09-26`, for historical replay/backfill when comparing against NinjaTrader screenshots or videos.
+* Do not silently switch January-May replay to old quarterly contracts if the active chart is loaded on the current contract with long historical lookback.
+* Store the resolved `bridge_instrument` with every cached OHLC row and report it in research output.
+* If the active chart contract cannot be resolved, stop and report the bridge health/default instrument issue before running chart-review research.
+
+Exception:
+
+* Historical rollover-contract research is allowed only when explicitly requested.
+* Rollover-contract backfill must be labeled as such in the command, output files, and final report.
+* Rollover-contract research must not be used for screenshot-by-screenshot chart review unless the user is viewing that exact contract.
+
+This rule exists to keep research prices aligned with the chart the trader is looking at. NinjaTrader OHLC remains the highest authority, but the contract must match the active chart context.
+
+---
+
 ## Bar-Close Protection
 
 The system must not treat an incomplete bar as a confirmed closed bar unless that behavior is explicitly intended.
@@ -155,6 +177,50 @@ Any output that references HTF/MSS structure must explicitly state whether HTF c
 If reliability is `data_limited`, the output must state that HTF is context only, not structural confirmation, and cannot be used as candidate-promotion evidence.
 
 Data-limited output must not say HTF conflict confirmed, bullish structure confirmed, bearish structure confirmed, candidate ready, or anything equivalent.
+
+### Fair Value Gap Research Model Contract
+
+Current FVG research models must use this workflow unless the user explicitly approves a different model definition:
+
+1. HTF map first:
+   * 60M, 120M, and 240M provide support, obstacle, draw, or caution only.
+   * HTF context does not trigger or approve the trade by itself.
+2. 15M parent setup:
+   * A real 15M displacement must create the parent FVG.
+   * The displacement candle may be the left, middle, or confirming candle of the three-candle 15M FVG formation. Do not require only the final FVG-confirming candle to pass displacement when the impulse leg clearly created the imbalance.
+   * A standalone 5M FVG cannot trigger the Fair Value Gap Research Model.
+3. Drill to 5M:
+   * Price must return into the 15M FVG area, or into a clean nested 5M FVG contained inside and aligned with that 15M parent zone.
+4. Completed 5M wick defense:
+   * A completed 5M candle must test the FVG area and reject it.
+   * The candle body must not accept through the zone against the trade direction.
+   * If the 15M parent FVG or aligned nested 5M FVG accepted through against the trade direction before proof, the continuation setup is dead.
+   * Later wick-defense-looking candles cannot revive a failed parent/nested FVG. A new setup requires a new valid parent model.
+5. Entry, stop, targets:
+   * Conservative research entry is the completed 5M wick-defense/confirmation close.
+   * Stop is the nearest protected 5M structure for the active side.
+   * T1 and T2 are calculated from actual entry-to-stop risk.
+   * HTF zones are target-management or reaction context, not replacement execution targets.
+   * When multiple same-side FVG candidates derive from the same parent displacement, the first valid completed 5M proof is the research trade candidate. Later same-parent rows are management or re-entry context unless a reset rule is explicitly approved.
+   * Research reports must also carry an FVG inventory/objective ladder when evaluating management after entry:
+     * Track 5M, 15M, 60M, 120M, and 240M FVGs as `open_untouched`, `partial_touch`, `filled`, or `failed_inverted`.
+     * Preserve prior same-day RTH/morning liquidity levels for lunch/PM reviews; a lunch trade must not forget morning liquidity runs.
+     * For shorts, failed/open FVGs above are resistance/context and open FVGs or liquidity below are structural draw/context. For longs, invert the logic.
+     * T1/T2 remain tactical risk targets. Open FVGs, RTH/session liquidity, and HTF imbalance zones explain runner management only; they do not approve a trade by themselves.
+6. Session-aware research windows:
+   * FVG research scripts must use an explicit session window instead of hidden hardcoded cutoffs.
+   * Default research may use `morning`, but afternoon review must run with a lunch/PM window that covers 12:00 PM-4:00 PM ET.
+   * Research output must state the session window used so visual review can verify the same market period.
+   * Research output must include a gate trace for rejected candidates so `eligible: 0` always names the exact failed gate before any model rule is adjusted.
+7. Morning and afternoon symmetry:
+   * FVG failure/breakdown research is not automatically an after-lunch-only idea.
+   * The same parent 15M FVG workflow may be evaluated in morning or lunch/PM windows.
+   * Session labels describe when the pattern appeared; they do not replace the parent 15M FVG, completed 5M proof, protected 5M stop, or target-room requirements.
+8. Balanced-price context:
+   * Prior balanced price action is context for likely continuation/liquidity delivery, not a standalone trigger.
+   * If price rebalances a prior move, then creates a fresh 15M displacement FVG and pulls back into it, research may classify continuation only after completed 5M proof confirms rejection/defense and the nearest real liquidity target remains available.
+
+If a replay finds a good-looking trade from a 5M FVG without a valid 15M parent displacement FVG, classify it as a separate research idea or no-trade. Do not label it as the Fair Value Gap Research Model.
 
 ### Mandatory Current Trade Report Contract
 

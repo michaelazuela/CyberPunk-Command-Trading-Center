@@ -1,0 +1,3256 @@
+{
+  "reportType": "jan7_fvg_failure_diagnostic_trace",
+  "generatedAt": "2026-08-09T23:06:18.131Z",
+  "boundary": "research_only_no_live_scanner_discord_or_trading_rule_change",
+  "bridgeInstrument": "MES 09-26",
+  "date": "2026-01-06",
+  "session": "full-rth",
+  "sessionWindow": {
+    "from": "2026-01-06T09:15:00",
+    "to": "2026-01-06T16:00:00"
+  },
+  "source": {
+    "marketData": "supabase_market_bars_read_only",
+    "completedHistoricalBarsOnly": true,
+    "chartAlignedContractRequired": true
+  },
+  "coverage": {
+    "5m": {
+      "bars": 623,
+      "first": "2026-01-04T18:05:00",
+      "last": "2026-01-06T23:55:00"
+    },
+    "15m": {
+      "bars": 207,
+      "first": "2026-01-04T18:15:00",
+      "last": "2026-01-06T23:45:00"
+    },
+    "60m": {
+      "bars": 51,
+      "first": "2026-01-04T19:00:00",
+      "last": "2026-01-06T23:00:00"
+    },
+    "120m": {
+      "bars": 26,
+      "first": "2026-01-04T20:00:00",
+      "last": "2026-01-06T22:00:00"
+    },
+    "240m": {
+      "bars": 13,
+      "first": "2026-01-04T22:00:00",
+      "last": "2026-01-06T22:00:00"
+    }
+  },
+  "htfContext": {
+    "60m": {
+      "bars": 51,
+      "first": "2026-01-04T19:00:00",
+      "last": "2026-01-06T23:00:00"
+    },
+    "120m": {
+      "bars": 26,
+      "first": "2026-01-04T20:00:00",
+      "last": "2026-01-06T22:00:00"
+    },
+    "240m": {
+      "bars": 13,
+      "first": "2026-01-04T22:00:00",
+      "last": "2026-01-06T22:00:00"
+    }
+  },
+  "fvgInventoryAtSessionStart": [
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T19:45:00",
+      "lower": 7053.5,
+      "upper": 7054.75,
+      "protectedLow": 7052.25,
+      "protectedHigh": 7056.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T19:50:00",
+      "filledTime": "2026-01-05T20:05:00",
+      "failedTime": "2026-01-05T20:05:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T03:20:00",
+      "lower": 7054.75,
+      "upper": 7059.25,
+      "protectedLow": 7051.25,
+      "protectedHigh": 7062.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T04:55:00",
+      "filledTime": "2026-01-06T07:45:00",
+      "failedTime": "2026-01-06T07:45:00",
+      "relationToPrice": "overlapping"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T20:30:00",
+      "lower": 7054.5,
+      "upper": 7054.75,
+      "protectedLow": 7053,
+      "protectedHigh": 7061.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T03:15:00",
+      "filledTime": "2026-01-06T03:15:00",
+      "failedTime": "2026-01-06T03:15:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "15m",
+      "createdAt": "2026-01-06T03:30:00",
+      "lower": 7054.75,
+      "upper": 7064.5,
+      "protectedLow": 7047.25,
+      "protectedHigh": 7066,
+      "statusAtReview": "partial_touch",
+      "firstTouchTime": "2026-01-06T05:00:00",
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "overlapping"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T07:20:00",
+      "lower": 7054.5,
+      "upper": 7055.5,
+      "protectedLow": 7052.5,
+      "protectedHigh": 7057,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T07:25:00",
+      "filledTime": "2026-01-06T08:55:00",
+      "failedTime": "2026-01-06T09:10:00",
+      "relationToPrice": "overlapping"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T18:40:00",
+      "lower": 7056,
+      "upper": 7058,
+      "protectedLow": 7054.25,
+      "protectedHigh": 7059.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T18:45:00",
+      "filledTime": "2026-01-05T20:20:00",
+      "failedTime": "2026-01-05T20:25:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T08:55:00",
+      "lower": 7056,
+      "upper": 7057.5,
+      "protectedLow": 7051.5,
+      "protectedHigh": 7059.25,
+      "statusAtReview": "filled",
+      "firstTouchTime": "2026-01-06T09:00:00",
+      "filledTime": "2026-01-06T09:00:00",
+      "failedTime": null,
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T19:00:00",
+      "lower": 7056,
+      "upper": 7056.5,
+      "protectedLow": 7054,
+      "protectedHigh": 7059.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T19:15:00",
+      "filledTime": "2026-01-05T19:15:00",
+      "failedTime": "2026-01-05T20:30:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T16:50:00",
+      "lower": 7057,
+      "upper": 7057.5,
+      "protectedLow": 7056,
+      "protectedHigh": 7058.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T16:55:00",
+      "filledTime": "2026-01-05T18:05:00",
+      "failedTime": "2026-01-05T18:05:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T18:05:00",
+      "lower": 7057,
+      "upper": 7057.25,
+      "protectedLow": 7056,
+      "protectedHigh": 7060.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T18:20:00",
+      "filledTime": "2026-01-05T18:20:00",
+      "failedTime": "2026-01-05T18:35:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T18:10:00",
+      "lower": 7057,
+      "upper": 7058.25,
+      "protectedLow": 7056,
+      "protectedHigh": 7060.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T18:20:00",
+      "filledTime": "2026-01-05T18:20:00",
+      "failedTime": "2026-01-05T18:35:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T07:50:00",
+      "lower": 7057,
+      "upper": 7059,
+      "protectedLow": 7055.75,
+      "protectedHigh": 7060.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T07:55:00",
+      "filledTime": "2026-01-06T08:30:00",
+      "failedTime": "2026-01-06T08:50:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "15m",
+      "createdAt": "2026-01-06T03:45:00",
+      "lower": 7049.25,
+      "upper": 7053,
+      "protectedLow": 7043.75,
+      "protectedHigh": 7066,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T04:00:00",
+      "filledTime": "2026-01-06T04:15:00",
+      "failedTime": "2026-01-06T04:45:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-06T08:00:00",
+      "lower": 7057,
+      "upper": 7059,
+      "protectedLow": 7055.25,
+      "protectedHigh": 7062,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T08:15:00",
+      "filledTime": "2026-01-06T08:30:00",
+      "failedTime": "2026-01-06T09:00:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T20:25:00",
+      "lower": 7057.25,
+      "upper": 7057.75,
+      "protectedLow": 7054.25,
+      "protectedHigh": 7059.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T03:15:00",
+      "filledTime": "2026-01-06T03:15:00",
+      "failedTime": "2026-01-06T03:15:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T20:45:00",
+      "lower": 7057.25,
+      "upper": 7060,
+      "protectedLow": 7053,
+      "protectedHigh": 7061.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T21:00:00",
+      "filledTime": "2026-01-06T03:15:00",
+      "failedTime": "2026-01-06T03:15:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "60m",
+      "createdAt": "2026-01-06T05:00:00",
+      "lower": 7057.25,
+      "upper": 7064.5,
+      "protectedLow": 7043.75,
+      "protectedHigh": 7070,
+      "statusAtReview": "partial_touch",
+      "firstTouchTime": "2026-01-06T08:00:00",
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "120m",
+      "createdAt": "2026-01-06T06:00:00",
+      "lower": 7057.25,
+      "upper": 7065.25,
+      "protectedLow": 7043.75,
+      "protectedHigh": 7071.5,
+      "statusAtReview": "partial_touch",
+      "firstTouchTime": "2026-01-06T08:00:00",
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "60m",
+      "createdAt": "2026-01-05T22:00:00",
+      "lower": 7057.5,
+      "upper": 7059,
+      "protectedLow": 7052.25,
+      "protectedHigh": 7064.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T04:00:00",
+      "filledTime": "2026-01-06T04:00:00",
+      "failedTime": "2026-01-06T04:00:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T16:30:00",
+      "lower": 7058,
+      "upper": 7058.25,
+      "protectedLow": 7056.25,
+      "protectedHigh": 7059.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T16:35:00",
+      "filledTime": "2026-01-05T16:35:00",
+      "failedTime": "2026-01-05T16:35:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T20:30:00",
+      "lower": 7058.25,
+      "upper": 7059.25,
+      "protectedLow": 7054.75,
+      "protectedHigh": 7061.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T21:15:00",
+      "filledTime": "2026-01-06T03:15:00",
+      "failedTime": "2026-01-06T03:15:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T04:45:00",
+      "lower": 7051.25,
+      "upper": 7051.5,
+      "protectedLow": 7048.5,
+      "protectedHigh": 7053.5,
+      "statusAtReview": "filled",
+      "firstTouchTime": "2026-01-06T04:50:00",
+      "filledTime": "2026-01-06T04:50:00",
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T15:15:00",
+      "lower": 7058.75,
+      "upper": 7060.75,
+      "protectedLow": 7056.25,
+      "protectedHigh": 7063.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T15:20:00",
+      "filledTime": "2026-01-05T15:45:00",
+      "failedTime": "2026-01-05T15:55:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T03:30:00",
+      "lower": 7050,
+      "upper": 7051.25,
+      "protectedLow": 7047.25,
+      "protectedHigh": 7054.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T03:55:00",
+      "filledTime": "2026-01-06T04:05:00",
+      "failedTime": "2026-01-06T04:15:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T14:45:00",
+      "lower": 7059.75,
+      "upper": 7062.75,
+      "protectedLow": 7054,
+      "protectedHigh": 7064.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T14:50:00",
+      "filledTime": "2026-01-05T15:15:00",
+      "failedTime": "2026-01-05T21:50:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T20:35:00",
+      "lower": 7059.75,
+      "upper": 7060,
+      "protectedLow": 7057.75,
+      "protectedHigh": 7061.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T20:40:00",
+      "filledTime": "2026-01-05T21:15:00",
+      "failedTime": "2026-01-05T21:15:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T21:30:00",
+      "lower": 7060,
+      "upper": 7060.75,
+      "protectedLow": 7059,
+      "protectedHigh": 7061.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T21:35:00",
+      "filledTime": "2026-01-06T03:05:00",
+      "failedTime": "2026-01-06T03:10:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T04:00:00",
+      "lower": 7049.25,
+      "upper": 7049.5,
+      "protectedLow": 7046.5,
+      "protectedHigh": 7050.75,
+      "statusAtReview": "filled",
+      "firstTouchTime": "2026-01-06T04:05:00",
+      "filledTime": "2026-01-06T04:05:00",
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "60m",
+      "createdAt": "2026-01-05T12:00:00",
+      "lower": 7060.5,
+      "upper": 7061.75,
+      "protectedLow": 7035.25,
+      "protectedHigh": 7076.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T14:00:00",
+      "filledTime": "2026-01-05T14:00:00",
+      "failedTime": "2026-01-05T15:00:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "120m",
+      "createdAt": "2026-01-06T00:00:00",
+      "lower": 7060.75,
+      "upper": 7062.75,
+      "protectedLow": 7052.25,
+      "protectedHigh": 7067.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T04:00:00",
+      "filledTime": "2026-01-06T04:00:00",
+      "failedTime": "2026-01-06T04:00:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T15:00:00",
+      "lower": 7061.5,
+      "upper": 7062.75,
+      "protectedLow": 7054,
+      "protectedHigh": 7065.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T15:15:00",
+      "filledTime": "2026-01-05T15:15:00",
+      "failedTime": "2026-01-05T22:00:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "60m",
+      "createdAt": "2026-01-05T23:00:00",
+      "lower": 7061.5,
+      "upper": 7062.75,
+      "protectedLow": 7053,
+      "protectedHigh": 7064.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T04:00:00",
+      "filledTime": "2026-01-06T04:00:00",
+      "failedTime": "2026-01-06T04:00:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T22:00:00",
+      "lower": 7061.75,
+      "upper": 7062,
+      "protectedLow": 7059,
+      "protectedHigh": 7064.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T03:15:00",
+      "filledTime": "2026-01-06T03:15:00",
+      "failedTime": "2026-01-06T03:15:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "60m",
+      "createdAt": "2026-01-05T11:00:00",
+      "lower": 7038.5,
+      "upper": 7047.75,
+      "protectedLow": 7025,
+      "protectedHigh": 7070,
+      "statusAtReview": "partial_touch",
+      "firstTouchTime": "2026-01-06T04:00:00",
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "120m",
+      "createdAt": "2026-01-05T12:00:00",
+      "lower": 7038.5,
+      "upper": 7047.75,
+      "protectedLow": 7025,
+      "protectedHigh": 7076.25,
+      "statusAtReview": "partial_touch",
+      "firstTouchTime": "2026-01-06T04:00:00",
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "240m",
+      "createdAt": "2026-01-05T14:00:00",
+      "lower": 7034.75,
+      "upper": 7047.75,
+      "protectedLow": 7018.75,
+      "protectedHigh": 7076.25,
+      "statusAtReview": "partial_touch",
+      "firstTouchTime": "2026-01-06T06:00:00",
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T03:10:00",
+      "lower": 7062.5,
+      "upper": 7065.25,
+      "protectedLow": 7059.25,
+      "protectedHigh": 7066,
+      "statusAtReview": "open_untouched",
+      "firstTouchTime": null,
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T10:35:00",
+      "lower": 7063,
+      "upper": 7065.75,
+      "protectedLow": 7058.25,
+      "protectedHigh": 7070,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T10:40:00",
+      "filledTime": "2026-01-05T10:40:00",
+      "failedTime": "2026-01-05T10:40:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T22:55:00",
+      "lower": 7063.5,
+      "upper": 7064,
+      "protectedLow": 7062.75,
+      "protectedHigh": 7064.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T23:00:00",
+      "filledTime": "2026-01-05T23:00:00",
+      "failedTime": "2026-01-05T23:05:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T13:25:00",
+      "lower": 7064,
+      "upper": 7064.75,
+      "protectedLow": 7057.75,
+      "protectedHigh": 7066.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T13:30:00",
+      "filledTime": "2026-01-05T13:30:00",
+      "failedTime": "2026-01-05T13:30:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T13:35:00",
+      "lower": 7064,
+      "upper": 7064.5,
+      "protectedLow": 7059.25,
+      "protectedHigh": 7067.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T13:40:00",
+      "filledTime": "2026-01-05T14:15:00",
+      "failedTime": "2026-01-05T14:25:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T23:10:00",
+      "lower": 7064.25,
+      "upper": 7064.75,
+      "protectedLow": 7063.25,
+      "protectedHigh": 7066.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T02:50:00",
+      "filledTime": "2026-01-06T03:05:00",
+      "failedTime": "2026-01-06T03:05:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "120m",
+      "createdAt": "2026-01-06T02:00:00",
+      "lower": 7064.25,
+      "upper": 7065.25,
+      "protectedLow": 7053,
+      "protectedHigh": 7071.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T04:00:00",
+      "filledTime": "2026-01-06T04:00:00",
+      "failedTime": "2026-01-06T04:00:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T23:30:00",
+      "lower": 7064.5,
+      "upper": 7065.5,
+      "protectedLow": 7062.75,
+      "protectedHigh": 7066.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T23:45:00",
+      "filledTime": "2026-01-06T03:00:00",
+      "failedTime": "2026-01-06T03:15:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T09:45:00",
+      "lower": 7043.5,
+      "upper": 7045.25,
+      "protectedLow": 7035.25,
+      "protectedHigh": 7058.25,
+      "statusAtReview": "partial_touch",
+      "firstTouchTime": "2026-01-06T03:45:00",
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "60m",
+      "createdAt": "2026-01-06T01:00:00",
+      "lower": 7064.75,
+      "upper": 7065.25,
+      "protectedLow": 7062.75,
+      "protectedHigh": 7067.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T03:00:00",
+      "filledTime": "2026-01-06T03:00:00",
+      "failedTime": "2026-01-06T04:00:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T10:45:00",
+      "lower": 7065.5,
+      "upper": 7065.75,
+      "protectedLow": 7061.25,
+      "protectedHigh": 7070,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T10:50:00",
+      "filledTime": "2026-01-05T10:50:00",
+      "failedTime": "2026-01-05T11:10:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T14:30:00",
+      "lower": 7065.5,
+      "upper": 7066.25,
+      "protectedLow": 7062.75,
+      "protectedHigh": 7069.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T23:15:00",
+      "filledTime": "2026-01-05T23:15:00",
+      "failedTime": "2026-01-05T23:30:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T14:15:00",
+      "lower": 7066,
+      "upper": 7066.75,
+      "protectedLow": 7063.25,
+      "protectedHigh": 7069,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T23:05:00",
+      "filledTime": "2026-01-05T23:15:00",
+      "failedTime": "2026-01-06T00:15:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T01:10:00",
+      "lower": 7066,
+      "upper": 7067,
+      "protectedLow": 7065.5,
+      "protectedHigh": 7067.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T01:15:00",
+      "filledTime": "2026-01-06T02:20:00",
+      "failedTime": "2026-01-06T02:45:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T14:00:00",
+      "lower": 7066,
+      "upper": 7066.25,
+      "protectedLow": 7057.75,
+      "protectedHigh": 7069.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T14:15:00",
+      "filledTime": "2026-01-05T14:15:00",
+      "failedTime": "2026-01-05T14:15:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-06T01:30:00",
+      "lower": 7066.25,
+      "upper": 7067,
+      "protectedLow": 7065.25,
+      "protectedHigh": 7069,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T02:30:00",
+      "filledTime": "2026-01-06T02:30:00",
+      "failedTime": "2026-01-06T02:45:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T00:20:00",
+      "lower": 7066.5,
+      "upper": 7067,
+      "protectedLow": 7065.75,
+      "protectedHigh": 7067.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T00:25:00",
+      "filledTime": "2026-01-06T00:30:00",
+      "failedTime": "2026-01-06T00:45:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T02:45:00",
+      "lower": 7066.5,
+      "upper": 7067,
+      "protectedLow": 7065.5,
+      "protectedHigh": 7067.75,
+      "statusAtReview": "open_untouched",
+      "firstTouchTime": null,
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T12:30:00",
+      "lower": 7067,
+      "upper": 7067.5,
+      "protectedLow": 7063.5,
+      "protectedHigh": 7072,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T12:35:00",
+      "filledTime": "2026-01-05T12:40:00",
+      "failedTime": "2026-01-05T12:50:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T13:50:00",
+      "lower": 7067.25,
+      "upper": 7067.5,
+      "protectedLow": 7064.5,
+      "protectedHigh": 7069.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T13:55:00",
+      "filledTime": "2026-01-05T13:55:00",
+      "failedTime": "2026-01-05T14:00:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T02:25:00",
+      "lower": 7067.25,
+      "upper": 7067.75,
+      "protectedLow": 7066,
+      "protectedHigh": 7068.75,
+      "statusAtReview": "filled",
+      "firstTouchTime": "2026-01-06T02:30:00",
+      "filledTime": "2026-01-06T02:35:00",
+      "failedTime": null,
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T12:45:00",
+      "lower": 7067.75,
+      "upper": 7069.25,
+      "protectedLow": 7063.5,
+      "protectedHigh": 7073,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T13:00:00",
+      "filledTime": "2026-01-05T13:00:00",
+      "failedTime": "2026-01-06T01:45:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "15m",
+      "createdAt": "2026-01-06T02:30:00",
+      "lower": 7068.25,
+      "upper": 7069.5,
+      "protectedLow": 7066,
+      "protectedHigh": 7071.5,
+      "statusAtReview": "open_untouched",
+      "firstTouchTime": null,
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T12:25:00",
+      "lower": 7068.5,
+      "upper": 7069.25,
+      "protectedLow": 7065.5,
+      "protectedHigh": 7072,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T12:50:00",
+      "filledTime": "2026-01-05T12:50:00",
+      "failedTime": "2026-01-06T01:35:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T09:30:00",
+      "lower": 7038.5,
+      "upper": 7041.5,
+      "protectedLow": 7030.75,
+      "protectedHigh": 7048.5,
+      "statusAtReview": "open_untouched",
+      "firstTouchTime": null,
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T02:10:00",
+      "lower": 7068.75,
+      "upper": 7069.75,
+      "protectedLow": 7067.25,
+      "protectedHigh": 7070.5,
+      "statusAtReview": "partial_touch",
+      "firstTouchTime": "2026-01-06T02:15:00",
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-06T01:40:00",
+      "lower": 7069,
+      "upper": 7069.25,
+      "protectedLow": 7067.5,
+      "protectedHigh": 7070.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T02:05:00",
+      "filledTime": "2026-01-06T02:05:00",
+      "failedTime": "2026-01-06T02:05:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-06T02:00:00",
+      "lower": 7069,
+      "upper": 7069.5,
+      "protectedLow": 7067,
+      "protectedHigh": 7071.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-06T02:15:00",
+      "filledTime": "2026-01-06T02:15:00",
+      "failedTime": "2026-01-06T02:15:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T11:55:00",
+      "lower": 7071,
+      "upper": 7071.75,
+      "protectedLow": 7068,
+      "protectedHigh": 7076.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T12:00:00",
+      "filledTime": "2026-01-05T12:00:00",
+      "failedTime": "2026-01-05T12:00:00",
+      "relationToPrice": "above"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T09:05:00",
+      "lower": 7034.25,
+      "upper": 7035.25,
+      "protectedLow": 7032.25,
+      "protectedHigh": 7043.5,
+      "statusAtReview": "open_untouched",
+      "firstTouchTime": null,
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T09:15:00",
+      "lower": 7032.5,
+      "upper": 7035.25,
+      "protectedLow": 7026.5,
+      "protectedHigh": 7043.5,
+      "statusAtReview": "open_untouched",
+      "firstTouchTime": null,
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T07:50:00",
+      "lower": 7033.75,
+      "upper": 7034.5,
+      "protectedLow": 7030.5,
+      "protectedHigh": 7036.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T07:55:00",
+      "filledTime": "2026-01-05T07:55:00",
+      "failedTime": "2026-01-05T09:00:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T06:25:00",
+      "lower": 7032.75,
+      "upper": 7033,
+      "protectedLow": 7031.5,
+      "protectedHigh": 7035,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T06:30:00",
+      "filledTime": "2026-01-05T06:30:00",
+      "failedTime": "2026-01-05T06:30:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T05:35:00",
+      "lower": 7032,
+      "upper": 7032.5,
+      "protectedLow": 7030.5,
+      "protectedHigh": 7034.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T05:45:00",
+      "filledTime": "2026-01-05T05:45:00",
+      "failedTime": "2026-01-05T05:50:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T08:55:00",
+      "lower": 7031.75,
+      "upper": 7032.25,
+      "protectedLow": 7028.5,
+      "protectedHigh": 7034.25,
+      "statusAtReview": "open_untouched",
+      "firstTouchTime": null,
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T05:20:00",
+      "lower": 7031,
+      "upper": 7031.25,
+      "protectedLow": 7029,
+      "protectedHigh": 7033,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T05:35:00",
+      "filledTime": "2026-01-05T05:35:00",
+      "failedTime": "2026-01-05T05:40:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T05:30:00",
+      "lower": 7030.25,
+      "upper": 7031.25,
+      "protectedLow": 7025.75,
+      "protectedHigh": 7034.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T05:45:00",
+      "filledTime": "2026-01-05T05:45:00",
+      "failedTime": "2026-01-05T08:30:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T03:25:00",
+      "lower": 7029.5,
+      "upper": 7030.75,
+      "protectedLow": 7022.5,
+      "protectedHigh": 7033.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T03:30:00",
+      "filledTime": "2026-01-05T03:30:00",
+      "failedTime": "2026-01-05T03:55:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T08:40:00",
+      "lower": 7028.5,
+      "upper": 7030,
+      "protectedLow": 7025,
+      "protectedHigh": 7032.5,
+      "statusAtReview": "filled",
+      "firstTouchTime": "2026-01-05T08:45:00",
+      "filledTime": "2026-01-05T08:45:00",
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T05:15:00",
+      "lower": 7029.25,
+      "upper": 7029.75,
+      "protectedLow": 7026.5,
+      "protectedHigh": 7032.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T08:10:00",
+      "filledTime": "2026-01-05T08:25:00",
+      "failedTime": "2026-01-05T08:25:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T08:30:00",
+      "lower": 7028.5,
+      "upper": 7029.75,
+      "protectedLow": 7025,
+      "protectedHigh": 7032.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T08:35:00",
+      "filledTime": "2026-01-05T08:35:00",
+      "failedTime": "2026-01-05T08:35:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T04:30:00",
+      "lower": 7027.5,
+      "upper": 7029,
+      "protectedLow": 7024.75,
+      "protectedHigh": 7031.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T04:40:00",
+      "filledTime": "2026-01-05T04:45:00",
+      "failedTime": "2026-01-05T05:10:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T05:10:00",
+      "lower": 7028,
+      "upper": 7029,
+      "protectedLow": 7025.75,
+      "protectedHigh": 7031,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T08:25:00",
+      "filledTime": "2026-01-05T08:25:00",
+      "failedTime": "2026-01-05T08:25:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T03:20:00",
+      "lower": 7023.5,
+      "upper": 7028.25,
+      "protectedLow": 7021.5,
+      "protectedHigh": 7031,
+      "statusAtReview": "partial_touch",
+      "firstTouchTime": "2026-01-05T03:55:00",
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T03:30:00",
+      "lower": 7023.75,
+      "upper": 7028.25,
+      "protectedLow": 7018.75,
+      "protectedHigh": 7033.5,
+      "statusAtReview": "partial_touch",
+      "firstTouchTime": "2026-01-05T04:00:00",
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T02:20:00",
+      "lower": 7025.5,
+      "upper": 7027,
+      "protectedLow": 7023.75,
+      "protectedHigh": 7028.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T03:15:00",
+      "filledTime": "2026-01-05T03:15:00",
+      "failedTime": "2026-01-05T03:15:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T04:35:00",
+      "lower": 7026.75,
+      "upper": 7027,
+      "protectedLow": 7024.5,
+      "protectedHigh": 7031.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T04:40:00",
+      "filledTime": "2026-01-05T04:40:00",
+      "failedTime": "2026-01-05T04:40:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T01:55:00",
+      "lower": 7024.75,
+      "upper": 7025.75,
+      "protectedLow": 7022.5,
+      "protectedHigh": 7027.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T02:00:00",
+      "filledTime": "2026-01-05T02:15:00",
+      "failedTime": "2026-01-05T02:20:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T01:30:00",
+      "lower": 7024.5,
+      "upper": 7024.75,
+      "protectedLow": 7020.5,
+      "protectedHigh": 7026.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T01:45:00",
+      "filledTime": "2026-01-05T01:45:00",
+      "failedTime": "2026-01-05T01:50:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T01:05:00",
+      "lower": 7024.25,
+      "upper": 7024.5,
+      "protectedLow": 7023.5,
+      "protectedHigh": 7026,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T01:15:00",
+      "filledTime": "2026-01-05T01:25:00",
+      "failedTime": "2026-01-05T01:30:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T01:50:00",
+      "lower": 7023.25,
+      "upper": 7024.5,
+      "protectedLow": 7021,
+      "protectedHigh": 7026.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T02:15:00",
+      "filledTime": "2026-01-05T02:25:00",
+      "failedTime": "2026-01-05T02:25:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T01:15:00",
+      "lower": 7023.75,
+      "upper": 7024.5,
+      "protectedLow": 7021.75,
+      "protectedHigh": 7026.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T01:30:00",
+      "filledTime": "2026-01-05T01:30:00",
+      "failedTime": "2026-01-05T01:30:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T23:55:00",
+      "lower": 7023.75,
+      "upper": 7024.25,
+      "protectedLow": 7021.75,
+      "protectedHigh": 7025,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T00:00:00",
+      "filledTime": "2026-01-05T00:05:00",
+      "failedTime": "2026-01-05T00:10:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T02:45:00",
+      "lower": 7024,
+      "upper": 7024.25,
+      "protectedLow": 7019.25,
+      "protectedHigh": 7028.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T03:15:00",
+      "filledTime": "2026-01-05T03:15:00",
+      "failedTime": "2026-01-05T03:15:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T21:10:00",
+      "lower": 7022.75,
+      "upper": 7024,
+      "protectedLow": 7021.25,
+      "protectedHigh": 7025.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-04T21:15:00",
+      "filledTime": "2026-01-04T21:25:00",
+      "failedTime": "2026-01-04T22:35:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T21:55:00",
+      "lower": 7023.25,
+      "upper": 7024,
+      "protectedLow": 7021,
+      "protectedHigh": 7025.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-04T22:00:00",
+      "filledTime": "2026-01-04T22:05:00",
+      "failedTime": "2026-01-04T22:25:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T22:20:00",
+      "lower": 7023.5,
+      "upper": 7024,
+      "protectedLow": 7022.25,
+      "protectedHigh": 7025,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-04T22:25:00",
+      "filledTime": "2026-01-04T22:25:00",
+      "failedTime": "2026-01-04T23:50:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T01:35:00",
+      "lower": 7021.75,
+      "upper": 7024,
+      "protectedLow": 7019.5,
+      "protectedHigh": 7026.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T01:40:00",
+      "filledTime": "2026-01-05T01:45:00",
+      "failedTime": "2026-01-05T01:45:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T02:30:00",
+      "lower": 7021.75,
+      "upper": 7023.75,
+      "protectedLow": 7019.25,
+      "protectedHigh": 7025.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T02:35:00",
+      "filledTime": "2026-01-05T02:35:00",
+      "failedTime": "2026-01-05T03:15:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T23:50:00",
+      "lower": 7022.5,
+      "upper": 7023.5,
+      "protectedLow": 7020.75,
+      "protectedHigh": 7025,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T00:05:00",
+      "filledTime": "2026-01-05T00:10:00",
+      "failedTime": "2026-01-05T00:10:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "15m",
+      "createdAt": "2026-01-05T00:00:00",
+      "lower": 7022,
+      "upper": 7023.5,
+      "protectedLow": 7019,
+      "protectedHigh": 7025.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T00:15:00",
+      "filledTime": "2026-01-05T00:15:00",
+      "failedTime": "2026-01-05T00:15:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T00:15:00",
+      "lower": 7022.25,
+      "upper": 7023.25,
+      "protectedLow": 7021,
+      "protectedHigh": 7024.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T00:25:00",
+      "filledTime": "2026-01-05T00:25:00",
+      "failedTime": "2026-01-05T00:35:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T20:45:00",
+      "lower": 7022.5,
+      "upper": 7023,
+      "protectedLow": 7021,
+      "protectedHigh": 7025,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-04T20:50:00",
+      "filledTime": "2026-01-04T20:50:00",
+      "failedTime": "2026-01-04T20:50:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T00:30:00",
+      "lower": 7021.75,
+      "upper": 7022.5,
+      "protectedLow": 7020,
+      "protectedHigh": 7023.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T00:35:00",
+      "filledTime": "2026-01-05T00:40:00",
+      "failedTime": "2026-01-05T01:30:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T01:45:00",
+      "lower": 7021.75,
+      "upper": 7022.5,
+      "protectedLow": 7019.5,
+      "protectedHigh": 7024.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T02:25:00",
+      "filledTime": "2026-01-05T02:25:00",
+      "failedTime": "2026-01-05T02:25:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-05T03:00:00",
+      "lower": 7020.25,
+      "upper": 7022.25,
+      "protectedLow": 7018.75,
+      "protectedHigh": 7023.75,
+      "statusAtReview": "partial_touch",
+      "firstTouchTime": "2026-01-05T03:05:00",
+      "filledTime": null,
+      "failedTime": null,
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T23:45:00",
+      "lower": 7021.5,
+      "upper": 7021.75,
+      "protectedLow": 7019.75,
+      "protectedHigh": 7023.75,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-05T00:10:00",
+      "filledTime": "2026-01-05T00:10:00",
+      "failedTime": "2026-01-05T01:30:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "15m",
+      "createdAt": "2026-01-04T23:15:00",
+      "lower": 7020.5,
+      "upper": 7021,
+      "protectedLow": 7019.25,
+      "protectedHigh": 7023.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-04T23:30:00",
+      "filledTime": "2026-01-04T23:30:00",
+      "failedTime": "2026-01-04T23:45:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T23:25:00",
+      "lower": 7020.25,
+      "upper": 7020.5,
+      "protectedLow": 7019.25,
+      "protectedHigh": 7022,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-04T23:30:00",
+      "filledTime": "2026-01-04T23:30:00",
+      "failedTime": "2026-01-04T23:30:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T19:25:00",
+      "lower": 7019,
+      "upper": 7020.25,
+      "protectedLow": 7016.25,
+      "protectedHigh": 7023.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-04T19:35:00",
+      "filledTime": "2026-01-04T19:40:00",
+      "failedTime": "2026-01-04T19:40:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T19:45:00",
+      "lower": 7018.5,
+      "upper": 7020,
+      "protectedLow": 7015.25,
+      "protectedHigh": 7022.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-04T19:50:00",
+      "filledTime": "2026-01-04T19:50:00",
+      "failedTime": "2026-01-04T19:55:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T18:30:00",
+      "lower": 7019.5,
+      "upper": 7019.75,
+      "protectedLow": 7015.25,
+      "protectedHigh": 7022.25,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-04T18:35:00",
+      "filledTime": "2026-01-04T18:35:00",
+      "failedTime": "2026-01-04T18:35:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "LONG",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T19:00:00",
+      "lower": 7017.5,
+      "upper": 7018.25,
+      "protectedLow": 7013.25,
+      "protectedHigh": 7020.5,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-04T19:10:00",
+      "filledTime": "2026-01-04T19:15:00",
+      "failedTime": "2026-01-04T19:40:00",
+      "relationToPrice": "below"
+    },
+    {
+      "direction": "SHORT",
+      "timeframe": "5m",
+      "createdAt": "2026-01-04T18:50:00",
+      "lower": 7017.5,
+      "upper": 7018,
+      "protectedLow": 7013.25,
+      "protectedHigh": 7020,
+      "statusAtReview": "failed_inverted",
+      "firstTouchTime": "2026-01-04T18:55:00",
+      "filledTime": "2026-01-04T18:55:00",
+      "failedTime": "2026-01-04T18:55:00",
+      "relationToPrice": "below"
+    }
+  ],
+  "traces": [
+    {
+      "parentFvg": {
+        "direction": "LONG",
+        "timeframe": "15m",
+        "createdAt": "2026-01-06T09:45:00",
+        "lower": 7056.75,
+        "upper": 7058,
+        "protectedLow": 7052.5,
+        "protectedHigh": 7067
+      },
+      "eligible": true,
+      "verdict": "valid_trace_candidate",
+      "rejectionGates": [
+        {
+          "gate": "15m_parent_displacement",
+          "status": "pass",
+          "detail": "15M FVG formation includes displacement at 2026-01-06T09:30:00."
+        },
+        {
+          "gate": "15m_parent_failure_or_acceptance",
+          "status": "context",
+          "detail": "No 15M acceptance through/failure was observed; this may still be continuation context, but it does not prove a failed-FVG model."
+        },
+        {
+          "gate": "5m_return_to_parent_or_nested_fvg",
+          "status": "pass",
+          "detail": "5M returned into the parent/nested FVG at 2026-01-06T09:45:00."
+        },
+        {
+          "gate": "completed_5m_wick_defense",
+          "status": "pass",
+          "detail": "Completed 5M wick defense found at 2026-01-06T09:45:00."
+        },
+        {
+          "gate": "completed_5m_continuation_proof",
+          "status": "pass",
+          "detail": "Completed 5M continuation proof closed at 2026-01-06T09:45:00."
+        },
+        {
+          "gate": "entry_stop_risk_contract",
+          "status": "pass",
+          "detail": "Entry 7065.50, protected 5M stop 7058.00, risk 7.50 pts."
+        },
+        {
+          "gate": "tactical_targets_from_actual_risk",
+          "status": "pass",
+          "detail": "T1 7076.75 and T2 7080.50 were calculated from actual risk."
+        },
+        {
+          "gate": "target_room_or_liquidity_context",
+          "status": "context",
+          "detail": "Nearest real liquidity context: nearest prior high liquidity 7065.75."
+        }
+      ],
+      "parentDisplacement": true,
+      "parentDisplacementTime": "2026-01-06T09:30:00",
+      "parentFailureTime": null,
+      "firstReturnTime": "2026-01-06T09:45:00",
+      "wickDefenseTimes": [
+        "2026-01-06T09:45:00"
+      ],
+      "proofTime": "2026-01-06T09:45:00",
+      "entry": 7065.5,
+      "stop": 7058,
+      "riskPoints": 7.5,
+      "target1": 7076.75,
+      "target2": 7080.5,
+      "nearestLiquidity": {
+        "label": "nearest prior high liquidity",
+        "price": 7065.75
+      },
+      "fvgInventoryAtProof": {
+        "openBelow": [
+          {
+            "direction": "SHORT",
+            "timeframe": "120m",
+            "createdAt": "2026-01-06T06:00:00",
+            "lower": 7057.25,
+            "upper": 7065.25,
+            "protectedLow": 7043.75,
+            "protectedHigh": 7071.5,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T08:00:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "SHORT",
+            "timeframe": "60m",
+            "createdAt": "2026-01-06T05:00:00",
+            "lower": 7057.25,
+            "upper": 7064.5,
+            "protectedLow": 7043.75,
+            "protectedHigh": 7070,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T08:00:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T09:35:00",
+            "lower": 7056.5,
+            "upper": 7059,
+            "protectedLow": 7054.5,
+            "protectedHigh": 7067,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T09:45:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T09:45:00",
+            "lower": 7056.75,
+            "upper": 7058,
+            "protectedLow": 7052.5,
+            "protectedHigh": 7067,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "60m",
+            "createdAt": "2026-01-05T11:00:00",
+            "lower": 7038.5,
+            "upper": 7047.75,
+            "protectedLow": 7025,
+            "protectedHigh": 7070,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T04:00:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "120m",
+            "createdAt": "2026-01-05T12:00:00",
+            "lower": 7038.5,
+            "upper": 7047.75,
+            "protectedLow": 7025,
+            "protectedHigh": 7076.25,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T04:00:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "240m",
+            "createdAt": "2026-01-05T14:00:00",
+            "lower": 7034.75,
+            "upper": 7047.75,
+            "protectedLow": 7018.75,
+            "protectedHigh": 7076.25,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T06:00:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-05T09:45:00",
+            "lower": 7043.5,
+            "upper": 7045.25,
+            "protectedLow": 7035.25,
+            "protectedHigh": 7058.25,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T03:45:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          }
+        ],
+        "failedAbove": [
+          {
+            "direction": "SHORT",
+            "timeframe": "5m",
+            "createdAt": "2026-01-05T14:15:00",
+            "lower": 7066,
+            "upper": 7066.75,
+            "protectedLow": 7063.25,
+            "protectedHigh": 7069,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-05T23:05:00",
+            "filledTime": "2026-01-05T23:15:00",
+            "failedTime": "2026-01-06T00:15:00",
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T01:10:00",
+            "lower": 7066,
+            "upper": 7067,
+            "protectedLow": 7065.5,
+            "protectedHigh": 7067.75,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-06T01:15:00",
+            "filledTime": "2026-01-06T02:20:00",
+            "failedTime": "2026-01-06T02:45:00",
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-05T14:00:00",
+            "lower": 7066,
+            "upper": 7066.25,
+            "protectedLow": 7057.75,
+            "protectedHigh": 7069.5,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-05T14:15:00",
+            "filledTime": "2026-01-05T14:15:00",
+            "failedTime": "2026-01-05T14:15:00",
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T01:30:00",
+            "lower": 7066.25,
+            "upper": 7067,
+            "protectedLow": 7065.25,
+            "protectedHigh": 7069,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-06T02:30:00",
+            "filledTime": "2026-01-06T02:30:00",
+            "failedTime": "2026-01-06T02:45:00",
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T00:20:00",
+            "lower": 7066.5,
+            "upper": 7067,
+            "protectedLow": 7065.75,
+            "protectedHigh": 7067.75,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-06T00:25:00",
+            "filledTime": "2026-01-06T00:30:00",
+            "failedTime": "2026-01-06T00:45:00",
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "SHORT",
+            "timeframe": "5m",
+            "createdAt": "2026-01-05T12:30:00",
+            "lower": 7067,
+            "upper": 7067.5,
+            "protectedLow": 7063.5,
+            "protectedHigh": 7072,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-05T12:35:00",
+            "filledTime": "2026-01-05T12:40:00",
+            "failedTime": "2026-01-05T12:50:00",
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-05T13:50:00",
+            "lower": 7067.25,
+            "upper": 7067.5,
+            "protectedLow": 7064.5,
+            "protectedHigh": 7069.5,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-05T13:55:00",
+            "filledTime": "2026-01-05T13:55:00",
+            "failedTime": "2026-01-05T14:00:00",
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "SHORT",
+            "timeframe": "15m",
+            "createdAt": "2026-01-05T12:45:00",
+            "lower": 7067.75,
+            "upper": 7069.25,
+            "protectedLow": 7063.5,
+            "protectedHigh": 7073,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-05T13:00:00",
+            "filledTime": "2026-01-05T13:00:00",
+            "failedTime": "2026-01-06T01:45:00",
+            "relationToPrice": "above"
+          }
+        ],
+        "openAbove": [
+          {
+            "direction": "SHORT",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T02:30:00",
+            "lower": 7068.25,
+            "upper": 7069.5,
+            "protectedLow": 7066,
+            "protectedHigh": 7071.5,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "SHORT",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T02:10:00",
+            "lower": 7068.75,
+            "upper": 7069.75,
+            "protectedLow": 7067.25,
+            "protectedHigh": 7070.5,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T02:15:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "above"
+          }
+        ]
+      },
+      "objectiveLadder": [
+        {
+          "kind": "session_extreme",
+          "label": "RTH high liquidity before proof",
+          "price": 7067,
+          "reachedTime": "2026-01-06T09:50:00"
+        },
+        {
+          "kind": "open_fvg",
+          "label": "15m SHORT open FVG open_untouched created 2026-01-06T02:30:00",
+          "price": 7069.5,
+          "reachedTime": "2026-01-06T09:50:00"
+        },
+        {
+          "kind": "open_fvg",
+          "label": "5m SHORT open FVG partial_touch created 2026-01-06T02:10:00",
+          "price": 7069.75,
+          "reachedTime": "2026-01-06T09:50:00"
+        },
+        {
+          "kind": "tactical",
+          "label": "T1 1.5R",
+          "price": 7076.75,
+          "reachedTime": "2026-01-06T09:55:00"
+        },
+        {
+          "kind": "tactical",
+          "label": "T2 2.0R",
+          "price": 7080.5,
+          "reachedTime": "2026-01-06T10:00:00"
+        }
+      ],
+      "outcome": "T1",
+      "outcomeTime": "2026-01-06T09:55:00",
+      "exitPrice": 7076.75,
+      "oneMesPnl": 56.25,
+      "reasons": [
+        "No 15M acceptance through the parent FVG was found inside this session window."
+      ]
+    },
+    {
+      "parentFvg": {
+        "direction": "LONG",
+        "timeframe": "15m",
+        "createdAt": "2026-01-06T10:00:00",
+        "lower": 7059.5,
+        "upper": 7065.25,
+        "protectedLow": 7054,
+        "protectedHigh": 7082.75
+      },
+      "eligible": true,
+      "verdict": "valid_trace_candidate",
+      "rejectionGates": [
+        {
+          "gate": "15m_parent_displacement",
+          "status": "pass",
+          "detail": "15M FVG formation includes displacement at 2026-01-06T09:30:00."
+        },
+        {
+          "gate": "15m_parent_failure_or_acceptance",
+          "status": "context",
+          "detail": "No 15M acceptance through/failure was observed; this may still be continuation context, but it does not prove a failed-FVG model."
+        },
+        {
+          "gate": "5m_return_to_parent_or_nested_fvg",
+          "status": "pass",
+          "detail": "5M returned into the parent/nested FVG at 2026-01-06T11:10:00."
+        },
+        {
+          "gate": "completed_5m_wick_defense",
+          "status": "pass",
+          "detail": "Completed 5M wick defense found at 2026-01-06T11:10:00."
+        },
+        {
+          "gate": "completed_5m_continuation_proof",
+          "status": "pass",
+          "detail": "Completed 5M continuation proof closed at 2026-01-06T11:10:00."
+        },
+        {
+          "gate": "entry_stop_risk_contract",
+          "status": "pass",
+          "detail": "Entry 7069.00, protected 5M stop 7063.00, risk 6.00 pts."
+        },
+        {
+          "gate": "tactical_targets_from_actual_risk",
+          "status": "pass",
+          "detail": "T1 7078.00 and T2 7081.00 were calculated from actual risk."
+        },
+        {
+          "gate": "target_room_or_liquidity_context",
+          "status": "context",
+          "detail": "Nearest real liquidity context: nearest prior high liquidity 7069.25."
+        }
+      ],
+      "parentDisplacement": true,
+      "parentDisplacementTime": "2026-01-06T09:30:00",
+      "parentFailureTime": null,
+      "firstReturnTime": "2026-01-06T11:10:00",
+      "wickDefenseTimes": [
+        "2026-01-06T11:10:00"
+      ],
+      "proofTime": "2026-01-06T11:10:00",
+      "entry": 7069,
+      "stop": 7063,
+      "riskPoints": 6,
+      "target1": 7078,
+      "target2": 7081,
+      "nearestLiquidity": {
+        "label": "nearest prior high liquidity",
+        "price": 7069.25
+      },
+      "fvgInventoryAtProof": {
+        "openBelow": [
+          {
+            "direction": "LONG",
+            "timeframe": "60m",
+            "createdAt": "2026-01-06T11:00:00",
+            "lower": 7062,
+            "upper": 7067.25,
+            "protectedLow": 7051.5,
+            "protectedHigh": 7090,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T10:00:00",
+            "lower": 7059.5,
+            "upper": 7065.25,
+            "protectedLow": 7054,
+            "protectedHigh": 7082.75,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T09:35:00",
+            "lower": 7056.5,
+            "upper": 7059,
+            "protectedLow": 7054.5,
+            "protectedHigh": 7067,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T09:45:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T09:45:00",
+            "lower": 7056.75,
+            "upper": 7058,
+            "protectedLow": 7052.5,
+            "protectedHigh": 7067,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "60m",
+            "createdAt": "2026-01-05T11:00:00",
+            "lower": 7038.5,
+            "upper": 7047.75,
+            "protectedLow": 7025,
+            "protectedHigh": 7070,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T04:00:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "120m",
+            "createdAt": "2026-01-05T12:00:00",
+            "lower": 7038.5,
+            "upper": 7047.75,
+            "protectedLow": 7025,
+            "protectedHigh": 7076.25,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T04:00:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "240m",
+            "createdAt": "2026-01-05T14:00:00",
+            "lower": 7034.75,
+            "upper": 7047.75,
+            "protectedLow": 7018.75,
+            "protectedHigh": 7076.25,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T06:00:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-05T09:45:00",
+            "lower": 7043.5,
+            "upper": 7045.25,
+            "protectedLow": 7035.25,
+            "protectedHigh": 7058.25,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T03:45:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          }
+        ],
+        "failedAbove": [
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-05T11:55:00",
+            "lower": 7071,
+            "upper": 7071.75,
+            "protectedLow": 7068,
+            "protectedHigh": 7076.25,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-05T12:00:00",
+            "filledTime": "2026-01-05T12:00:00",
+            "failedTime": "2026-01-05T12:00:00",
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T10:00:00",
+            "lower": 7075.25,
+            "upper": 7077.25,
+            "protectedLow": 7065.25,
+            "protectedHigh": 7082.75,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-06T10:50:00",
+            "filledTime": "2026-01-06T10:55:00",
+            "failedTime": "2026-01-06T10:55:00",
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T10:05:00",
+            "lower": 7079.75,
+            "upper": 7080.75,
+            "protectedLow": 7072.75,
+            "protectedHigh": 7085,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-06T10:40:00",
+            "filledTime": "2026-01-06T10:40:00",
+            "failedTime": "2026-01-06T10:45:00",
+            "relationToPrice": "above"
+          }
+        ],
+        "openAbove": [
+          {
+            "direction": "SHORT",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T11:00:00",
+            "lower": 7072.75,
+            "upper": 7076.5,
+            "protectedLow": 7067.25,
+            "protectedHigh": 7081,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "SHORT",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T11:00:00",
+            "lower": 7081,
+            "upper": 7082.25,
+            "protectedLow": 7067.25,
+            "protectedHigh": 7090,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "SHORT",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T10:40:00",
+            "lower": 7083.25,
+            "upper": 7086,
+            "protectedLow": 7078.75,
+            "protectedHigh": 7090,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "above"
+          }
+        ]
+      },
+      "objectiveLadder": [
+        {
+          "kind": "open_fvg",
+          "label": "5m SHORT open FVG open_untouched created 2026-01-06T11:00:00",
+          "price": 7076.5,
+          "reachedTime": "2026-01-06T12:10:00"
+        },
+        {
+          "kind": "tactical",
+          "label": "T1 1.5R",
+          "price": 7078,
+          "reachedTime": "2026-01-06T12:10:00"
+        },
+        {
+          "kind": "tactical",
+          "label": "T2 2.0R",
+          "price": 7081,
+          "reachedTime": "2026-01-06T12:20:00"
+        },
+        {
+          "kind": "open_fvg",
+          "label": "15m SHORT open FVG open_untouched created 2026-01-06T11:00:00",
+          "price": 7082.25,
+          "reachedTime": "2026-01-06T12:25:00"
+        },
+        {
+          "kind": "open_fvg",
+          "label": "5m SHORT open FVG open_untouched created 2026-01-06T10:40:00",
+          "price": 7086,
+          "reachedTime": "2026-01-06T12:30:00"
+        },
+        {
+          "kind": "liquidity",
+          "label": "prior 5M swing high liquidity from 2026-01-06T10:30:00",
+          "price": 7090,
+          "reachedTime": "2026-01-06T12:40:00"
+        },
+        {
+          "kind": "session_extreme",
+          "label": "RTH high liquidity before proof",
+          "price": 7090,
+          "reachedTime": "2026-01-06T12:40:00"
+        }
+      ],
+      "outcome": "T1",
+      "outcomeTime": "2026-01-06T12:10:00",
+      "exitPrice": 7078,
+      "oneMesPnl": 45,
+      "reasons": [
+        "No 15M acceptance through the parent FVG was found inside this session window."
+      ]
+    },
+    {
+      "parentFvg": {
+        "direction": "LONG",
+        "timeframe": "15m",
+        "createdAt": "2026-01-06T10:15:00",
+        "lower": 7067,
+        "upper": 7080.75,
+        "protectedLow": 7058,
+        "protectedHigh": 7088
+      },
+      "eligible": true,
+      "verdict": "valid_trace_candidate",
+      "rejectionGates": [
+        {
+          "gate": "15m_parent_displacement",
+          "status": "pass",
+          "detail": "15M FVG formation includes displacement at 2026-01-06T09:45:00."
+        },
+        {
+          "gate": "15m_parent_failure_or_acceptance",
+          "status": "context",
+          "detail": "No 15M acceptance through/failure was observed; this may still be continuation context, but it does not prove a failed-FVG model."
+        },
+        {
+          "gate": "5m_return_to_parent_or_nested_fvg",
+          "status": "pass",
+          "detail": "5M returned into the parent/nested FVG at 2026-01-06T10:40:00."
+        },
+        {
+          "gate": "completed_5m_wick_defense",
+          "status": "pass",
+          "detail": "Completed 5M wick defense found at 2026-01-06T10:50:00, 2026-01-06T11:00:00, 2026-01-06T11:10:00, 2026-01-06T11:20:00, 2026-01-06T11:25:00, 2026-01-06T11:40:00, 2026-01-06T12:00:00, 2026-01-06T12:05:00."
+        },
+        {
+          "gate": "completed_5m_continuation_proof",
+          "status": "pass",
+          "detail": "Completed 5M continuation proof closed at 2026-01-06T12:25:00."
+        },
+        {
+          "gate": "entry_stop_risk_contract",
+          "status": "pass",
+          "detail": "Entry 7084.25, protected 5M stop 7063.00, risk 21.25 pts."
+        },
+        {
+          "gate": "tactical_targets_from_actual_risk",
+          "status": "pass",
+          "detail": "T1 7116.25 and T2 7126.75 were calculated from actual risk."
+        },
+        {
+          "gate": "target_room_or_liquidity_context",
+          "status": "context",
+          "detail": "Nearest real liquidity context: nearest prior high liquidity 7085.00."
+        }
+      ],
+      "parentDisplacement": true,
+      "parentDisplacementTime": "2026-01-06T09:45:00",
+      "parentFailureTime": null,
+      "firstReturnTime": "2026-01-06T10:40:00",
+      "wickDefenseTimes": [
+        "2026-01-06T10:50:00",
+        "2026-01-06T11:00:00",
+        "2026-01-06T11:10:00",
+        "2026-01-06T11:20:00",
+        "2026-01-06T11:25:00",
+        "2026-01-06T11:40:00",
+        "2026-01-06T12:00:00",
+        "2026-01-06T12:05:00"
+      ],
+      "proofTime": "2026-01-06T12:25:00",
+      "entry": 7084.25,
+      "stop": 7063,
+      "riskPoints": 21.25,
+      "target1": 7116.25,
+      "target2": 7126.75,
+      "nearestLiquidity": {
+        "label": "nearest prior high liquidity",
+        "price": 7085
+      },
+      "fvgInventoryAtProof": {
+        "openBelow": [
+          {
+            "direction": "SHORT",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T11:00:00",
+            "lower": 7081,
+            "upper": 7082.25,
+            "protectedLow": 7067.25,
+            "protectedHigh": 7090,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T12:25:00",
+            "lower": 7080.25,
+            "upper": 7080.75,
+            "protectedLow": 7077.75,
+            "protectedHigh": 7085.75,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T12:15:00",
+            "lower": 7075,
+            "upper": 7077.75,
+            "protectedLow": 7071.75,
+            "protectedHigh": 7080.25,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "60m",
+            "createdAt": "2026-01-06T11:00:00",
+            "lower": 7062,
+            "upper": 7067.25,
+            "protectedLow": 7051.5,
+            "protectedHigh": 7090,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T12:00:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T10:00:00",
+            "lower": 7059.5,
+            "upper": 7065.25,
+            "protectedLow": 7054,
+            "protectedHigh": 7082.75,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T11:15:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "120m",
+            "createdAt": "2026-01-06T12:00:00",
+            "lower": 7062,
+            "upper": 7063,
+            "protectedLow": 7051.5,
+            "protectedHigh": 7090,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T09:35:00",
+            "lower": 7056.5,
+            "upper": 7059,
+            "protectedLow": 7054.5,
+            "protectedHigh": 7067,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T09:45:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T09:45:00",
+            "lower": 7056.75,
+            "upper": 7058,
+            "protectedLow": 7052.5,
+            "protectedHigh": 7067,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          }
+        ],
+        "failedAbove": [],
+        "openAbove": []
+      },
+      "objectiveLadder": [
+        {
+          "kind": "liquidity",
+          "label": "prior 5M swing high liquidity from 2026-01-06T10:30:00",
+          "price": 7090,
+          "reachedTime": "2026-01-06T12:40:00"
+        },
+        {
+          "kind": "session_extreme",
+          "label": "RTH high liquidity before proof",
+          "price": 7090,
+          "reachedTime": "2026-01-06T12:40:00"
+        },
+        {
+          "kind": "tactical",
+          "label": "T1 1.5R",
+          "price": 7116.25,
+          "reachedTime": null
+        },
+        {
+          "kind": "tactical",
+          "label": "T2 2.0R",
+          "price": 7126.75,
+          "reachedTime": null
+        }
+      ],
+      "outcome": "SessionClose",
+      "outcomeTime": "2026-01-06T16:00:00",
+      "exitPrice": 7099.25,
+      "oneMesPnl": 75,
+      "reasons": [
+        "No 15M acceptance through the parent FVG was found inside this session window."
+      ]
+    },
+    {
+      "parentFvg": {
+        "direction": "SHORT",
+        "timeframe": "15m",
+        "createdAt": "2026-01-06T11:00:00",
+        "lower": 7081,
+        "upper": 7082.25,
+        "protectedLow": 7067.25,
+        "protectedHigh": 7090
+      },
+      "eligible": false,
+      "verdict": "diagnostic_only_not_valid_under_clean_workflow",
+      "rejectionGates": [
+        {
+          "gate": "15m_parent_displacement",
+          "status": "pass",
+          "detail": "15M FVG formation includes displacement at 2026-01-06T10:45:00."
+        },
+        {
+          "gate": "15m_parent_failure_or_acceptance",
+          "status": "context",
+          "detail": "15M acceptance through/failure observed at 2026-01-06T12:30:00."
+        },
+        {
+          "gate": "5m_return_to_parent_or_nested_fvg",
+          "status": "fail",
+          "detail": "5M never returned into the parent/nested FVG during the session window."
+        },
+        {
+          "gate": "completed_5m_wick_defense",
+          "status": "fail",
+          "detail": "No completed 5M wick-defense candle was found inside the FVG area."
+        },
+        {
+          "gate": "completed_5m_continuation_proof",
+          "status": "fail",
+          "detail": "No completed 5M continuation close away from the FVG was found after wick defense."
+        },
+        {
+          "gate": "entry_stop_risk_contract",
+          "status": "fail",
+          "detail": "Missing valid entry, protected 5M stop, or positive entry-to-stop risk."
+        },
+        {
+          "gate": "tactical_targets_from_actual_risk",
+          "status": "fail",
+          "detail": "T1/T2 could not be calculated from actual entry-to-stop risk."
+        },
+        {
+          "gate": "target_room_or_liquidity_context",
+          "status": "fail",
+          "detail": "No nearest real liquidity objective was found before proof."
+        }
+      ],
+      "parentDisplacement": true,
+      "parentDisplacementTime": "2026-01-06T10:45:00",
+      "parentFailureTime": "2026-01-06T12:30:00",
+      "firstReturnTime": null,
+      "wickDefenseTimes": [],
+      "proofTime": null,
+      "entry": null,
+      "stop": null,
+      "riskPoints": null,
+      "target1": null,
+      "target2": null,
+      "nearestLiquidity": null,
+      "fvgInventoryAtProof": {
+        "openBelow": [],
+        "failedAbove": [],
+        "openAbove": []
+      },
+      "objectiveLadder": [],
+      "outcome": "NoEntry",
+      "outcomeTime": null,
+      "exitPrice": null,
+      "oneMesPnl": 0,
+      "reasons": [
+        "After the parent failure, 5M did not return into the failed 15M FVG zone.",
+        "No completed 5M wick-defense candle was found inside the failed FVG zone.",
+        "No completed 5M continuation close away from the failed FVG zone was found after the return."
+      ]
+    },
+    {
+      "parentFvg": {
+        "direction": "SHORT",
+        "timeframe": "15m",
+        "createdAt": "2026-01-06T11:15:00",
+        "lower": 7071.75,
+        "upper": 7077.75,
+        "protectedLow": 7063,
+        "protectedHigh": 7087.75
+      },
+      "eligible": false,
+      "verdict": "diagnostic_only_not_valid_under_clean_workflow",
+      "rejectionGates": [
+        {
+          "gate": "15m_parent_displacement",
+          "status": "pass",
+          "detail": "15M FVG formation includes displacement at 2026-01-06T10:45:00."
+        },
+        {
+          "gate": "15m_parent_failure_or_acceptance",
+          "status": "context",
+          "detail": "15M acceptance through/failure observed at 2026-01-06T12:15:00."
+        },
+        {
+          "gate": "5m_return_to_parent_or_nested_fvg",
+          "status": "pass",
+          "detail": "5M returned into the parent/nested FVG at 2026-01-06T12:15:00."
+        },
+        {
+          "gate": "completed_5m_wick_defense",
+          "status": "pass",
+          "detail": "Completed 5M wick defense found at 2026-01-06T12:15:00."
+        },
+        {
+          "gate": "completed_5m_continuation_proof",
+          "status": "fail",
+          "detail": "No completed 5M continuation close away from the FVG was found after wick defense."
+        },
+        {
+          "gate": "entry_stop_risk_contract",
+          "status": "fail",
+          "detail": "Missing valid entry, protected 5M stop, or positive entry-to-stop risk."
+        },
+        {
+          "gate": "tactical_targets_from_actual_risk",
+          "status": "fail",
+          "detail": "T1/T2 could not be calculated from actual entry-to-stop risk."
+        },
+        {
+          "gate": "target_room_or_liquidity_context",
+          "status": "fail",
+          "detail": "No nearest real liquidity objective was found before proof."
+        }
+      ],
+      "parentDisplacement": true,
+      "parentDisplacementTime": "2026-01-06T10:45:00",
+      "parentFailureTime": "2026-01-06T12:15:00",
+      "firstReturnTime": "2026-01-06T12:15:00",
+      "wickDefenseTimes": [
+        "2026-01-06T12:15:00"
+      ],
+      "proofTime": null,
+      "entry": null,
+      "stop": null,
+      "riskPoints": null,
+      "target1": null,
+      "target2": null,
+      "nearestLiquidity": null,
+      "fvgInventoryAtProof": {
+        "openBelow": [],
+        "failedAbove": [],
+        "openAbove": []
+      },
+      "objectiveLadder": [],
+      "outcome": "NoEntry",
+      "outcomeTime": null,
+      "exitPrice": null,
+      "oneMesPnl": 0,
+      "reasons": [
+        "No completed 5M continuation close away from the failed FVG zone was found after the return."
+      ]
+    },
+    {
+      "parentFvg": {
+        "direction": "LONG",
+        "timeframe": "15m",
+        "createdAt": "2026-01-06T12:30:00",
+        "lower": 7075.75,
+        "upper": 7078.75,
+        "protectedLow": 7067.5,
+        "protectedHigh": 7086.75
+      },
+      "eligible": false,
+      "verdict": "diagnostic_only_not_valid_under_clean_workflow",
+      "rejectionGates": [
+        {
+          "gate": "15m_parent_displacement",
+          "status": "pass",
+          "detail": "15M FVG formation includes displacement at 2026-01-06T12:00:00."
+        },
+        {
+          "gate": "15m_parent_failure_or_acceptance",
+          "status": "context",
+          "detail": "No 15M acceptance through/failure was observed; this may still be continuation context, but it does not prove a failed-FVG model."
+        },
+        {
+          "gate": "5m_return_to_parent_or_nested_fvg",
+          "status": "fail",
+          "detail": "5M never returned into the parent/nested FVG during the session window."
+        },
+        {
+          "gate": "completed_5m_wick_defense",
+          "status": "fail",
+          "detail": "No completed 5M wick-defense candle was found inside the FVG area."
+        },
+        {
+          "gate": "completed_5m_continuation_proof",
+          "status": "fail",
+          "detail": "No completed 5M continuation close away from the FVG was found after wick defense."
+        },
+        {
+          "gate": "entry_stop_risk_contract",
+          "status": "fail",
+          "detail": "Missing valid entry, protected 5M stop, or positive entry-to-stop risk."
+        },
+        {
+          "gate": "tactical_targets_from_actual_risk",
+          "status": "fail",
+          "detail": "T1/T2 could not be calculated from actual entry-to-stop risk."
+        },
+        {
+          "gate": "target_room_or_liquidity_context",
+          "status": "fail",
+          "detail": "No nearest real liquidity objective was found before proof."
+        }
+      ],
+      "parentDisplacement": true,
+      "parentDisplacementTime": "2026-01-06T12:00:00",
+      "parentFailureTime": null,
+      "firstReturnTime": null,
+      "wickDefenseTimes": [],
+      "proofTime": null,
+      "entry": null,
+      "stop": null,
+      "riskPoints": null,
+      "target1": null,
+      "target2": null,
+      "nearestLiquidity": null,
+      "fvgInventoryAtProof": {
+        "openBelow": [],
+        "failedAbove": [],
+        "openAbove": []
+      },
+      "objectiveLadder": [],
+      "outcome": "NoEntry",
+      "outcomeTime": null,
+      "exitPrice": null,
+      "oneMesPnl": 0,
+      "reasons": [
+        "No 15M acceptance through the parent FVG was found inside this session window.",
+        "After the parent failure, 5M did not return into the failed 15M FVG zone.",
+        "No completed 5M wick-defense candle was found inside the failed FVG zone.",
+        "No completed 5M continuation close away from the failed FVG zone was found after the return."
+      ]
+    },
+    {
+      "parentFvg": {
+        "direction": "LONG",
+        "timeframe": "15m",
+        "createdAt": "2026-01-06T12:45:00",
+        "lower": 7080.25,
+        "upper": 7084,
+        "protectedLow": 7071.75,
+        "protectedHigh": 7091.75
+      },
+      "eligible": false,
+      "verdict": "diagnostic_only_not_valid_under_clean_workflow",
+      "rejectionGates": [
+        {
+          "gate": "15m_parent_displacement",
+          "status": "fail",
+          "detail": "15M FVG exists, but no candle in the three-candle FVG formation passed the displacement heuristic."
+        },
+        {
+          "gate": "15m_parent_failure_or_acceptance",
+          "status": "context",
+          "detail": "No 15M acceptance through/failure was observed; this may still be continuation context, but it does not prove a failed-FVG model."
+        },
+        {
+          "gate": "5m_return_to_parent_or_nested_fvg",
+          "status": "fail",
+          "detail": "5M never returned into the parent/nested FVG during the session window."
+        },
+        {
+          "gate": "completed_5m_wick_defense",
+          "status": "fail",
+          "detail": "No completed 5M wick-defense candle was found inside the FVG area."
+        },
+        {
+          "gate": "completed_5m_continuation_proof",
+          "status": "fail",
+          "detail": "No completed 5M continuation close away from the FVG was found after wick defense."
+        },
+        {
+          "gate": "entry_stop_risk_contract",
+          "status": "fail",
+          "detail": "Missing valid entry, protected 5M stop, or positive entry-to-stop risk."
+        },
+        {
+          "gate": "tactical_targets_from_actual_risk",
+          "status": "fail",
+          "detail": "T1/T2 could not be calculated from actual entry-to-stop risk."
+        },
+        {
+          "gate": "target_room_or_liquidity_context",
+          "status": "fail",
+          "detail": "No nearest real liquidity objective was found before proof."
+        }
+      ],
+      "parentDisplacement": false,
+      "parentDisplacementTime": null,
+      "parentFailureTime": null,
+      "firstReturnTime": null,
+      "wickDefenseTimes": [],
+      "proofTime": null,
+      "entry": null,
+      "stop": null,
+      "riskPoints": null,
+      "target1": null,
+      "target2": null,
+      "nearestLiquidity": null,
+      "fvgInventoryAtProof": {
+        "openBelow": [],
+        "failedAbove": [],
+        "openAbove": []
+      },
+      "objectiveLadder": [],
+      "outcome": "NoEntry",
+      "outcomeTime": null,
+      "exitPrice": null,
+      "oneMesPnl": 0,
+      "reasons": [
+        "15M parent FVG exists, but no candle in the three-candle FVG formation is strong displacement by the current heuristic.",
+        "No 15M acceptance through the parent FVG was found inside this session window.",
+        "After the parent failure, 5M did not return into the failed 15M FVG zone.",
+        "No completed 5M wick-defense candle was found inside the failed FVG zone.",
+        "No completed 5M continuation close away from the failed FVG zone was found after the return."
+      ]
+    },
+    {
+      "parentFvg": {
+        "direction": "LONG",
+        "timeframe": "15m",
+        "createdAt": "2026-01-06T14:00:00",
+        "lower": 7093,
+        "upper": 7094.5,
+        "protectedLow": 7087.25,
+        "protectedHigh": 7098.5
+      },
+      "eligible": false,
+      "verdict": "diagnostic_only_not_valid_under_clean_workflow",
+      "rejectionGates": [
+        {
+          "gate": "15m_parent_displacement",
+          "status": "fail",
+          "detail": "15M FVG exists, but no candle in the three-candle FVG formation passed the displacement heuristic."
+        },
+        {
+          "gate": "15m_parent_failure_or_acceptance",
+          "status": "context",
+          "detail": "No 15M acceptance through/failure was observed; this may still be continuation context, but it does not prove a failed-FVG model."
+        },
+        {
+          "gate": "5m_return_to_parent_or_nested_fvg",
+          "status": "fail",
+          "detail": "5M never returned into the parent/nested FVG during the session window."
+        },
+        {
+          "gate": "completed_5m_wick_defense",
+          "status": "fail",
+          "detail": "No completed 5M wick-defense candle was found inside the FVG area."
+        },
+        {
+          "gate": "completed_5m_continuation_proof",
+          "status": "fail",
+          "detail": "No completed 5M continuation close away from the FVG was found after wick defense."
+        },
+        {
+          "gate": "entry_stop_risk_contract",
+          "status": "fail",
+          "detail": "Missing valid entry, protected 5M stop, or positive entry-to-stop risk."
+        },
+        {
+          "gate": "tactical_targets_from_actual_risk",
+          "status": "fail",
+          "detail": "T1/T2 could not be calculated from actual entry-to-stop risk."
+        },
+        {
+          "gate": "target_room_or_liquidity_context",
+          "status": "fail",
+          "detail": "No nearest real liquidity objective was found before proof."
+        }
+      ],
+      "parentDisplacement": false,
+      "parentDisplacementTime": null,
+      "parentFailureTime": null,
+      "firstReturnTime": null,
+      "wickDefenseTimes": [],
+      "proofTime": null,
+      "entry": null,
+      "stop": null,
+      "riskPoints": null,
+      "target1": null,
+      "target2": null,
+      "nearestLiquidity": null,
+      "fvgInventoryAtProof": {
+        "openBelow": [],
+        "failedAbove": [],
+        "openAbove": []
+      },
+      "objectiveLadder": [],
+      "outcome": "NoEntry",
+      "outcomeTime": null,
+      "exitPrice": null,
+      "oneMesPnl": 0,
+      "reasons": [
+        "15M parent FVG exists, but no candle in the three-candle FVG formation is strong displacement by the current heuristic.",
+        "No 15M acceptance through the parent FVG was found inside this session window.",
+        "After the parent failure, 5M did not return into the failed 15M FVG zone.",
+        "No completed 5M wick-defense candle was found inside the failed FVG zone.",
+        "No completed 5M continuation close away from the failed FVG zone was found after the return."
+      ]
+    },
+    {
+      "parentFvg": {
+        "direction": "LONG",
+        "timeframe": "15m",
+        "createdAt": "2026-01-06T14:15:00",
+        "lower": 7095.5,
+        "upper": 7097.5,
+        "protectedLow": 7087.25,
+        "protectedHigh": 7102.25
+      },
+      "eligible": false,
+      "verdict": "diagnostic_only_not_valid_under_clean_workflow",
+      "rejectionGates": [
+        {
+          "gate": "15m_parent_displacement",
+          "status": "fail",
+          "detail": "15M FVG exists, but no candle in the three-candle FVG formation passed the displacement heuristic."
+        },
+        {
+          "gate": "15m_parent_failure_or_acceptance",
+          "status": "context",
+          "detail": "No 15M acceptance through/failure was observed; this may still be continuation context, but it does not prove a failed-FVG model."
+        },
+        {
+          "gate": "5m_return_to_parent_or_nested_fvg",
+          "status": "fail",
+          "detail": "5M never returned into the parent/nested FVG during the session window."
+        },
+        {
+          "gate": "completed_5m_wick_defense",
+          "status": "fail",
+          "detail": "No completed 5M wick-defense candle was found inside the FVG area."
+        },
+        {
+          "gate": "completed_5m_continuation_proof",
+          "status": "fail",
+          "detail": "No completed 5M continuation close away from the FVG was found after wick defense."
+        },
+        {
+          "gate": "entry_stop_risk_contract",
+          "status": "fail",
+          "detail": "Missing valid entry, protected 5M stop, or positive entry-to-stop risk."
+        },
+        {
+          "gate": "tactical_targets_from_actual_risk",
+          "status": "fail",
+          "detail": "T1/T2 could not be calculated from actual entry-to-stop risk."
+        },
+        {
+          "gate": "target_room_or_liquidity_context",
+          "status": "fail",
+          "detail": "No nearest real liquidity objective was found before proof."
+        }
+      ],
+      "parentDisplacement": false,
+      "parentDisplacementTime": null,
+      "parentFailureTime": null,
+      "firstReturnTime": null,
+      "wickDefenseTimes": [],
+      "proofTime": null,
+      "entry": null,
+      "stop": null,
+      "riskPoints": null,
+      "target1": null,
+      "target2": null,
+      "nearestLiquidity": null,
+      "fvgInventoryAtProof": {
+        "openBelow": [],
+        "failedAbove": [],
+        "openAbove": []
+      },
+      "objectiveLadder": [],
+      "outcome": "NoEntry",
+      "outcomeTime": null,
+      "exitPrice": null,
+      "oneMesPnl": 0,
+      "reasons": [
+        "15M parent FVG exists, but no candle in the three-candle FVG formation is strong displacement by the current heuristic.",
+        "No 15M acceptance through the parent FVG was found inside this session window.",
+        "After the parent failure, 5M did not return into the failed 15M FVG zone.",
+        "No completed 5M wick-defense candle was found inside the failed FVG zone.",
+        "No completed 5M continuation close away from the failed FVG zone was found after the return."
+      ]
+    },
+    {
+      "parentFvg": {
+        "direction": "LONG",
+        "timeframe": "15m",
+        "createdAt": "2026-01-06T14:30:00",
+        "lower": 7098.5,
+        "upper": 7100,
+        "protectedLow": 7094.5,
+        "protectedHigh": 7102.75
+      },
+      "eligible": false,
+      "verdict": "diagnostic_only_not_valid_under_clean_workflow",
+      "rejectionGates": [
+        {
+          "gate": "15m_parent_displacement",
+          "status": "fail",
+          "detail": "15M FVG exists, but no candle in the three-candle FVG formation passed the displacement heuristic."
+        },
+        {
+          "gate": "15m_parent_failure_or_acceptance",
+          "status": "context",
+          "detail": "No 15M acceptance through/failure was observed; this may still be continuation context, but it does not prove a failed-FVG model."
+        },
+        {
+          "gate": "5m_return_to_parent_or_nested_fvg",
+          "status": "pass",
+          "detail": "5M returned into the parent/nested FVG at 2026-01-06T14:30:00."
+        },
+        {
+          "gate": "completed_5m_wick_defense",
+          "status": "pass",
+          "detail": "Completed 5M wick defense found at 2026-01-06T15:15:00."
+        },
+        {
+          "gate": "completed_5m_continuation_proof",
+          "status": "pass",
+          "detail": "Completed 5M continuation proof closed at 2026-01-06T15:15:00."
+        },
+        {
+          "gate": "entry_stop_risk_contract",
+          "status": "pass",
+          "detail": "Entry 7101.75, protected 5M stop 7099.00, risk 2.75 pts."
+        },
+        {
+          "gate": "tactical_targets_from_actual_risk",
+          "status": "pass",
+          "detail": "T1 7106.00 and T2 7107.25 were calculated from actual risk."
+        },
+        {
+          "gate": "target_room_or_liquidity_context",
+          "status": "context",
+          "detail": "Nearest real liquidity context: nearest prior high liquidity 7102.00."
+        }
+      ],
+      "parentDisplacement": false,
+      "parentDisplacementTime": null,
+      "parentFailureTime": null,
+      "firstReturnTime": "2026-01-06T14:30:00",
+      "wickDefenseTimes": [
+        "2026-01-06T15:15:00"
+      ],
+      "proofTime": "2026-01-06T15:15:00",
+      "entry": 7101.75,
+      "stop": 7099,
+      "riskPoints": 2.75,
+      "target1": 7106,
+      "target2": 7107.25,
+      "nearestLiquidity": {
+        "label": "nearest prior high liquidity",
+        "price": 7102
+      },
+      "fvgInventoryAtProof": {
+        "openBelow": [
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T14:30:00",
+            "lower": 7098.5,
+            "upper": 7100,
+            "protectedLow": 7094.5,
+            "protectedHigh": 7102.75,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T14:45:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T14:15:00",
+            "lower": 7095.5,
+            "upper": 7097.5,
+            "protectedLow": 7087.25,
+            "protectedHigh": 7102.25,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "60m",
+            "createdAt": "2026-01-06T15:00:00",
+            "lower": 7091.75,
+            "upper": 7097.5,
+            "protectedLow": 7071.75,
+            "protectedHigh": 7102.75,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T13:55:00",
+            "lower": 7095.5,
+            "upper": 7096,
+            "protectedLow": 7091,
+            "protectedHigh": 7097.75,
+            "statusAtReview": "partial_touch",
+            "firstTouchTime": "2026-01-06T14:00:00",
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "createdAt": "2026-01-06T13:50:00",
+            "lower": 7091.5,
+            "upper": 7094.5,
+            "protectedLow": 7088.25,
+            "protectedHigh": 7097.75,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T14:00:00",
+            "lower": 7093,
+            "upper": 7094.5,
+            "protectedLow": 7087.25,
+            "protectedHigh": 7098.5,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "60m",
+            "createdAt": "2026-01-06T14:00:00",
+            "lower": 7075.75,
+            "upper": 7086.25,
+            "protectedLow": 7063,
+            "protectedHigh": 7098.5,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "15m",
+            "createdAt": "2026-01-06T12:45:00",
+            "lower": 7080.25,
+            "upper": 7084,
+            "protectedLow": 7071.75,
+            "protectedHigh": 7091.75,
+            "statusAtReview": "open_untouched",
+            "firstTouchTime": null,
+            "filledTime": null,
+            "failedTime": null,
+            "relationToPrice": "below"
+          }
+        ],
+        "failedAbove": [],
+        "openAbove": []
+      },
+      "objectiveLadder": [
+        {
+          "kind": "liquidity",
+          "label": "prior 5M swing high liquidity from 2026-01-06T14:45:00",
+          "price": 7102.75,
+          "reachedTime": "2026-01-06T15:20:00"
+        },
+        {
+          "kind": "session_extreme",
+          "label": "RTH high liquidity before proof",
+          "price": 7103,
+          "reachedTime": "2026-01-06T15:20:00"
+        },
+        {
+          "kind": "tactical",
+          "label": "T1 1.5R",
+          "price": 7106,
+          "reachedTime": null
+        },
+        {
+          "kind": "tactical",
+          "label": "T2 2.0R",
+          "price": 7107.25,
+          "reachedTime": null
+        }
+      ],
+      "outcome": "Stop",
+      "outcomeTime": "2026-01-06T16:00:00",
+      "exitPrice": 7099,
+      "oneMesPnl": -13.75,
+      "reasons": [
+        "15M parent FVG exists, but no candle in the three-candle FVG formation is strong displacement by the current heuristic.",
+        "No 15M acceptance through the parent FVG was found inside this session window."
+      ]
+    }
+  ]
+}
