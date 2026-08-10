@@ -219,6 +219,10 @@ Current FVG research models must use this workflow unless the user explicitly ap
 8. Balanced-price context:
    * Prior balanced price action is context for likely continuation/liquidity delivery, not a standalone trigger.
    * If price rebalances a prior move, then creates a fresh 15M displacement FVG and pulls back into it, research may classify continuation only after completed 5M proof confirms rejection/defense and the nearest real liquidity target remains available.
+9. Holiday bridge participation context:
+   * FVG research may tag a Friday session after a Thursday federal holiday as `holiday_bridge_thin_participation`.
+   * This is context only. It must not block, approve, publish, rank, or alter any trade by itself.
+   * Use the tag to review whether holiday-bridge participation explains range/chop losses before proposing any live blocker.
 
 If a replay finds a good-looking trade from a 5M FVG without a valid 15M parent displacement FVG, classify it as a separate research idea or no-trade. Do not label it as the Fair Value Gap Research Model.
 

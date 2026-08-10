@@ -57,6 +57,12 @@ interface RejectionGate {
   detail: string;
 }
 
+interface ResearchTag {
+  tag: 'holiday_bridge_thin_participation';
+  status: 'context_only';
+  detail: string;
+}
+
 interface TraceRow {
   parentFvg: Zone;
   eligible: boolean;
@@ -102,6 +108,7 @@ interface DiagnosticReport {
   };
   coverage: Record<MarketBarTimeframe, { bars: number; first: string | null; last: string | null }>;
   htfContext: Record<'60m' | '120m' | '240m', { bars: number; first: string | null; last: string | null }>;
+  researchTags: ResearchTag[];
   fvgInventoryAtSessionStart: FvgInventoryItem[];
   traces: TraceRow[];
 }
@@ -140,6 +147,29 @@ function sessionWindowFor(date: string, session: Session): { from: string; to: s
   if (session === 'morning') return { from: `${date}T09:15:00`, to: `${date}T12:00:00` };
   if (session === 'lunch') return { from: `${date}T12:00:00`, to: `${date}T16:00:00` };
   return { from: `${date}T09:15:00`, to: `${date}T16:00:00` };
+}
+
+function isKnownFederalHoliday(date: Date): boolean {
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
+  return month === 1 && day === 1;
+}
+
+function researchTagsForDate(dateText: string): ResearchTag[] {
+  const date = new Date(`${dateText}T00:00:00Z`);
+  const priorDay = new Date(date);
+  priorDay.setUTCDate(priorDay.getUTCDate() - 1);
+
+  if (date.getUTCDay() === 5 && priorDay.getUTCDay() === 4 && isKnownFederalHoliday(priorDay)) {
+    return [{
+      tag: 'holiday_bridge_thin_participation',
+      status: 'context_only',
+      detail:
+        'Prior calendar day was a Thursday federal holiday and this replay date is the Friday bridge session. Treat range/chop behavior as research context only; this tag does not block or approve trades.',
+    }];
+  }
+
+  return [];
 }
 
 function validBars(bars: Bar[]): Bar[] {
@@ -800,6 +830,11 @@ function markdownReport(report: DiagnosticReport): string {
       return `- ${timeframe}: ${item.bars} bars (${item.first ?? 'none'} to ${item.last ?? 'none'})`;
     }),
     ``,
+    `## Research Tags`,
+    ...(report.researchTags.length
+      ? report.researchTags.map((tag) => `- ${tag.tag} (${tag.status}): ${tag.detail}`)
+      : ['- none']),
+    ``,
     `## FVG Inventory At Session Start`,
     `- Open below: ${formatInventory(report.fvgInventoryAtSessionStart.filter((item) => item.relationToPrice === 'below' && ['open_untouched', 'partial_touch'].includes(item.statusAtReview)).slice(0, 10))}`,
     `- Failed above: ${formatInventory(report.fvgInventoryAtSessionStart.filter((item) => item.relationToPrice === 'above' && item.statusAtReview === 'failed_inverted').slice(0, 10))}`,
@@ -903,6 +938,7 @@ async function main(): Promise<void> {
       last: bars[timeframe].at(-1)?.time ?? null,
     },
   ])) as DiagnosticReport['coverage'];
+  const researchTags = researchTagsForDate(date);
 
   const report: DiagnosticReport = {
     reportType: 'jan7_fvg_failure_diagnostic_trace',
@@ -923,6 +959,7 @@ async function main(): Promise<void> {
       '120m': coverage['120m'],
       '240m': coverage['240m'],
     },
+    researchTags,
     fvgInventoryAtSessionStart,
     traces,
   };
@@ -949,6 +986,7 @@ async function main(): Promise<void> {
     parentFvgs: parentZones.length,
     eligible: eligible.length,
     tradeLikeDiagnostics: tradeLike.length,
+    researchTags,
     outputs: { jsonPath, markdownPath },
     eligibleRows: eligible.map((trace) => ({
       direction: trace.parentFvg.direction,
