@@ -328,6 +328,14 @@ function findProtectedStop(direction: Direction, bars: Bar[]): number | null {
     : roundTick(Math.max(...bars.map((bar) => bar.high)));
 }
 
+function protectedStopFromParentStructure(direction: Direction, localStop: number | null, parentZone: Zone): number | null {
+  const parentStop = direction === 'LONG' ? parentZone.protectedLow : parentZone.protectedHigh;
+  if (localStop === null) return parentStop;
+  return direction === 'LONG'
+    ? roundTick(Math.min(localStop, parentStop))
+    : roundTick(Math.max(localStop, parentStop));
+}
+
 function findNearestLiquidity(direction: Direction, entry: number, bars: Bar[]): { label: string; price: number } | null {
   const prior = bars.filter((bar) => direction === 'LONG' ? bar.high > entry : bar.low < entry);
   if (!prior.length) return null;
@@ -614,7 +622,8 @@ function traceZone(args: {
   if (!proof) reasons.push('No completed 5M continuation close away from the failed FVG zone was found after the return.');
 
   const stopLookback = proof ? barsBetween(bars5m, firstReturn?.time ?? returnFrom, proof.time) : [];
-  const stop = proof ? findProtectedStop(zone.direction, stopLookback.length ? stopLookback : [proof]) : null;
+  const localStop = proof ? findProtectedStop(zone.direction, stopLookback.length ? stopLookback : [proof]) : null;
+  const stop = proof ? protectedStopFromParentStructure(zone.direction, localStop, zone) : null;
   const entry = proof ? roundTick(proof.close) : null;
   const riskPoints = entry !== null && stop !== null
     ? roundTick(zone.direction === 'LONG' ? entry - stop : stop - entry)
