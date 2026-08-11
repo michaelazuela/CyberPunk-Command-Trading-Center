@@ -6,7 +6,10 @@
   "createdFrom": [
     "tools/automation/replay-diagnostics/fvg-balanced-path-jan7-smoke-v1.md",
     "tools/automation/replay-diagnostics/fvg-balanced-path-jan13-v1.md",
-    "tools/automation/replay-diagnostics/fvg-next-review-jan15-v1.md"
+    "tools/automation/replay-diagnostics/fvg-next-review-jan15-v1.md",
+    "tools/automation/replay-diagnostics/fvg-balanced-path-rule-jan7-v1.md",
+    "tools/automation/replay-diagnostics/fvg-balanced-path-rule-jan13-v1.md",
+    "tools/automation/replay-diagnostics/fvg-balanced-path-rule-jan15-v1.md"
   ],
   "modelLane": "FairValueGapResearchModel",
   "workflow": [
@@ -30,6 +33,39 @@
     ],
     "meaning": "The trade is delivering through a balanced/rebalanced path to real liquidity, so an opposing FVG before T1 should be managed as context instead of automatically downgrading the valid FVG rejection."
   },
+  "balancedPathContinuationRule": {
+    "name": "FvgBalancedPathContinuation",
+    "status": "research_only_supporting_rule",
+    "definition": "If price breaks out of a balanced/rebalanced range and no defended opposing FVG appears before the next real-liquidity or open-FVG objective, the move can travel cleanly through that path. This supports continuation and runner management after a valid FVG proof already exists.",
+    "requiredFacts": [
+      "15M parent FVG setup is valid",
+      "completed 5M wick-defense/proof exists",
+      "nearest protected 5M structure stop is known",
+      "objective ladder has a real liquidity or open-FVG objective ahead",
+      "no opposing FVG/HTF obstacle defends before that objective"
+    ],
+    "invalidation": [
+      "used without 15M parent FVG plus completed 5M proof",
+      "opposing FVG/HTF obstacle defends before the objective",
+      "objective was already reached before entry",
+      "balanced path is treated as a standalone trigger"
+    ],
+    "managementUse": "T1/T2 remain risk-based. The first real liquidity/open-FVG objective becomes management and runner context, especially when the balanced path suggests price can travel cleanly."
+  },
+  "balancedPathContinuationValidation": [
+    {
+      "date": "2026-01-07",
+      "result": "Separates the bad morning long from the good afternoon shorts. The long is blocked because an older opposing FVG defended before T1. The afternoon shorts remain balanced-path-valid because first liquidity delivered before an opposing FVG defended."
+    },
+    {
+      "date": "2026-01-13",
+      "result": "Keeps the 12:00 and 12:20 shorts valid. Blocks the later wide-risk same-parent row as management/re-entry context."
+    },
+    {
+      "date": "2026-01-15",
+      "result": "Keeps both reviewed shorts valid with first liquidity reached before tactical T1 and no defended opposing FVG before delivery."
+    }
+  ],
   "htfMapLesson": {
     "included": true,
     "timeframes": ["60M", "120M", "240M"],

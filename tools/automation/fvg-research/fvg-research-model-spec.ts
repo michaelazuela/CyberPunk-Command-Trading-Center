@@ -6,7 +6,8 @@ export const FVG_RESEARCH_BOUNDARY =
 export type FvgResearchSubmodel =
   | 'FvgWickDefenseContinuation'
   | 'FvgFailedAcceptanceReversal'
-  | 'FvgObjectiveLadderContinuation';
+  | 'FvgObjectiveLadderContinuation'
+  | 'FvgBalancedPathContinuation';
 
 export interface FvgResearchModelDefinition {
   family: typeof FVG_RESEARCH_MODEL_FAMILY;
@@ -87,6 +88,30 @@ export const FVG_RESEARCH_MODEL_DEFINITIONS: FvgResearchModelDefinition[] = [
     entry: 'No standalone entry. This submodel supports management after a valid FVG entry exists.',
     stop: 'No standalone stop. Stop remains nearest protected 5M structure from the entry model.',
     targets: 'T1/T2 remain tactical. FVG inventory and liquidity explain runner/management context.',
+    publishBoundary: FVG_RESEARCH_BOUNDARY,
+  },
+  {
+    family: FVG_RESEARCH_MODEL_FAMILY,
+    submodel: 'FvgBalancedPathContinuation',
+    purpose:
+      'Classify continuation/runner quality when a valid FVG entry breaks out of a balanced path toward real liquidity or an open FVG objective.',
+    requiredEvidence: [
+      'A valid FVG entry already passed the 15M parent setup and completed 5M proof workflow.',
+      'FVG inventory and objective ladder are available for the review window.',
+      'Price breaks from a balanced or rebalanced range in the trade direction.',
+      'The first real liquidity or open-FVG objective is ahead of entry and reachable before or around T1.',
+      'No opposing FVG/HTF obstacle defends before that objective is delivered.',
+    ],
+    invalidation: [
+      'Balanced path is used as a standalone entry trigger.',
+      'The 15M parent FVG or completed 5M proof is missing.',
+      'An opposing FVG/HTF obstacle defends before the first objective.',
+      'The liquidity/open-FVG objective was already gone before entry.',
+    ],
+    entry: 'No standalone entry. This rule only supports a valid FVG proof already found.',
+    stop: 'No standalone stop. Stop remains nearest protected 5M structure from the entry model.',
+    targets:
+      'T1/T2 remain risk-based. First liquidity/open-FVG objective becomes management and runner context.',
     publishBoundary: FVG_RESEARCH_BOUNDARY,
   },
 ];

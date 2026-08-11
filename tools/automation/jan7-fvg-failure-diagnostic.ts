@@ -88,6 +88,15 @@ interface ResearchTag {
   detail: string;
 }
 
+interface ResearchRule {
+  name: 'FvgBalancedPathContinuation';
+  status: 'research_only_supporting_rule';
+  definition: string;
+  requiredFacts: string[];
+  invalidation: string[];
+  notAStandaloneTrigger: true;
+}
+
 interface TraceRow {
   parentFvg: Zone;
   eligible: boolean;
@@ -146,6 +155,7 @@ interface DiagnosticReport {
   coverage: Record<MarketBarTimeframe, { bars: number; first: string | null; last: string | null }>;
   htfContext: Record<'60m' | '120m' | '240m', { bars: number; first: string | null; last: string | null }>;
   researchTags: ResearchTag[];
+  researchRules: ResearchRule[];
   fvgInventoryAtSessionStart: FvgInventoryItem[];
   traces: TraceRow[];
 }
@@ -155,6 +165,26 @@ const __dirname = path.dirname(__filename);
 const OUT_DIR = path.join(__dirname, 'replay-diagnostics');
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 const POINT_VALUE_MES = 5;
+const BALANCED_PATH_CONTINUATION_RULE: ResearchRule = {
+  name: 'FvgBalancedPathContinuation',
+  status: 'research_only_supporting_rule',
+  definition:
+    'If price breaks out of a balanced/rebalanced range and no defended opposing FVG appears before the next real-liquidity or open-FVG objective, the move can travel cleanly through that path. This supports continuation and runner management after a valid FVG proof already exists.',
+  requiredFacts: [
+    '15M parent FVG setup is valid.',
+    'Completed 5M wick-defense/proof exists.',
+    'Nearest protected 5M structure stop is known.',
+    'Objective ladder has a real liquidity or open-FVG objective ahead.',
+    'No opposing FVG/HTF obstacle defends before that objective.',
+  ],
+  invalidation: [
+    'Used without 15M parent FVG plus completed 5M proof.',
+    'Opposing FVG/HTF obstacle defends before the objective.',
+    'The objective was already reached before entry.',
+    'Balanced path is treated as a standalone trigger.',
+  ],
+  notAStandaloneTrigger: true,
+};
 
 function argValue(name: string, fallback: string): string {
   const prefix = `--${name}=`;
@@ -1167,6 +1197,14 @@ function markdownReport(report: DiagnosticReport): string {
       ? report.researchTags.map((tag) => `- ${tag.tag} (${tag.status}): ${tag.detail}`)
       : ['- none']),
     ``,
+    `## Research Rules`,
+    ...report.researchRules.flatMap((rule) => [
+      `- ${rule.name} (${rule.status}): ${rule.definition}`,
+      `  - Required facts: ${rule.requiredFacts.join(' | ')}`,
+      `  - Invalidation: ${rule.invalidation.join(' | ')}`,
+      `  - Standalone trigger: ${rule.notAStandaloneTrigger ? 'no' : 'yes'}`,
+    ]),
+    ``,
     `## FVG Inventory At Session Start`,
     `- Open below: ${formatInventory(report.fvgInventoryAtSessionStart.filter((item) => item.relationToPrice === 'below' && ['open_untouched', 'partial_touch'].includes(item.statusAtReview)).slice(0, 10))}`,
     `- Failed above: ${formatInventory(report.fvgInventoryAtSessionStart.filter((item) => item.relationToPrice === 'above' && item.statusAtReview === 'failed_inverted').slice(0, 10))}`,
@@ -1301,6 +1339,7 @@ async function main(): Promise<void> {
       '240m': coverage['240m'],
     },
     researchTags,
+    researchRules: [BALANCED_PATH_CONTINUATION_RULE],
     fvgInventoryAtSessionStart,
     traces,
   };
