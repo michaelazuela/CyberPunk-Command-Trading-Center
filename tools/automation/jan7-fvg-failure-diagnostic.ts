@@ -13,6 +13,8 @@ dotenv.config({ path: '.env.local', override: false, quiet: true });
 
 type Direction = 'LONG' | 'SHORT';
 type Session = 'morning' | 'lunch' | 'full-rth';
+type StandardOutcome = 'T2' | 'T1' | 'Stop' | 'SessionClose' | 'NoEntry';
+type ManagedOutcome = StandardOutcome | 'LQ1';
 
 interface Bar {
   time: string;
@@ -25,6 +27,23 @@ interface Bar {
 
 type InventoryTimeframe = '5m' | '15m' | '60m' | '120m' | '240m';
 type FvgInventoryStatus = 'open_untouched' | 'partial_touch' | 'filled' | 'failed_inverted';
+type FvgObstacleReaction =
+  | 'none'
+  | 'obstacle_before_t1_not_reached'
+  | 'obstacle_before_t1_reached'
+  | 'obstacle_defended_continuation_failed'
+  | 'obstacle_reached_then_continued';
+type ContinuationRead =
+  | 'balanced_path_to_liquidity_valid'
+  | 'clean_continuation'
+  | 'obstacle_before_t1_manage_or_downgrade'
+  | 'obstacle_defended_continuation_failed'
+  | 'diagnostic_only_no_completed_plan';
+type BalancedPathToLiquidityStatus =
+  | 'balanced_path_to_liquidity'
+  | 'not_balanced_path_to_liquidity'
+  | 'no_liquidity_target'
+  | 'diagnostic_only_no_completed_plan';
 
 interface Zone {
   direction: Direction;
@@ -49,6 +68,12 @@ interface ObjectiveLevel {
   label: string;
   price: number;
   reachedTime: string | null;
+}
+
+interface BalancedPathToLiquidityRead {
+  status: BalancedPathToLiquidityStatus;
+  reason: string;
+  target: ObjectiveLevel | null;
 }
 
 interface RejectionGate {
@@ -86,10 +111,20 @@ interface TraceRow {
     openAbove: FvgInventoryItem[];
   };
   objectiveLadder: ObjectiveLevel[];
-  outcome: 'T2' | 'T1' | 'Stop' | 'SessionClose' | 'NoEntry';
+  opposingFvgObstacleBeforeT1: FvgInventoryItem | null;
+  opposingFvgObstacleReaction: FvgObstacleReaction;
+  opposingFvgObstacleReactionTime: string | null;
+  continuationRead: ContinuationRead;
+  balancedPathToLiquidity: BalancedPathToLiquidityRead;
+  liquidityFirstTarget: ObjectiveLevel | null;
+  outcome: StandardOutcome;
   outcomeTime: string | null;
   exitPrice: number | null;
   oneMesPnl: number;
+  managedOutcome: ManagedOutcome;
+  managedOutcomeTime: string | null;
+  managedExitPrice: number | null;
+  managedOneMesPnl: number;
   reasons: string[];
 }
 
@@ -101,6 +136,8 @@ interface DiagnosticReport {
   date: string;
   session: Session;
   sessionWindow: { from: string; to: string };
+  contextDays: number;
+  loadWindow: { from: string; to: string };
   source: {
     marketData: 'supabase_market_bars_read_only';
     completedHistoricalBarsOnly: true;
@@ -123,6 +160,11 @@ function argValue(name: string, fallback: string): string {
   const prefix = `--${name}=`;
   const found = process.argv.find((arg) => arg.startsWith(prefix));
   return found ? found.slice(prefix.length) : fallback;
+}
+
+function argNumber(name: string, fallback: number): number {
+  const parsed = Number(argValue(name, String(fallback)));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function safeLabel(value: string): string {
@@ -439,6 +481,171 @@ function buildObjectiveLadder(args: {
     .slice(0, 14);
 }
 
+function firstLiquidityBeforeT1(args: {
+  direction: Direction;
+  entry: number;
+  stop: number;
+  target1: number;
+  objectiveLadder: ObjectiveLevel[];
+}): ObjectiveLevel | null {
+  const minMeaningfulMove = Math.max(4, Math.abs(args.entry - args.stop) * 0.25);
+  const realLiquidity = args.objectiveLadder.filter((level) =>
+    ['liquidity', 'session_extreme'].includes(level.kind)
+  );
+  return realLiquidity.find((level) => {
+    if (args.direction === 'LONG') {
+      return level.price > args.entry + minMeaningfulMove && level.price < args.target1;
+    }
+    return level.price < args.entry - minMeaningfulMove && level.price > args.target1;
+  }) ?? null;
+}
+
+function firstOpposingFvgObstacleBeforeT1(args: {
+  direction: Direction;
+  entry: number;
+  target1: number;
+  inventory: TraceRow['fvgInventoryAtProof'];
+}): FvgInventoryItem | null {
+  const candidates = args.direction === 'LONG'
+    ? [...args.inventory.openAbove, ...args.inventory.failedAbove]
+    : args.inventory.openBelow;
+
+  return candidates
+    .filter((item) => {
+      const firstTouchPrice = args.direction === 'LONG' ? item.lower : item.upper;
+      if (args.direction === 'LONG') {
+        return firstTouchPrice > args.entry && firstTouchPrice < args.target1;
+      }
+      return firstTouchPrice < args.entry && firstTouchPrice > args.target1;
+    })
+    .sort((a, b) => {
+      const priceA = args.direction === 'LONG' ? a.lower : a.upper;
+      const priceB = args.direction === 'LONG' ? b.lower : b.upper;
+      return Math.abs(priceA - args.entry) - Math.abs(priceB - args.entry);
+    })[0] ?? null;
+}
+
+function evaluateFvgObstacleReaction(args: {
+  direction: Direction;
+  target1: number;
+  obstacle: FvgInventoryItem | null;
+  standardOutcome: Pick<TraceRow, 'outcome' | 'outcomeTime'>;
+  bars: Bar[];
+}): Pick<TraceRow, 'opposingFvgObstacleReaction' | 'opposingFvgObstacleReactionTime'> {
+  if (!args.obstacle) {
+    return { opposingFvgObstacleReaction: 'none', opposingFvgObstacleReactionTime: null };
+  }
+
+  const obstacleTouchPrice = args.direction === 'LONG' ? args.obstacle.lower : args.obstacle.upper;
+  const obstacleReached = args.bars.find((bar) =>
+    args.direction === 'LONG' ? bar.high >= obstacleTouchPrice : bar.low <= obstacleTouchPrice
+  );
+
+  if (!obstacleReached) {
+    return {
+      opposingFvgObstacleReaction: 'obstacle_before_t1_not_reached',
+      opposingFvgObstacleReactionTime: null,
+    };
+  }
+
+  const t1ReachedAfterObstacle = args.bars.find((bar) => {
+    if (bar.time < obstacleReached.time) return false;
+    return args.direction === 'LONG' ? bar.high >= args.target1 : bar.low <= args.target1;
+  });
+
+  if (t1ReachedAfterObstacle) {
+    return {
+      opposingFvgObstacleReaction: 'obstacle_reached_then_continued',
+      opposingFvgObstacleReactionTime: obstacleReached.time,
+    };
+  }
+
+  if (['Stop', 'SessionClose'].includes(args.standardOutcome.outcome)) {
+    return {
+      opposingFvgObstacleReaction: 'obstacle_defended_continuation_failed',
+      opposingFvgObstacleReactionTime: obstacleReached.time,
+    };
+  }
+
+  return {
+    opposingFvgObstacleReaction: 'obstacle_before_t1_reached',
+    opposingFvgObstacleReactionTime: obstacleReached.time,
+  };
+}
+
+function classifyBalancedPathToLiquidity(args: {
+  eligible: boolean;
+  direction: Direction;
+  entry: number;
+  target1: number;
+  liquidityFirstTarget: ObjectiveLevel | null;
+  obstacleReaction: FvgObstacleReaction;
+}): BalancedPathToLiquidityRead {
+  if (!args.eligible) {
+    return {
+      status: 'diagnostic_only_no_completed_plan',
+      reason: 'The row did not pass the clean completed-plan workflow, so balanced-path context stays diagnostic only.',
+      target: args.liquidityFirstTarget,
+    };
+  }
+  if (!args.liquidityFirstTarget) {
+    return {
+      status: 'no_liquidity_target',
+      reason: 'No meaningful real-liquidity target was found between entry and T1.',
+      target: null,
+    };
+  }
+
+  const targetBeforeT1 = args.direction === 'LONG'
+    ? args.liquidityFirstTarget.price > args.entry && args.liquidityFirstTarget.price < args.target1
+    : args.liquidityFirstTarget.price < args.entry && args.liquidityFirstTarget.price > args.target1;
+
+  if (!targetBeforeT1) {
+    return {
+      status: 'not_balanced_path_to_liquidity',
+      reason: 'The first liquidity objective is not between entry and T1, so it is not a near-path delivery target.',
+      target: args.liquidityFirstTarget,
+    };
+  }
+  if (args.obstacleReaction === 'obstacle_defended_continuation_failed') {
+    return {
+      status: 'not_balanced_path_to_liquidity',
+      reason: 'An opposing FVG defended before T1, so the path did not deliver cleanly to liquidity.',
+      target: args.liquidityFirstTarget,
+    };
+  }
+  if (!args.liquidityFirstTarget.reachedTime) {
+    return {
+      status: 'not_balanced_path_to_liquidity',
+      reason: 'The near liquidity objective sat in the path but was not reached during the replay window.',
+      target: args.liquidityFirstTarget,
+    };
+  }
+
+  return {
+    status: 'balanced_path_to_liquidity',
+    reason: 'The first real-liquidity objective sat between entry and T1, was reached, and no opposing FVG defended before delivery.',
+    target: args.liquidityFirstTarget,
+  };
+}
+
+function classifyContinuationRead(args: {
+  eligible: boolean;
+  obstacle: FvgInventoryItem | null;
+  obstacleReaction: FvgObstacleReaction;
+  balancedPathToLiquidity: BalancedPathToLiquidityRead;
+}): ContinuationRead {
+  if (!args.eligible) return 'diagnostic_only_no_completed_plan';
+  if (args.obstacleReaction === 'obstacle_defended_continuation_failed') {
+    return 'obstacle_defended_continuation_failed';
+  }
+  if (args.balancedPathToLiquidity.status === 'balanced_path_to_liquidity') {
+    return 'balanced_path_to_liquidity_valid';
+  }
+  if (args.obstacle) return 'obstacle_before_t1_manage_or_downgrade';
+  return 'clean_continuation';
+}
+
 function evaluateOutcome(args: {
   direction: Direction;
   entry: number;
@@ -484,6 +691,49 @@ function evaluateOutcome(args: {
     outcomeTime: last.time,
     exitPrice: last.close,
     oneMesPnl: money((args.direction === 'LONG' ? last.close - args.entry : args.entry - last.close) * POINT_VALUE_MES),
+  };
+}
+
+function evaluateManagedOutcome(args: {
+  direction: Direction;
+  entry: number;
+  stop: number;
+  liquidityFirstTarget: ObjectiveLevel | null;
+  standardOutcome: Pick<TraceRow, 'outcome' | 'outcomeTime' | 'exitPrice' | 'oneMesPnl'>;
+  bars: Bar[];
+}): Pick<TraceRow, 'managedOutcome' | 'managedOutcomeTime' | 'managedExitPrice' | 'managedOneMesPnl'> {
+  if (!args.liquidityFirstTarget) {
+    return {
+      managedOutcome: args.standardOutcome.outcome,
+      managedOutcomeTime: args.standardOutcome.outcomeTime,
+      managedExitPrice: args.standardOutcome.exitPrice,
+      managedOneMesPnl: args.standardOutcome.oneMesPnl,
+    };
+  }
+
+  for (const bar of args.bars) {
+    const stopHit = args.direction === 'LONG' ? bar.low <= args.stop : bar.high >= args.stop;
+    const liquidityHit = args.direction === 'LONG'
+      ? bar.high >= args.liquidityFirstTarget.price
+      : bar.low <= args.liquidityFirstTarget.price;
+    if (stopHit) break;
+    if (liquidityHit) {
+      return {
+        managedOutcome: 'LQ1',
+        managedOutcomeTime: bar.time,
+        managedExitPrice: args.liquidityFirstTarget.price,
+        managedOneMesPnl: money((args.direction === 'LONG'
+          ? args.liquidityFirstTarget.price - args.entry
+          : args.entry - args.liquidityFirstTarget.price) * POINT_VALUE_MES),
+      };
+    }
+  }
+
+  return {
+    managedOutcome: args.standardOutcome.outcome,
+    managedOutcomeTime: args.standardOutcome.outcomeTime,
+    managedExitPrice: args.standardOutcome.exitPrice,
+    managedOneMesPnl: args.standardOutcome.oneMesPnl,
   };
 }
 
@@ -673,13 +923,67 @@ function traceZone(args: {
       zones: args.allZones,
       barsByTimeframe: args.barsByTimeframe,
     });
+    const afterProofBars = bars5m.filter((bar) => bar.time > proof.time && bar.time <= sessionWindow.to);
+    const objectiveLadder = buildObjectiveLadder({
+      direction: zone.direction,
+      entry,
+      target1,
+      target2,
+      proofTime: proof.time,
+      bars5m,
+      inventory: fvgInventoryAtProof,
+      sessionWindow,
+      contextFrom: args.contextFrom,
+    });
+    const liquidityFirstTarget = firstLiquidityBeforeT1({
+      direction: zone.direction,
+      entry,
+      stop,
+      target1,
+      objectiveLadder,
+    });
+    const opposingFvgObstacleBeforeT1 = firstOpposingFvgObstacleBeforeT1({
+      direction: zone.direction,
+      entry,
+      target1,
+      inventory: fvgInventoryAtProof,
+    });
     const outcome = evaluateOutcome({
       direction: zone.direction,
       entry,
       stop,
       target1,
       target2,
-      bars: bars5m.filter((bar) => bar.time > proof.time && bar.time <= sessionWindow.to),
+      bars: afterProofBars,
+    });
+    const opposingFvgObstacleReaction = evaluateFvgObstacleReaction({
+      direction: zone.direction,
+      target1,
+      obstacle: opposingFvgObstacleBeforeT1,
+      standardOutcome: outcome,
+      bars: afterProofBars,
+    });
+    const balancedPathToLiquidity = classifyBalancedPathToLiquidity({
+      eligible: structurallyEligible,
+      direction: zone.direction,
+      entry,
+      target1,
+      liquidityFirstTarget,
+      obstacleReaction: opposingFvgObstacleReaction.opposingFvgObstacleReaction,
+    });
+    const continuationRead = classifyContinuationRead({
+      eligible: structurallyEligible,
+      obstacle: opposingFvgObstacleBeforeT1,
+      obstacleReaction: opposingFvgObstacleReaction.opposingFvgObstacleReaction,
+      balancedPathToLiquidity,
+    });
+    const managedOutcome = evaluateManagedOutcome({
+      direction: zone.direction,
+      entry,
+      stop,
+      liquidityFirstTarget,
+      standardOutcome: outcome,
+      bars: afterProofBars,
     });
     return {
       parentFvg: zone,
@@ -699,18 +1003,14 @@ function traceZone(args: {
       target2,
       nearestLiquidity,
       fvgInventoryAtProof,
-      objectiveLadder: buildObjectiveLadder({
-        direction: zone.direction,
-        entry,
-        target1,
-        target2,
-        proofTime: proof.time,
-        bars5m,
-        inventory: fvgInventoryAtProof,
-        sessionWindow,
-        contextFrom: args.contextFrom,
-      }),
+      objectiveLadder,
+      opposingFvgObstacleBeforeT1,
+      ...opposingFvgObstacleReaction,
+      continuationRead,
+      balancedPathToLiquidity,
+      liquidityFirstTarget,
       ...outcome,
+      ...managedOutcome,
       reasons,
     };
   }
@@ -734,10 +1034,24 @@ function traceZone(args: {
     nearestLiquidity,
     fvgInventoryAtProof: inventoryAtProof({ proof, zones: args.allZones, barsByTimeframe: args.barsByTimeframe }),
     objectiveLadder: [],
+    opposingFvgObstacleBeforeT1: null,
+    opposingFvgObstacleReaction: 'none',
+    opposingFvgObstacleReactionTime: null,
+    continuationRead: 'diagnostic_only_no_completed_plan',
+    balancedPathToLiquidity: {
+      status: 'diagnostic_only_no_completed_plan',
+      reason: 'The row did not produce a completed research plan with entry, stop, and targets.',
+      target: null,
+    },
+    liquidityFirstTarget: null,
     outcome: 'NoEntry',
     outcomeTime: null,
     exitPrice: null,
     oneMesPnl: 0,
+    managedOutcome: 'NoEntry',
+    managedOutcomeTime: null,
+    managedExitPrice: null,
+    managedOneMesPnl: 0,
     reasons,
   };
 }
@@ -802,6 +1116,10 @@ function markdownReport(report: DiagnosticReport): string {
       .map((item) => `${item.kind} ${item.price.toFixed(2)} ${item.reachedTime ? `reached ${item.reachedTime}` : 'not reached'} (${item.label})`)
       .join('; ');
   };
+  const formatObstacle = (item: FvgInventoryItem | null): string => {
+    if (!item) return 'none before T1';
+    return `${item.timeframe} ${item.direction} ${item.lower.toFixed(2)}-${item.upper.toFixed(2)} created ${item.createdAt} status ${item.statusAtReview}`;
+  };
   const formatGates = (items: RejectionGate[]): string => {
     if (!items.length) return 'none';
     return items.map((item) => `${item.status.toUpperCase()} ${item.gate}: ${item.detail}`).join(' | ');
@@ -815,10 +1133,14 @@ function markdownReport(report: DiagnosticReport): string {
       .filter((item) => item.kind !== 'tactical' && item.reachedTime)
       .map((item) => `${item.price.toFixed(2)} ${item.kind}`)
       .slice(0, 4);
+    const obstacleText = trace.opposingFvgObstacleBeforeT1
+      ? `Opposing FVG obstacle before T1: ${trace.opposingFvgObstacleBeforeT1.timeframe} ${trace.opposingFvgObstacleBeforeT1.lower.toFixed(2)}-${trace.opposingFvgObstacleBeforeT1.upper.toFixed(2)} with reaction ${trace.opposingFvgObstacleReaction}.`
+      : 'No opposing FVG obstacle was loaded before T1.';
     return [
       `${trace.parentFvg.direction} proof completed at ${trace.proofTime} from ${trace.parentFvg.lower.toFixed(2)}-${trace.parentFvg.upper.toFixed(2)}.`,
       `${failedAbove + openAbove} failed/open FVG areas remained above as resistance/memory.`,
       `${openBelow} open FVG areas remained below as downside draw/context.`,
+      obstacleText,
       reachedStructural.length
         ? `Structural objectives reached after proof: ${reachedStructural.join(', ')}.`
         : 'No structural objective beyond tactical targets was reached inside the session window.',
@@ -832,6 +1154,7 @@ function markdownReport(report: DiagnosticReport): string {
     `Boundary: ${report.boundary}`,
     `Instrument: ${report.bridgeInstrument}`,
     `Date/session: ${report.date} / ${report.session} (${report.sessionWindow.from} to ${report.sessionWindow.to})`,
+    `Context window: ${report.contextDays} days (${report.loadWindow.from} to ${report.loadWindow.to})`,
     ``,
     `## Coverage`,
     ...TIMEFRAMES.map((timeframe) => {
@@ -857,6 +1180,7 @@ function markdownReport(report: DiagnosticReport): string {
       ``,
       `### ${index + 1}. ${trace.parentFvg.direction} 15M FVG ${trace.parentFvg.lower.toFixed(2)}-${trace.parentFvg.upper.toFixed(2)} created ${trace.parentFvg.createdAt}`,
       `- Verdict: ${trace.verdict}`,
+      `- Continuation read: ${trace.continuationRead}`,
       `- Gate trace: ${formatGates(trace.rejectionGates)}`,
       `- Parent displacement: ${trace.parentDisplacement ? 'yes' : 'no'}`,
       `- Parent displacement candle: ${trace.parentDisplacementTime ?? 'none'}`,
@@ -867,12 +1191,17 @@ function markdownReport(report: DiagnosticReport): string {
       `- Entry/stop/risk: ${trace.entry?.toFixed(2) ?? 'N/A'} / ${trace.stop?.toFixed(2) ?? 'N/A'} / ${trace.riskPoints?.toFixed(2) ?? 'N/A'} pts`,
       `- T1/T2: ${trace.target1?.toFixed(2) ?? 'N/A'} / ${trace.target2?.toFixed(2) ?? 'N/A'}`,
       `- Nearest liquidity: ${trace.nearestLiquidity ? `${trace.nearestLiquidity.label} ${trace.nearestLiquidity.price.toFixed(2)}` : 'N/A'}`,
+      `- Opposing FVG obstacle before T1: ${formatObstacle(trace.opposingFvgObstacleBeforeT1)}`,
+      `- Opposing FVG reaction: ${trace.opposingFvgObstacleReaction}${trace.opposingFvgObstacleReactionTime ? ` at ${trace.opposingFvgObstacleReactionTime}` : ''}`,
+      `- Meaningful liquidity target before T1: ${trace.liquidityFirstTarget ? `${trace.liquidityFirstTarget.price.toFixed(2)} (${trace.liquidityFirstTarget.label})` : 'none before T1'}`,
+      `- Balanced path to liquidity: ${trace.balancedPathToLiquidity.status} - ${trace.balancedPathToLiquidity.reason}`,
       `- Open FVGs below at proof: ${formatInventory(trace.fvgInventoryAtProof.openBelow)}`,
       `- Failed FVGs above at proof: ${formatInventory(trace.fvgInventoryAtProof.failedAbove)}`,
       `- Open FVGs above at proof: ${formatInventory(trace.fvgInventoryAtProof.openAbove)}`,
       `- Objective ladder: ${formatObjectives(trace.objectiveLadder)}`,
       `- Story: ${storyForTrace(trace)}`,
       `- Outcome: ${trace.outcome}${trace.outcomeTime ? ` at ${trace.outcomeTime}` : ''}, one MES ${trace.oneMesPnl >= 0 ? '+' : ''}$${trace.oneMesPnl.toFixed(2)}`,
+      `- Managed outcome: ${trace.managedOutcome}${trace.managedOutcomeTime ? ` at ${trace.managedOutcomeTime}` : ''}, exit ${trace.managedExitPrice?.toFixed(2) ?? 'N/A'}, one MES ${trace.managedOneMesPnl >= 0 ? '+' : ''}$${trace.managedOneMesPnl.toFixed(2)}`,
       `- Reasons: ${trace.reasons.length ? trace.reasons.join(' ') : 'Qualified by this diagnostic heuristic.'}`,
     );
   }
@@ -893,7 +1222,7 @@ async function loadBars(args: {
       from: args.from,
       to: args.to,
       config,
-      limit: 20000,
+      limit: 100000,
     }));
   }
   return output;
@@ -905,9 +1234,10 @@ async function main(): Promise<void> {
   if (!['morning', 'lunch', 'full-rth'].includes(session)) throw new Error(`Unsupported session: ${session}`);
   const bridgeInstrument = argValue('bridge-instrument', process.env.SUPERVISOR_BRIDGE_INSTRUMENT || 'MES 09-26');
   const label = safeLabel(argValue('label', `jan7-fvg-failure-${session}`));
+  const contextDays = argNumber('context-days', 3);
   const sessionWindow = sessionWindowFor(date, session);
   const contextFrom = `${date}T09:15:00`;
-  const loadFrom = `${addDays(date, -3)}T00:00:00`;
+  const loadFrom = `${addDays(date, -contextDays)}T00:00:00`;
   const loadTo = `${date}T23:59:59`;
   const bars = await loadBars({ instrument: bridgeInstrument, from: loadFrom, to: loadTo });
   const fvgScanFrom = session === 'lunch' ? `${date}T11:30:00` : sessionWindow.from;
@@ -957,6 +1287,8 @@ async function main(): Promise<void> {
     date,
     session,
     sessionWindow,
+    contextDays,
+    loadWindow: { from: loadFrom, to: loadTo },
     source: {
       marketData: 'supabase_market_bars_read_only',
       completedHistoricalBarsOnly: true,
@@ -987,6 +1319,7 @@ async function main(): Promise<void> {
     bridgeInstrument,
     date,
     session,
+    contextDays,
     fvgInventoryAtSessionStart: {
       openBelow: fvgInventoryAtSessionStart.filter((item) => item.relationToPrice === 'below' && ['open_untouched', 'partial_touch'].includes(item.statusAtReview)).length,
       failedAbove: fvgInventoryAtSessionStart.filter((item) => item.relationToPrice === 'above' && item.statusAtReview === 'failed_inverted').length,
@@ -1006,8 +1339,32 @@ async function main(): Promise<void> {
       stop: trace.stop,
       target1: trace.target1,
       target2: trace.target2,
+      liquidityFirstTarget: trace.liquidityFirstTarget
+        ? {
+            kind: trace.liquidityFirstTarget.kind,
+            price: trace.liquidityFirstTarget.price,
+            label: trace.liquidityFirstTarget.label,
+            reachedTime: trace.liquidityFirstTarget.reachedTime,
+          }
+        : null,
+      opposingFvgObstacleBeforeT1: trace.opposingFvgObstacleBeforeT1
+        ? {
+            timeframe: trace.opposingFvgObstacleBeforeT1.timeframe,
+            direction: trace.opposingFvgObstacleBeforeT1.direction,
+            zone: `${trace.opposingFvgObstacleBeforeT1.lower.toFixed(2)}-${trace.opposingFvgObstacleBeforeT1.upper.toFixed(2)}`,
+            createdAt: trace.opposingFvgObstacleBeforeT1.createdAt,
+            statusAtReview: trace.opposingFvgObstacleBeforeT1.statusAtReview,
+          }
+        : null,
+      opposingFvgObstacleReaction: trace.opposingFvgObstacleReaction,
+      opposingFvgObstacleReactionTime: trace.opposingFvgObstacleReactionTime,
+      continuationRead: trace.continuationRead,
+      balancedPathToLiquidity: trace.balancedPathToLiquidity,
       outcome: trace.outcome,
       oneMesPnl: trace.oneMesPnl,
+      managedOutcome: trace.managedOutcome,
+      managedExitPrice: trace.managedExitPrice,
+      managedOneMesPnl: trace.managedOneMesPnl,
     })),
     diagnosticRowsThatWorkedButFailedStrictWorkflow: tradeLike
       .filter((trace) => !trace.eligible)
@@ -1020,8 +1377,32 @@ async function main(): Promise<void> {
         stop: trace.stop,
         target1: trace.target1,
         target2: trace.target2,
+        liquidityFirstTarget: trace.liquidityFirstTarget
+          ? {
+              kind: trace.liquidityFirstTarget.kind,
+              price: trace.liquidityFirstTarget.price,
+              label: trace.liquidityFirstTarget.label,
+              reachedTime: trace.liquidityFirstTarget.reachedTime,
+            }
+          : null,
+        opposingFvgObstacleBeforeT1: trace.opposingFvgObstacleBeforeT1
+          ? {
+              timeframe: trace.opposingFvgObstacleBeforeT1.timeframe,
+              direction: trace.opposingFvgObstacleBeforeT1.direction,
+              zone: `${trace.opposingFvgObstacleBeforeT1.lower.toFixed(2)}-${trace.opposingFvgObstacleBeforeT1.upper.toFixed(2)}`,
+              createdAt: trace.opposingFvgObstacleBeforeT1.createdAt,
+              statusAtReview: trace.opposingFvgObstacleBeforeT1.statusAtReview,
+            }
+          : null,
+        opposingFvgObstacleReaction: trace.opposingFvgObstacleReaction,
+        opposingFvgObstacleReactionTime: trace.opposingFvgObstacleReactionTime,
+        continuationRead: trace.continuationRead,
+        balancedPathToLiquidity: trace.balancedPathToLiquidity,
         outcome: trace.outcome,
         oneMesPnl: trace.oneMesPnl,
+        managedOutcome: trace.managedOutcome,
+        managedExitPrice: trace.managedExitPrice,
+        managedOneMesPnl: trace.managedOneMesPnl,
         failedGates: trace.rejectionGates
           .filter((gate) => gate.status === 'fail')
           .map((gate) => ({ gate: gate.gate, detail: gate.detail })),
