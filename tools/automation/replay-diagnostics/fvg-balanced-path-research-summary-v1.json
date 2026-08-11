@@ -21,6 +21,8 @@
     "Stop is the nearest protected 5M structure for the active side.",
     "T1 and T2 are calculated from actual entry-to-stop risk.",
     "Balanced price context is not a trigger; it explains whether the path can deliver cleanly to real liquidity before T1.",
+    "FVG/objective zones must not be labeled as liquidity. Real liquidity means prior swing/session/equal high-low; FVG zones are objective/reaction context.",
+    "Later same-direction FVG proof inside the same move is continuation/management from the first valid campaign unless an explicit reset/add-on rule exists.",
     "Opposing FVG before T1 is not an automatic downgrade if liquidity sits between entry and T1, gets reached, and no opposing FVG defends first."
   ],
   "balancedPathToLiquidityDefinition": {
@@ -28,29 +30,32 @@
     "requiredFacts": [
       "candidate already passed the clean completed-plan workflow",
       "first real-liquidity objective sits between entry and T1",
+      "FVG objectives are tracked separately from real-liquidity objectives",
       "that liquidity objective is reached during the replay window",
       "no opposing FVG defends before liquidity delivery"
     ],
-    "meaning": "The trade is delivering through a balanced/rebalanced path to real liquidity, so an opposing FVG before T1 should be managed as context instead of automatically downgrading the valid FVG rejection."
+    "meaning": "The trade is delivering through a balanced/rebalanced path to a real liquidity draw or separately labeled FVG objective. FVG context must not be mislabeled as liquidity."
   },
   "balancedPathContinuationRule": {
     "name": "FvgBalancedPathContinuation",
     "status": "research_only_supporting_rule",
-    "definition": "If price breaks out of a balanced/rebalanced range and no defended opposing FVG appears before the next real-liquidity or open-FVG objective, the move can travel cleanly through that path. This supports continuation and runner management after a valid FVG proof already exists.",
+    "definition": "If price breaks out of a balanced/rebalanced range and no defended opposing FVG appears before the next real-liquidity draw or separately labeled open-FVG objective, the move can travel cleanly through that path. This supports continuation and runner management after a valid FVG proof already exists.",
     "requiredFacts": [
       "15M parent FVG setup is valid",
       "completed 5M wick-defense/proof exists",
       "nearest protected 5M structure stop is known",
-      "objective ladder has a real liquidity or open-FVG objective ahead",
+      "objective ladder has a real-liquidity draw or separately labeled open-FVG objective ahead",
+      "FVG/objective zones are not labeled as liquidity",
       "no opposing FVG/HTF obstacle defends before that objective"
     ],
     "invalidation": [
       "used without 15M parent FVG plus completed 5M proof",
       "opposing FVG/HTF obstacle defends before the objective",
+      "FVG/objective zone is mislabeled as liquidity",
       "objective was already reached before entry",
       "balanced path is treated as a standalone trigger"
     ],
-    "managementUse": "T1/T2 remain risk-based. The first real liquidity/open-FVG objective becomes management and runner context, especially when the balanced path suggests price can travel cleanly."
+    "managementUse": "T1/T2 remain risk-based. The first real liquidity draw or separately labeled open-FVG objective becomes management and runner context, especially when the balanced path suggests price can travel cleanly."
   },
   "balancedPathContinuationValidation": [
     {
@@ -63,7 +68,7 @@
     },
     {
       "date": "2026-01-15",
-      "result": "Keeps both reviewed shorts valid with first liquidity reached before tactical T1 and no defended opposing FVG before delivery."
+      "result": "Keeps Trade 1 as the primary reviewed short and treats the later valid short as continuation/management from Trade 1. The human-reviewed real liquidity draw is the 7100 zone; nearby FVG/objective areas stay labeled as context."
     }
   ],
   "htfMapLesson": {
@@ -87,12 +92,13 @@
     ],
     "ladderOrder": [
       "nearest opposing FVG or HTF reaction obstacle before T1",
+      "separately labeled FVG objective or reaction zone before real liquidity",
       "first real liquidity objective between entry and T1",
       "T1 from actual entry-to-protected-stop risk",
       "T2 from actual entry-to-protected-stop risk",
       "runner liquidity or larger HTF objective after T2"
     ],
-    "meaning": "The model should remember open FVGs above and below price. A clean continuation can run through balanced price toward the next real liquidity target, but an older opposing FVG that defends before delivery can kill or downgrade the trade.",
+    "meaning": "The model should remember open FVGs above and below price without calling them liquidity. A clean continuation can run through balanced price toward the next real liquidity target or separately labeled FVG objective, but an older opposing FVG that defends before delivery can kill or downgrade the trade.",
     "jan7Lesson": "The Jan 7 morning long was not a clean continuation because an older opposing FVG defended before T1. The liquidity ladder alone was not enough.",
     "jan13Lesson": "The Jan 13 shorts stayed valid because the path to first liquidity was balanced and the opposing FVG context did not defend before liquidity delivery."
   },
@@ -101,7 +107,7 @@
     "rule": "Balanced market structure is context, not a trigger.",
     "validUse": "If price has already rebalanced the path between entry and the next real liquidity pool, the model can score the trade as a cleaner delivery path when the FVG rejection and 5M proof are valid.",
     "invalidUse": "Balanced price alone cannot create a trade, override a failed 15M parent setup, or replace completed 5M wick-defense proof.",
-    "targetBehavior": "When the first real liquidity objective is closer than T1, mark it as a management objective before the app-style R targets."
+    "targetBehavior": "When the first real liquidity objective or separately labeled FVG objective is closer than T1, mark it as management context before app-style R targets without calling FVG liquidity."
   },
   "protectedStopAnchoring": {
     "included": true,
@@ -119,6 +125,8 @@
     "gateTraceRule": "Every rejected candidate needs a gate trace naming the exact failed gate before the model definition is changed.",
     "holidayBridgeContextRule": "A Friday after a Thursday federal holiday may be tagged holiday_bridge_thin_participation for research only. It must not block, approve, publish, rank, or alter trades by itself.",
     "morningLiquidityMemoryRule": "Lunch/PM research must preserve same-day morning/RTH liquidity levels and open FVG inventory; the afternoon model cannot forget what the morning created or left behind.",
+    "liquidityLabelIntegrityRule": "Real liquidity means prior swing/session/equal high-low. FVG zones are objective/reaction/obstacle context and must not be called liquidity.",
+    "sameMoveContinuationManagementRule": "After the first valid same-direction FVG trade in an active move, later same-direction FVG proof is continuation/management context unless a reset/add-on rule is explicitly approved.",
     "fiveMinuteStandaloneBoundary": "A standalone 5M FVG without a valid 15M parent displacement FVG is a separate research idea or no-trade. It is not the FairValueGapResearchModel."
   },
   "controlCases": [
@@ -207,6 +215,17 @@
         "label": "prior 5M swing low liquidity from 2026-01-15T12:40:00",
         "reachedTime": "2026-01-15T14:05:00"
       },
+      "humanReviewCorrection": "Trade 1 is the primary Jan 15 short. The 7117 area is FVG/objective/management context, not first real liquidity. The real delivery draw is the 7100 zone.",
+      "humanReviewedRealLiquidityDraw": {
+        "priceZone": "7100",
+        "label": "first real liquidity/delivery draw after balanced path",
+        "source": "human_visual_review"
+      },
+      "fvgObjectiveBeforeRealLiquidity": {
+        "price": 7117.0,
+        "label": "FVG/objective context, not liquidity"
+      },
+      "campaignRole": "primary_trade_1",
       "opposingFvgObstacleReaction": "obstacle_reached_then_continued",
       "continuationRead": "balanced_path_to_liquidity_valid",
       "standardOutcome": "T1",
@@ -230,6 +249,13 @@
         "label": "RTH low liquidity before proof",
         "reachedTime": "2026-01-15T15:00:00"
       },
+      "humanReviewCorrection": "Trade 2 is valid, but it is continuation/management from Trade 1 unless a reset/add-on rule is approved. The real liquidity draw remains the 7100 zone; nearby 5M/15M FVG areas are objective/reaction context, not liquidity.",
+      "humanReviewedRealLiquidityDraw": {
+        "priceZone": "7100",
+        "label": "same balanced-path liquidity draw from Trade 1 campaign",
+        "source": "human_visual_review"
+      },
+      "campaignRole": "continuation_management_from_trade_1",
       "opposingFvgObstacleReaction": "obstacle_reached_then_continued",
       "continuationRead": "balanced_path_to_liquidity_valid",
       "standardOutcome": "T1",
@@ -238,9 +264,14 @@
       "managedOneMesPnl": 37.5
     }
   ],
+  "lockedReviewNotes": [
+    "Jan 15 Trade 1 is the primary short campaign.",
+    "Jan 15 Trade 2 is valid continuation/management from Trade 1 by default.",
+    "7100 is the human-reviewed real liquidity/delivery draw for the Jan 15 short campaign.",
+    "7117/7101.25 style nearby zones may remain in raw ladders but must be displayed as FVG/objective/management context when visual review says they are not real liquidity."
+  ],
   "openQuestions": [
-    "Visually review Jan 15 to confirm the 14:00 and 14:45 shorts match the intended 15M parent FVG and 5M wick-defense workflow.",
-    "Decide whether the first eligible proof in a same-session short campaign should be the primary candidate and later same-side rows should become management or re-entry context.",
+    "Future replay should preserve the raw ladder but display human-reviewed label corrections so FVG objectives are not called liquidity.",
     "Continue January review one day at a time before installing anything live."
   ]
 }

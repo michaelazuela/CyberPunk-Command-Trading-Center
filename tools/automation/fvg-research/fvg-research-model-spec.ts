@@ -94,24 +94,27 @@ export const FVG_RESEARCH_MODEL_DEFINITIONS: FvgResearchModelDefinition[] = [
     family: FVG_RESEARCH_MODEL_FAMILY,
     submodel: 'FvgBalancedPathContinuation',
     purpose:
-      'Classify continuation/runner quality when a valid FVG entry breaks out of a balanced path toward real liquidity or an open FVG objective.',
+      'Classify continuation/runner quality when a valid FVG entry breaks out of a balanced path toward real liquidity while tracking open FVG objectives separately.',
     requiredEvidence: [
       'A valid FVG entry already passed the 15M parent setup and completed 5M proof workflow.',
       'FVG inventory and objective ladder are available for the review window.',
+      'Real liquidity is labeled separately from FVG context: liquidity is prior swing/session/equal high-low; FVGs are objective/reaction context, not liquidity.',
       'Price breaks from a balanced or rebalanced range in the trade direction.',
-      'The first real liquidity or open-FVG objective is ahead of entry and reachable before or around T1.',
+      'The first real liquidity draw or separately labeled open-FVG objective is ahead of entry and reachable before or around T1.',
       'No opposing FVG/HTF obstacle defends before that objective is delivered.',
+      'Later same-direction candidates in the same active move are continuation/management context unless a reset or add-on rule is explicitly approved.',
     ],
     invalidation: [
       'Balanced path is used as a standalone entry trigger.',
       'The 15M parent FVG or completed 5M proof is missing.',
       'An opposing FVG/HTF obstacle defends before the first objective.',
-      'The liquidity/open-FVG objective was already gone before entry.',
+      'An FVG/objective zone is mislabeled as liquidity.',
+      'The liquidity draw or separately labeled open-FVG objective was already gone before entry.',
     ],
     entry: 'No standalone entry. This rule only supports a valid FVG proof already found.',
     stop: 'No standalone stop. Stop remains nearest protected 5M structure from the entry model.',
     targets:
-      'T1/T2 remain risk-based. First liquidity/open-FVG objective becomes management and runner context.',
+      'T1/T2 remain risk-based. First real liquidity and separately labeled open-FVG objectives become management and runner context.',
     publishBoundary: FVG_RESEARCH_BOUNDARY,
   },
 ];

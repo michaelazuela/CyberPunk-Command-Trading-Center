@@ -1,4 +1,4 @@
-# Jan 7 FVG Failure Diagnostic Trace
+# Jan 15 FVG Balanced Path Diagnostic Trace
 
 Boundary: research_only_no_live_scanner_discord_or_trading_rule_change
 Instrument: MES 09-26
@@ -20,6 +20,8 @@ Context window: 120 days (2025-09-17T00:00:00 to 2026-01-15T23:59:59)
   - Required facts: 15M parent FVG setup is valid. | Completed 5M wick-defense/proof exists. | Nearest protected 5M structure stop is known. | Objective ladder has a real liquidity or open-FVG objective ahead. | No opposing FVG/HTF obstacle defends before that objective.
   - Invalidation: Used without 15M parent FVG plus completed 5M proof. | Opposing FVG/HTF obstacle defends before the objective. | The objective was already reached before entry. | Balanced path is treated as a standalone trigger.
   - Standalone trigger: no
+  - Label rule: real liquidity is prior swing/session/equal high-low. FVG zones are objective/reaction context and must not be called liquidity.
+  - Same-move campaign rule: later same-direction proof after the first valid FVG trade is continuation/management unless a reset or add-on rule is explicitly approved.
 
 ## FVG Inventory At Session Start
 - Open below: 5m LONG 7112.25-7113.00 created 2026-01-15T09:10:00 status partial_touch; 15m LONG 7109.25-7110.25 created 2026-01-15T09:00:00 status partial_touch; 15m LONG 7098.25-7100.75 created 2026-01-15T04:45:00 status partial_touch; 5m LONG 7098.50-7100.00 created 2026-01-15T04:30:00 status partial_touch; 120m LONG 7092.50-7100.00 created 2026-01-15T08:00:00 status open_untouched; 60m LONG 7092.50-7099.50 created 2026-01-15T06:00:00 status open_untouched; 5m LONG 7094.75-7096.00 created 2026-01-15T04:20:00 status open_untouched; 15m LONG 7091.75-7096.00 created 2026-01-15T04:30:00 status open_untouched; 5m LONG 7093.75-7094.75 created 2026-01-15T04:15:00 status open_untouched; 60m LONG 7088.00-7089.75 created 2026-01-15T05:00:00 status open_untouched
@@ -53,6 +55,7 @@ Context window: 120 days (2025-09-17T00:00:00 to 2026-01-15T23:59:59)
 - Outcome: T1 at 2026-01-15T14:30:00, one MES +$57.50
 - Managed outcome: LQ1 at 2026-01-15T14:05:00, exit 7117.00, one MES +$26.25
 - Reasons: Qualified by this diagnostic heuristic.
+- Human review correction: Trade 1 is the primary Jan 15 short. The earlier 7117 area is FVG/objective/management context, not first real liquidity. The real delivery draw for this short is the 7100 zone. Future reports must not label the nearby FVG/objective area as liquidity.
 
 ### 2. SHORT 15M FVG 7122.25-7123.25 created 2026-01-15T14:15:00
 - Verdict: diagnostic_only_not_valid_under_clean_workflow
@@ -131,6 +134,7 @@ Context window: 120 days (2025-09-17T00:00:00 to 2026-01-15T23:59:59)
 - Outcome: T1 at 2026-01-15T15:25:00, one MES +$101.25
 - Managed outcome: LQ1 at 2026-01-15T15:00:00, exit 7101.25, one MES +$37.50
 - Reasons: No 15M acceptance through the parent FVG was found inside this session window.
+- Human review correction: Trade 2 is valid, but it should be treated as continuation/management from Trade 1 by default, not a separate fresh campaign unless a reset or add-on rule is approved. The real liquidity draw remains the 7100 zone; nearby 5M/15M FVG areas are objective/reaction context, not liquidity.
 
 ### 5. SHORT 15M FVG 7100.00-7100.75 created 2026-01-15T15:30:00
 - Verdict: diagnostic_only_not_valid_under_clean_workflow
