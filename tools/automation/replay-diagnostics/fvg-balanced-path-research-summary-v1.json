@@ -9,7 +9,9 @@
     "tools/automation/replay-diagnostics/fvg-next-review-jan15-v1.md",
     "tools/automation/replay-diagnostics/fvg-balanced-path-rule-jan7-v1.md",
     "tools/automation/replay-diagnostics/fvg-balanced-path-rule-jan13-v1.md",
-    "tools/automation/replay-diagnostics/fvg-balanced-path-rule-jan15-v1.md"
+    "tools/automation/replay-diagnostics/fvg-balanced-path-rule-jan15-v1.md",
+    "tools/automation/replay-diagnostics/fvg-jan16-full-rth-review-v1.md",
+    "tools/automation/replay-diagnostics/fvg-jan16-human-review-lock-v1.md"
   ],
   "modelLane": "FairValueGapResearchModel",
   "workflow": [
@@ -69,6 +71,10 @@
     {
       "date": "2026-01-15",
       "result": "Keeps Trade 1 as the primary reviewed short and treats the later valid short as continuation/management from Trade 1. The human-reviewed real liquidity draw is the 7100 zone; nearby FVG/objective areas stay labeled as context."
+    },
+    {
+      "date": "2026-01-16",
+      "result": "Keeps only Trade 1 as valid. The human-reviewed 15M short FVG parent is the yellow-box zone around 7100-7103, with short entry near 7099.75/7099. Trades 2 and 3 are rejected from this model because they do not have valid 15M parent FVG support."
     }
   ],
   "htfMapLesson": {
@@ -262,13 +268,45 @@
       "oneMesPnl": 101.25,
       "managedOutcome": "LQ1",
       "managedOneMesPnl": 37.5
+    },
+    {
+      "date": "2026-01-16",
+      "session": "full-rth",
+      "direction": "SHORT",
+      "parentFvg": "7100.50-7103.00",
+      "parentCreatedAt": "2026-01-16T10:15:00",
+      "proofTime": "2026-01-16T12:00:00",
+      "entry": 7099.75,
+      "stop": 7114.75,
+      "target1": 7077.25,
+      "target2": 7069.75,
+      "liquidityFirstTarget": {
+        "price": 7088.0,
+        "label": "prior 5M swing low liquidity from 2026-01-16T10:05:00",
+        "reachedTime": "2026-01-16T16:00:00"
+      },
+      "humanReviewCorrection": "Trade 1 is valid. The visible 15M yellow-box short FVG/rejection area is the parent context. Trade 2 and Trade 3 from the raw diagnostic should not remain review candidates because they lack valid 15M parent FVG support under the locked workflow.",
+      "campaignRole": "primary_trade_1",
+      "opposingFvgObstacleBeforeT1": {
+        "timeframe": "15m",
+        "direction": "LONG",
+        "zone": "7091.25-7094.00",
+        "createdAt": "2026-01-16T11:30:00",
+        "humanReviewUse": "context_only_not_a_reason_to_promote_trade_2_or_3"
+      },
+      "continuationRead": "valid_primary_short_with_obstacle_context",
+      "standardOutcome": "SessionClose",
+      "oneMesPnl": 52.5,
+      "managedOutcome": "LQ1",
+      "managedOneMesPnl": 58.75
     }
   ],
   "lockedReviewNotes": [
     "Jan 15 Trade 1 is the primary short campaign.",
     "Jan 15 Trade 2 is valid continuation/management from Trade 1 by default.",
     "7100 is the human-reviewed real liquidity/delivery draw for the Jan 15 short campaign.",
-    "7117/7101.25 style nearby zones may remain in raw ladders but must be displayed as FVG/objective/management context when visual review says they are not real liquidity."
+    "7117/7101.25 style nearby zones may remain in raw ladders but must be displayed as FVG/objective/management context when visual review says they are not real liquidity.",
+    "Jan 16 Trade 1 is valid. Trades 2 and 3 are rejected from the FairValueGapResearchModel review set because they do not have valid 15M parent FVG support."
   ],
   "openQuestions": [
     "Future replay should preserve the raw ladder but display human-reviewed label corrections so FVG objectives are not called liquidity.",
