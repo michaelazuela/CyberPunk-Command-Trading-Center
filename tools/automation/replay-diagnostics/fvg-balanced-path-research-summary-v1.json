@@ -1,0 +1,210 @@
+{
+  "reportType": "fvg_balanced_path_research_summary",
+  "version": 1,
+  "boundary": "research_only_no_live_scanner_discord_supabase_or_trading_rule_change",
+  "bridgeInstrument": "MES 09-26",
+  "createdFrom": [
+    "tools/automation/replay-diagnostics/fvg-balanced-path-jan7-smoke-v1.md",
+    "tools/automation/replay-diagnostics/fvg-balanced-path-jan13-v1.md",
+    "tools/automation/replay-diagnostics/fvg-next-review-jan15-v1.md"
+  ],
+  "modelLane": "FairValueGapResearchModel",
+  "workflow": [
+    "HTF map first: 60M, 120M, and 240M provide support, obstacle, draw, or caution only.",
+    "15M parent setup: a real 15M displacement must create the parent FVG.",
+    "Drill to 5M: price must return into the 15M FVG area or a clean nested aligned 5M FVG.",
+    "Completed 5M wick defense: completed 5M candle must test and reject the FVG area without accepting through it against the trade.",
+    "Entry is the completed 5M wick-defense or confirmation close.",
+    "Stop is the nearest protected 5M structure for the active side.",
+    "T1 and T2 are calculated from actual entry-to-stop risk.",
+    "Balanced price context is not a trigger; it explains whether the path can deliver cleanly to real liquidity before T1.",
+    "Opposing FVG before T1 is not an automatic downgrade if liquidity sits between entry and T1, gets reached, and no opposing FVG defends first."
+  ],
+  "balancedPathToLiquidityDefinition": {
+    "status": "balanced_path_to_liquidity",
+    "requiredFacts": [
+      "candidate already passed the clean completed-plan workflow",
+      "first real-liquidity objective sits between entry and T1",
+      "that liquidity objective is reached during the replay window",
+      "no opposing FVG defends before liquidity delivery"
+    ],
+    "meaning": "The trade is delivering through a balanced/rebalanced path to real liquidity, so an opposing FVG before T1 should be managed as context instead of automatically downgrading the valid FVG rejection."
+  },
+  "htfMapLesson": {
+    "included": true,
+    "timeframes": ["60M", "120M", "240M"],
+    "role": "map_support_obstacle_draw_or_caution_only",
+    "rule": "HTF FVGs, displacement zones, and older imbalance areas can explain support, resistance, targets, or defended obstacles, but they do not approve a trade by themselves.",
+    "executionBoundary": "The 15M parent FVG plus completed 5M wick-defense/proof remains the research execution workflow.",
+    "contractRule": "Research must use the active chart contract, currently MES 09-26, so chart review and replay prices stay aligned."
+  },
+  "fvgInventoryAndObjectiveLadder": {
+    "included": true,
+    "inventoryTimeframes": ["5M", "15M", "60M", "120M", "240M"],
+    "trackedFvgStates": [
+      "open",
+      "partial_touch",
+      "filled",
+      "defended",
+      "failed",
+      "reclaimed"
+    ],
+    "ladderOrder": [
+      "nearest opposing FVG or HTF reaction obstacle before T1",
+      "first real liquidity objective between entry and T1",
+      "T1 from actual entry-to-protected-stop risk",
+      "T2 from actual entry-to-protected-stop risk",
+      "runner liquidity or larger HTF objective after T2"
+    ],
+    "meaning": "The model should remember open FVGs above and below price. A clean continuation can run through balanced price toward the next real liquidity target, but an older opposing FVG that defends before delivery can kill or downgrade the trade.",
+    "jan7Lesson": "The Jan 7 morning long was not a clean continuation because an older opposing FVG defended before T1. The liquidity ladder alone was not enough.",
+    "jan13Lesson": "The Jan 13 shorts stayed valid because the path to first liquidity was balanced and the opposing FVG context did not defend before liquidity delivery."
+  },
+  "balancedMarketContext": {
+    "included": true,
+    "rule": "Balanced market structure is context, not a trigger.",
+    "validUse": "If price has already rebalanced the path between entry and the next real liquidity pool, the model can score the trade as a cleaner delivery path when the FVG rejection and 5M proof are valid.",
+    "invalidUse": "Balanced price alone cannot create a trade, override a failed 15M parent setup, or replace completed 5M wick-defense proof.",
+    "targetBehavior": "When the first real liquidity objective is closer than T1, mark it as a management objective before the app-style R targets."
+  },
+  "protectedStopAnchoring": {
+    "included": true,
+    "rule": "Stop must anchor to the nearest protected 5M structure for the active side.",
+    "shortStop": "For a short, use the nearest protected 5M swing high or rejection structure above entry that invalidates the short idea.",
+    "longStop": "For a long, use the nearest protected 5M swing low or rejection structure below entry that invalidates the long idea.",
+    "targetMath": "T1 and T2 must be recalculated from the actual entry-to-protected-stop risk."
+  },
+  "antiDriftRulesFromReview": {
+    "included": true,
+    "parentDisplacementNuance": "A valid 15M FVG parent may come from an impulse/displacement candle that is the left, middle, or final confirming candle of the three-candle FVG formation. Do not force only the final FVG-confirming candle to carry the displacement read when the imbalance was clearly created by the impulse leg.",
+    "sameParentCampaignRule": "When multiple same-side FVG candidates derive from the same parent displacement, the first valid completed 5M proof is the research trade candidate. Later same-parent rows are management or re-entry context unless a reset rule is explicitly approved.",
+    "failedParentRule": "If the 15M parent FVG or aligned nested 5M FVG accepts through against the trade direction before proof, the continuation setup is dead. Later wick-defense-looking candles cannot revive that failed parent.",
+    "sessionWindowRule": "Research scripts must use explicit session windows and must report the window used. Hidden morning-only cutoffs such as 12:30, 13:00, or 13:30 must not decide afternoon/lunch research.",
+    "gateTraceRule": "Every rejected candidate needs a gate trace naming the exact failed gate before the model definition is changed.",
+    "holidayBridgeContextRule": "A Friday after a Thursday federal holiday may be tagged holiday_bridge_thin_participation for research only. It must not block, approve, publish, rank, or alter trades by itself.",
+    "morningLiquidityMemoryRule": "Lunch/PM research must preserve same-day morning/RTH liquidity levels and open FVG inventory; the afternoon model cannot forget what the morning created or left behind.",
+    "fiveMinuteStandaloneBoundary": "A standalone 5M FVG without a valid 15M parent displacement FVG is a separate research idea or no-trade. It is not the FairValueGapResearchModel."
+  },
+  "controlCases": [
+    {
+      "date": "2026-01-07",
+      "purpose": "negative control",
+      "result": "The morning long was not rescued by the balanced-path rule because an older opposing FVG defended before T1.",
+      "trade": {
+        "session": "full-rth",
+        "direction": "LONG",
+        "proofTime": "2026-01-07T10:55:00",
+        "entry": 7104.0,
+        "stop": 7089.0,
+        "target1": 7126.5,
+        "target2": 7134.0,
+        "liquidityFirstTarget": 7111.0,
+        "standardOutcome": "Stop",
+        "oneMesPnl": -75.0,
+        "managedOutcome": "LQ1",
+        "managedOneMesPnl": 35.0,
+        "continuationRead": "obstacle_defended_continuation_failed",
+        "balancedPathToLiquidity": "not_balanced_path_to_liquidity"
+      }
+    }
+  ],
+  "proofCases": [
+    {
+      "date": "2026-01-13",
+      "session": "full-rth",
+      "direction": "SHORT",
+      "parentFvg": "7127.75-7130.75",
+      "parentCreatedAt": "2026-01-13T10:00:00",
+      "proofTime": "2026-01-13T12:00:00",
+      "entry": 7125.25,
+      "stop": 7140.25,
+      "target1": 7102.75,
+      "target2": 7095.25,
+      "liquidityFirstTarget": {
+        "price": 7107.0,
+        "label": "prior 5M swing low liquidity from 2026-01-13T10:05:00",
+        "reachedTime": "2026-01-13T13:00:00"
+      },
+      "opposingFvgObstacleReaction": "obstacle_reached_then_continued",
+      "continuationRead": "balanced_path_to_liquidity_valid",
+      "standardOutcome": "T1",
+      "oneMesPnl": 112.5,
+      "managedOutcome": "LQ1",
+      "managedOneMesPnl": 91.25
+    },
+    {
+      "date": "2026-01-13",
+      "session": "full-rth",
+      "direction": "SHORT",
+      "parentFvg": "7121.00-7124.75",
+      "parentCreatedAt": "2026-01-13T10:15:00",
+      "proofTime": "2026-01-13T12:20:00",
+      "entry": 7118.25,
+      "stop": 7137.0,
+      "target1": 7090.25,
+      "target2": 7080.75,
+      "liquidityFirstTarget": {
+        "price": 7107.0,
+        "label": "prior 5M swing low liquidity from 2026-01-13T10:05:00",
+        "reachedTime": "2026-01-13T13:00:00"
+      },
+      "opposingFvgObstacleReaction": "obstacle_reached_then_continued",
+      "continuationRead": "balanced_path_to_liquidity_valid",
+      "standardOutcome": "T1",
+      "oneMesPnl": 140.0,
+      "managedOutcome": "LQ1",
+      "managedOneMesPnl": 56.25
+    },
+    {
+      "date": "2026-01-15",
+      "session": "full-rth",
+      "direction": "SHORT",
+      "parentFvg": "7122.75-7124.25",
+      "parentCreatedAt": "2026-01-15T12:45:00",
+      "proofTime": "2026-01-15T14:00:00",
+      "entry": 7122.25,
+      "stop": 7130.0,
+      "target1": 7110.75,
+      "target2": 7106.75,
+      "liquidityFirstTarget": {
+        "price": 7117.0,
+        "label": "prior 5M swing low liquidity from 2026-01-15T12:40:00",
+        "reachedTime": "2026-01-15T14:05:00"
+      },
+      "opposingFvgObstacleReaction": "obstacle_reached_then_continued",
+      "continuationRead": "balanced_path_to_liquidity_valid",
+      "standardOutcome": "T1",
+      "oneMesPnl": 57.5,
+      "managedOutcome": "LQ1",
+      "managedOneMesPnl": 26.25
+    },
+    {
+      "date": "2026-01-15",
+      "session": "full-rth",
+      "direction": "SHORT",
+      "parentFvg": "7112.50-7113.00",
+      "parentCreatedAt": "2026-01-15T14:45:00",
+      "proofTime": "2026-01-15T14:45:00",
+      "entry": 7108.75,
+      "stop": 7122.25,
+      "target1": 7088.5,
+      "target2": 7081.75,
+      "liquidityFirstTarget": {
+        "price": 7101.25,
+        "label": "RTH low liquidity before proof",
+        "reachedTime": "2026-01-15T15:00:00"
+      },
+      "opposingFvgObstacleReaction": "obstacle_reached_then_continued",
+      "continuationRead": "balanced_path_to_liquidity_valid",
+      "standardOutcome": "T1",
+      "oneMesPnl": 101.25,
+      "managedOutcome": "LQ1",
+      "managedOneMesPnl": 37.5
+    }
+  ],
+  "openQuestions": [
+    "Visually review Jan 15 to confirm the 14:00 and 14:45 shorts match the intended 15M parent FVG and 5M wick-defense workflow.",
+    "Decide whether the first eligible proof in a same-session short campaign should be the primary candidate and later same-side rows should become management or re-entry context.",
+    "Continue January review one day at a time before installing anything live."
+  ]
+}
