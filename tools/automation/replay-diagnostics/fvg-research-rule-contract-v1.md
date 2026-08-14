@@ -14,6 +14,7 @@ Mandatory workflow: every FVG review starts with the HTF/15M story and active FV
 
 1. HTF map first: 60M, 120M, and 240M provide support, obstacle, draw, or caution only.
 2. 15M parent setup: a real 15M displacement must create the parent FVG.
+   - Parent timestamp discipline: the parent time is the 15M candle/formation that created the FVG zone. A later candle that trades through, rejects, expands away from, or confirms the zone is proof/continuation context, not the parent.
 3. Drill to 5M: price must return into the 15M FVG area or a clean nested/aligned 5M FVG.
 4. Completed 5M wick defense: a completed 5M candle must test and reject/defend the FVG area without accepting through it against the trade.
 5. Entry: the default research entry is the completed 5M wick-defense or confirmation close.
@@ -116,6 +117,7 @@ Meaning:
 
 - Do not call FVG/objective zones liquidity. Real liquidity means prior swing liquidity, session high/low liquidity, or equal high/low liquidity.
 - Do not promote a row without a valid 15M parent FVG.
+- Do not drift the parent timestamp forward. Parent means the 15M FVG creation/formation time, not the later continuation or confirmation candle.
 - Do not classify a rule-matching trade as a human-review exception. If it matches the contract, it is rule-based research.
 - Do not treat HTF context as execution authority.
 - Do not treat balanced path as a trigger.
@@ -129,5 +131,6 @@ Meaning:
 - 2026-01-13: valid short case. 12:00 rejection candidate binds to 15M FVG failure/breakdown continuation with balanced path to liquidity. Later wide-risk row is blocked or treated as management context.
 - 2026-01-15: valid short case. Trade 1 is the primary campaign. Trade 2 is continuation/management from Trade 1 unless a reset/add-on rule is approved later.
 - 2026-01-16: valid Trade 1 only. Other raw rows are rejected because they lack valid 15M parent FVG support.
+- 2026-01-20: valid Trade 4 correction. The parent FVG is the 12:45 15M zone around 6983-6991. The 13:00 long-wick bearish candle is continuation/acceptance through that already-created parent, not the parent creation candle.
 - 2026-01-21: valid long case. 9:30 15M parent FVG plus tiny nested 5M FVG/wick defense around 6957 is a rule-based 15M FVG Hold + Nested 5M FVG Defense Continuation.
 - 2026-01-22: valid FVG stack defense long story. Late short rows are invalid because price defended the final/lowest 15M bullish FVG in the stack and never accepted below it with clean 5M bearish proof.

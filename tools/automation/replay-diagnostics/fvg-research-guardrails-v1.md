@@ -12,6 +12,8 @@ Every FVG review or replay must follow this order:
 
 1. Build the HTF and 15M story first.
 2. Identify the active 15M parent FVG, FVG stack, or failed FVG.
+   - The parent FVG timestamp is the candle/formation that created the FVG zone.
+   - Do not relabel a later candle that trades through, expands away from, or confirms the zone as the parent.
 3. Decide whether the market is continuing, failing, balanced, or reacting into an obstacle.
 4. Drill into 5M only after the 15M story is valid.
 5. Require completed 5M proof before a research trade is valid.
@@ -67,6 +69,7 @@ Before scoring continuation, check for a defended opposing FVG or HTF reaction z
 ## Anti-Drift Rules
 
 - Do not begin with raw 5M rows. Begin with HTF/15M story.
+- Do not drift the parent timestamp forward. Parent means the 15M FVG creation/formation time, not the later 15M or 5M continuation candle.
 - Do not promote a trade without a valid 15M parent FVG, failed FVG, or FVG stack defense.
 - Do not call FVG/objective zones liquidity. Real liquidity means prior swing liquidity, session high/low liquidity, or equal high/low liquidity.
 - Do not use balanced path as a standalone trigger.

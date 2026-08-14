@@ -26,7 +26,10 @@ details without mixing this research lane into older model logic.
     usable; extra long/short rows without supporting 15M parent FVG are rejected.
 - `tools/automation/replay-diagnostics/fvg-jan20-full-rth-preview-v1.md`
   - Jan 20 preview package.
-  - Current read: diagnostic evidence only until visually confirmed.
+  - Human correction: Trade 4 is valid as a rule-based FVG failure/continuation
+    short. The parent FVG is the 12:45 15M zone around 6983-6991; the 13:00
+    long-wick bearish candle is continuation/acceptance through that already
+    created parent, not the parent creation candle. Trade 6 remains separate.
 - `tools/automation/replay-diagnostics/fvg-jan21-full-rth-preview-v1.md`
   - Jan 21 preview package.
   - Human correction: valid trade is the 9:30 15M parent FVG long with tiny

@@ -6,6 +6,7 @@
   "mandatoryWorkflow": [
     "build_htf_15m_story_first",
     "identify_parent_fvg_failed_fvg_or_fvg_stack",
+    "lock_parent_timestamp_to_15m_fvg_creation_not_later_continuation_candle",
     "classify_continuation_failure_balance_or_obstacle",
     "drill_to_5m_only_after_15m_story_is_valid",
     "require_completed_5m_proof",
@@ -14,6 +15,7 @@
     "treat_liquidity_open_fvg_htf_reaction_and_balanced_path_as_management_context"
   ],
   "parentSetupAuthority": "15M",
+  "parentTimestampDiscipline": "Parent time is the 15M candle/formation that created the FVG zone. Later candles that trade through, reject, expand away from, or confirm the zone are proof or continuation context, not the parent.",
   "executionAuthority": "5M",
   "htfRole": "map_support_obstacle_draw_caution_only",
   "runtimeTouched": false,
@@ -109,6 +111,7 @@
   "antiDriftLanguage": {
     "doNotCallFvgLiquidity": true,
     "valid15mParentRequired": true,
+    "doNotDriftParentTimestampForward": true,
     "ruleMatchesAreNotHumanReviewExceptions": true,
     "htfIsNotExecutionAuthority": true,
     "balancedPathIsNotTrigger": true,
@@ -136,6 +139,11 @@
       "date": "2026-01-16",
       "status": "valid_trade_1_only",
       "binding": "15m_fvg_failure_breakdown_continuation"
+    },
+    {
+      "date": "2026-01-20",
+      "status": "valid_trade_4_parent_timestamp_corrected",
+      "binding": "12_45_15m_parent_fvg_13_00_continuation_acceptance_not_parent_creation"
     },
     {
       "date": "2026-01-21",
