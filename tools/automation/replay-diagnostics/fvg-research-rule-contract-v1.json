@@ -2,6 +2,17 @@
   "version": "fvg-research-rule-contract-v1",
   "boundary": "research_only_no_live_scanner_discord_supabase_or_trading_rule_change",
   "modelLane": "FairValueGapResearchModel",
+  "portableGuardrail": "tools/automation/replay-diagnostics/fvg-research-guardrails-v1.md",
+  "mandatoryWorkflow": [
+    "build_htf_15m_story_first",
+    "identify_parent_fvg_failed_fvg_or_fvg_stack",
+    "classify_continuation_failure_balance_or_obstacle",
+    "drill_to_5m_only_after_15m_story_is_valid",
+    "require_completed_5m_proof",
+    "anchor_stop_to_nearest_protected_5m_structure",
+    "calculate_t1_t2_from_actual_entry_stop_risk",
+    "treat_liquidity_open_fvg_htf_reaction_and_balanced_path_as_management_context"
+  ],
   "parentSetupAuthority": "15M",
   "executionAuthority": "5M",
   "htfRole": "map_support_obstacle_draw_caution_only",
@@ -45,6 +56,29 @@
       ]
     },
     {
+      "name": "15M FVG Stack Defense Continuation",
+      "type": "stack_defense_continuation",
+      "requiredFacts": [
+        "htf_15m_story_supports_continuation_or_no_accepted_reversal",
+        "same_side_15m_fvg_stack_exists",
+        "price_passes_through_first_fvg_in_stack",
+        "final_last_valid_same_side_15m_fvg_defends",
+        "completed_5m_proof_confirms_continuation",
+        "entry_nearest_protected_5m_stop_t1_t2_known"
+      ],
+      "invalidations": [
+        "no_valid_15m_fvg_stack",
+        "price_accepts_through_final_defended_fvg",
+        "opposite_side_completed_5m_proof_after_acceptance_through_final_defended_fvg",
+        "missing_protected_5m_stop",
+        "target_room_gone_before_proof"
+      ],
+      "antiDrift": [
+        "do_not_classify_late_opposite_side_row_against_defended_final_15m_fvg_stack",
+        "opposite_side_requires_accepted_break_through_final_defended_fvg_plus_completed_5m_proof"
+      ]
+    },
+    {
       "name": "Balanced Path To Liquidity / Open FVG Objective",
       "type": "management_context",
       "requiredFacts": [
@@ -78,6 +112,8 @@
     "ruleMatchesAreNotHumanReviewExceptions": true,
     "htfIsNotExecutionAuthority": true,
     "balancedPathIsNotTrigger": true,
+    "startWithHtf15mStoryNotRaw5mRows": true,
+    "defendedFinalFvgStackBlocksOppositeSideWithoutAcceptedBreakAnd5mProof": true,
     "unclearFactsBecomeDiagnosticOnly": true
   },
   "reviewedCaseBindings": [
@@ -105,6 +141,11 @@
       "date": "2026-01-21",
       "status": "valid_rule_based_trade",
       "binding": "15m_fvg_hold_nested_5m_fvg_defense_continuation"
+    },
+    {
+      "date": "2026-01-22",
+      "status": "valid_fvg_stack_defense_long_story_late_shorts_invalid",
+      "binding": "15m_fvg_stack_defense_continuation"
     }
   ]
 }

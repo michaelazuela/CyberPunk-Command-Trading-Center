@@ -6,6 +6,10 @@ Model lane: FairValueGapResearchModel
 
 Purpose: lock the fair value gap research workflow so reviewed cases use the same rule language. This is a documentation and research-contract artifact only. It does not change the live scanner, Discord posting, Supabase behavior, NinjaTrader bridge behavior, or execution/risk logic.
 
+Portable guardrail: `tools/automation/replay-diagnostics/fvg-research-guardrails-v1.md`
+
+Mandatory workflow: every FVG review starts with the HTF/15M story and active FVG stack before any 5M row can be treated as a trade. A 5M row without the 15M story is diagnostic_only.
+
 ## Authority Stack
 
 1. HTF map first: 60M, 120M, and 240M provide support, obstacle, draw, or caution only.
@@ -55,6 +59,29 @@ Invalidation:
 - No completed 5M rejection/continuation proof.
 - Price has already delivered the target room before proof.
 
+### 15M FVG Stack Defense Continuation
+
+In a directional move, price may pass through the first 15M FVG in a same-side support/resistance stack. The continuation idea remains valid only if the final/last valid 15M FVG in that stack defends and the 5M gives completed same-side proof.
+
+Required facts:
+- HTF/15M story supports continuation or shows no accepted reversal.
+- A same-side 15M FVG stack exists.
+- Price passes through the first FVG in the stack.
+- The final/last valid same-side 15M FVG defends.
+- Completed 5M proof confirms continuation in the original direction.
+- Entry, nearest protected 5M stop, T1, and T2 are known.
+
+Invalidation:
+- No valid 15M FVG stack.
+- Price accepts through the final defended FVG.
+- Opposite side has completed 5M proof after acceptance through the final defended FVG.
+- No protected 5M stop.
+- Target room is gone before proof.
+
+Anti-drift:
+- Do not classify a late opposite-side row against a defended final 15M FVG stack.
+- Opposite side requires accepted break through the final defended FVG plus completed 5M proof.
+
 ### Balanced Path To Liquidity / Open FVG Objective
 
 If price breaks out of a balanced/rebalanced range and no defended opposing FVG appears before the next real-liquidity draw or separately labeled open-FVG objective, the move can travel cleanly through that path. This supports continuation and runner management only after a valid FVG proof already exists.
@@ -92,6 +119,8 @@ Meaning:
 - Do not classify a rule-matching trade as a human-review exception. If it matches the contract, it is rule-based research.
 - Do not treat HTF context as execution authority.
 - Do not treat balanced path as a trigger.
+- Do not begin with raw 5M rows. Start with HTF/15M story, then validate the parent FVG, failed FVG, or FVG stack.
+- Do not approve opposite-side trades against a defended final 15M FVG stack unless price accepts through it and completed 5M proof confirms the reversal.
 - If facts are unclear, classify as diagnostic_only until the chart review resolves the missing fact.
 
 ## Reviewed Case Bindings
@@ -101,3 +130,4 @@ Meaning:
 - 2026-01-15: valid short case. Trade 1 is the primary campaign. Trade 2 is continuation/management from Trade 1 unless a reset/add-on rule is approved later.
 - 2026-01-16: valid Trade 1 only. Other raw rows are rejected because they lack valid 15M parent FVG support.
 - 2026-01-21: valid long case. 9:30 15M parent FVG plus tiny nested 5M FVG/wick defense around 6957 is a rule-based 15M FVG Hold + Nested 5M FVG Defense Continuation.
+- 2026-01-22: valid FVG stack defense long story. Late short rows are invalid because price defended the final/lowest 15M bullish FVG in the stack and never accepted below it with clean 5M bearish proof.
