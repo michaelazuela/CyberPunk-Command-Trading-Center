@@ -1,0 +1,110 @@
+{
+  "version": "fvg-research-rule-contract-v1",
+  "boundary": "research_only_no_live_scanner_discord_supabase_or_trading_rule_change",
+  "modelLane": "FairValueGapResearchModel",
+  "parentSetupAuthority": "15M",
+  "executionAuthority": "5M",
+  "htfRole": "map_support_obstacle_draw_caution_only",
+  "runtimeTouched": false,
+  "rules": [
+    {
+      "name": "15M FVG Hold + Nested 5M FVG Defense Continuation",
+      "type": "continuation",
+      "requiredFacts": [
+        "valid_15m_parent_fvg",
+        "price_returns_into_15m_parent_fvg",
+        "nested_or_aligned_5m_fvg_or_wick_defense_inside_parent",
+        "completed_5m_defense",
+        "entry_nearest_protected_5m_stop_t1_t2_known",
+        "target_room_after_proof"
+      ],
+      "invalidations": [
+        "no_valid_15m_parent_fvg",
+        "5m_proof_outside_parent_context",
+        "acceptance_through_fvg_against_trade_before_proof",
+        "missing_protected_5m_stop",
+        "targets_reached_before_proof"
+      ]
+    },
+    {
+      "name": "15M FVG Failure / Breakdown Continuation",
+      "type": "failure_continuation",
+      "requiredFacts": [
+        "valid_15m_parent_fvg",
+        "acceptance_through_parent_fvg_against_original_side",
+        "pullback_or_rejection_into_failed_fvg_or_aligned_5m_area",
+        "completed_5m_continuation_proof",
+        "nearest_protected_5m_structure_stop",
+        "t1_t2_from_actual_risk"
+      ],
+      "invalidations": [
+        "no_valid_15m_parent_fvg",
+        "no_acceptance_or_failure_through_parent",
+        "no_completed_5m_rejection_or_continuation_proof",
+        "target_room_already_delivered_before_proof"
+      ]
+    },
+    {
+      "name": "Balanced Path To Liquidity / Open FVG Objective",
+      "type": "management_context",
+      "requiredFacts": [
+        "valid_fvg_candidate_already_exists",
+        "first_real_liquidity_or_open_fvg_objective_ahead",
+        "fvg_objectives_separate_from_real_liquidity",
+        "balanced_or_rebalanced_path_between_entry_and_objective",
+        "no_opposing_fvg_defends_before_delivery"
+      ],
+      "invalidations": [
+        "used_as_standalone_trigger",
+        "fvg_objective_mislabeled_as_liquidity",
+        "opposing_fvg_or_htf_obstacle_defends_before_delivery",
+        "objective_reached_before_entry"
+      ]
+    },
+    {
+      "name": "Opposing FVG Obstacle Before T1",
+      "type": "obstacle_filter",
+      "requiredFacts": [
+        "opposing_fvg_or_htf_reaction_zone_between_entry_and_t1",
+        "price_reaches_obstacle_after_proof",
+        "obstacle_defends_before_t1_or_first_objective"
+      ],
+      "meaning": "A defended opposing FVG before T1 can downgrade or fail continuation. FVG obstacle priority comes before a simple liquidity ladder."
+    }
+  ],
+  "antiDriftLanguage": {
+    "doNotCallFvgLiquidity": true,
+    "valid15mParentRequired": true,
+    "ruleMatchesAreNotHumanReviewExceptions": true,
+    "htfIsNotExecutionAuthority": true,
+    "balancedPathIsNotTrigger": true,
+    "unclearFactsBecomeDiagnosticOnly": true
+  },
+  "reviewedCaseBindings": [
+    {
+      "date": "2026-01-07",
+      "status": "mixed",
+      "binding": "opposing_fvg_obstacle_before_t1_and_afternoon_failure_diagnostic"
+    },
+    {
+      "date": "2026-01-13",
+      "status": "valid_with_bad_late_row_blocked",
+      "binding": "15m_fvg_failure_breakdown_continuation_with_balanced_path"
+    },
+    {
+      "date": "2026-01-15",
+      "status": "valid_primary_trade_with_later_management",
+      "binding": "15m_fvg_failure_breakdown_continuation_with_balanced_path"
+    },
+    {
+      "date": "2026-01-16",
+      "status": "valid_trade_1_only",
+      "binding": "15m_fvg_failure_breakdown_continuation"
+    },
+    {
+      "date": "2026-01-21",
+      "status": "valid_rule_based_trade",
+      "binding": "15m_fvg_hold_nested_5m_fvg_defense_continuation"
+    }
+  ]
+}

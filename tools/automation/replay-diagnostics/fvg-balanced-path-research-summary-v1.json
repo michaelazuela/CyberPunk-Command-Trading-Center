@@ -2,8 +2,15 @@
   "reportType": "fvg_balanced_path_research_summary",
   "version": 1,
   "boundary": "research_only_no_live_scanner_discord_supabase_or_trading_rule_change",
+  "canonicalRuleContractVersion": "fvg-research-rule-contract-v1",
+  "canonicalRuleContractFiles": [
+    "tools/automation/replay-diagnostics/fvg-research-rule-contract-v1.md",
+    "tools/automation/replay-diagnostics/fvg-research-rule-contract-v1.json"
+  ],
   "bridgeInstrument": "MES 09-26",
   "createdFrom": [
+    "tools/automation/replay-diagnostics/fvg-research-rule-contract-v1.md",
+    "tools/automation/replay-diagnostics/fvg-research-rule-contract-v1.json",
     "tools/automation/replay-diagnostics/fvg-balanced-path-jan7-smoke-v1.md",
     "tools/automation/replay-diagnostics/fvg-balanced-path-jan13-v1.md",
     "tools/automation/replay-diagnostics/fvg-next-review-jan15-v1.md",
@@ -11,7 +18,9 @@
     "tools/automation/replay-diagnostics/fvg-balanced-path-rule-jan13-v1.md",
     "tools/automation/replay-diagnostics/fvg-balanced-path-rule-jan15-v1.md",
     "tools/automation/replay-diagnostics/fvg-jan16-full-rth-review-v1.md",
-    "tools/automation/replay-diagnostics/fvg-jan16-human-review-lock-v1.md"
+    "tools/automation/replay-diagnostics/fvg-jan16-human-review-lock-v1.md",
+    "tools/automation/replay-diagnostics/fvg-jan21-full-rth-preview-v1.md",
+    "tools/automation/replay-diagnostics/fvg-jan21-rule-lock-v1.md"
   ],
   "modelLane": "FairValueGapResearchModel",
   "workflow": [
@@ -25,7 +34,8 @@
     "Balanced price context is not a trigger; it explains whether the path can deliver cleanly to real liquidity before T1.",
     "FVG/objective zones must not be labeled as liquidity. Real liquidity means prior swing/session/equal high-low; FVG zones are objective/reaction context.",
     "Later same-direction FVG proof inside the same move is continuation/management from the first valid campaign unless an explicit reset/add-on rule exists.",
-    "Opposing FVG before T1 is not an automatic downgrade if liquidity sits between entry and T1, gets reached, and no opposing FVG defends first."
+    "Opposing FVG before T1 is not an automatic downgrade if liquidity sits between entry and T1, gets reached, and no opposing FVG defends first.",
+    "15M FVG Hold + Nested 5M FVG Defense Continuation: price returns into a valid 15M parent FVG, a nested/aligned 5M FVG or 5M wick-defense area exists inside that parent zone, and a completed 5M candle defends the nested area before continuation."
   ],
   "balancedPathToLiquidityDefinition": {
     "status": "balanced_path_to_liquidity",
@@ -75,6 +85,10 @@
     {
       "date": "2026-01-16",
       "result": "Keeps only Trade 1 as valid. The human-reviewed 15M short FVG parent is the yellow-box zone around 7100-7103, with short entry near 7099.75/7099. Trades 2 and 3 are rejected from this model because they do not have valid 15M parent FVG support."
+    },
+    {
+      "date": "2026-01-21",
+      "result": "Keeps the 9:30 parent FVG / 12:20-12:30 proof long as the valid rule-based trade: 15M FVG Hold + Nested 5M FVG Defense Continuation. Rejects trust in the raw late eligible long rows. Corrects the first meaningful concern/objective to 6988.75 instead of the tool's 6978.50 label."
     }
   ],
   "htfMapLesson": {
@@ -299,6 +313,41 @@
       "oneMesPnl": 52.5,
       "managedOutcome": "LQ1",
       "managedOneMesPnl": 58.75
+    },
+    {
+      "date": "2026-01-21",
+      "session": "full-rth",
+      "direction": "LONG",
+      "parentFvg": "6944.75-6957.50",
+      "parentCreatedAt": "2026-01-21T09:30:00",
+      "ruleClassification": "15M FVG Hold + Nested 5M FVG Defense Continuation",
+      "proofTime": "2026-01-21T12:20:00",
+      "proofTimeRuleWindow": "2026-01-21T12:20:00 to 2026-01-21T12:30:00",
+      "entry": 6962.25,
+      "stop": 6930.5,
+      "target1": 7010.0,
+      "target2": 7025.75,
+      "ruleRequiredNested5mFvg": {
+        "priceZone": "around 6957.00",
+        "role": "rule-required tiny nested 5M FVG / wick-defense proof inside the valid 15M parent",
+        "source": "chart_aligned_rule_lock"
+      },
+      "ruleCorrectedFirstConcern": {
+        "price": 6988.75,
+        "label": "first meaningful concern/objective before T1",
+        "source": "chart_aligned_rule_lock"
+      },
+      "toolLiquidityCorrection": {
+        "rejectedPrice": 6978.5,
+        "reason": "Rule lock does not accept 6978.50 as first meaningful liquidity for this trade."
+      },
+      "ruleLockCorrection": "Trade 1 is valid by rule, not as an exception. The correct learning example is the 9:30 15M parent FVG with tiny nested 5M FVG/wick-defense proof around 6957 and long entry around 6962.25. The two late raw eligible long rows should not be trusted as the clean model lesson.",
+      "campaignRole": "primary_trade_1",
+      "continuationRead": "valid_primary_long_with_tiny_nested_5m_fvg_defense",
+      "standardOutcome": "T2",
+      "oneMesPnl": 317.5,
+      "managedOutcome": "first_concern_then_T2",
+      "managedOneMesPnl": 132.5
     }
   ],
   "lockedReviewNotes": [
@@ -306,7 +355,8 @@
     "Jan 15 Trade 2 is valid continuation/management from Trade 1 by default.",
     "7100 is the human-reviewed real liquidity/delivery draw for the Jan 15 short campaign.",
     "7117/7101.25 style nearby zones may remain in raw ladders but must be displayed as FVG/objective/management context when visual review says they are not real liquidity.",
-    "Jan 16 Trade 1 is valid. Trades 2 and 3 are rejected from the FairValueGapResearchModel review set because they do not have valid 15M parent FVG support."
+    "Jan 16 Trade 1 is valid. Trades 2 and 3 are rejected from the FairValueGapResearchModel review set because they do not have valid 15M parent FVG support.",
+    "Jan 21 Trade 1 is valid under the 15M FVG Hold + Nested 5M FVG Defense Continuation rule. The tiny nested 5M FVG/wick-defense around 6957 matters because it sits inside the valid 9:30 15M parent FVG. The raw 6978.50 liquidity label is rejected; the first meaningful concern is 6988.75."
   ],
   "openQuestions": [
     "Future replay should preserve the raw ladder but display human-reviewed label corrections so FVG objectives are not called liquidity.",

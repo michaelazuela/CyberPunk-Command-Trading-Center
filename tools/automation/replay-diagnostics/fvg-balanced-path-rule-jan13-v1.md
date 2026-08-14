@@ -5,6 +5,11 @@ Instrument: MES 09-26
 Date/session: 2026-01-13 / full-rth (2026-01-13T09:15:00 to 2026-01-13T16:00:00)
 Context window: 120 days (2025-09-15T00:00:00 to 2026-01-13T23:59:59)
 
+Canonical research contract: fvg-research-rule-contract-v1
+Contract path: tools/automation/replay-diagnostics/fvg-research-rule-contract-v1.md
+Contract binding: 15M FVG Failure / Breakdown Continuation with Balanced Path To Liquidity / Open FVG Objective
+Runtime boundary: research only; no live scanner, Discord, Supabase, NinjaTrader, or execution change.
+
 ## Coverage
 - 5m: 14432 bars (2025-10-28T18:05:00 to 2026-01-13T23:55:00)
 - 15m: 4810 bars (2025-10-28T18:15:00 to 2026-01-13T23:45:00)

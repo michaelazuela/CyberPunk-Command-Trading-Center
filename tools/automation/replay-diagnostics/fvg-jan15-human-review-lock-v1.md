@@ -6,6 +6,11 @@ Instrument: MES 09-26
 
 Status: locked from human visual review
 
+Canonical research contract: fvg-research-rule-contract-v1
+Contract path: tools/automation/replay-diagnostics/fvg-research-rule-contract-v1.md
+Contract binding: 15M FVG Failure / Breakdown Continuation with Balanced Path To Liquidity / Open FVG Objective
+Runtime boundary: research only; no live scanner, Discord, Supabase, NinjaTrader, or execution change.
+
 ## Locked Corrections
 
 - Trade 1 is the primary Jan 15 short campaign.

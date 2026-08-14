@@ -5,6 +5,11 @@ Instrument: MES 09-26
 Date/session: 2026-01-07 / full-rth (2026-01-07T09:15:00 to 2026-01-07T16:00:00)
 Context window: 120 days (2025-09-09T00:00:00 to 2026-01-07T23:59:59)
 
+Canonical research contract: fvg-research-rule-contract-v1
+Contract path: tools/automation/replay-diagnostics/fvg-research-rule-contract-v1.md
+Contract binding: Opposing FVG Obstacle Before T1; 15M FVG Failure / Breakdown Continuation diagnostic
+Runtime boundary: research only; no live scanner, Discord, Supabase, NinjaTrader, or execution change.
+
 ## Coverage
 - 5m: 13328 bars (2025-10-28T18:05:00 to 2026-01-07T23:55:00)
 - 15m: 4442 bars (2025-10-28T18:15:00 to 2026-01-07T23:45:00)

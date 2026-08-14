@@ -5,6 +5,11 @@ Boundary: research only. No live scanner, Discord, Supabase, NinjaTrader, or tra
 Instrument: MES 09-26
 Date/session: 2026-01-16 / full RTH
 
+Canonical research contract: fvg-research-rule-contract-v1
+Contract path: tools/automation/replay-diagnostics/fvg-research-rule-contract-v1.md
+Contract binding: 15M FVG Failure / Breakdown Continuation; valid Trade 1 only
+Runtime boundary: research only; no live scanner, Discord, Supabase, NinjaTrader, or execution change.
+
 ## Locked Review
 
 Trade 1 is valid.
