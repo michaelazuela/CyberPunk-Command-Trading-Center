@@ -92,6 +92,13 @@ interface FiveMinuteDefenseRead {
   detail: string;
 }
 
+interface DefendedFirstContinuationRead {
+  zone: Zone;
+  defense: FiveMinuteDefenseRead;
+  originalZoneDirection: Direction;
+  cutoffTime: string;
+}
+
 interface BattleZoneInventoryRead {
   scope: '15m_only_active_displacement_leg';
   rule: string;
@@ -480,6 +487,21 @@ function zoneKey(zone: Zone): string {
   return `${zone.timeframe}:${zone.direction}:${zone.createdAt}:${zone.lower.toFixed(2)}:${zone.upper.toFixed(2)}`;
 }
 
+function sameZoneLocation(left: Zone, right: Zone): boolean {
+  return left.timeframe === right.timeframe &&
+    left.createdAt === right.createdAt &&
+    left.lower === right.lower &&
+    left.upper === right.upper;
+}
+
+function oppositeDirection(direction: Direction): Direction {
+  return direction === 'LONG' ? 'SHORT' : 'LONG';
+}
+
+function withDirection(zone: Zone, direction: Direction): Zone {
+  return { ...zone, direction };
+}
+
 function isDeeperSameSideZone(direction: Direction, candidate: Zone, current: Zone): boolean {
   return direction === 'LONG' ? candidate.lower < current.lower : candidate.upper > current.upper;
 }
@@ -535,6 +557,38 @@ function readFiveMinuteDefense(zone: Zone, bars5m: Bar[], sessionWindow: { from:
   };
 }
 
+function findDefendedFirstContinuation(args: {
+  zone: Zone;
+  bars5m: Bar[];
+  sessionWindow: { from: string; to: string };
+  parentFailureTime: string | null;
+}): DefendedFirstContinuationRead | null {
+  const cutoffTime = args.parentFailureTime ?? args.sessionWindow.to;
+  const directions: Direction[] = [args.zone.direction, oppositeDirection(args.zone.direction)];
+  const candidates = directions
+    .map((direction) => {
+      const candidateZone = withDirection(args.zone, direction);
+      return {
+        zone: candidateZone,
+        defense: readFiveMinuteDefense(candidateZone, args.bars5m, {
+          from: args.sessionWindow.from,
+          to: cutoffTime,
+        }),
+      };
+    })
+    .filter((candidate) => candidate.defense.status === 'confirmed_defense' && candidate.defense.proofTime)
+    .sort((a, b) => (a.defense.proofTime ?? '').localeCompare(b.defense.proofTime ?? ''));
+
+  const first = candidates[0] ?? null;
+  if (!first) return null;
+
+  return {
+    ...first,
+    originalZoneDirection: args.zone.direction,
+    cutoffTime,
+  };
+}
+
 function buildBattleZoneInventory(args: {
   activeZone: Zone;
   zones: Zone[];
@@ -543,7 +597,7 @@ function buildBattleZoneInventory(args: {
   sessionWindow: { from: string; to: string };
 }): BattleZoneInventoryRead {
   const activeDate = args.activeZone.createdAt.slice(0, 10);
-  const activeSessionSameSide15m = args.zones
+  const activeSessionSameSide15mBase = args.zones
     .filter((zone) =>
       zone.timeframe === '15m' &&
       zone.direction === args.activeZone.direction &&
@@ -552,6 +606,10 @@ function buildBattleZoneInventory(args: {
       zone.createdAt <= args.activeZone.createdAt
     )
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const activeSessionSameSide15m = activeSessionSameSide15mBase
+    .some((zone) => sameZoneLocation(zone, args.activeZone))
+      ? activeSessionSameSide15mBase
+      : [...activeSessionSameSide15mBase, args.activeZone].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
   const firstZone = activeSessionSameSide15m[0] ?? args.activeZone;
   const finalZone = activeSessionSameSide15m.reduce((current, candidate) =>
@@ -1142,54 +1200,77 @@ function traceZone(args: {
 }): TraceRow {
   const { zone, bars5m, bars15m, sessionWindow } = args;
   const reasons: string[] = [];
-  const parentDisplacementBar = findParentDisplacementBar(zone, bars15m);
-  const parentDisplacement = Boolean(parentDisplacementBar);
-  if (!parentDisplacement) reasons.push('15M parent FVG exists, but no candle in the three-candle FVG formation is strong displacement by the current heuristic.');
-
   const postCreate15m = bars15m.filter((bar) => bar.time > zone.createdAt && bar.time <= sessionWindow.to);
   const parentFailure = postCreate15m.find((bar) => overlapsZone(bar, zone) && acceptedThroughAgainstZone(bar, zone));
-  if (!parentFailure) reasons.push('No 15M acceptance through the parent FVG was found inside this session window.');
+  const defendedFirstContinuation = findDefendedFirstContinuation({
+    zone,
+    bars5m,
+    sessionWindow,
+    parentFailureTime: parentFailure?.time ?? null,
+  });
+  const activeZone = defendedFirstContinuation?.zone ?? zone;
+  const parentDisplacementBar =
+    findParentDisplacementBar(activeZone, bars15m) ??
+    (activeZone.direction !== zone.direction ? findParentDisplacementBar(zone, bars15m) : null);
+  const parentDisplacement = Boolean(parentDisplacementBar);
+  if (!parentDisplacement) reasons.push('15M parent FVG exists, but no candle in the three-candle FVG formation is strong displacement by the current heuristic.');
+  if (defendedFirstContinuation) {
+    reasons.push(
+      `Defended-first continuation precedence: ${activeZone.direction} 5M defense proof completed at ${defendedFirstContinuation.defense.proofTime} before ${parentFailure ? `later same-zone failure/reversal read at ${parentFailure.time}` : 'any later same-zone failure/reversal read'}. Review the defended continuation before labeling this zone as failure/reversal.`
+    );
+    if (defendedFirstContinuation.originalZoneDirection !== activeZone.direction) {
+      reasons.push(`Original extracted zone side was ${defendedFirstContinuation.originalZoneDirection}; ${activeZone.direction} defense takes precedence for this research row.`);
+    }
+  } else if (!parentFailure) {
+    reasons.push('No 15M acceptance through the parent FVG was found inside this session window.');
+  }
 
-  const returnFrom = parentFailure?.time ?? zone.createdAt;
+  const returnFrom = defendedFirstContinuation ? activeZone.createdAt : parentFailure?.time ?? activeZone.createdAt;
   const postFailure5m = bars5m.filter((bar) => bar.time >= returnFrom && bar.time <= sessionWindow.to);
-  const firstReturn = postFailure5m.find((bar) => overlapsZone(bar, zone));
-  if (!firstReturn) reasons.push('After the parent failure, 5M did not return into the failed 15M FVG zone.');
+  const firstReturn = postFailure5m.find((bar) => overlapsZone(bar, activeZone));
+  if (!firstReturn) reasons.push(defendedFirstContinuation
+    ? 'After the 15M battle zone was created, 5M did not return into the defended 15M FVG zone.'
+    : 'After the parent failure, 5M did not return into the failed 15M FVG zone.');
 
   const wickDefenseBars = firstReturn
-    ? postFailure5m.filter((bar) => bar.time >= firstReturn.time && overlapsZone(bar, zone) && hasWickDefense(bar, zone.direction))
+    ? postFailure5m.filter((bar) => bar.time >= firstReturn.time && overlapsZone(bar, activeZone) && hasWickDefense(bar, activeZone.direction))
     : [];
-  if (!wickDefenseBars.length) reasons.push('No completed 5M wick-defense candle was found inside the failed FVG zone.');
+  if (!wickDefenseBars.length) reasons.push(defendedFirstContinuation
+    ? 'No completed 5M wick-defense candle was found inside the defended FVG zone.'
+    : 'No completed 5M wick-defense candle was found inside the failed FVG zone.');
 
   const firstDefense = wickDefenseBars[0] ?? firstReturn;
   const proof = firstDefense
-    ? postFailure5m.find((bar) => bar.time >= firstDefense.time && closesContinuationSide(bar, zone))
+    ? postFailure5m.find((bar) => bar.time >= firstDefense.time && closesContinuationSide(bar, activeZone))
     : null;
-  if (!proof) reasons.push('No completed 5M continuation close away from the failed FVG zone was found after the return.');
+  if (!proof) reasons.push(defendedFirstContinuation
+    ? 'No completed 5M continuation close away from the defended FVG zone was found after the return.'
+    : 'No completed 5M continuation close away from the failed FVG zone was found after the return.');
 
   const entry = proof ? roundTick(proof.close) : null;
   const structureLookback = proof
     ? bars5m.filter((bar) => bar.time >= sessionWindow.from && bar.time < proof.time)
     : [];
   const localStop = proof && entry !== null
-    ? findProtectedStructureStop(zone.direction, structureLookback, entry, zone)
+    ? findProtectedStructureStop(activeZone.direction, structureLookback, entry, activeZone)
     : null;
-  const stop = proof ? protectedStopFromParentStructure(zone.direction, localStop, zone) : null;
+  const stop = proof ? protectedStopFromParentStructure(activeZone.direction, localStop, activeZone) : null;
   const riskPoints = entry !== null && stop !== null
-    ? roundTick(zone.direction === 'LONG' ? entry - stop : stop - entry)
+    ? roundTick(activeZone.direction === 'LONG' ? entry - stop : stop - entry)
     : null;
   if (riskPoints !== null && riskPoints <= 0) reasons.push('Protected 5M stop is not beyond entry on the active side.');
 
   const target1 = entry !== null && riskPoints !== null && riskPoints > 0
-    ? roundTick(zone.direction === 'LONG' ? entry + riskPoints * 1.5 : entry - riskPoints * 1.5)
+    ? roundTick(activeZone.direction === 'LONG' ? entry + riskPoints * 1.5 : entry - riskPoints * 1.5)
     : null;
   const target2 = entry !== null && riskPoints !== null && riskPoints > 0
-    ? roundTick(zone.direction === 'LONG' ? entry + riskPoints * 2 : entry - riskPoints * 2)
+    ? roundTick(activeZone.direction === 'LONG' ? entry + riskPoints * 2 : entry - riskPoints * 2)
     : null;
   const nearestLiquidity = entry !== null
-    ? findNearestLiquidity(zone.direction, entry, bars5m.filter((bar) => bar.time < proof!.time))
+    ? findNearestLiquidity(activeZone.direction, entry, bars5m.filter((bar) => bar.time < proof!.time))
     : null;
   const battleZoneInventory = buildBattleZoneInventory({
-    activeZone: zone,
+    activeZone,
     zones: args.allZones,
     bars15m,
     bars5m,
@@ -1239,7 +1320,7 @@ function traceZone(args: {
     });
     const afterProofBars = bars5m.filter((bar) => bar.time > proof.time);
     const objectiveLadder = buildObjectiveLadder({
-      direction: zone.direction,
+      direction: activeZone.direction,
       entry,
       target1,
       target2,
@@ -1250,20 +1331,20 @@ function traceZone(args: {
       contextFrom: args.contextFrom,
     });
     const liquidityFirstTarget = firstLiquidityBeforeT1({
-      direction: zone.direction,
+      direction: activeZone.direction,
       entry,
       stop,
       target1,
       objectiveLadder,
     });
     const opposingFvgObstacleBeforeT1 = firstOpposingFvgObstacleBeforeT1({
-      direction: zone.direction,
+      direction: activeZone.direction,
       entry,
       target1,
       inventory: fvgInventoryAtProof,
     });
     const outcome = evaluateOutcome({
-      direction: zone.direction,
+      direction: activeZone.direction,
       entry,
       stop,
       target1,
@@ -1271,7 +1352,7 @@ function traceZone(args: {
       bars: afterProofBars,
     });
     const opposingFvgObstacleReaction = evaluateFvgObstacleReaction({
-      direction: zone.direction,
+      direction: activeZone.direction,
       target1,
       obstacle: opposingFvgObstacleBeforeT1,
       standardOutcome: outcome,
@@ -1279,7 +1360,7 @@ function traceZone(args: {
     });
     const balancedPathToLiquidity = classifyBalancedPathToLiquidity({
       eligible: structurallyEligible,
-      direction: zone.direction,
+      direction: activeZone.direction,
       entry,
       target1,
       liquidityFirstTarget,
@@ -1292,7 +1373,7 @@ function traceZone(args: {
       balancedPathToLiquidity,
     });
     const managedOutcome = evaluateManagedOutcome({
-      direction: zone.direction,
+      direction: activeZone.direction,
       entry,
       stop,
       liquidityFirstTarget,
@@ -1300,7 +1381,7 @@ function traceZone(args: {
       bars: afterProofBars,
     });
     return {
-      parentFvg: zone,
+      parentFvg: activeZone,
       eligible: structurallyEligible,
       verdict: structurallyEligible ? 'valid_trace_candidate' : 'diagnostic_only_not_valid_under_clean_workflow',
       rejectionGates,
@@ -1331,7 +1412,7 @@ function traceZone(args: {
   }
 
   return {
-    parentFvg: zone,
+    parentFvg: activeZone,
     eligible: false,
     verdict: 'diagnostic_only_not_valid_under_clean_workflow',
     rejectionGates,

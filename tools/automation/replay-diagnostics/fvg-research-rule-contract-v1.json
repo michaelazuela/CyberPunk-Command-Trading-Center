@@ -8,6 +8,7 @@
     "identify_parent_fvg_failed_fvg_or_fvg_stack",
     "lock_parent_timestamp_to_15m_fvg_creation_not_later_continuation_candle",
     "classify_continuation_failure_balance_or_obstacle",
+    "check_defended_first_continuation_before_later_same_zone_failure_or_reversal",
     "drill_to_5m_only_after_15m_story_is_valid",
     "require_completed_5m_proof",
     "anchor_stop_to_nearest_protected_5m_structure",
@@ -52,6 +53,16 @@
         "missing_protected_5m_stop",
         "targets_reached_before_proof"
       ]
+    },
+    {
+      "name": "Defended-First Continuation Precedence",
+      "type": "precedence_gate",
+      "requiredFacts": [
+        "same_15m_zone_has_defended_continuation_read_before_later_failure_or_reversal",
+        "completed_5m_defense_proof_exists_before_later_failure_label",
+        "later_opposite_side_requires_acceptance_through_defended_zone_plus_fresh_5m_proof"
+      ],
+      "meaning": "The first completed 5M defense/continuation read on a 15M battle zone is reviewed before labeling that same zone as a later failure/reversal."
     },
     {
       "name": "15M FVG Failure / Breakdown Continuation",
@@ -141,6 +152,7 @@
     "htfIsNotExecutionAuthority": true,
     "balancedPathIsNotTrigger": true,
     "startWithHtf15mStoryNotRaw5mRows": true,
+    "defendedFirstContinuationPrecedesLaterSameZoneFailureReversal": true,
     "trackOnlyFirstReactionAndFinalBattleZoneFor15mInventory": true,
     "defendedFinalFvgStackBlocksOppositeSideWithoutAcceptedBreakAnd5mProof": true,
     "unclearFactsBecomeDiagnosticOnly": true

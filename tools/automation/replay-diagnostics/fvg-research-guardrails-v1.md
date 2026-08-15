@@ -36,6 +36,10 @@ If the 15M story is missing or contradicted, the row is diagnostic_only. Do not 
 
 Price returns into a valid 15M parent FVG. A nested or aligned 5M FVG/wick-defense area inside that parent zone defends. A completed 5M candle confirms continuation in the parent direction.
 
+### Defended-First Continuation Precedence
+
+When the same 15M battle zone can be read as both a defended continuation and a later failure/reversal, review the first completed 5M defense/continuation proof first. The later opposite-side failure is secondary until price accepts through the defended zone and gives fresh opposite-side 5M proof.
+
 ### 15M FVG Failure / Breakdown Continuation
 
 Price accepts through a valid 15M parent FVG against the original side. A pullback or rejection into the failed area, or an aligned nested 5M area, gives completed 5M proof for continuation in the failure direction.
@@ -83,6 +87,7 @@ If the later continuation reaches an older opposing FVG before T1 and that FVG d
 - Do not use balanced path as a standalone trigger.
 - Do not use HTF context as execution authority.
 - Do not classify rule-matching trades as human-review exceptions.
+- Do not label a later same-zone failure/reversal before reviewing the first completed 5M defended continuation proof.
 - Do not approve opposite-side trades against a defended final FVG stack unless price accepts through the final defended FVG and completed 5M proof confirms the reversal.
 - If the facts are unclear, mark diagnostic_only and ask for chart review.
 
