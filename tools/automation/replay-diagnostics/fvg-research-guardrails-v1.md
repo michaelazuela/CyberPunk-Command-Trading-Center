@@ -42,19 +42,21 @@ Price accepts through a valid 15M parent FVG against the original side. A pullba
 
 ### 15M FVG Stack Defense Continuation
 
-In a directional move, price may pass through the first 15M FVG in a same-side support/resistance stack. The continuation idea remains valid only if the final/last valid 15M FVG in that stack defends and the 5M gives completed same-side proof.
+In a directional move, do not tag every FVG. The research inventory tracks only the 15M fair value gap battle zones from the active displacement leg:
+
+- First reaction zone: the first meaningful 15M FVG price returns into after displacement. If it defends and continuation resumes, the move is strong.
+- Final battle zone: if price accepts through the first reaction zone, the final/deepest same-side 15M FVG becomes the last defense area. If it defends, continuation remains valid. If it fails, the original structure is suspect.
+- Middle FVG clutter is not tracked for this research rule unless the user explicitly promotes a specific zone during visual review.
 
 Long version:
 - HTF/15M story is bullish or actively continuing higher.
-- Price pulls back through the first bullish 15M FVG in the stack.
-- The final/lowest valid bullish 15M FVG defends.
+- Price pulls back into the first bullish 15M FVG reaction zone. If it fails, price must defend the final/lowest bullish 15M FVG battle zone.
 - Completed 5M proof confirms continuation higher.
 - Shorts are blocked unless price accepts below that final defended 15M FVG and then gives clean 5M bearish proof.
 
 Short version:
 - HTF/15M story is bearish or actively continuing lower.
-- Price retraces through the first bearish 15M FVG in the stack.
-- The final/highest valid bearish 15M FVG defends.
+- Price retraces into the first bearish 15M FVG reaction zone. If it fails, price must defend the final/highest bearish 15M FVG battle zone.
 - Completed 5M proof confirms continuation lower.
 - Longs are blocked unless price accepts above that final defended 15M FVG and then gives clean 5M bullish proof.
 

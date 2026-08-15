@@ -7,7 +7,8 @@ export type FvgResearchSubmodel =
   | 'FvgWickDefenseContinuation'
   | 'FvgFailedAcceptanceReversal'
   | 'FvgObjectiveLadderContinuation'
-  | 'FvgBalancedPathContinuation';
+  | 'FvgBalancedPathContinuation'
+  | 'FvgBattleZoneInventory';
 
 export interface FvgResearchModelDefinition {
   family: typeof FVG_RESEARCH_MODEL_FAMILY;
@@ -115,6 +116,29 @@ export const FVG_RESEARCH_MODEL_DEFINITIONS: FvgResearchModelDefinition[] = [
     stop: 'No standalone stop. Stop remains nearest protected 5M structure from the entry model.',
     targets:
       'T1/T2 remain risk-based. First real liquidity and separately labeled open-FVG objectives become management and runner context.',
+    publishBoundary: FVG_RESEARCH_BOUNDARY,
+  },
+  {
+    family: FVG_RESEARCH_MODEL_FAMILY,
+    submodel: 'FvgBattleZoneInventory',
+    purpose:
+      'Track only the first same-side 15M FVG reaction zone and the final/deepest same-side 15M FVG battle zone from the active displacement leg.',
+    requiredEvidence: [
+      '15M only for this inventory layer; do not tag every FVG on every timeframe.',
+      'A same-side 15M displacement leg creates one or more FVG zones.',
+      'The first same-side 15M FVG is the first reaction zone.',
+      'If the first reaction zone fails, the final/deepest same-side 15M FVG becomes the battle zone that must defend for the structure to survive.',
+      '5M is used only after the 15M battle zone is selected, to confirm return, wick defense, continuation close, protected 5M stop, and target math.',
+    ],
+    invalidation: [
+      'Middle-zone FVG clutter is promoted as equal to the first or final/deepest 15M battle zone.',
+      'A 5M FVG is used before the 15M battle zone is selected.',
+      'The final/deepest 15M battle zone accepts through against the intended direction.',
+      'The 5M does not confirm defense of the selected 15M battle zone.',
+    ],
+    entry: 'No standalone entry. Entry remains completed 5M confirmation after the selected 15M battle zone defends.',
+    stop: 'Nearest protected 5M structure after the selected 15M battle zone defense.',
+    targets: 'T1/T2 remain risk-based; FVG battle zones are structure survival/obstacle context.',
     publishBoundary: FVG_RESEARCH_BOUNDARY,
   },
 ];

@@ -63,6 +63,44 @@ interface FvgInventoryItem extends Zone {
   relationToPrice: 'above' | 'below' | 'overlapping';
 }
 
+type BattleZoneRole = 'first_reaction_15m_fvg' | 'final_deepest_15m_fvg';
+type BattleZoneDefenseStatus =
+  | 'defended_on_15m'
+  | 'failed_acceptance_through_15m'
+  | 'untested_by_15m'
+  | 'not_selected';
+type FiveMinuteDefenseStatus =
+  | 'confirmed_defense'
+  | 'returned_no_confirmation'
+  | 'accepted_through_zone'
+  | 'not_returned'
+  | 'not_selected_15m_battle_zone';
+
+interface BattleZoneItem extends Zone {
+  role: BattleZoneRole;
+  defenseStatus: BattleZoneDefenseStatus;
+  firstTouchTime: string | null;
+  failedTime: string | null;
+  defendedTime: string | null;
+}
+
+interface FiveMinuteDefenseRead {
+  status: FiveMinuteDefenseStatus;
+  returnTime: string | null;
+  wickDefenseTime: string | null;
+  proofTime: string | null;
+  detail: string;
+}
+
+interface BattleZoneInventoryRead {
+  scope: '15m_only_active_displacement_leg';
+  rule: string;
+  activeRole: BattleZoneRole | 'not_in_battle_inventory';
+  firstReaction: BattleZoneItem | null;
+  finalDeepest: BattleZoneItem | null;
+  activeFiveMinuteDefense: FiveMinuteDefenseRead;
+}
+
 interface ObjectiveLevel {
   kind: 'tactical' | 'liquidity' | 'open_fvg' | 'session_extreme';
   label: string;
@@ -89,7 +127,7 @@ interface ResearchTag {
 }
 
 interface ResearchRule {
-  name: 'FvgBalancedPathContinuation';
+  name: 'FvgBalancedPathContinuation' | 'FvgBattleZoneInventory';
   status: 'research_only_supporting_rule';
   definition: string;
   requiredFacts: string[];
@@ -119,6 +157,7 @@ interface TraceRow {
     failedAbove: FvgInventoryItem[];
     openAbove: FvgInventoryItem[];
   };
+  battleZoneInventory: BattleZoneInventoryRead;
   objectiveLadder: ObjectiveLevel[];
   opposingFvgObstacleBeforeT1: FvgInventoryItem | null;
   opposingFvgObstacleReaction: FvgObstacleReaction;
@@ -182,6 +221,26 @@ const BALANCED_PATH_CONTINUATION_RULE: ResearchRule = {
     'Opposing FVG/HTF obstacle defends before the objective.',
     'The objective was already reached before entry.',
     'Balanced path is treated as a standalone trigger.',
+  ],
+  notAStandaloneTrigger: true,
+};
+const BATTLE_ZONE_INVENTORY_RULE: ResearchRule = {
+  name: 'FvgBattleZoneInventory',
+  status: 'research_only_supporting_rule',
+  definition:
+    'Track only the first same-side 15M FVG reaction zone and the final/deepest same-side 15M FVG battle zone from the active displacement leg. The selected 15M battle zone must then be defended on completed 5M candles before any entry model can use it.',
+  requiredFacts: [
+    '15M-only inventory for this research rule.',
+    'Same-side 15M displacement leg creates the candidate FVG stack.',
+    'First same-side 15M FVG is the first reaction zone.',
+    'Final/deepest same-side 15M FVG is the structure survival battle zone if the first zone fails.',
+    '5M confirms only after price returns into the selected 15M battle zone and rejects it.',
+  ],
+  invalidation: [
+    'Every 15M FVG is tagged as equal importance.',
+    'Middle-zone clutter is promoted over first reaction or final/deepest battle-zone roles.',
+    '5M confirmation is used before the 15M battle zone is selected.',
+    'The selected 15M battle zone accepts through against the intended direction.',
   ],
   notAStandaloneTrigger: true,
 };
@@ -359,6 +418,176 @@ function classifyFvgAtReview(zone: Zone, bars: Bar[], reviewTime: string, price:
     filledTime: filled?.time ?? null,
     failedTime: failed?.time ?? null,
     relationToPrice: relationToPrice(zone, price),
+  };
+}
+
+function battleZoneDefenseStatus(zone: Zone, bars15m: Bar[], reviewTime: string): Pick<BattleZoneItem, 'defenseStatus' | 'firstTouchTime' | 'failedTime' | 'defendedTime'> {
+  const postCreate = bars15m.filter((bar) => bar.time > zone.createdAt && bar.time <= reviewTime);
+  const firstTouch = postCreate.find((bar) => overlapsZone(bar, zone)) ?? null;
+  const failed = postCreate.find((bar) => overlapsZone(bar, zone) && acceptedThroughAgainstZone(bar, zone)) ?? null;
+  const defended = postCreate.find((bar) =>
+    overlapsZone(bar, zone) &&
+    !acceptedThroughAgainstZone(bar, zone) &&
+    closesContinuationSide(bar, zone)
+  ) ?? null;
+
+  if (failed) {
+    return {
+      defenseStatus: 'failed_acceptance_through_15m',
+      firstTouchTime: firstTouch?.time ?? null,
+      failedTime: failed.time,
+      defendedTime: defended?.time ?? null,
+    };
+  }
+  if (defended) {
+    return {
+      defenseStatus: 'defended_on_15m',
+      firstTouchTime: firstTouch?.time ?? null,
+      failedTime: null,
+      defendedTime: defended.time,
+    };
+  }
+  return {
+    defenseStatus: firstTouch ? 'not_selected' : 'untested_by_15m',
+    firstTouchTime: firstTouch?.time ?? null,
+    failedTime: null,
+    defendedTime: null,
+  };
+}
+
+function buildBattleZoneItem(args: {
+  zone: Zone;
+  role: BattleZoneRole;
+  bars15m: Bar[];
+  reviewTime: string;
+}): BattleZoneItem {
+  const status = battleZoneDefenseStatus(args.zone, args.bars15m, args.reviewTime);
+  return {
+    ...args.zone,
+    role: args.role,
+    ...status,
+  };
+}
+
+function zoneKey(zone: Zone): string {
+  return `${zone.timeframe}:${zone.direction}:${zone.createdAt}:${zone.lower.toFixed(2)}:${zone.upper.toFixed(2)}`;
+}
+
+function isDeeperSameSideZone(direction: Direction, candidate: Zone, current: Zone): boolean {
+  return direction === 'LONG' ? candidate.lower < current.lower : candidate.upper > current.upper;
+}
+
+function readFiveMinuteDefense(zone: Zone, bars5m: Bar[], sessionWindow: { from: string; to: string }): FiveMinuteDefenseRead {
+  const reviewBars = bars5m.filter((bar) => bar.time >= zone.createdAt && bar.time <= sessionWindow.to);
+  const firstReturn = reviewBars.find((bar) => overlapsZone(bar, zone)) ?? null;
+  if (!firstReturn) {
+    return {
+      status: 'not_returned',
+      returnTime: null,
+      wickDefenseTime: null,
+      proofTime: null,
+      detail: '5M did not return into the selected 15M battle zone before the session ended.',
+    };
+  }
+
+  const afterReturn = reviewBars.filter((bar) => bar.time >= firstReturn.time);
+  const acceptedThrough = afterReturn.find((bar) => overlapsZone(bar, zone) && acceptedThroughAgainstZone(bar, zone)) ?? null;
+  const wickDefense = afterReturn.find((bar) =>
+    overlapsZone(bar, zone) &&
+    hasWickDefense(bar, zone.direction) &&
+    !acceptedThroughAgainstZone(bar, zone)
+  ) ?? null;
+  const proof = wickDefense
+    ? afterReturn.find((bar) => bar.time >= wickDefense.time && closesContinuationSide(bar, zone))
+    : null;
+
+  if (proof) {
+    return {
+      status: 'confirmed_defense',
+      returnTime: firstReturn.time,
+      wickDefenseTime: wickDefense?.time ?? null,
+      proofTime: proof.time,
+      detail: '5M returned into the active 15M battle zone, rejected it, and closed back in the continuation direction.',
+    };
+  }
+  if (acceptedThrough) {
+    return {
+      status: 'accepted_through_zone',
+      returnTime: firstReturn.time,
+      wickDefenseTime: wickDefense?.time ?? null,
+      proofTime: null,
+      detail: `5M returned into the active 15M battle zone but accepted through it at ${acceptedThrough.time}.`,
+    };
+  }
+  return {
+    status: 'returned_no_confirmation',
+    returnTime: firstReturn.time,
+    wickDefenseTime: wickDefense?.time ?? null,
+    proofTime: null,
+    detail: '5M returned into the active 15M battle zone, but completed continuation proof was not found.',
+  };
+}
+
+function buildBattleZoneInventory(args: {
+  activeZone: Zone;
+  zones: Zone[];
+  bars15m: Bar[];
+  bars5m: Bar[];
+  sessionWindow: { from: string; to: string };
+}): BattleZoneInventoryRead {
+  const activeDate = args.activeZone.createdAt.slice(0, 10);
+  const sameDaySameSide15m = args.zones
+    .filter((zone) =>
+      zone.timeframe === '15m' &&
+      zone.direction === args.activeZone.direction &&
+      zone.createdAt.slice(0, 10) === activeDate &&
+      zone.createdAt <= args.activeZone.createdAt
+    )
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+  const firstZone = sameDaySameSide15m[0] ?? args.activeZone;
+  const finalZone = sameDaySameSide15m.reduce((current, candidate) =>
+    isDeeperSameSideZone(args.activeZone.direction, candidate, current) ? candidate : current,
+  firstZone);
+
+  const firstReaction = buildBattleZoneItem({
+    zone: firstZone,
+    role: 'first_reaction_15m_fvg',
+    bars15m: args.bars15m,
+    reviewTime: args.sessionWindow.to,
+  });
+  const finalDeepest = buildBattleZoneItem({
+    zone: finalZone,
+    role: 'final_deepest_15m_fvg',
+    bars15m: args.bars15m,
+    reviewTime: args.sessionWindow.to,
+  });
+
+  const activeKey = zoneKey(args.activeZone);
+  const activeRole = zoneKey(firstReaction) === activeKey
+    ? 'first_reaction_15m_fvg'
+    : zoneKey(finalDeepest) === activeKey
+      ? 'final_deepest_15m_fvg'
+      : 'not_in_battle_inventory';
+  const activeFiveMinuteDefense: FiveMinuteDefenseRead = activeRole === 'not_in_battle_inventory'
+    ? {
+        status: 'not_selected_15m_battle_zone',
+        returnTime: null,
+        wickDefenseTime: null,
+        proofTime: null,
+        detail:
+          'The active 15M FVG is not the first reaction zone or final/deepest battle zone, so 5M defense is diagnostic only and cannot promote this research model.',
+      }
+    : readFiveMinuteDefense(args.activeZone, args.bars5m, args.sessionWindow);
+
+  return {
+    scope: '15m_only_active_displacement_leg',
+    rule:
+      'Track only the first same-side 15M FVG reaction zone and the final/deepest same-side 15M FVG battle zone from the active leg; ignore middle-zone clutter for this model.',
+    activeRole,
+    firstReaction,
+    finalDeepest,
+    activeFiveMinuteDefense,
   };
 }
 
@@ -919,6 +1148,21 @@ function traceZone(args: {
   const nearestLiquidity = entry !== null
     ? findNearestLiquidity(zone.direction, entry, bars5m.filter((bar) => bar.time < proof!.time))
     : null;
+  const battleZoneInventory = buildBattleZoneInventory({
+    activeZone: zone,
+    zones: args.allZones,
+    bars15m,
+    bars5m,
+    sessionWindow,
+  });
+  const battleZoneEligible =
+    battleZoneInventory.activeRole !== 'not_in_battle_inventory' &&
+    battleZoneInventory.activeFiveMinuteDefense.status === 'confirmed_defense';
+  if (battleZoneInventory.activeRole === 'not_in_battle_inventory') {
+    reasons.push('15M FVG is middle-zone clutter for this research model; only the first reaction zone or final/deepest battle zone can promote.');
+  } else if (battleZoneInventory.activeFiveMinuteDefense.status !== 'confirmed_defense') {
+    reasons.push('Selected 15M battle zone did not receive completed 5M defense confirmation.');
+  }
 
   const structurallyEligible = Boolean(
     parentDisplacement &&
@@ -930,7 +1174,8 @@ function traceZone(args: {
     riskPoints !== null &&
     riskPoints > 0 &&
     target1 !== null &&
-    target2 !== null
+    target2 !== null &&
+    battleZoneEligible
   );
   const rejectionGates = buildRejectionGates({
     parentDisplacement,
@@ -946,7 +1191,6 @@ function traceZone(args: {
     target2,
     nearestLiquidity,
   });
-
   if (proof && stop !== null && entry !== null && riskPoints !== null && riskPoints > 0 && target1 !== null && target2 !== null) {
     const fvgInventoryAtProof = inventoryAtProof({
       proof,
@@ -1033,6 +1277,7 @@ function traceZone(args: {
       target2,
       nearestLiquidity,
       fvgInventoryAtProof,
+      battleZoneInventory,
       objectiveLadder,
       opposingFvgObstacleBeforeT1,
       ...opposingFvgObstacleReaction,
@@ -1063,6 +1308,7 @@ function traceZone(args: {
     target2,
     nearestLiquidity,
     fvgInventoryAtProof: inventoryAtProof({ proof, zones: args.allZones, barsByTimeframe: args.barsByTimeframe }),
+    battleZoneInventory,
     objectiveLadder: [],
     opposingFvgObstacleBeforeT1: null,
     opposingFvgObstacleReaction: 'none',
@@ -1150,6 +1396,12 @@ function markdownReport(report: DiagnosticReport): string {
     if (!item) return 'none before T1';
     return `${item.timeframe} ${item.direction} ${item.lower.toFixed(2)}-${item.upper.toFixed(2)} created ${item.createdAt} status ${item.statusAtReview}`;
   };
+  const formatBattleZone = (item: BattleZoneItem | null): string => {
+    if (!item) return 'none';
+    return `${item.role} ${item.direction} ${item.lower.toFixed(2)}-${item.upper.toFixed(2)} created ${item.createdAt} ${item.defenseStatus}${item.defendedTime ? ` defended ${item.defendedTime}` : ''}${item.failedTime ? ` failed ${item.failedTime}` : ''}`;
+  };
+  const formatFiveMinuteDefense = (read: FiveMinuteDefenseRead): string =>
+    `${read.status}; return ${read.returnTime ?? 'none'}; wick ${read.wickDefenseTime ?? 'none'}; proof ${read.proofTime ?? 'none'}; ${read.detail}`;
   const formatGates = (items: RejectionGate[]): string => {
     if (!items.length) return 'none';
     return items.map((item) => `${item.status.toUpperCase()} ${item.gate}: ${item.detail}`).join(' | ');
@@ -1231,6 +1483,11 @@ function markdownReport(report: DiagnosticReport): string {
       `- Nearest liquidity: ${trace.nearestLiquidity ? `${trace.nearestLiquidity.label} ${trace.nearestLiquidity.price.toFixed(2)}` : 'N/A'}`,
       `- Opposing FVG obstacle before T1: ${formatObstacle(trace.opposingFvgObstacleBeforeT1)}`,
       `- Opposing FVG reaction: ${trace.opposingFvgObstacleReaction}${trace.opposingFvgObstacleReactionTime ? ` at ${trace.opposingFvgObstacleReactionTime}` : ''}`,
+      `- 15M battle-zone scope: ${trace.battleZoneInventory.scope}`,
+      `- 15M battle-zone active role: ${trace.battleZoneInventory.activeRole}`,
+      `- 15M first reaction zone: ${formatBattleZone(trace.battleZoneInventory.firstReaction)}`,
+      `- 15M final/deepest battle zone: ${formatBattleZone(trace.battleZoneInventory.finalDeepest)}`,
+      `- 5M defense of active 15M zone: ${formatFiveMinuteDefense(trace.battleZoneInventory.activeFiveMinuteDefense)}`,
       `- Meaningful liquidity target before T1: ${trace.liquidityFirstTarget ? `${trace.liquidityFirstTarget.price.toFixed(2)} (${trace.liquidityFirstTarget.label})` : 'none before T1'}`,
       `- Balanced path to liquidity: ${trace.balancedPathToLiquidity.status} - ${trace.balancedPathToLiquidity.reason}`,
       `- Open FVGs below at proof: ${formatInventory(trace.fvgInventoryAtProof.openBelow)}`,
@@ -1339,7 +1596,7 @@ async function main(): Promise<void> {
       '240m': coverage['240m'],
     },
     researchTags,
-    researchRules: [BALANCED_PATH_CONTINUATION_RULE],
+    researchRules: [BATTLE_ZONE_INVENTORY_RULE, BALANCED_PATH_CONTINUATION_RULE],
     fvgInventoryAtSessionStart,
     traces,
   };

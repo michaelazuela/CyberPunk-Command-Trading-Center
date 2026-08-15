@@ -62,18 +62,22 @@ Invalidation:
 
 ### 15M FVG Stack Defense Continuation
 
-In a directional move, price may pass through the first 15M FVG in a same-side support/resistance stack. The continuation idea remains valid only if the final/last valid 15M FVG in that stack defends and the 5M gives completed same-side proof.
+In a directional move, do not inventory every FVG. Inventory only the active 15M fair value gap battle zones from the displacement leg:
+
+- First reaction zone: the first meaningful 15M FVG price returns into after displacement. A clean defense here means the move is strong.
+- Final battle zone: if price accepts through the first reaction zone, the final/deepest same-side 15M FVG becomes the last defense area. If this zone defends, continuation remains valid. If it fails, the original structure is suspect.
+- Middle FVG clutter is ignored unless the user explicitly promotes a specific zone during chart review.
 
 Required facts:
 - HTF/15M story supports continuation or shows no accepted reversal.
-- A same-side 15M FVG stack exists.
-- Price passes through the first FVG in the stack.
-- The final/last valid same-side 15M FVG defends.
+- A same-side 15M FVG battle-zone inventory exists.
+- The first reaction 15M FVG either defends or fails cleanly.
+- If the first reaction FVG fails, the final/deepest same-side 15M FVG battle zone defends.
 - Completed 5M proof confirms continuation in the original direction.
 - Entry, nearest protected 5M stop, T1, and T2 are known.
 
 Invalidation:
-- No valid 15M FVG stack.
+- No valid 15M FVG battle-zone inventory.
 - Price accepts through the final defended FVG.
 - Opposite side has completed 5M proof after acceptance through the final defended FVG.
 - No protected 5M stop.
@@ -138,6 +142,7 @@ Meaning:
 - Do not treat balanced path as a trigger.
 - Do not begin with raw 5M rows. Start with HTF/15M story, then validate the parent FVG, failed FVG, or FVG stack.
 - Do not approve opposite-side trades against a defended final 15M FVG stack unless price accepts through it and completed 5M proof confirms the reversal.
+- Do not tag every 15M FVG. For this research lane, track the first reaction zone and final battle zone only.
 - If facts are unclear, classify as diagnostic_only until the chart review resolves the missing fact.
 
 ## Reviewed Case Bindings

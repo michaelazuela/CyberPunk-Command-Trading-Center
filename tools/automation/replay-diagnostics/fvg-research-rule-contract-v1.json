@@ -14,6 +14,20 @@
     "calculate_t1_t2_from_actual_entry_stop_risk",
     "treat_liquidity_open_fvg_htf_reaction_and_balanced_path_as_management_context"
   ],
+  "battleZoneInventory": {
+    "name": "15M FVG Battle-Zone Inventory",
+    "timeframe": "15M",
+    "scope": "active_displacement_leg_only",
+    "trackedZones": [
+      "first_reaction_15m_fvg",
+      "final_deepest_same_side_15m_fvg"
+    ],
+    "ignoredZones": [
+      "middle_fvg_clutter",
+      "lower_timeframe_fvg_inventory_until_5m_execution_proof"
+    ],
+    "meaning": "The first reaction zone tests strength. If it fails, the final battle zone tests whether the original structure survives. If the final battle zone fails, the structure is suspect."
+  },
   "parentSetupAuthority": "15M",
   "parentTimestampDiscipline": "Parent time is the 15M candle/formation that created the FVG zone. Later candles that trade through, reject, expand away from, or confirm the zone are proof or continuation context, not the parent.",
   "executionAuthority": "5M",
@@ -62,14 +76,14 @@
       "type": "stack_defense_continuation",
       "requiredFacts": [
         "htf_15m_story_supports_continuation_or_no_accepted_reversal",
-        "same_side_15m_fvg_stack_exists",
-        "price_passes_through_first_fvg_in_stack",
-        "final_last_valid_same_side_15m_fvg_defends",
+        "same_side_15m_fvg_battle_zone_inventory_exists",
+        "first_reaction_15m_fvg_defends_or_fails_cleanly",
+        "if_first_reaction_fails_final_deepest_same_side_15m_fvg_defends",
         "completed_5m_proof_confirms_continuation",
         "entry_nearest_protected_5m_stop_t1_t2_known"
       ],
       "invalidations": [
-        "no_valid_15m_fvg_stack",
+        "no_valid_15m_fvg_battle_zone_inventory",
         "price_accepts_through_final_defended_fvg",
         "opposite_side_completed_5m_proof_after_acceptance_through_final_defended_fvg",
         "missing_protected_5m_stop",
@@ -127,6 +141,7 @@
     "htfIsNotExecutionAuthority": true,
     "balancedPathIsNotTrigger": true,
     "startWithHtf15mStoryNotRaw5mRows": true,
+    "trackOnlyFirstReactionAndFinalBattleZoneFor15mInventory": true,
     "defendedFinalFvgStackBlocksOppositeSideWithoutAcceptedBreakAnd5mProof": true,
     "unclearFactsBecomeDiagnosticOnly": true
   },
