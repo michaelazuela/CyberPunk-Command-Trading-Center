@@ -106,6 +106,17 @@
         "obstacle_defends_before_t1_or_first_objective"
       ],
       "meaning": "A defended opposing FVG before T1 can downgrade or fail continuation. FVG obstacle priority comes before a simple liquidity ladder."
+    },
+    {
+      "name": "Management Continuation After First Campaign",
+      "type": "management_context",
+      "requiredFacts": [
+        "first_same_direction_fvg_campaign_already_exists_in_active_drive",
+        "later_same_direction_fvg_proof_appears_before_clean_reset",
+        "later_path_reaches_older_opposing_fvg_or_htf_reaction_before_full_tactical_delivery",
+        "older_opposing_fvg_or_htf_reaction_defends"
+      ],
+      "meaning": "Later same-direction FVG proof in the same drive is management or add-on context by default. It is not a fresh standalone model trade unless an explicit reset/add-on rule is approved. If an older opposing FVG defends before T1/T2, record that defended FVG as the reason management was required."
     }
   ],
   "antiDriftLanguage": {
@@ -144,6 +155,12 @@
       "date": "2026-01-20",
       "status": "valid_trade_4_parent_timestamp_corrected",
       "binding": "12_45_15m_parent_fvg_13_00_continuation_acceptance_not_parent_creation"
+    },
+    {
+      "date": "2026-01-20",
+      "trade": "trade_6",
+      "status": "management_continuation_short_not_clean_standalone",
+      "binding": "13_45_impulse_14_00_parent_fvg_confirmation_dec19_0215_0230_long_fvg_defended_before_full_tactical_delivery"
     },
     {
       "date": "2026-01-21",

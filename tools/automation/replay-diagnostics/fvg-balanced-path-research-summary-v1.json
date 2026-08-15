@@ -315,6 +315,35 @@
       "managedOneMesPnl": 58.75
     },
     {
+      "date": "2026-01-20",
+      "session": "full-rth",
+      "direction": "SHORT",
+      "parentFvg": "6962.00-6971.50",
+      "parentCreatedAt": "2026-01-20T14:00:00",
+      "impulseDisplacementCandle": "2026-01-20T13:45:00",
+      "ruleClassification": "Management Continuation After First Campaign",
+      "proofTime": "2026-01-20T14:05:00",
+      "entry": 6956.5,
+      "stop": 6981.0,
+      "target1": 6919.75,
+      "target2": 6907.5,
+      "opposingFvgObstacleBeforeT1": {
+        "timeframe": "15m",
+        "direction": "LONG",
+        "zone": "6940.25-6949.00",
+        "createdAt": "2025-12-19T02:30:00",
+        "humanChartTimeReference": "2025-12-19T02:15:00/02:30:00",
+        "source": "human_visual_review"
+      },
+      "humanReviewCorrection": "Trade 6 is management continuation short, not a fresh standalone primary trade. The 13:45 candle is the impulse/displacement leg, the 14:00 15M candle confirms the parent FVG, and the older Dec 19 02:15/02:30 15M LONG FVG area defended before full tactical delivery.",
+      "campaignRole": "management_continuation_from_trade_4",
+      "continuationRead": "management_continuation_short_obstacle_defended_before_t1",
+      "standardOutcome": "SessionClose",
+      "oneMesPnl": 55.0,
+      "managedOutcome": "LQ1",
+      "managedOneMesPnl": 36.25
+    },
+    {
       "date": "2026-01-21",
       "session": "full-rth",
       "direction": "LONG",
@@ -356,6 +385,7 @@
     "7100 is the human-reviewed real liquidity/delivery draw for the Jan 15 short campaign.",
     "7117/7101.25 style nearby zones may remain in raw ladders but must be displayed as FVG/objective/management context when visual review says they are not real liquidity.",
     "Jan 16 Trade 1 is valid. Trades 2 and 3 are rejected from the FairValueGapResearchModel review set because they do not have valid 15M parent FVG support.",
+    "Jan 20 Trade 6 is management continuation short from the earlier sell-side campaign, not a fresh standalone primary trade. The older Dec 19 02:15/02:30 15M LONG FVG area around 6940.25-6949.00 defended before full tactical delivery.",
     "Jan 21 Trade 1 is valid under the 15M FVG Hold + Nested 5M FVG Defense Continuation rule. The tiny nested 5M FVG/wick-defense around 6957 matters because it sits inside the valid 9:30 15M parent FVG. The raw 6978.50 liquidity label is rejected; the first meaningful concern is 6988.75."
   ],
   "openQuestions": [

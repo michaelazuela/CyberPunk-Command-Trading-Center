@@ -160,11 +160,12 @@ Context window: 120 days (2025-09-22T00:00:00 to 2026-01-20T23:59:59)
 - Reasons: No 15M acceptance through the parent FVG was found inside this session window. After the parent failure, 5M did not return into the failed 15M FVG zone. No completed 5M wick-defense candle was found inside the failed FVG zone. No completed 5M continuation close away from the failed FVG zone was found after the return.
 
 ### 6. SHORT 15M FVG 6962.00-6971.50 created 2026-01-20T14:00:00
-- Verdict: valid_trace_candidate
-- Continuation read: obstacle_defended_continuation_failed
+- Verdict: management_continuation_short_not_clean_standalone
+- Continuation read: management_continuation_short_obstacle_defended_before_t1
 - Gate trace: PASS 15m_parent_displacement: 15M FVG formation includes displacement at 2026-01-20T13:45:00. | CONTEXT 15m_parent_failure_or_acceptance: No 15M acceptance through/failure was observed; this may still be continuation context, but it does not prove a failed-FVG model. | PASS 5m_return_to_parent_or_nested_fvg: 5M returned into the parent/nested FVG at 2026-01-20T14:05:00. | PASS completed_5m_wick_defense: Completed 5M wick defense found at 2026-01-20T14:05:00. | PASS completed_5m_continuation_proof: Completed 5M continuation proof closed at 2026-01-20T14:05:00. | PASS entry_stop_risk_contract: Entry 6956.50, protected 5M stop 6981.00, risk 24.50 pts. | PASS tactical_targets_from_actual_risk: T1 6919.75 and T2 6907.50 were calculated from actual risk. | CONTEXT target_room_or_liquidity_context: Nearest real liquidity context: nearest prior low liquidity 6956.25.
 - Parent displacement: yes
-- Parent displacement candle: 2026-01-20T13:45:00
+- Parent impulse/displacement candle: 2026-01-20T13:45:00
+- Parent FVG creation/confirmation: 2026-01-20T14:00:00
 - Parent failure: not found
 - First 5M return: 2026-01-20T14:05:00
 - 5M wick defense: 2026-01-20T14:05:00
@@ -172,7 +173,7 @@ Context window: 120 days (2025-09-22T00:00:00 to 2026-01-20T23:59:59)
 - Entry/stop/risk: 6956.50 / 6981.00 / 24.50 pts
 - T1/T2: 6919.75 / 6907.50
 - Nearest liquidity: nearest prior low liquidity 6956.25
-- Opposing FVG obstacle before T1: 15m LONG 6940.25-6949.00 created 2025-12-19T02:30:00 status partial_touch
+- Opposing FVG obstacle before T1: 15m LONG 6940.25-6949.00 created 2025-12-19T02:30:00 status partial_touch; human chart read ties this to the defended Dec 19 02:15/02:30 15M fair value gap area
 - Opposing FVG reaction: obstacle_defended_continuation_failed at 2026-01-20T14:20:00
 - Meaningful liquidity target before T1: 6949.25 (RTH low liquidity before proof)
 - Balanced path to liquidity: not_balanced_path_to_liquidity - An opposing FVG defended before T1, so the path did not deliver cleanly to liquidity.
@@ -180,7 +181,7 @@ Context window: 120 days (2025-09-22T00:00:00 to 2026-01-20T23:59:59)
 - Failed FVGs above at proof: 5m SHORT 6956.75-6957.25 created 2025-12-19T06:15:00 status failed_inverted; 240m SHORT 6956.75-6960.50 created 2025-11-06T17:00:00 status failed_inverted; 5m SHORT 6957.00-6957.25 created 2025-12-19T03:30:00 status failed_inverted; 5m LONG 6957.00-6958.00 created 2025-12-19T03:40:00 status failed_inverted; 15m LONG 6957.00-6959.25 created 2025-12-16T03:30:00 status failed_inverted; 5m LONG 6957.25-6958.75 created 2025-11-05T06:50:00 status failed_inverted; 5m LONG 6957.25-6957.75 created 2025-12-19T06:35:00 status failed_inverted; 5m SHORT 6957.75-6958.75 created 2025-12-15T22:35:00 status failed_inverted
 - Open FVGs above at proof: 5m SHORT 6962.00-6962.75 created 2026-01-20T13:50:00 status partial_touch; 15m SHORT 6962.00-6971.50 created 2026-01-20T14:00:00 status open_untouched; 5m SHORT 6965.25-6966.75 created 2026-01-20T13:45:00 status open_untouched; 5m SHORT 6970.00-6971.50 created 2026-01-20T13:40:00 status open_untouched; 15m SHORT 6973.75-6977.75 created 2026-01-20T13:45:00 status open_untouched; 5m SHORT 6975.50-6976.00 created 2026-01-20T13:30:00 status open_untouched; 15m SHORT 6983.00-6990.75 created 2026-01-20T13:00:00 status partial_touch; 60m SHORT 6984.50-6993.00 created 2026-01-20T14:00:00 status open_untouched
 - Objective ladder: session_extreme 6949.25 reached 2026-01-20T14:20:00 (RTH low liquidity before proof); open_fvg 6940.25 reached 2026-01-20T15:15:00 (15m LONG open FVG partial_touch created 2025-12-19T02:30:00); open_fvg 6940.25 reached 2026-01-20T15:15:00 (5m LONG open FVG partial_touch created 2025-12-19T02:10:00); open_fvg 6939.25 reached 2026-01-20T15:15:00 (5m LONG open FVG open_untouched created 2025-12-19T02:05:00); open_fvg 6935.75 reached 2026-01-20T15:45:00 (5m LONG open FVG open_untouched created 2025-12-19T02:00:00); open_fvg 6923.00 not reached (15m LONG open FVG partial_touch created 2025-12-18T09:00:00); open_fvg 6923.00 not reached (5m LONG open FVG partial_touch created 2025-12-18T08:40:00); open_fvg 6921.00 not reached (240m LONG open FVG open_untouched created 2025-12-18T14:00:00); tactical 6919.75 not reached (T1 1.5R); open_fvg 6918.50 not reached (5m LONG open FVG partial_touch created 2025-12-18T08:20:00); tactical 6907.50 not reached (T2 2.0R)
-- Story: SHORT proof completed at 2026-01-20T14:05:00 from 6962.00-6971.50. 16 failed/open FVG areas remained above as resistance/memory. 8 open FVG areas remained below as downside draw/context. Opposing FVG obstacle before T1: 15m 6940.25-6949.00 with reaction obstacle_defended_continuation_failed. Structural objectives reached after proof: 6949.25 session_extreme, 6940.25 open_fvg, 6940.25 open_fvg, 6939.25 open_fvg. T1/T2 are tactical; open FVG/liquidity levels explain whether a runner had structural support.
+- Story: SHORT proof completed at 2026-01-20T14:05:00 from 6962.00-6971.50, but this is management/continuation from the earlier Jan 20 sell-side campaign, not a clean standalone primary trade. The 13:45 candle is the impulse/displacement leg; the 14:00 15M candle confirms the parent FVG. The move delivered to the first useful liquidity/objective area near 6949.25, then ran into the older defended Dec 19 02:15/02:30 15M LONG FVG area around 6940.25-6949.00 before T1. That defended FVG explains why this should be managed as continuation context instead of promoted as a fresh short model trade.
 - Outcome: SessionClose at 2026-01-20T16:00:00, one MES +$55.00
 - Managed outcome: LQ1 at 2026-01-20T14:20:00, exit 6949.25, one MES +$36.25
 - Reasons: No 15M acceptance through the parent FVG was found inside this session window.

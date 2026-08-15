@@ -66,6 +66,12 @@ If price breaks out of a balanced/rebalanced range and no defended opposing FVG 
 
 Before scoring continuation, check for a defended opposing FVG or HTF reaction zone between entry and T1. A defended obstacle before T1 downgrades or fails continuation.
 
+### Management Continuation After First Campaign
+
+After the first clean same-direction FVG campaign is active, later same-direction FVG proof in the same drive is management or add-on context by default. It is not a new primary trade unless an explicit reset/add-on rule has been approved.
+
+If the later continuation reaches an older opposing FVG before T1 and that FVG defends, the correct label is management_continuation, not fresh standalone model trade. The Jan 20 Trade 6 review is the control case: the short continued from the earlier sell-side campaign, then the older Dec 19 02:15/02:30 15M LONG FVG area defended before full tactical delivery.
+
 ## Anti-Drift Rules
 
 - Do not begin with raw 5M rows. Begin with HTF/15M story.

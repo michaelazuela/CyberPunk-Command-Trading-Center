@@ -113,6 +113,21 @@ Meaning:
 - FVG obstacles take priority over a simple liquidity ladder.
 - Liquidity target remains useful, but it does not override a defended opposing FVG.
 
+### Management Continuation After First Campaign
+
+After the first valid same-direction FVG campaign in a drive, later same-direction FVG proof is management or add-on context by default. It is not a new primary model trade unless an explicit reset/add-on rule has been approved.
+
+Required facts:
+- First same-direction FVG campaign already exists in the active drive.
+- Later same-direction FVG proof appears before a clean reset.
+- Later trade path reaches an older opposing FVG/HTF reaction area before full tactical target delivery.
+- That older opposing FVG/HTF reaction area defends.
+
+Meaning:
+- The later row can explain continuation, partial management, or add-on context.
+- It must not be promoted as a fresh standalone model trade by default.
+- If the defended older FVG blocks full delivery before T1/T2, record the defended FVG as the reason management was required.
+
 ## Anti-Drift Language
 
 - Do not call FVG/objective zones liquidity. Real liquidity means prior swing liquidity, session high/low liquidity, or equal high/low liquidity.
@@ -132,5 +147,6 @@ Meaning:
 - 2026-01-15: valid short case. Trade 1 is the primary campaign. Trade 2 is continuation/management from Trade 1 unless a reset/add-on rule is approved later.
 - 2026-01-16: valid Trade 1 only. Other raw rows are rejected because they lack valid 15M parent FVG support.
 - 2026-01-20: valid Trade 4 correction. The parent FVG is the 12:45 15M zone around 6983-6991. The 13:00 long-wick bearish candle is continuation/acceptance through that already-created parent, not the parent creation candle.
+- 2026-01-20 Trade 6: management continuation short, not a fresh standalone primary trade. The 13:45 candle is the impulse/displacement leg, the 14:00 15M candle confirms the parent FVG, and the older Dec 19 02:15/02:30 15M LONG FVG area around 6940.25-6949.00 defended before full tactical delivery.
 - 2026-01-21: valid long case. 9:30 15M parent FVG plus tiny nested 5M FVG/wick defense around 6957 is a rule-based 15M FVG Hold + Nested 5M FVG Defense Continuation.
 - 2026-01-22: valid FVG stack defense long story. Late short rows are invalid because price defended the final/lowest 15M bullish FVG in the stack and never accepted below it with clean 5M bearish proof.

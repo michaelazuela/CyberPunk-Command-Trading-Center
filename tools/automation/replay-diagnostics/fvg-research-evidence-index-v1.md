@@ -29,7 +29,11 @@ details without mixing this research lane into older model logic.
   - Human correction: Trade 4 is valid as a rule-based FVG failure/continuation
     short. The parent FVG is the 12:45 15M zone around 6983-6991; the 13:00
     long-wick bearish candle is continuation/acceptance through that already
-    created parent, not the parent creation candle. Trade 6 remains separate.
+    created parent, not the parent creation candle.
+  - Human correction: Trade 6 is management continuation short, not a fresh
+    standalone primary trade. The 13:45 candle is the impulse leg, the 14:00
+    15M candle confirms the parent FVG, and the older Dec 19 02:15/02:30 15M
+    LONG FVG area around 6940.25-6949.00 defended before full tactical delivery.
 - `tools/automation/replay-diagnostics/fvg-jan21-full-rth-preview-v1.md`
   - Jan 21 preview package.
   - Human correction: valid trade is the 9:30 15M parent FVG long with tiny
