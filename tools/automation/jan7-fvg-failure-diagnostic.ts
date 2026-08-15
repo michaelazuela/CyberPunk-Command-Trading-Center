@@ -48,6 +48,8 @@ type BalancedPathToLiquidityStatus =
 interface Zone {
   direction: Direction;
   timeframe: InventoryTimeframe;
+  parentDisplacementAt: string;
+  confirmedAt: string;
   createdAt: string;
   lower: number;
   upper: number;
@@ -187,6 +189,7 @@ interface DiagnosticReport {
   reportType: 'jan7_fvg_failure_diagnostic_trace';
   generatedAt: string;
   boundary: 'research_only_no_live_scanner_discord_or_trading_rule_change';
+  requestedBridgeInstrument: string;
   bridgeInstrument: string;
   date: string;
   session: Session;
@@ -212,6 +215,7 @@ const __dirname = path.dirname(__filename);
 const OUT_DIR = path.join(__dirname, 'replay-diagnostics');
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 const POINT_VALUE_MES = 5;
+const DEFAULT_FVG_RESEARCH_BRIDGE_INSTRUMENT = 'MES 09-26';
 const BALANCED_PATH_CONTINUATION_RULE: ResearchRule = {
   name: 'FvgBalancedPathContinuation',
   status: 'research_only_supporting_rule',
@@ -255,9 +259,15 @@ const BATTLE_ZONE_INVENTORY_RULE: ResearchRule = {
 };
 
 function argValue(name: string, fallback: string): string {
-  const prefix = `--${name}=`;
-  const found = process.argv.find((arg) => arg.startsWith(prefix));
-  return found ? found.slice(prefix.length) : fallback;
+  const equalsPrefix = `--${name}=`;
+  const equalsArg = process.argv.find((arg) => arg.startsWith(equalsPrefix));
+  if (equalsArg) return equalsArg.slice(equalsPrefix.length);
+  const flagIndex = process.argv.findIndex((arg) => arg === `--${name}`);
+  if (flagIndex >= 0) {
+    const value = process.argv[flagIndex + 1];
+    if (value && !value.startsWith('--')) return value;
+  }
+  return fallback;
 }
 
 function argNumber(name: string, fallback: number): number {
@@ -272,6 +282,20 @@ function argNonNegativeNumber(name: string, fallback: number): number {
 
 function safeLabel(value: string): string {
   return value.replace(/[^0-9A-Za-z_-]+/g, '-');
+}
+
+function normalizeFvgResearchBridgeInstrument(value: string): string {
+  const text = String(value || '').trim().replace(/^\/+/, '').replace(/\s+/g, ' ');
+  if (!text) return DEFAULT_FVG_RESEARCH_BRIDGE_INSTRUMENT;
+  const upper = text.toUpperCase();
+  if (upper === 'MES') return DEFAULT_FVG_RESEARCH_BRIDGE_INSTRUMENT;
+  const monthNameMatch = upper.match(/^MES\s+SEP\s*-?\s*26$/);
+  if (monthNameMatch) return DEFAULT_FVG_RESEARCH_BRIDGE_INSTRUMENT;
+  const compactMonthNameMatch = upper.match(/^MES\s+SEP26$/);
+  if (compactMonthNameMatch) return DEFAULT_FVG_RESEARCH_BRIDGE_INSTRUMENT;
+  const numericMonthMatch = upper.match(/^MES\s+0?9\s*-?\s*26$/);
+  if (numericMonthMatch) return DEFAULT_FVG_RESEARCH_BRIDGE_INSTRUMENT;
+  return text;
 }
 
 function roundTick(value: number): number {
@@ -360,6 +384,8 @@ function detectFvgs(bars: Bar[], timeframe: InventoryTimeframe): Zone[] {
       zones.push({
         direction: 'LONG',
         timeframe,
+        parentDisplacementAt: middle.time,
+        confirmedAt: right.time,
         createdAt: right.time,
         lower: roundTick(left.high),
         upper: roundTick(right.low),
@@ -371,6 +397,8 @@ function detectFvgs(bars: Bar[], timeframe: InventoryTimeframe): Zone[] {
       zones.push({
         direction: 'SHORT',
         timeframe,
+        parentDisplacementAt: middle.time,
+        confirmedAt: right.time,
         createdAt: right.time,
         lower: roundTick(right.high),
         upper: roundTick(left.low),
@@ -382,10 +410,26 @@ function detectFvgs(bars: Bar[], timeframe: InventoryTimeframe): Zone[] {
   return zones;
 }
 
+function zoneParentDisplacementAt(zone: Zone): string {
+  return zone.parentDisplacementAt ?? zone.createdAt;
+}
+
+function zoneConfirmedAt(zone: Zone): string {
+  return zone.confirmedAt ?? zone.createdAt;
+}
+
 function findParentDisplacementBar(zone: Zone, bars15m: Bar[]): Bar | null {
-  const parentIndex = bars15m.findIndex((bar) => bar.time === zone.createdAt);
-  if (parentIndex < 0) return null;
-  const formationIndexes = [parentIndex - 2, parentIndex - 1, parentIndex].filter((index) => index >= 0);
+  const confirmedIndex = bars15m.findIndex((bar) => bar.time === zoneConfirmedAt(zone));
+  if (confirmedIndex < 0) return null;
+
+  const directParentIndex = bars15m.findIndex((bar) => bar.time === zoneParentDisplacementAt(zone));
+  if (directParentIndex >= 0) {
+    const directParent = bars15m[directParentIndex];
+    const priorBars = bars15m.slice(Math.max(0, directParentIndex - 12), directParentIndex);
+    if (isDisplacement(directParent, priorBars, zone.direction)) return directParent;
+  }
+
+  const formationIndexes = [confirmedIndex - 2, confirmedIndex - 1, confirmedIndex].filter((index) => index >= 0);
   return formationIndexes
     .map((index) => ({
       bar: bars15m[index],
@@ -445,6 +489,14 @@ function battleZoneDefenseStatus(zone: Zone, bars15m: Bar[], reviewTime: string)
     closesContinuationSide(bar, zone)
   ) ?? null;
 
+  if (defended && (!failed || defended.time < failed.time)) {
+    return {
+      defenseStatus: 'defended_on_15m',
+      firstTouchTime: firstTouch?.time ?? null,
+      failedTime: failed?.time ?? null,
+      defendedTime: defended.time,
+    };
+  }
   if (failed) {
     return {
       defenseStatus: 'failed_acceptance_through_15m',
@@ -506,7 +558,12 @@ function isDeeperSameSideZone(direction: Direction, candidate: Zone, current: Zo
   return direction === 'LONG' ? candidate.lower < current.lower : candidate.upper > current.upper;
 }
 
-function readFiveMinuteDefense(zone: Zone, bars5m: Bar[], sessionWindow: { from: string; to: string }): FiveMinuteDefenseRead {
+function readFiveMinuteDefense(
+  zone: Zone,
+  bars5m: Bar[],
+  sessionWindow: { from: string; to: string },
+  options: { allowBattleZoneHold?: boolean } = {},
+): FiveMinuteDefenseRead {
   const reviewBars = bars5m.filter((bar) => bar.time >= zone.createdAt && bar.time <= sessionWindow.to);
   const firstReturn = reviewBars.find((bar) => overlapsZone(bar, zone)) ?? null;
   if (!firstReturn) {
@@ -526,17 +583,29 @@ function readFiveMinuteDefense(zone: Zone, bars5m: Bar[], sessionWindow: { from:
     hasWickDefense(bar, zone.direction) &&
     !acceptedThroughAgainstZone(bar, zone)
   ) ?? null;
-  const proof = wickDefense
-    ? afterReturn.find((bar) => bar.time >= wickDefense.time && closesContinuationSide(bar, zone))
+  const battleZoneHold = options.allowBattleZoneHold
+    ? afterReturn.find((bar) =>
+        overlapsZone(bar, zone) &&
+        !acceptedThroughAgainstZone(bar, zone) &&
+        closesContinuationSide(bar, zone)
+      ) ?? null
+    : null;
+  const defenseBar = wickDefense ?? battleZoneHold;
+  const proof = defenseBar
+    ? closesContinuationSide(defenseBar, zone)
+      ? defenseBar
+      : afterReturn.find((bar) => bar.time > defenseBar.time && closesContinuationSide(bar, zone))
     : null;
 
   if (proof) {
     return {
       status: 'confirmed_defense',
       returnTime: firstReturn.time,
-      wickDefenseTime: wickDefense?.time ?? null,
+      wickDefenseTime: defenseBar?.time ?? null,
       proofTime: proof.time,
-      detail: '5M returned into the active 15M battle zone, rejected it, and closed back in the continuation direction.',
+      detail: wickDefense
+        ? '5M returned into the active 15M battle zone, rejected it, and closed back in the continuation direction.'
+        : '5M returned into the active 15M battle zone, held it, and closed back in the continuation direction.',
     };
   }
   if (acceptedThrough) {
@@ -573,7 +642,7 @@ function findDefendedFirstContinuation(args: {
         defense: readFiveMinuteDefense(candidateZone, args.bars5m, {
           from: args.sessionWindow.from,
           to: cutoffTime,
-        }),
+        }, { allowBattleZoneHold: direction !== args.zone.direction }),
       };
     })
     .filter((candidate) => candidate.defense.status === 'confirmed_defense' && candidate.defense.proofTime)
@@ -595,6 +664,7 @@ function buildBattleZoneInventory(args: {
   bars15m: Bar[];
   bars5m: Bar[];
   sessionWindow: { from: string; to: string };
+  allowBattleZoneHold?: boolean;
 }): BattleZoneInventoryRead {
   const activeDate = args.activeZone.createdAt.slice(0, 10);
   const activeSessionSameSide15mBase = args.zones
@@ -647,7 +717,9 @@ function buildBattleZoneInventory(args: {
         detail:
           'The active 15M FVG is not the first reaction zone, final/deepest battle zone, or latest active-session 15M FVG, so 5M defense is diagnostic only and cannot promote this research model.',
       }
-    : readFiveMinuteDefense(args.activeZone, args.bars5m, args.sessionWindow);
+    : readFiveMinuteDefense(args.activeZone, args.bars5m, args.sessionWindow, {
+        allowBattleZoneHold: args.allowBattleZoneHold,
+      });
 
   return {
     scope: '15m_only_active_displacement_leg',
@@ -804,7 +876,7 @@ function buildObjectiveLadder(args: {
   for (const item of openFvgs.slice(0, 8)) {
     levels.push({
       kind: 'open_fvg',
-      label: `${item.timeframe} ${item.direction} open FVG ${item.statusAtReview} created ${item.createdAt}`,
+      label: `${item.timeframe} ${item.direction} open FVG ${item.statusAtReview} parent ${zoneParentDisplacementAt(item)} confirmed ${zoneConfirmedAt(item)}`,
       price: args.direction === 'SHORT' ? item.lower : item.upper,
       reachedTime: null,
     });
@@ -1235,14 +1307,26 @@ function traceZone(args: {
   const wickDefenseBars = firstReturn
     ? postFailure5m.filter((bar) => bar.time >= firstReturn.time && overlapsZone(bar, activeZone) && hasWickDefense(bar, activeZone.direction))
     : [];
-  if (!wickDefenseBars.length) reasons.push(defendedFirstContinuation
-    ? 'No completed 5M wick-defense candle was found inside the defended FVG zone.'
+  const defendedFirstDefenseBar = defendedFirstContinuation?.defense.wickDefenseTime
+    ? postFailure5m.find((bar) => bar.time === defendedFirstContinuation.defense.wickDefenseTime) ?? null
+    : null;
+  const defendedFirstProofBar = defendedFirstContinuation?.defense.proofTime
+    ? postFailure5m.find((bar) => bar.time === defendedFirstContinuation.defense.proofTime) ?? null
+    : null;
+  const effectiveDefenseBars = wickDefenseBars.length
+    ? wickDefenseBars
+    : defendedFirstDefenseBar
+      ? [defendedFirstDefenseBar]
+      : [];
+  if (!effectiveDefenseBars.length) reasons.push(defendedFirstContinuation
+    ? 'No completed 5M defended-zone hold or wick-defense candle was found inside the defended FVG zone.'
     : 'No completed 5M wick-defense candle was found inside the failed FVG zone.');
 
-  const firstDefense = wickDefenseBars[0] ?? firstReturn;
-  const proof = firstDefense
-    ? postFailure5m.find((bar) => bar.time >= firstDefense.time && closesContinuationSide(bar, activeZone))
-    : null;
+  const firstDefense = effectiveDefenseBars[0] ?? firstReturn;
+  const proof = defendedFirstProofBar ?? (firstDefense
+    ? postFailure5m.find((bar) => bar.time > firstDefense.time && closesContinuationSide(bar, activeZone))
+    : null
+  );
   if (!proof) reasons.push(defendedFirstContinuation
     ? 'No completed 5M continuation close away from the defended FVG zone was found after the return.'
     : 'No completed 5M continuation close away from the failed FVG zone was found after the return.');
@@ -1275,6 +1359,7 @@ function traceZone(args: {
     bars15m,
     bars5m,
     sessionWindow,
+    allowBattleZoneHold: Boolean(defendedFirstContinuation),
   });
   const battleZoneEligible =
     battleZoneInventory.activeRole !== 'not_in_battle_inventory' &&
@@ -1288,7 +1373,7 @@ function traceZone(args: {
   const structurallyEligible = Boolean(
     parentDisplacement &&
     firstReturn &&
-    wickDefenseBars.length &&
+    effectiveDefenseBars.length &&
     proof &&
     stop !== null &&
     entry !== null &&
@@ -1303,7 +1388,7 @@ function traceZone(args: {
     parentDisplacementTime: parentDisplacementBar?.time ?? null,
     parentFailure: parentFailure ?? null,
     firstReturn: firstReturn ?? null,
-    wickDefenseBars,
+    wickDefenseBars: effectiveDefenseBars,
     proof,
     entry,
     stop,
@@ -1504,7 +1589,7 @@ function markdownReport(report: DiagnosticReport): string {
   const formatInventory = (items: FvgInventoryItem[]): string => {
     if (!items.length) return 'none';
     return items
-      .map((item) => `${item.timeframe} ${item.direction} ${item.lower.toFixed(2)}-${item.upper.toFixed(2)} created ${item.createdAt} status ${item.statusAtReview}`)
+      .map((item) => `${item.timeframe} ${item.direction} ${item.lower.toFixed(2)}-${item.upper.toFixed(2)} parent ${zoneParentDisplacementAt(item)} confirmed ${zoneConfirmedAt(item)} status ${item.statusAtReview}`)
       .join('; ');
   };
   const formatObjectives = (items: ObjectiveLevel[]): string => {
@@ -1515,11 +1600,11 @@ function markdownReport(report: DiagnosticReport): string {
   };
   const formatObstacle = (item: FvgInventoryItem | null): string => {
     if (!item) return 'none before T1';
-    return `${item.timeframe} ${item.direction} ${item.lower.toFixed(2)}-${item.upper.toFixed(2)} created ${item.createdAt} status ${item.statusAtReview}`;
+    return `${item.timeframe} ${item.direction} ${item.lower.toFixed(2)}-${item.upper.toFixed(2)} parent ${zoneParentDisplacementAt(item)} confirmed ${zoneConfirmedAt(item)} status ${item.statusAtReview}`;
   };
   const formatBattleZone = (item: BattleZoneItem | null): string => {
     if (!item) return 'none';
-    return `${item.role} ${item.direction} ${item.lower.toFixed(2)}-${item.upper.toFixed(2)} created ${item.createdAt} ${item.defenseStatus}${item.defendedTime ? ` defended ${item.defendedTime}` : ''}${item.failedTime ? ` failed ${item.failedTime}` : ''}`;
+    return `${item.role} ${item.direction} ${item.lower.toFixed(2)}-${item.upper.toFixed(2)} parent ${zoneParentDisplacementAt(item)} confirmed ${zoneConfirmedAt(item)} ${item.defenseStatus}${item.defendedTime ? ` defended ${item.defendedTime}` : ''}${item.failedTime ? ` failed ${item.failedTime}` : ''}`;
   };
   const formatFiveMinuteDefense = (read: FiveMinuteDefenseRead): string =>
     `${read.status}; return ${read.returnTime ?? 'none'}; wick ${read.wickDefenseTime ?? 'none'}; proof ${read.proofTime ?? 'none'}; ${read.detail}`;
@@ -1555,7 +1640,7 @@ function markdownReport(report: DiagnosticReport): string {
     `# Jan 7 FVG Failure Diagnostic Trace`,
     ``,
     `Boundary: ${report.boundary}`,
-    `Instrument: ${report.bridgeInstrument}`,
+    `Instrument: ${report.bridgeInstrument}${report.requestedBridgeInstrument !== report.bridgeInstrument ? ` (requested ${report.requestedBridgeInstrument})` : ''}`,
     `Date/session: ${report.date} / ${report.session} (${report.sessionWindow.from} to ${report.sessionWindow.to})`,
     `Context window: ${report.contextDays} days (${report.loadWindow.from} to ${report.loadWindow.to})`,
     `Forward target-check horizon: ${report.forwardDays} day(s) after the review date`,
@@ -1590,7 +1675,7 @@ function markdownReport(report: DiagnosticReport): string {
   for (const [index, trace] of report.traces.entries()) {
     lines.push(
       ``,
-      `### ${index + 1}. ${trace.parentFvg.direction} 15M FVG ${trace.parentFvg.lower.toFixed(2)}-${trace.parentFvg.upper.toFixed(2)} created ${trace.parentFvg.createdAt}`,
+      `### ${index + 1}. ${trace.parentFvg.direction} 15M FVG ${trace.parentFvg.lower.toFixed(2)}-${trace.parentFvg.upper.toFixed(2)} parent ${zoneParentDisplacementAt(trace.parentFvg)} confirmed ${zoneConfirmedAt(trace.parentFvg)}`,
       `- Verdict: ${trace.verdict}`,
       `- Continuation read: ${trace.continuationRead}`,
       `- Gate trace: ${formatGates(trace.rejectionGates)}`,
@@ -1649,7 +1734,11 @@ async function main(): Promise<void> {
   const date = argValue('date', '2026-01-07');
   const session = argValue('session', 'lunch') as Session;
   if (!['morning', 'lunch', 'full-rth'].includes(session)) throw new Error(`Unsupported session: ${session}`);
-  const bridgeInstrument = argValue('bridge-instrument', process.env.SUPERVISOR_BRIDGE_INSTRUMENT || 'MES 09-26');
+  const requestedBridgeInstrument = argValue(
+    'bridge-instrument',
+    process.env.SUPERVISOR_BRIDGE_INSTRUMENT || DEFAULT_FVG_RESEARCH_BRIDGE_INSTRUMENT,
+  );
+  const bridgeInstrument = normalizeFvgResearchBridgeInstrument(requestedBridgeInstrument);
   const label = safeLabel(argValue('label', `jan7-fvg-failure-${session}`));
   const contextDays = argNumber('context-days', 3);
   const forwardDays = argNonNegativeNumber('forward-days', 0);
@@ -1701,6 +1790,7 @@ async function main(): Promise<void> {
     reportType: 'jan7_fvg_failure_diagnostic_trace',
     generatedAt: new Date().toISOString(),
     boundary: 'research_only_no_live_scanner_discord_or_trading_rule_change',
+    requestedBridgeInstrument,
     bridgeInstrument,
     date,
     session,
@@ -1753,7 +1843,9 @@ async function main(): Promise<void> {
     eligibleRows: eligible.map((trace) => ({
       direction: trace.parentFvg.direction,
       parentFvg: `${trace.parentFvg.lower.toFixed(2)}-${trace.parentFvg.upper.toFixed(2)}`,
-      parentCreatedAt: trace.parentFvg.createdAt,
+      parentCreatedAt: zoneParentDisplacementAt(trace.parentFvg),
+      parentDisplacementAt: zoneParentDisplacementAt(trace.parentFvg),
+      parentConfirmedAt: zoneConfirmedAt(trace.parentFvg),
       proofTime: trace.proofTime,
       entry: trace.entry,
       stop: trace.stop,
@@ -1772,6 +1864,8 @@ async function main(): Promise<void> {
             timeframe: trace.opposingFvgObstacleBeforeT1.timeframe,
             direction: trace.opposingFvgObstacleBeforeT1.direction,
             zone: `${trace.opposingFvgObstacleBeforeT1.lower.toFixed(2)}-${trace.opposingFvgObstacleBeforeT1.upper.toFixed(2)}`,
+            parentDisplacementAt: zoneParentDisplacementAt(trace.opposingFvgObstacleBeforeT1),
+            confirmedAt: zoneConfirmedAt(trace.opposingFvgObstacleBeforeT1),
             createdAt: trace.opposingFvgObstacleBeforeT1.createdAt,
             statusAtReview: trace.opposingFvgObstacleBeforeT1.statusAtReview,
           }
@@ -1791,7 +1885,9 @@ async function main(): Promise<void> {
       .map((trace) => ({
         direction: trace.parentFvg.direction,
         parentFvg: `${trace.parentFvg.lower.toFixed(2)}-${trace.parentFvg.upper.toFixed(2)}`,
-        parentCreatedAt: trace.parentFvg.createdAt,
+        parentCreatedAt: zoneParentDisplacementAt(trace.parentFvg),
+        parentDisplacementAt: zoneParentDisplacementAt(trace.parentFvg),
+        parentConfirmedAt: zoneConfirmedAt(trace.parentFvg),
         proofTime: trace.proofTime,
         entry: trace.entry,
         stop: trace.stop,
@@ -1810,6 +1906,8 @@ async function main(): Promise<void> {
               timeframe: trace.opposingFvgObstacleBeforeT1.timeframe,
               direction: trace.opposingFvgObstacleBeforeT1.direction,
               zone: `${trace.opposingFvgObstacleBeforeT1.lower.toFixed(2)}-${trace.opposingFvgObstacleBeforeT1.upper.toFixed(2)}`,
+              parentDisplacementAt: zoneParentDisplacementAt(trace.opposingFvgObstacleBeforeT1),
+              confirmedAt: zoneConfirmedAt(trace.opposingFvgObstacleBeforeT1),
               createdAt: trace.opposingFvgObstacleBeforeT1.createdAt,
               statusAtReview: trace.opposingFvgObstacleBeforeT1.statusAtReview,
             }
