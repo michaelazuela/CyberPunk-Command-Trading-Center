@@ -1,0 +1,109 @@
+{
+  "reportType": "jan7_fvg_failure_diagnostic_trace",
+  "generatedAt": "2026-08-15T01:03:04.489Z",
+  "boundary": "research_only_no_live_scanner_discord_or_trading_rule_change",
+  "bridgeInstrument": "MES",
+  "date": "2026-01-13",
+  "session": "lunch",
+  "sessionWindow": {
+    "from": "2026-01-13T12:00:00",
+    "to": "2026-01-13T16:00:00"
+  },
+  "contextDays": 120,
+  "loadWindow": {
+    "from": "2025-09-15T00:00:00",
+    "to": "2026-01-13T23:59:59"
+  },
+  "source": {
+    "marketData": "supabase_market_bars_read_only",
+    "completedHistoricalBarsOnly": true,
+    "chartAlignedContractRequired": true
+  },
+  "coverage": {
+    "5m": {
+      "bars": 0,
+      "first": null,
+      "last": null
+    },
+    "15m": {
+      "bars": 0,
+      "first": null,
+      "last": null
+    },
+    "60m": {
+      "bars": 0,
+      "first": null,
+      "last": null
+    },
+    "120m": {
+      "bars": 0,
+      "first": null,
+      "last": null
+    },
+    "240m": {
+      "bars": 0,
+      "first": null,
+      "last": null
+    }
+  },
+  "htfContext": {
+    "60m": {
+      "bars": 0,
+      "first": null,
+      "last": null
+    },
+    "120m": {
+      "bars": 0,
+      "first": null,
+      "last": null
+    },
+    "240m": {
+      "bars": 0,
+      "first": null,
+      "last": null
+    }
+  },
+  "researchTags": [],
+  "researchRules": [
+    {
+      "name": "FvgBattleZoneInventory",
+      "status": "research_only_supporting_rule",
+      "definition": "Track only the first same-side 15M FVG reaction zone and the final/deepest same-side 15M FVG battle zone from the active displacement leg. The selected 15M battle zone must then be defended on completed 5M candles before any entry model can use it.",
+      "requiredFacts": [
+        "15M-only inventory for this research rule.",
+        "Same-side 15M displacement leg creates the candidate FVG stack.",
+        "First same-side 15M FVG is the first reaction zone.",
+        "Final/deepest same-side 15M FVG is the structure survival battle zone if the first zone fails.",
+        "5M confirms only after price returns into the selected 15M battle zone and rejects it."
+      ],
+      "invalidation": [
+        "Every 15M FVG is tagged as equal importance.",
+        "Middle-zone clutter is promoted over first reaction or final/deepest battle-zone roles.",
+        "5M confirmation is used before the 15M battle zone is selected.",
+        "The selected 15M battle zone accepts through against the intended direction."
+      ],
+      "notAStandaloneTrigger": true
+    },
+    {
+      "name": "FvgBalancedPathContinuation",
+      "status": "research_only_supporting_rule",
+      "definition": "If price breaks out of a balanced/rebalanced range and no defended opposing FVG appears before the next real-liquidity or open-FVG objective, the move can travel cleanly through that path. This supports continuation and runner management after a valid FVG proof already exists.",
+      "requiredFacts": [
+        "15M parent FVG setup is valid.",
+        "Completed 5M wick-defense/proof exists.",
+        "Nearest protected 5M structure stop is known.",
+        "Objective ladder has a real liquidity or open-FVG objective ahead.",
+        "No opposing FVG/HTF obstacle defends before that objective."
+      ],
+      "invalidation": [
+        "Used without 15M parent FVG plus completed 5M proof.",
+        "Opposing FVG/HTF obstacle defends before the objective.",
+        "The objective was already reached before entry.",
+        "Balanced path is treated as a standalone trigger."
+      ],
+      "notAStandaloneTrigger": true
+    }
+  ],
+  "fvgInventoryAtSessionStart": [],
+  "traces": []
+}
