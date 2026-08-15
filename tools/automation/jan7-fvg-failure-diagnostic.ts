@@ -97,7 +97,6 @@ interface FiveMinuteDefenseRead {
 interface DefendedFirstContinuationRead {
   zone: Zone;
   defense: FiveMinuteDefenseRead;
-  originalZoneDirection: Direction;
   cutoffTime: string;
 }
 
@@ -546,14 +545,6 @@ function sameZoneLocation(left: Zone, right: Zone): boolean {
     left.upper === right.upper;
 }
 
-function oppositeDirection(direction: Direction): Direction {
-  return direction === 'LONG' ? 'SHORT' : 'LONG';
-}
-
-function withDirection(zone: Zone, direction: Direction): Zone {
-  return { ...zone, direction };
-}
-
 function isDeeperSameSideZone(direction: Direction, candidate: Zone, current: Zone): boolean {
   return direction === 'LONG' ? candidate.lower < current.lower : candidate.upper > current.upper;
 }
@@ -633,27 +624,16 @@ function findDefendedFirstContinuation(args: {
   parentFailureTime: string | null;
 }): DefendedFirstContinuationRead | null {
   const cutoffTime = args.parentFailureTime ?? args.sessionWindow.to;
-  const directions: Direction[] = [args.zone.direction, oppositeDirection(args.zone.direction)];
-  const candidates = directions
-    .map((direction) => {
-      const candidateZone = withDirection(args.zone, direction);
-      return {
-        zone: candidateZone,
-        defense: readFiveMinuteDefense(candidateZone, args.bars5m, {
-          from: args.sessionWindow.from,
-          to: cutoffTime,
-        }, { allowBattleZoneHold: direction !== args.zone.direction }),
-      };
-    })
-    .filter((candidate) => candidate.defense.status === 'confirmed_defense' && candidate.defense.proofTime)
-    .sort((a, b) => (a.defense.proofTime ?? '').localeCompare(b.defense.proofTime ?? ''));
+  const defense = readFiveMinuteDefense(args.zone, args.bars5m, {
+    from: args.sessionWindow.from,
+    to: cutoffTime,
+  });
 
-  const first = candidates[0] ?? null;
-  if (!first) return null;
+  if (defense.status !== 'confirmed_defense' || !defense.proofTime) return null;
 
   return {
-    ...first,
-    originalZoneDirection: args.zone.direction,
+    zone: args.zone,
+    defense,
     cutoffTime,
   };
 }
@@ -1281,18 +1261,13 @@ function traceZone(args: {
     parentFailureTime: parentFailure?.time ?? null,
   });
   const activeZone = defendedFirstContinuation?.zone ?? zone;
-  const parentDisplacementBar =
-    findParentDisplacementBar(activeZone, bars15m) ??
-    (activeZone.direction !== zone.direction ? findParentDisplacementBar(zone, bars15m) : null);
+  const parentDisplacementBar = findParentDisplacementBar(activeZone, bars15m);
   const parentDisplacement = Boolean(parentDisplacementBar);
   if (!parentDisplacement) reasons.push('15M parent FVG exists, but no candle in the three-candle FVG formation is strong displacement by the current heuristic.');
   if (defendedFirstContinuation) {
     reasons.push(
       `Defended-first continuation precedence: ${activeZone.direction} 5M defense proof completed at ${defendedFirstContinuation.defense.proofTime} before ${parentFailure ? `later same-zone failure/reversal read at ${parentFailure.time}` : 'any later same-zone failure/reversal read'}. Review the defended continuation before labeling this zone as failure/reversal.`
     );
-    if (defendedFirstContinuation.originalZoneDirection !== activeZone.direction) {
-      reasons.push(`Original extracted zone side was ${defendedFirstContinuation.originalZoneDirection}; ${activeZone.direction} defense takes precedence for this research row.`);
-    }
   } else if (!parentFailure) {
     reasons.push('No 15M acceptance through the parent FVG was found inside this session window.');
   }

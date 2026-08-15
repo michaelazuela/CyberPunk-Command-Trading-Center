@@ -1,8 +1,8 @@
 {
   "reportType": "jan7_fvg_failure_diagnostic_trace",
-  "generatedAt": "2026-08-15T21:55:09.486Z",
+  "generatedAt": "2026-08-15T22:49:14.209Z",
   "boundary": "research_only_no_live_scanner_discord_or_trading_rule_change",
-  "requestedBridgeInstrument": "MES 09-26",
+  "requestedBridgeInstrument": "MES",
   "bridgeInstrument": "MES 09-26",
   "date": "2026-01-28",
   "session": "lunch",
@@ -75248,7 +75248,7 @@
   "traces": [
     {
       "parentFvg": {
-        "direction": "LONG",
+        "direction": "SHORT",
         "timeframe": "15m",
         "parentDisplacementAt": "2026-01-28T11:45:00",
         "confirmedAt": "2026-01-28T12:00:00",
@@ -75279,27 +75279,27 @@
         {
           "gate": "completed_5m_wick_defense",
           "status": "pass",
-          "detail": "Completed 5M wick defense found at 2026-01-28T12:10:00, 2026-01-28T12:20:00, 2026-01-28T13:15:00, 2026-01-28T13:30:00, 2026-01-28T14:05:00, 2026-01-28T14:10:00, 2026-01-28T14:25:00, 2026-01-28T14:55:00."
+          "detail": "Completed 5M wick defense found at 2026-01-28T13:10:00, 2026-01-28T13:25:00, 2026-01-28T13:35:00, 2026-01-28T13:40:00, 2026-01-28T13:55:00, 2026-01-28T14:15:00, 2026-01-28T14:35:00, 2026-01-28T14:40:00, 2026-01-28T15:50:00, 2026-01-28T16:00:00."
         },
         {
           "gate": "completed_5m_continuation_proof",
           "status": "pass",
-          "detail": "Completed 5M continuation proof closed at 2026-01-28T12:20:00."
+          "detail": "Completed 5M continuation proof closed at 2026-01-28T13:10:00."
         },
         {
           "gate": "entry_stop_risk_contract",
           "status": "pass",
-          "detail": "Entry 7120.50, protected 5M stop 7109.75, risk 10.75 pts."
+          "detail": "Entry 7115.75, protected 5M stop 7119.25, risk 3.50 pts."
         },
         {
           "gate": "tactical_targets_from_actual_risk",
           "status": "pass",
-          "detail": "T1 7136.75 and T2 7142.00 were calculated from actual risk."
+          "detail": "T1 7110.50 and T2 7108.75 were calculated from actual risk."
         },
         {
           "gate": "target_room_or_liquidity_context",
           "status": "context",
-          "detail": "Nearest real liquidity context: nearest prior high liquidity 7120.75."
+          "detail": "Nearest real liquidity context: nearest prior low liquidity 7115.50."
         }
       ],
       "parentDisplacement": true,
@@ -75307,24 +75307,26 @@
       "parentFailureTime": "2026-01-28T15:15:00",
       "firstReturnTime": "2026-01-28T12:05:00",
       "wickDefenseTimes": [
-        "2026-01-28T12:10:00",
-        "2026-01-28T12:20:00",
-        "2026-01-28T13:15:00",
-        "2026-01-28T13:30:00",
-        "2026-01-28T14:05:00",
-        "2026-01-28T14:10:00",
-        "2026-01-28T14:25:00",
-        "2026-01-28T14:55:00"
+        "2026-01-28T13:10:00",
+        "2026-01-28T13:25:00",
+        "2026-01-28T13:35:00",
+        "2026-01-28T13:40:00",
+        "2026-01-28T13:55:00",
+        "2026-01-28T14:15:00",
+        "2026-01-28T14:35:00",
+        "2026-01-28T14:40:00",
+        "2026-01-28T15:50:00",
+        "2026-01-28T16:00:00"
       ],
-      "proofTime": "2026-01-28T12:20:00",
-      "entry": 7120.5,
-      "stop": 7109.75,
-      "riskPoints": 10.75,
-      "target1": 7136.75,
-      "target2": 7142,
+      "proofTime": "2026-01-28T13:10:00",
+      "entry": 7115.75,
+      "stop": 7119.25,
+      "riskPoints": 3.5,
+      "target1": 7110.5,
+      "target2": 7108.75,
       "nearestLiquidity": {
-        "label": "nearest prior high liquidity",
-        "price": 7120.75
+        "label": "nearest prior low liquidity",
+        "price": 7115.5
       },
       "fvgInventoryAtProof": {
         "openBelow": [
@@ -75459,131 +75461,131 @@
         ],
         "failedAbove": [
           {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "parentDisplacementAt": "2026-01-12T11:10:00",
+            "confirmedAt": "2026-01-12T11:15:00",
+            "createdAt": "2026-01-12T11:15:00",
+            "lower": 7116,
+            "upper": 7117,
+            "protectedLow": 7113,
+            "protectedHigh": 7121.5,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-12T19:05:00",
+            "filledTime": "2026-01-12T19:05:00",
+            "failedTime": "2026-01-12T19:35:00",
+            "relationToPrice": "above"
+          },
+          {
             "direction": "SHORT",
             "timeframe": "5m",
-            "parentDisplacementAt": "2026-01-12T18:50:00",
-            "confirmedAt": "2026-01-12T18:55:00",
-            "createdAt": "2026-01-12T18:55:00",
-            "lower": 7120.75,
-            "upper": 7121.25,
-            "protectedLow": 7119,
-            "protectedHigh": 7123,
+            "parentDisplacementAt": "2026-01-15T10:45:00",
+            "confirmedAt": "2026-01-15T10:50:00",
+            "createdAt": "2026-01-15T10:50:00",
+            "lower": 7116,
+            "upper": 7119.25,
+            "protectedLow": 7107.5,
+            "protectedHigh": 7124.75,
             "statusAtReview": "failed_inverted",
-            "firstTouchTime": "2026-01-12T20:55:00",
-            "filledTime": "2026-01-12T20:55:00",
-            "failedTime": "2026-01-12T22:25:00",
+            "firstTouchTime": "2026-01-15T11:00:00",
+            "filledTime": "2026-01-15T11:00:00",
+            "failedTime": "2026-01-15T11:00:00",
             "relationToPrice": "above"
           },
           {
             "direction": "LONG",
             "timeframe": "5m",
-            "parentDisplacementAt": "2026-01-12T23:55:00",
-            "confirmedAt": "2026-01-13T00:00:00",
-            "createdAt": "2026-01-13T00:00:00",
-            "lower": 7120.75,
-            "upper": 7121,
-            "protectedLow": 7118.75,
-            "protectedHigh": 7121.75,
+            "parentDisplacementAt": "2026-01-27T01:05:00",
+            "confirmedAt": "2026-01-27T01:10:00",
+            "createdAt": "2026-01-27T01:10:00",
+            "lower": 7116,
+            "upper": 7117,
+            "protectedLow": 7115.25,
+            "protectedHigh": 7119.5,
             "statusAtReview": "failed_inverted",
-            "firstTouchTime": "2026-01-13T00:05:00",
-            "filledTime": "2026-01-13T00:05:00",
-            "failedTime": "2026-01-13T00:10:00",
-            "relationToPrice": "above"
-          },
-          {
-            "direction": "LONG",
-            "timeframe": "5m",
-            "parentDisplacementAt": "2026-01-13T08:35:00",
-            "confirmedAt": "2026-01-13T08:40:00",
-            "createdAt": "2026-01-13T08:40:00",
-            "lower": 7120.75,
-            "upper": 7132.75,
-            "protectedLow": 7112.75,
-            "protectedHigh": 7149.25,
-            "statusAtReview": "failed_inverted",
-            "firstTouchTime": "2026-01-13T08:50:00",
-            "filledTime": "2026-01-13T09:50:00",
-            "failedTime": "2026-01-13T09:55:00",
+            "firstTouchTime": "2026-01-27T01:15:00",
+            "filledTime": "2026-01-27T01:35:00",
+            "failedTime": "2026-01-27T01:40:00",
             "relationToPrice": "above"
           },
           {
             "direction": "LONG",
             "timeframe": "15m",
-            "parentDisplacementAt": "2026-01-13T08:45:00",
-            "confirmedAt": "2026-01-13T09:00:00",
-            "createdAt": "2026-01-13T09:00:00",
-            "lower": 7121,
-            "upper": 7125.5,
-            "protectedLow": 7112.75,
-            "protectedHigh": 7149.25,
+            "parentDisplacementAt": "2026-01-27T01:15:00",
+            "confirmedAt": "2026-01-27T01:30:00",
+            "createdAt": "2026-01-27T01:30:00",
+            "lower": 7116,
+            "upper": 7116.5,
+            "protectedLow": 7113.5,
+            "protectedHigh": 7119.5,
             "statusAtReview": "failed_inverted",
-            "firstTouchTime": "2026-01-13T09:45:00",
-            "filledTime": "2026-01-13T10:00:00",
-            "failedTime": "2026-01-13T10:00:00",
+            "firstTouchTime": "2026-01-27T01:45:00",
+            "filledTime": "2026-01-27T01:45:00",
+            "failedTime": "2026-01-27T01:45:00",
             "relationToPrice": "above"
           },
           {
-            "direction": "SHORT",
+            "direction": "LONG",
+            "timeframe": "5m",
+            "parentDisplacementAt": "2025-10-29T03:40:00",
+            "confirmedAt": "2025-10-29T03:45:00",
+            "createdAt": "2025-10-29T03:45:00",
+            "lower": 7116.25,
+            "upper": 7116.5,
+            "protectedLow": 7114.25,
+            "protectedHigh": 7118.25,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2025-10-29T03:50:00",
+            "filledTime": "2025-10-29T03:50:00",
+            "failedTime": "2025-10-29T03:50:00",
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "LONG",
+            "timeframe": "5m",
+            "parentDisplacementAt": "2026-01-15T09:25:00",
+            "confirmedAt": "2026-01-15T09:30:00",
+            "createdAt": "2026-01-15T09:30:00",
+            "lower": 7116.25,
+            "upper": 7119,
+            "protectedLow": 7112.5,
+            "protectedHigh": 7124,
+            "statusAtReview": "failed_inverted",
+            "firstTouchTime": "2026-01-15T09:35:00",
+            "filledTime": "2026-01-15T09:35:00",
+            "failedTime": "2026-01-15T09:40:00",
+            "relationToPrice": "above"
+          },
+          {
+            "direction": "LONG",
             "timeframe": "15m",
-            "parentDisplacementAt": "2026-01-13T10:00:00",
-            "confirmedAt": "2026-01-13T10:15:00",
-            "createdAt": "2026-01-13T10:15:00",
-            "lower": 7121,
-            "upper": 7124.75,
-            "protectedLow": 7107,
-            "protectedHigh": 7137,
+            "parentDisplacementAt": "2025-10-29T07:30:00",
+            "confirmedAt": "2025-10-29T07:45:00",
+            "createdAt": "2025-10-29T07:45:00",
+            "lower": 7116.25,
+            "upper": 7117.5,
+            "protectedLow": 7109.5,
+            "protectedHigh": 7121.25,
             "statusAtReview": "failed_inverted",
-            "firstTouchTime": "2026-01-13T11:45:00",
-            "filledTime": "2026-01-13T12:00:00",
-            "failedTime": "2026-01-13T12:00:00",
+            "firstTouchTime": "2025-10-29T08:00:00",
+            "filledTime": "2025-10-29T08:00:00",
+            "failedTime": "2025-10-29T08:00:00",
             "relationToPrice": "above"
           },
           {
             "direction": "LONG",
-            "timeframe": "5m",
-            "parentDisplacementAt": "2026-01-13T00:45:00",
-            "confirmedAt": "2026-01-13T00:50:00",
-            "createdAt": "2026-01-13T00:50:00",
-            "lower": 7121.25,
-            "upper": 7121.5,
-            "protectedLow": 7119.75,
-            "protectedHigh": 7122.5,
+            "timeframe": "15m",
+            "parentDisplacementAt": "2026-01-12T21:00:00",
+            "confirmedAt": "2026-01-12T21:15:00",
+            "createdAt": "2026-01-12T21:15:00",
+            "lower": 7116.25,
+            "upper": 7117.75,
+            "protectedLow": 7111.5,
+            "protectedHigh": 7122,
             "statusAtReview": "failed_inverted",
-            "firstTouchTime": "2026-01-13T03:15:00",
-            "filledTime": "2026-01-13T03:15:00",
-            "failedTime": "2026-01-13T03:15:00",
-            "relationToPrice": "above"
-          },
-          {
-            "direction": "SHORT",
-            "timeframe": "5m",
-            "parentDisplacementAt": "2026-01-13T04:45:00",
-            "confirmedAt": "2026-01-13T04:50:00",
-            "createdAt": "2026-01-13T04:50:00",
-            "lower": 7121.25,
-            "upper": 7122,
-            "protectedLow": 7118.5,
-            "protectedHigh": 7123.25,
-            "statusAtReview": "failed_inverted",
-            "firstTouchTime": "2026-01-13T04:55:00",
-            "filledTime": "2026-01-13T04:55:00",
-            "failedTime": "2026-01-13T07:00:00",
-            "relationToPrice": "above"
-          },
-          {
-            "direction": "LONG",
-            "timeframe": "5m",
-            "parentDisplacementAt": "2026-01-13T06:55:00",
-            "confirmedAt": "2026-01-13T07:00:00",
-            "createdAt": "2026-01-13T07:00:00",
-            "lower": 7121.25,
-            "upper": 7121.5,
-            "protectedLow": 7117.5,
-            "protectedHigh": 7123,
-            "statusAtReview": "failed_inverted",
-            "firstTouchTime": "2026-01-13T07:05:00",
-            "filledTime": "2026-01-13T07:05:00",
-            "failedTime": "2026-01-13T07:55:00",
+            "firstTouchTime": "2026-01-12T23:00:00",
+            "filledTime": "2026-01-13T05:15:00",
+            "failedTime": "2026-01-13T10:15:00",
             "relationToPrice": "above"
           }
         ],
@@ -75643,7 +75645,7 @@
         "rule": "Track only the active-session first same-side 15M FVG reaction zone, final/deepest same-side 15M FVG battle zone, and latest active-session same-side 15M FVG from the active leg; ignore middle-zone clutter for this model.",
         "activeRole": "first_reaction_15m_fvg",
         "firstReaction": {
-          "direction": "LONG",
+          "direction": "SHORT",
           "timeframe": "15m",
           "parentDisplacementAt": "2026-01-28T11:45:00",
           "confirmedAt": "2026-01-28T12:00:00",
@@ -75653,13 +75655,13 @@
           "protectedLow": 7109.75,
           "protectedHigh": 7126.5,
           "role": "first_reaction_15m_fvg",
-          "defenseStatus": "failed_acceptance_through_15m",
+          "defenseStatus": "defended_on_15m",
           "firstTouchTime": "2026-01-28T12:15:00",
-          "failedTime": "2026-01-28T12:30:00",
-          "defendedTime": "2026-01-28T15:15:00"
+          "failedTime": "2026-01-28T15:15:00",
+          "defendedTime": "2026-01-28T12:30:00"
         },
         "finalDeepest": {
-          "direction": "LONG",
+          "direction": "SHORT",
           "timeframe": "15m",
           "parentDisplacementAt": "2026-01-28T11:45:00",
           "confirmedAt": "2026-01-28T12:00:00",
@@ -75669,133 +75671,128 @@
           "protectedLow": 7109.75,
           "protectedHigh": 7126.5,
           "role": "final_deepest_15m_fvg",
-          "defenseStatus": "failed_acceptance_through_15m",
+          "defenseStatus": "defended_on_15m",
           "firstTouchTime": "2026-01-28T12:15:00",
-          "failedTime": "2026-01-28T12:30:00",
-          "defendedTime": "2026-01-28T15:15:00"
+          "failedTime": "2026-01-28T15:15:00",
+          "defendedTime": "2026-01-28T12:30:00"
         },
         "activeFiveMinuteDefense": {
           "status": "confirmed_defense",
           "returnTime": "2026-01-28T12:05:00",
-          "wickDefenseTime": "2026-01-28T12:20:00",
-          "proofTime": "2026-01-28T12:20:00",
+          "wickDefenseTime": "2026-01-28T13:10:00",
+          "proofTime": "2026-01-28T13:10:00",
           "detail": "5M returned into the active 15M battle zone, rejected it, and closed back in the continuation direction."
         }
       },
       "objectiveLadder": [
         {
-          "kind": "liquidity",
-          "label": "prior 5M swing high liquidity from 2026-01-28T11:30:00",
-          "price": 7126.5,
-          "reachedTime": "2026-01-28T15:15:00"
-        },
-        {
-          "kind": "liquidity",
-          "label": "prior 5M swing high liquidity from 2026-01-28T11:10:00",
-          "price": 7128.25,
-          "reachedTime": null
-        },
-        {
-          "kind": "open_fvg",
-          "label": "60m SHORT open FVG open_untouched parent 2026-01-28T11:00:00 confirmed 2026-01-28T12:00:00",
-          "price": 7130.75,
-          "reachedTime": null
-        },
-        {
-          "kind": "liquidity",
-          "label": "prior 5M swing high liquidity from 2026-01-28T10:25:00",
-          "price": 7136,
-          "reachedTime": null
-        },
-        {
-          "kind": "open_fvg",
-          "label": "240m LONG open FVG partial_touch parent 2026-01-27T22:00:00 confirmed 2026-01-28T02:00:00",
-          "price": 7136.5,
-          "reachedTime": null
-        },
-        {
           "kind": "tactical",
           "label": "T1 1.5R",
-          "price": 7136.75,
-          "reachedTime": null
+          "price": 7110.5,
+          "reachedTime": "2026-01-28T14:05:00"
+        },
+        {
+          "kind": "liquidity",
+          "label": "prior 5M swing low liquidity from 2026-01-28T12:35:00",
+          "price": 7109.75,
+          "reachedTime": "2026-01-28T14:05:00"
+        },
+        {
+          "kind": "session_extreme",
+          "label": "RTH low liquidity before proof",
+          "price": 7109.75,
+          "reachedTime": "2026-01-28T14:05:00"
+        },
+        {
+          "kind": "open_fvg",
+          "label": "15m LONG open FVG partial_touch parent 2026-01-27T10:00:00 confirmed 2026-01-27T10:15:00",
+          "price": 7109.5,
+          "reachedTime": "2026-01-28T14:05:00"
+        },
+        {
+          "kind": "open_fvg",
+          "label": "5m LONG open FVG partial_touch parent 2026-01-27T09:50:00 confirmed 2026-01-27T09:55:00",
+          "price": 7109.5,
+          "reachedTime": "2026-01-28T14:05:00"
         },
         {
           "kind": "tactical",
           "label": "T2 2.0R",
-          "price": 7142,
-          "reachedTime": null
+          "price": 7108.75,
+          "reachedTime": "2026-01-28T14:05:00"
         },
         {
-          "kind": "liquidity",
-          "label": "prior 5M swing high liquidity from 2026-01-28T09:35:00",
-          "price": 7142.25,
-          "reachedTime": null
-        },
-        {
-          "kind": "liquidity",
-          "label": "prior 5M swing high liquidity from 2026-01-28T09:50:00",
-          "price": 7144,
-          "reachedTime": null
-        },
-        {
-          "kind": "session_extreme",
-          "label": "RTH high liquidity before proof",
-          "price": 7144,
+          "kind": "open_fvg",
+          "label": "5m LONG open FVG partial_touch parent 2026-01-26T21:05:00 confirmed 2026-01-26T21:10:00",
+          "price": 7100.75,
           "reachedTime": null
         },
         {
           "kind": "open_fvg",
-          "label": "15m SHORT open FVG partial_touch parent 2026-01-28T07:15:00 confirmed 2026-01-28T07:30:00",
-          "price": 7144.5,
+          "label": "15m LONG open FVG open_untouched parent 2026-01-26T20:30:00 confirmed 2026-01-26T20:45:00",
+          "price": 7097.75,
+          "reachedTime": null
+        },
+        {
+          "kind": "open_fvg",
+          "label": "120m LONG open FVG partial_touch parent 2026-01-26T22:00:00 confirmed 2026-01-27T00:00:00",
+          "price": 7096.75,
+          "reachedTime": null
+        },
+        {
+          "kind": "open_fvg",
+          "label": "60m LONG open FVG open_untouched parent 2026-01-26T21:00:00 confirmed 2026-01-26T22:00:00",
+          "price": 7096.75,
+          "reachedTime": null
+        },
+        {
+          "kind": "open_fvg",
+          "label": "15m LONG open FVG partial_touch parent 2026-01-26T09:45:00 confirmed 2026-01-26T10:00:00",
+          "price": 7070.75,
+          "reachedTime": null
+        },
+        {
+          "kind": "open_fvg",
+          "label": "60m LONG open FVG open_untouched parent 2026-01-26T10:00:00 confirmed 2026-01-26T11:00:00",
+          "price": 7065.5,
           "reachedTime": null
         }
       ],
       "opposingFvgObstacleBeforeT1": {
-        "direction": "SHORT",
-        "timeframe": "5m",
-        "parentDisplacementAt": "2026-01-12T18:50:00",
-        "confirmedAt": "2026-01-12T18:55:00",
-        "createdAt": "2026-01-12T18:55:00",
-        "lower": 7120.75,
-        "upper": 7121.25,
-        "protectedLow": 7119,
-        "protectedHigh": 7123,
-        "statusAtReview": "failed_inverted",
-        "firstTouchTime": "2026-01-12T20:55:00",
-        "filledTime": "2026-01-12T20:55:00",
-        "failedTime": "2026-01-12T22:25:00",
-        "relationToPrice": "above"
+        "direction": "LONG",
+        "timeframe": "15m",
+        "parentDisplacementAt": "2026-01-27T10:00:00",
+        "confirmedAt": "2026-01-27T10:15:00",
+        "createdAt": "2026-01-27T10:15:00",
+        "lower": 7109.5,
+        "upper": 7110.75,
+        "protectedLow": 7101,
+        "protectedHigh": 7120.5,
+        "statusAtReview": "partial_touch",
+        "firstTouchTime": "2026-01-28T12:00:00",
+        "filledTime": null,
+        "failedTime": null,
+        "relationToPrice": "below"
       },
       "opposingFvgObstacleReaction": "obstacle_reached_then_continued",
-      "opposingFvgObstacleReactionTime": "2026-01-28T12:25:00",
-      "continuationRead": "balanced_path_to_liquidity_valid",
+      "opposingFvgObstacleReactionTime": "2026-01-28T14:05:00",
+      "continuationRead": "obstacle_before_t1_manage_or_downgrade",
       "balancedPathToLiquidity": {
-        "status": "balanced_path_to_liquidity",
-        "reason": "The first real-liquidity objective sat between entry and T1, was reached, and no opposing FVG defended before delivery.",
-        "target": {
-          "kind": "liquidity",
-          "label": "prior 5M swing high liquidity from 2026-01-28T11:30:00",
-          "price": 7126.5,
-          "reachedTime": "2026-01-28T15:15:00"
-        }
+        "status": "no_liquidity_target",
+        "reason": "No meaningful real-liquidity target was found between entry and T1.",
+        "target": null
       },
-      "liquidityFirstTarget": {
-        "kind": "liquidity",
-        "label": "prior 5M swing high liquidity from 2026-01-28T11:30:00",
-        "price": 7126.5,
-        "reachedTime": "2026-01-28T15:15:00"
-      },
+      "liquidityFirstTarget": null,
       "outcome": "Stop",
-      "outcomeTime": "2026-01-28T12:35:00",
-      "exitPrice": 7109.75,
-      "oneMesPnl": -53.75,
+      "outcomeTime": "2026-01-28T13:25:00",
+      "exitPrice": 7119.25,
+      "oneMesPnl": -17.5,
       "managedOutcome": "Stop",
-      "managedOutcomeTime": "2026-01-28T12:35:00",
-      "managedExitPrice": 7109.75,
-      "managedOneMesPnl": -53.75,
+      "managedOutcomeTime": "2026-01-28T13:25:00",
+      "managedExitPrice": 7119.25,
+      "managedOneMesPnl": -17.5,
       "reasons": [
-        "Defended-first continuation precedence: LONG 5M defense proof completed at 2026-01-28T12:20:00 before later same-zone failure/reversal read at 2026-01-28T15:15:00. Review the defended continuation before labeling this zone as failure/reversal.",
-        "Original extracted zone side was SHORT; LONG defense takes precedence for this research row."
+        "Defended-first continuation precedence: SHORT 5M defense proof completed at 2026-01-28T13:10:00 before later same-zone failure/reversal read at 2026-01-28T15:15:00. Review the defended continuation before labeling this zone as failure/reversal."
       ]
     }
   ]

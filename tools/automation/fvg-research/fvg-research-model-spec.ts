@@ -133,11 +133,13 @@ export const FVG_RESEARCH_MODEL_DEFINITIONS: FvgResearchModelDefinition[] = [
       'The first same-side 15M FVG is the first reaction zone.',
       'If the first reaction zone fails, the final/deepest same-side 15M FVG becomes the battle zone that must defend for the structure to survive.',
       'If the selected 15M battle zone has both a defended continuation read and a later failure/reversal read, the first completed 5M defense is reviewed before the later opposite-side label.',
+      'Defended-first continuation is same-direction only; it cannot flip an opposite-side 15M zone into a continuation.',
       '5M is used only after the 15M battle zone is selected, to confirm return, wick defense, continuation close, protected 5M stop, and target math.',
     ],
     invalidation: [
       'Middle-zone FVG clutter is promoted as equal to the first or final/deepest 15M battle zone.',
       'A 5M FVG is used before the 15M battle zone is selected.',
+      'No valid same-direction 15M parent/battle-zone FVG exists; classify as invalid_parent_15m_fvg_not_confirmed.',
       'The final/deepest 15M battle zone accepts through against the intended direction.',
       'The 5M does not confirm defense of the selected 15M battle zone.',
     ],

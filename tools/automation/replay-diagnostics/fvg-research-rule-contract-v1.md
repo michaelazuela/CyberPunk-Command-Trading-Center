@@ -37,6 +37,7 @@ Required facts:
 
 Invalidation:
 - No valid 15M parent FVG.
+- No valid same-direction 15M parent FVG; mark `invalid_parent_15m_fvg_not_confirmed`.
 - 5M proof occurs outside the parent FVG context.
 - Price accepts through the FVG against the trade before proof.
 - No protected 5M stop.
@@ -139,6 +140,7 @@ Meaning:
 - Do not call FVG/objective zones liquidity. Real liquidity means prior swing liquidity, session high/low liquidity, or equal high/low liquidity.
 - Do not promote a row without a valid 15M parent FVG.
 - Do not drift the parent timestamp forward. Parent means the 15M FVG creation/formation time, not the later continuation or confirmation candle.
+- Do not promote defended-first continuation by changing the parent FVG direction. Defended-first is a same-direction timing precedence rule only.
 - Do not classify a rule-matching trade as a human-review exception. If it matches the contract, it is rule-based research.
 - Do not treat HTF context as execution authority.
 - Do not treat balanced path as a trigger.
@@ -158,3 +160,4 @@ Meaning:
 - 2026-01-21: valid long case. 9:30 15M parent FVG plus tiny nested 5M FVG/wick defense around 6957 is a rule-based 15M FVG Hold + Nested 5M FVG Defense Continuation.
 - 2026-01-22: valid FVG stack defense long story. Late short rows are invalid because price defended the final/lowest 15M bullish FVG in the stack and never accepted below it with clean 5M bearish proof.
 - 2026-01-27: valid FVG stack defense long story. Parent/displacement was created at 10:45 ET. Correct entry area is 13:05 ET and completed 5M proof is 13:15 ET. The later 13:30 machine-selected row is management/context, not the primary setup lesson.
+- 2026-01-28: invalid prior long candidate. The claimed 11:45 15M parent is not a real same-direction LONG parent FVG for this model; mark it `invalid_parent_15m_fvg_not_confirmed`.

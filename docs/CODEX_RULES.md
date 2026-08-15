@@ -188,6 +188,7 @@ Current FVG research models must use this workflow unless the user explicitly ap
 2. 15M parent setup:
    * A real 15M displacement must create the parent FVG.
    * The displacement candle may be the left, middle, or confirming candle of the three-candle 15M FVG formation. Do not require only the final FVG-confirming candle to pass displacement when the impulse leg clearly created the imbalance.
+   * Defended-first continuation requires a real same-direction 15M parent/battle-zone FVG. A 5M confirmation cannot flip an opposite-side 15M zone into a same-direction trade.
    * A standalone 5M FVG cannot trigger the Fair Value Gap Research Model.
 3. Drill to 5M:
    * Price must return into the 15M FVG area, or into a clean nested 5M FVG contained inside and aligned with that 15M parent zone.
@@ -225,6 +226,8 @@ Current FVG research models must use this workflow unless the user explicitly ap
    * Use the tag to review whether holiday-bridge participation explains range/chop losses before proposing any live blocker.
 
 If a replay finds a good-looking trade from a 5M FVG without a valid 15M parent displacement FVG, classify it as a separate research idea or no-trade. Do not label it as the Fair Value Gap Research Model.
+
+If a replay promotes defended-first continuation without a real same-direction 15M parent FVG, classify it as `invalid_parent_15m_fvg_not_confirmed`.
 
 ### Mandatory Current Trade Report Contract
 
