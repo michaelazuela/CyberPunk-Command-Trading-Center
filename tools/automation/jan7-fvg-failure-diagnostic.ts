@@ -63,7 +63,7 @@ interface FvgInventoryItem extends Zone {
   relationToPrice: 'above' | 'below' | 'overlapping';
 }
 
-type BattleZoneRole = 'first_reaction_15m_fvg' | 'final_deepest_15m_fvg';
+type BattleZoneRole = 'first_reaction_15m_fvg' | 'final_deepest_15m_fvg' | 'latest_active_leg_15m_fvg';
 type BattleZoneDefenseStatus =
   | 'defended_on_15m'
   | 'failed_acceptance_through_15m'
@@ -185,6 +185,7 @@ interface DiagnosticReport {
   session: Session;
   sessionWindow: { from: string; to: string };
   contextDays: number;
+  forwardDays: number;
   loadWindow: { from: string; to: string };
   source: {
     marketData: 'supabase_market_bars_read_only';
@@ -228,12 +229,13 @@ const BATTLE_ZONE_INVENTORY_RULE: ResearchRule = {
   name: 'FvgBattleZoneInventory',
   status: 'research_only_supporting_rule',
   definition:
-    'Track only the first same-side 15M FVG reaction zone and the final/deepest same-side 15M FVG battle zone from the active displacement leg. The selected 15M battle zone must then be defended on completed 5M candles before any entry model can use it.',
+    'Track only the first same-side 15M FVG reaction zone, the final/deepest same-side 15M FVG battle zone, and the latest active-session same-side 15M FVG from the active displacement leg. The selected 15M battle zone must then be defended on completed 5M candles before any entry model can use it.',
   requiredFacts: [
     '15M-only inventory for this research rule.',
-    'Same-side 15M displacement leg creates the candidate FVG stack.',
+    'Same-side active-session 15M displacement leg creates the candidate FVG stack.',
     'First same-side 15M FVG is the first reaction zone.',
     'Final/deepest same-side 15M FVG is the structure survival battle zone if the first zone fails.',
+    'Latest same-side 15M FVG in the active session can be a valid active-leg battle zone when it is defended by 5M proof.',
     '5M confirms only after price returns into the selected 15M battle zone and rejects it.',
   ],
   invalidation: [
@@ -254,6 +256,11 @@ function argValue(name: string, fallback: string): string {
 function argNumber(name: string, fallback: number): number {
   const parsed = Number(argValue(name, String(fallback)));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function argNonNegativeNumber(name: string, fallback: number): number {
+  const parsed = Number(argValue(name, String(fallback)));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
 function safeLabel(value: string): string {
@@ -536,19 +543,21 @@ function buildBattleZoneInventory(args: {
   sessionWindow: { from: string; to: string };
 }): BattleZoneInventoryRead {
   const activeDate = args.activeZone.createdAt.slice(0, 10);
-  const sameDaySameSide15m = args.zones
+  const activeSessionSameSide15m = args.zones
     .filter((zone) =>
       zone.timeframe === '15m' &&
       zone.direction === args.activeZone.direction &&
       zone.createdAt.slice(0, 10) === activeDate &&
+      zone.createdAt >= args.sessionWindow.from &&
       zone.createdAt <= args.activeZone.createdAt
     )
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
-  const firstZone = sameDaySameSide15m[0] ?? args.activeZone;
-  const finalZone = sameDaySameSide15m.reduce((current, candidate) =>
+  const firstZone = activeSessionSameSide15m[0] ?? args.activeZone;
+  const finalZone = activeSessionSameSide15m.reduce((current, candidate) =>
     isDeeperSameSideZone(args.activeZone.direction, candidate, current) ? candidate : current,
   firstZone);
+  const latestActiveLegZone = activeSessionSameSide15m[activeSessionSameSide15m.length - 1] ?? args.activeZone;
 
   const firstReaction = buildBattleZoneItem({
     zone: firstZone,
@@ -568,7 +577,9 @@ function buildBattleZoneInventory(args: {
     ? 'first_reaction_15m_fvg'
     : zoneKey(finalDeepest) === activeKey
       ? 'final_deepest_15m_fvg'
-      : 'not_in_battle_inventory';
+      : zoneKey(latestActiveLegZone) === activeKey
+        ? 'latest_active_leg_15m_fvg'
+        : 'not_in_battle_inventory';
   const activeFiveMinuteDefense: FiveMinuteDefenseRead = activeRole === 'not_in_battle_inventory'
     ? {
         status: 'not_selected_15m_battle_zone',
@@ -576,14 +587,14 @@ function buildBattleZoneInventory(args: {
         wickDefenseTime: null,
         proofTime: null,
         detail:
-          'The active 15M FVG is not the first reaction zone or final/deepest battle zone, so 5M defense is diagnostic only and cannot promote this research model.',
+          'The active 15M FVG is not the first reaction zone, final/deepest battle zone, or latest active-session 15M FVG, so 5M defense is diagnostic only and cannot promote this research model.',
       }
     : readFiveMinuteDefense(args.activeZone, args.bars5m, args.sessionWindow);
 
   return {
     scope: '15m_only_active_displacement_leg',
     rule:
-      'Track only the first same-side 15M FVG reaction zone and the final/deepest same-side 15M FVG battle zone from the active leg; ignore middle-zone clutter for this model.',
+      'Track only the active-session first same-side 15M FVG reaction zone, final/deepest same-side 15M FVG battle zone, and latest active-session same-side 15M FVG from the active leg; ignore middle-zone clutter for this model.',
     activeRole,
     firstReaction,
     finalDeepest,
@@ -629,12 +640,37 @@ function findProtectedStop(direction: Direction, bars: Bar[]): number | null {
     : roundTick(Math.max(...bars.map((bar) => bar.high)));
 }
 
+function findProtectedStructureStop(direction: Direction, bars: Bar[], entry: number, zone: Zone): number | null {
+  const swings: { price: number; time: string }[] = [];
+  for (let index = 1; index < bars.length - 1; index += 1) {
+    const previous = bars[index - 1];
+    const current = bars[index];
+    const next = bars[index + 1];
+    if (direction === 'LONG') {
+      const isProtectedLow =
+        current.low <= previous.low &&
+        current.low <= next.low &&
+        current.low < entry &&
+        current.low <= zone.lower;
+      if (isProtectedLow) swings.push({ price: current.low, time: current.time });
+    } else {
+      const isProtectedHigh =
+        current.high >= previous.high &&
+        current.high >= next.high &&
+        current.high > entry &&
+        current.high >= zone.upper;
+      if (isProtectedHigh) swings.push({ price: current.high, time: current.time });
+    }
+  }
+
+  if (!swings.length) return null;
+  return roundTick(swings[swings.length - 1].price);
+}
+
 function protectedStopFromParentStructure(direction: Direction, localStop: number | null, parentZone: Zone): number | null {
   const parentStop = direction === 'LONG' ? parentZone.protectedLow : parentZone.protectedHigh;
   if (localStop === null) return parentStop;
-  return direction === 'LONG'
-    ? roundTick(Math.min(localStop, parentStop))
-    : roundTick(Math.max(localStop, parentStop));
+  return roundTick(localStop);
 }
 
 function findNearestLiquidity(direction: Direction, entry: number, bars: Bar[]): { label: string; price: number } | null {
@@ -1130,10 +1166,14 @@ function traceZone(args: {
     : null;
   if (!proof) reasons.push('No completed 5M continuation close away from the failed FVG zone was found after the return.');
 
-  const stopLookback = proof ? barsBetween(bars5m, firstReturn?.time ?? returnFrom, proof.time) : [];
-  const localStop = proof ? findProtectedStop(zone.direction, stopLookback.length ? stopLookback : [proof]) : null;
-  const stop = proof ? protectedStopFromParentStructure(zone.direction, localStop, zone) : null;
   const entry = proof ? roundTick(proof.close) : null;
+  const structureLookback = proof
+    ? bars5m.filter((bar) => bar.time >= sessionWindow.from && bar.time < proof.time)
+    : [];
+  const localStop = proof && entry !== null
+    ? findProtectedStructureStop(zone.direction, structureLookback, entry, zone)
+    : null;
+  const stop = proof ? protectedStopFromParentStructure(zone.direction, localStop, zone) : null;
   const riskPoints = entry !== null && stop !== null
     ? roundTick(zone.direction === 'LONG' ? entry - stop : stop - entry)
     : null;
@@ -1159,7 +1199,7 @@ function traceZone(args: {
     battleZoneInventory.activeRole !== 'not_in_battle_inventory' &&
     battleZoneInventory.activeFiveMinuteDefense.status === 'confirmed_defense';
   if (battleZoneInventory.activeRole === 'not_in_battle_inventory') {
-    reasons.push('15M FVG is middle-zone clutter for this research model; only the first reaction zone or final/deepest battle zone can promote.');
+    reasons.push('15M FVG is middle-zone clutter for this research model; only the first reaction zone, final/deepest battle zone, or latest active-session FVG can promote.');
   } else if (battleZoneInventory.activeFiveMinuteDefense.status !== 'confirmed_defense') {
     reasons.push('Selected 15M battle zone did not receive completed 5M defense confirmation.');
   }
@@ -1197,7 +1237,7 @@ function traceZone(args: {
       zones: args.allZones,
       barsByTimeframe: args.barsByTimeframe,
     });
-    const afterProofBars = bars5m.filter((bar) => bar.time > proof.time && bar.time <= sessionWindow.to);
+    const afterProofBars = bars5m.filter((bar) => bar.time > proof.time);
     const objectiveLadder = buildObjectiveLadder({
       direction: zone.direction,
       entry,
@@ -1437,6 +1477,7 @@ function markdownReport(report: DiagnosticReport): string {
     `Instrument: ${report.bridgeInstrument}`,
     `Date/session: ${report.date} / ${report.session} (${report.sessionWindow.from} to ${report.sessionWindow.to})`,
     `Context window: ${report.contextDays} days (${report.loadWindow.from} to ${report.loadWindow.to})`,
+    `Forward target-check horizon: ${report.forwardDays} day(s) after the review date`,
     ``,
     `## Coverage`,
     ...TIMEFRAMES.map((timeframe) => {
@@ -1530,10 +1571,11 @@ async function main(): Promise<void> {
   const bridgeInstrument = argValue('bridge-instrument', process.env.SUPERVISOR_BRIDGE_INSTRUMENT || 'MES 09-26');
   const label = safeLabel(argValue('label', `jan7-fvg-failure-${session}`));
   const contextDays = argNumber('context-days', 3);
+  const forwardDays = argNonNegativeNumber('forward-days', 0);
   const sessionWindow = sessionWindowFor(date, session);
   const contextFrom = `${date}T09:15:00`;
   const loadFrom = `${addDays(date, -contextDays)}T00:00:00`;
-  const loadTo = `${date}T23:59:59`;
+  const loadTo = `${addDays(date, forwardDays)}T23:59:59`;
   const bars = await loadBars({ instrument: bridgeInstrument, from: loadFrom, to: loadTo });
   const fvgScanFrom = session === 'lunch' ? `${date}T11:30:00` : sessionWindow.from;
   const fvgScanTo = sessionWindow.to;
@@ -1583,6 +1625,7 @@ async function main(): Promise<void> {
     session,
     sessionWindow,
     contextDays,
+    forwardDays,
     loadWindow: { from: loadFrom, to: loadTo },
     source: {
       marketData: 'supabase_market_bars_read_only',
