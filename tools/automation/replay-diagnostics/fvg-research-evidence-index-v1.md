@@ -44,6 +44,12 @@ details without mixing this research lane into older model logic.
   - Human correction: late shorts are invalid when the market is already in an
     uptrend and the final/lowest 15M bullish FVG stack defends. This binds to
     `15M FVG Stack Defense Continuation`.
+- `tools/automation/replay-diagnostics/fvg-jan27-visual-correction-lock-v1.md`
+  - Jan 27 visual correction lock.
+  - Human correction: the parent/displacement was created at 10:45 ET, the
+    correct 5M entry area was 13:05 ET, and the completed 5M proof was 13:15 ET.
+    The later 13:30 machine-selected row is management/context only, not the
+    primary trade lesson.
 
 ## Archived Raw Replay JSON
 
@@ -77,3 +83,6 @@ readable Markdown proof packages listed above.
    proof exists.
 7. Reject rows that skip the story-first workflow, invent liquidity from FVGs,
    or promote late duplicate same-parent entries as fresh trades.
+8. When the 15M battle-zone story identifies an earlier defended final battle
+   zone, do not promote a later same-side row as the primary setup merely
+   because it also passes mechanical 5M gates.

@@ -86,6 +86,8 @@ Invalidation:
 Anti-drift:
 - Do not classify a late opposite-side row against a defended final 15M FVG stack.
 - Opposite side requires accepted break through the final defended FVG plus completed 5M proof.
+- Do not promote a later same-side row as the primary setup when the 15M story
+  already produced an earlier final battle-zone defense and completed 5M proof.
 
 ### Balanced Path To Liquidity / Open FVG Objective
 
@@ -155,3 +157,4 @@ Meaning:
 - 2026-01-20 Trade 6: management continuation short, not a fresh standalone primary trade. The 13:45 candle is the impulse/displacement leg, the 14:00 15M candle confirms the parent FVG, and the older Dec 19 02:15/02:30 15M LONG FVG area around 6940.25-6949.00 defended before full tactical delivery.
 - 2026-01-21: valid long case. 9:30 15M parent FVG plus tiny nested 5M FVG/wick defense around 6957 is a rule-based 15M FVG Hold + Nested 5M FVG Defense Continuation.
 - 2026-01-22: valid FVG stack defense long story. Late short rows are invalid because price defended the final/lowest 15M bullish FVG in the stack and never accepted below it with clean 5M bearish proof.
+- 2026-01-27: valid FVG stack defense long story. Parent/displacement was created at 10:45 ET. Correct entry area is 13:05 ET and completed 5M proof is 13:15 ET. The later 13:30 machine-selected row is management/context, not the primary setup lesson.
