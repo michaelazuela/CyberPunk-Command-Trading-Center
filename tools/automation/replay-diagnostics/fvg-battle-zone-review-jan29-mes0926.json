@@ -1,7 +1,40 @@
 {
-  "reportType": "jan7_fvg_failure_diagnostic_trace",
+  "reportType": "jan29_fvg_battle_zone_review",
   "generatedAt": "2026-08-15T01:28:10.105Z",
   "boundary": "research_only_no_live_scanner_discord_or_trading_rule_change",
+  "humanLockedCorrection": {
+    "status": "research_locked_after_visual_review",
+    "boundary": "research_only_no_live_scanner_discord_or_trading_rule_change",
+    "lockedWorkflow": [
+      "HTF/15M story first",
+      "Valid same-direction 15M parent required before 5M proof",
+      "Parent timestamp is completed 15M displacement/FVG creation, not a later retest",
+      "Proof timestamp is first completed 5M wick-defense/continuation after return to the valid 15M battle zone",
+      "Defended-first continuation is reviewed before later same-zone failure/reversal",
+      "Later retests are management and cannot rewrite parent/proof"
+    ],
+    "jan29Rows": [
+      {
+        "row": 1,
+        "direction": "SHORT",
+        "status": "valid_research_candidate",
+        "parentDisplacementEt": "09:15",
+        "fvgPrintEt": "09:30",
+        "firstFiveMinuteProofEt": "09:35",
+        "correction": "Accept same-direction 15M parent and first 5M proof; do not demote as 5M-led middle-zone clutter."
+      },
+      {
+        "row": 7,
+        "direction": "LONG",
+        "status": "valid_research_candidate",
+        "parentDisplacementEt": "12:15",
+        "firstFiveMinuteProofEt": "12:55",
+        "targetOne": 7110,
+        "targetOneStatus": "hit",
+        "correction": "13:25/13:35 labels are late management; first proof/review anchor is 12:55."
+      }
+    ]
+  },
   "bridgeInstrument": "MES 09-26",
   "date": "2026-01-29",
   "session": "full-rth",

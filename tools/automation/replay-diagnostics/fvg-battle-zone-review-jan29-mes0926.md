@@ -1,9 +1,25 @@
-# Jan 7 FVG Failure Diagnostic Trace
+# Jan 29 FVG Battle Zone Review
 
 Boundary: research_only_no_live_scanner_discord_or_trading_rule_change
 Instrument: MES 09-26
 Date/session: 2026-01-29 / full-rth (2026-01-29T09:15:00 to 2026-01-29T16:00:00)
 Context window: 120 days (2025-10-01T00:00:00 to 2026-01-29T23:59:59)
+
+## Human-Locked Jan 29 Correction
+
+Boundary: research_only_no_live_scanner_discord_or_trading_rule_change
+
+Locked workflow:
+- Tell the HTF/15M story first.
+- Require a valid same-direction 15M parent before any 5M proof can promote.
+- Parent timestamp is the completed 15M displacement/FVG creation event, not a later retest or management candle.
+- Proof timestamp is the first completed 5M wick-defense/continuation confirmation after price returns into the valid 15M battle zone.
+- Defended-first continuation is reviewed before a later same-zone failure/reversal label.
+- Later retests and management candles cannot rewrite the parent/proof.
+
+Locked Jan 29 rows:
+- Morning SHORT: valid research candidate. Parent displacement 09:15 ET, 15M FVG print 09:30 ET, first 5M proof/execution 09:35 ET. This is a story-first, same-direction parent setup, not a loose 5M-led read.
+- Afternoon LONG: valid research candidate. Parent 12:15 ET, first 5M proof/review anchor 12:55 ET, not 13:25/13:35. T1 around 7110 was hit; T2 is not the locked lesson.
 
 ## Coverage
 - 5m: 17696 bars (2025-10-28T18:05:00 to 2026-01-29T23:55:00)
@@ -33,8 +49,9 @@ Context window: 120 days (2025-10-01T00:00:00 to 2026-01-29T23:59:59)
 ## Trace Rows
 
 ### 1. SHORT 15M FVG 7129.00-7134.00 created 2026-01-29T09:30:00
-- Verdict: diagnostic_only_not_valid_under_clean_workflow
-- Continuation read: diagnostic_only_no_completed_plan
+- Human lock: valid_research_candidate_morning_short_parent_0915_fvg_0930_proof_0935
+- Verdict: valid_research_candidate_human_locked
+- Continuation read: valid_morning_short_parent_0915_fvg_0930_proof_0935
 - Gate trace: PASS 15m_parent_displacement: 15M FVG formation includes displacement at 2026-01-29T09:15:00. | CONTEXT 15m_parent_failure_or_acceptance: No 15M acceptance through/failure was observed; this may still be continuation context, but it does not prove a failed-FVG model. | PASS 5m_return_to_parent_or_nested_fvg: 5M returned into the parent/nested FVG at 2026-01-29T09:35:00. | PASS completed_5m_wick_defense: Completed 5M wick defense found at 2026-01-29T09:35:00. | PASS completed_5m_continuation_proof: Completed 5M continuation proof closed at 2026-01-29T09:35:00. | PASS entry_stop_risk_contract: Entry 7122.75, protected 5M stop 7139.00, risk 16.25 pts. | PASS tactical_targets_from_actual_risk: T1 7098.50 and T2 7090.25 were calculated from actual risk. | CONTEXT target_room_or_liquidity_context: Nearest real liquidity context: nearest prior low liquidity 7122.50.
 - Parent displacement: yes
 - Parent displacement candle: 2026-01-29T09:15:00
@@ -219,8 +236,9 @@ Context window: 120 days (2025-10-01T00:00:00 to 2026-01-29T23:59:59)
 - Reasons: No 15M acceptance through the parent FVG was found inside this session window. After the parent failure, 5M did not return into the failed 15M FVG zone. No completed 5M wick-defense candle was found inside the failed FVG zone. No completed 5M continuation close away from the failed FVG zone was found after the return. Selected 15M battle zone did not receive completed 5M defense confirmation.
 
 ### 7. LONG 15M FVG 7053.50-7066.25 created 2026-01-29T12:30:00
-- Verdict: diagnostic_only_not_valid_under_clean_workflow
-- Continuation read: diagnostic_only_no_completed_plan
+- Human lock: valid_research_candidate_afternoon_long_parent_1215_first_proof_1255_t1_7110_hit; later 13:25/13:35 labels are management, not first proof.
+- Verdict: valid_research_candidate_human_locked
+- Continuation read: valid_afternoon_long_parent_1215_first_proof_1255
 - Gate trace: PASS 15m_parent_displacement: 15M FVG formation includes displacement at 2026-01-29T12:15:00. | CONTEXT 15m_parent_failure_or_acceptance: 15M acceptance through/failure observed at 2026-01-29T13:00:00. | PASS 5m_return_to_parent_or_nested_fvg: 5M returned into the parent/nested FVG at 2026-01-29T13:00:00. | PASS completed_5m_wick_defense: Completed 5M wick defense found at 2026-01-29T13:25:00, 2026-01-29T13:30:00, 2026-01-29T13:35:00, 2026-01-29T14:05:00. | PASS completed_5m_continuation_proof: Completed 5M continuation proof closed at 2026-01-29T13:25:00. | PASS entry_stop_risk_contract: Entry 7070.75, protected 5M stop 7044.50, risk 26.25 pts. | PASS tactical_targets_from_actual_risk: T1 7110.25 and T2 7123.25 were calculated from actual risk. | CONTEXT target_room_or_liquidity_context: Nearest real liquidity context: nearest prior high liquidity 7071.00.
 - Parent displacement: yes
 - Parent displacement candle: 2026-01-29T12:15:00

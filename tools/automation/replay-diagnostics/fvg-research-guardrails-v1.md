@@ -91,8 +91,16 @@ If the later continuation reaches an older opposing FVG before T1 and that FVG d
 - Do not use HTF context as execution authority.
 - Do not classify rule-matching trades as human-review exceptions.
 - Do not label a later same-zone failure/reversal before reviewing the first completed 5M defended continuation proof.
+- Do not move first 5M proof forward to a later cleaner-looking management candle once the first completed 5M defense/continuation proof exists.
+- Do not let a later retest overwrite a human-locked parent/proof pair.
 - Do not approve opposite-side trades against a defended final FVG stack unless price accepts through the final defended FVG and completed 5M proof confirms the reversal.
 - If the facts are unclear, mark diagnostic_only and ask for chart review.
+
+## Jan 29 Regression Lock
+
+- Morning SHORT: parent displacement 09:15 ET, 15M FVG print 09:30 ET, first 5M proof 09:35 ET.
+- Afternoon LONG: parent 12:15 ET, first 5M proof 12:55 ET. Later 13:25/13:35 candles are management, not first proof.
+- Any Jan 29 replay that labels either row from a later retest first has drifted.
 
 ## Portable Install Rule
 
