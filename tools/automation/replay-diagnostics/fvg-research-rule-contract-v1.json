@@ -123,14 +123,14 @@
       ]
     },
     {
-      "name": "Opposing FVG Obstacle Before T1",
-      "type": "obstacle_filter",
+      "name": "Defended-Area Management Callout Before Or Near T1",
+      "type": "management_context",
       "requiredFacts": [
-        "opposing_fvg_or_htf_reaction_zone_between_entry_and_t1",
+        "opposing_fvg_or_htf_reaction_zone_before_or_near_t1",
         "price_reaches_obstacle_after_proof",
         "obstacle_defends_before_t1_or_first_objective"
       ],
-      "meaning": "A defended opposing FVG before T1 can downgrade or fail continuation. FVG obstacle priority comes before a simple liquidity ladder."
+      "meaning": "A defended opposing FVG/HTF reaction zone before or near T1 is not an issue by default. It must be reported as management context with timeframe, zone, and defense time. It blocks only when it invalidates the story-first workflow, target room, protected stop, or same-direction 15M parent proof."
     },
     {
       "name": "Management Continuation After First Campaign",

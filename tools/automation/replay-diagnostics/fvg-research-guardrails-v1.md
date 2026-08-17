@@ -68,11 +68,13 @@ Short version:
 
 ### Balanced Path To Liquidity / Open FVG Objective
 
-If price breaks out of a balanced/rebalanced range and no defended opposing FVG appears before the next real-liquidity draw or separately labeled open-FVG objective, the move can travel cleanly through that path. This supports continuation and runner management only after valid FVG proof already exists.
+If price breaks out of a balanced/rebalanced range and no defended FVG management objective appears before the next real-liquidity draw or separately labeled open-FVG objective, the move can travel cleanly through that path. This supports continuation and runner management only after valid FVG proof already exists.
 
-### Opposing FVG Obstacle Before T1
+### Defended-Area Management Callout Before Or Near T1
 
-Before scoring continuation, check for a defended opposing FVG or HTF reaction zone between entry and T1. A defended obstacle before T1 downgrades or fails continuation.
+Before scoring or reading continuation, check for a defended opposing FVG or HTF reaction zone before or near T1. This is not an issue by default. It is a management callout.
+
+The report must state timeframe, zone, touch/defense time, and whether the defended area changes target management. It blocks only if it breaks the story-first workflow: no valid same-direction 15M parent FVG, no completed 5M proof, no protected 5M stop, no target room, or acceptance through the protected zone against the trade.
 
 ### Management Continuation After First Campaign
 

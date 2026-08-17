@@ -1,0 +1,39 @@
+{
+  "schema": "fvg_research_human_lock_v1",
+  "version": 1,
+  "date": "2026-01-30",
+  "instrument": "MES 09-26",
+  "finalVerdict": "no_trade",
+  "scope": "research_only",
+  "lockedAt": "2026-08-16",
+  "summary": "Human review corrected Jan 30 to no-trade. Prior replay rows are retained only as drift/debug evidence.",
+  "corrections": [
+    "No Jan 30 candidate is a locked trade.",
+    "The 12:40 short is diagnostic/context only.",
+    "The 120M LONG FVG 7058-7060 is a defended-area management callout, not an issue and not approval.",
+    "The 14:35 and 16:00 longs are invalid/no-trade noise for this review.",
+    "The 11:15 run and 12:15 FVG are missed-story context only, not a validated trade."
+  ],
+  "blockedCandidates": [
+    {
+      "time": "2026-01-30T12:40:00",
+      "direction": "SHORT",
+      "reason": "not_clean_trade_lock_after_human_review"
+    },
+    {
+      "time": "2026-01-30T14:35:00",
+      "direction": "LONG",
+      "reason": "invalid_no_trade_noise"
+    },
+    {
+      "time": "2026-01-30T16:00:00",
+      "direction": "LONG",
+      "reason": "invalid_no_trade_noise"
+    }
+  ],
+  "researchOnlyContext": {
+    "defendedAreaCallout": "120M LONG FVG 7058-7060 may be noted as management/obstacle context only.",
+    "missedStoryCandidate": "Run around 11:15 and 12:15 FVG should be studied later as context only."
+  },
+  "liveBehaviorChanged": false
+}

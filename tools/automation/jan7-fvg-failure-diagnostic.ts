@@ -31,13 +31,12 @@ type FvgObstacleReaction =
   | 'none'
   | 'obstacle_before_t1_not_reached'
   | 'obstacle_before_t1_reached'
-  | 'obstacle_defended_continuation_failed'
+  | 'obstacle_defended_management_callout'
   | 'obstacle_reached_then_continued';
 type ContinuationRead =
   | 'balanced_path_to_liquidity_valid'
   | 'clean_continuation'
-  | 'obstacle_before_t1_manage_or_downgrade'
-  | 'obstacle_defended_continuation_failed'
+  | 'defended_area_management_callout'
   | 'diagnostic_only_no_completed_plan';
 type BalancedPathToLiquidityStatus =
   | 'balanced_path_to_liquidity'
@@ -965,12 +964,12 @@ function evaluateFvgObstacleReaction(args: {
     };
   }
 
-  if (['Stop', 'SessionClose'].includes(args.standardOutcome.outcome)) {
-    return {
-      opposingFvgObstacleReaction: 'obstacle_defended_continuation_failed',
-      opposingFvgObstacleReactionTime: obstacleReached.time,
-    };
-  }
+    if (['Stop', 'SessionClose'].includes(args.standardOutcome.outcome)) {
+      return {
+        opposingFvgObstacleReaction: 'obstacle_defended_management_callout',
+        opposingFvgObstacleReactionTime: obstacleReached.time,
+      };
+    }
 
   return {
     opposingFvgObstacleReaction: 'obstacle_before_t1_reached',
@@ -1012,10 +1011,11 @@ function classifyBalancedPathToLiquidity(args: {
       target: args.liquidityFirstTarget,
     };
   }
-  if (args.obstacleReaction === 'obstacle_defended_continuation_failed') {
+  if (args.obstacleReaction === 'obstacle_defended_management_callout') {
     return {
       status: 'not_balanced_path_to_liquidity',
-      reason: 'An opposing FVG defended before T1, so the path did not deliver cleanly to liquidity.',
+      reason:
+        'A defended FVG/HTF obstacle sat before or near T1, so it must be reported as management context before treating liquidity as the first clean objective.',
       target: args.liquidityFirstTarget,
     };
   }
@@ -1029,7 +1029,8 @@ function classifyBalancedPathToLiquidity(args: {
 
   return {
     status: 'balanced_path_to_liquidity',
-    reason: 'The first real-liquidity objective sat between entry and T1, was reached, and no opposing FVG defended before delivery.',
+    reason:
+      'The first real-liquidity objective sat between entry and T1, was reached, and no defended FVG management objective interrupted delivery.',
     target: args.liquidityFirstTarget,
   };
 }
@@ -1041,13 +1042,10 @@ function classifyContinuationRead(args: {
   balancedPathToLiquidity: BalancedPathToLiquidityRead;
 }): ContinuationRead {
   if (!args.eligible) return 'diagnostic_only_no_completed_plan';
-  if (args.obstacleReaction === 'obstacle_defended_continuation_failed') {
-    return 'obstacle_defended_continuation_failed';
-  }
+  if (args.obstacle) return 'defended_area_management_callout';
   if (args.balancedPathToLiquidity.status === 'balanced_path_to_liquidity') {
     return 'balanced_path_to_liquidity_valid';
   }
-  if (args.obstacle) return 'obstacle_before_t1_manage_or_downgrade';
   return 'clean_continuation';
 }
 
@@ -1597,7 +1595,7 @@ function markdownReport(report: DiagnosticReport): string {
       .map((item) => `${item.price.toFixed(2)} ${item.kind}`)
       .slice(0, 4);
     const obstacleText = trace.opposingFvgObstacleBeforeT1
-      ? `Opposing FVG obstacle before T1: ${trace.opposingFvgObstacleBeforeT1.timeframe} ${trace.opposingFvgObstacleBeforeT1.lower.toFixed(2)}-${trace.opposingFvgObstacleBeforeT1.upper.toFixed(2)} with reaction ${trace.opposingFvgObstacleReaction}.`
+      ? `Defended-area / obstacle management callout before or near T1: ${trace.opposingFvgObstacleBeforeT1.timeframe} ${trace.opposingFvgObstacleBeforeT1.lower.toFixed(2)}-${trace.opposingFvgObstacleBeforeT1.upper.toFixed(2)} with reaction ${trace.opposingFvgObstacleReaction}.`
       : 'No opposing FVG obstacle was loaded before T1.';
     return [
       `${trace.parentFvg.direction} proof completed at ${trace.proofTime} from ${trace.parentFvg.lower.toFixed(2)}-${trace.parentFvg.upper.toFixed(2)}.`,
@@ -1609,6 +1607,24 @@ function markdownReport(report: DiagnosticReport): string {
         : 'No structural objective beyond tactical targets was reached inside the session window.',
       `T1/T2 are tactical; open FVG/liquidity levels explain whether a runner had structural support.`,
     ].join(' ');
+  };
+
+  const reviewOrderLines = (): string[] => {
+    const primary = report.traces.find((trace) => trace.eligible) ?? report.traces[0];
+    if (!primary) {
+      return ['- No trade-like FVG campaign qualified for review.'];
+    }
+    const laterCount = Math.max(0, report.traces.length - 1);
+    const managementLine = primary.opposingFvgObstacleBeforeT1
+      ? `- Defended-area management context: ${primary.opposingFvgObstacleBeforeT1.timeframe} ${primary.opposingFvgObstacleBeforeT1.direction} ${primary.opposingFvgObstacleBeforeT1.lower.toFixed(2)}-${primary.opposingFvgObstacleBeforeT1.upper.toFixed(2)} is a callout before/near T1, not an issue by itself.`
+      : '- Defended-area management context: no loaded obstacle before/near the primary campaign T1.';
+    return [
+      `- Primary campaign to review first: ${primary.parentFvg.direction} proof ${primary.proofTime ?? 'none'} from 15M parent ${zoneParentDisplacementAt(primary.parentFvg)} confirmed ${zoneConfirmedAt(primary.parentFvg)}.`,
+      managementLine,
+      laterCount
+        ? `- Later rows: ${laterCount} secondary idea(s). They cannot lead the story unless the primary campaign is resolved and a separate reset is proven.`
+        : '- Later rows: none.',
+    ];
   };
 
   const lines = [
@@ -1644,6 +1660,9 @@ function markdownReport(report: DiagnosticReport): string {
     `- Failed above: ${formatInventory(report.fvgInventoryAtSessionStart.filter((item) => item.relationToPrice === 'above' && item.statusAtReview === 'failed_inverted').slice(0, 10))}`,
     `- Open above: ${formatInventory(report.fvgInventoryAtSessionStart.filter((item) => item.relationToPrice === 'above' && ['open_untouched', 'partial_touch'].includes(item.statusAtReview)).slice(0, 10))}`,
     ``,
+    `## Review Order`,
+    ...reviewOrderLines(),
+    ``,
     `## Trace Rows`,
   ];
 
@@ -1663,8 +1682,8 @@ function markdownReport(report: DiagnosticReport): string {
       `- Entry/stop/risk: ${trace.entry?.toFixed(2) ?? 'N/A'} / ${trace.stop?.toFixed(2) ?? 'N/A'} / ${trace.riskPoints?.toFixed(2) ?? 'N/A'} pts`,
       `- T1/T2: ${trace.target1?.toFixed(2) ?? 'N/A'} / ${trace.target2?.toFixed(2) ?? 'N/A'}`,
       `- Nearest liquidity: ${trace.nearestLiquidity ? `${trace.nearestLiquidity.label} ${trace.nearestLiquidity.price.toFixed(2)}` : 'N/A'}`,
-      `- Opposing FVG obstacle before T1: ${formatObstacle(trace.opposingFvgObstacleBeforeT1)}`,
-      `- Opposing FVG reaction: ${trace.opposingFvgObstacleReaction}${trace.opposingFvgObstacleReactionTime ? ` at ${trace.opposingFvgObstacleReactionTime}` : ''}`,
+      `- Defended-area / obstacle management callout before or near T1: ${formatObstacle(trace.opposingFvgObstacleBeforeT1)}`,
+      `- Defended-area reaction: ${trace.opposingFvgObstacleReaction}${trace.opposingFvgObstacleReactionTime ? ` at ${trace.opposingFvgObstacleReactionTime}` : ''}`,
       `- 15M battle-zone scope: ${trace.battleZoneInventory.scope}`,
       `- 15M battle-zone active role: ${trace.battleZoneInventory.activeRole}`,
       `- 15M first reaction zone: ${formatBattleZone(trace.battleZoneInventory.firstReaction)}`,
