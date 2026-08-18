@@ -42,6 +42,16 @@ When the same 15M battle zone can be read as both a defended continuation and a 
 
 This is a timing rule, not a direction-switch rule. Defended-first continuation may only confirm a real same-direction 15M parent/battle-zone FVG. If no same-direction 15M parent FVG exists, classify the row as `invalid_parent_15m_fvg_not_confirmed`; do not flip an opposite-side zone into a continuation.
 
+### Opposite-Side 5M Flip Before Proof Guard
+
+A candidate is blocked when price returns into the selected 15M parent/battle-zone FVG and a completed 5M candle accepts through that zone in the opposite direction before same-direction 5M proof completes.
+
+- LONG candidate: a completed 5M close below the selected bullish 15M zone before long proof blocks the long.
+- SHORT candidate: a completed 5M close above the selected bearish 15M zone before short proof blocks the short.
+- Do not call that candle wick defense.
+- Do not move proof to a later candle to rescue the original side.
+- June 1 regression: bullish 5M displacement/flip through a bearish 15M zone blocks the short candidate.
+
 ### 15M FVG Failure / Breakdown Continuation
 
 Price accepts through a valid 15M parent FVG against the original side. A pullback or rejection into the failed area, or an aligned nested 5M area, gives completed 5M proof for continuation in the failure direction.

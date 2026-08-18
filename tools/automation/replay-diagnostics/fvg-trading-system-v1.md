@@ -57,6 +57,17 @@ For a bearish structure, the first bearish FVG should defend. If price runs thro
 
 The 5M confirms a defended 15M battle zone when price returns into the 15M zone or an aligned nested 5M FVG, rejects it, and completes a 5M candle back in the trade direction without accepting through the zone.
 
+### Opposite-Side 5M Flip Before Proof
+
+If price returns into the selected 15M parent/battle-zone FVG and a completed 5M candle accepts through that zone in the opposite direction before same-direction 5M proof, the original candidate is invalid.
+
+This is a no-trade/invalid-candidate rule, not a reversal entry by itself.
+
+- LONG candidate: completed 5M close below the selected bullish 15M zone before long proof blocks the long.
+- SHORT candidate: completed 5M close above the selected bearish 15M zone before short proof blocks the short.
+- Do not call opposite-side acceptance wick defense.
+- Do not move proof to a later candle to rescue the original side.
+
 ### Balanced Path
 
 A balanced path is a rebalanced price area where there is no meaningful defended opposing FVG before the next real liquidity or open-FVG objective.
@@ -220,6 +231,7 @@ No trade when:
 - Target room is already gone before proof.
 - Entry/stop/target math does not match the candle truth.
 - The candidate only works by relabeling a later candle as the parent.
+- 2026-06-01: short invalid; 5M bullish flip/acceptance through bearish 15M zone before short proof.
 
 Examples:
 

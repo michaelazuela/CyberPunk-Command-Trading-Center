@@ -10,6 +10,7 @@
     "classify_continuation_failure_balance_or_obstacle",
     "check_defended_first_continuation_before_later_same_zone_failure_or_reversal",
     "drill_to_5m_only_after_15m_story_is_valid",
+    "block_opposite_side_5m_flip_before_same_direction_proof",
     "require_completed_5m_proof",
     "anchor_stop_to_nearest_protected_5m_structure",
     "calculate_t1_t2_from_actual_entry_stop_risk",
@@ -63,6 +64,23 @@
         "later_opposite_side_requires_acceptance_through_defended_zone_plus_fresh_5m_proof"
       ],
       "meaning": "The first completed 5M defense/continuation read on a 15M battle zone is reviewed before labeling that same zone as a later failure/reversal."
+    },
+    {
+      "name": "Opposite-Side 5M Flip Before Proof Guard",
+      "type": "candidate_blocker",
+      "requiredFacts": [
+        "valid_15m_parent_or_battle_zone_selected",
+        "price_returns_into_selected_15m_zone",
+        "completed_5m_candle_accepts_through_zone_against_candidate_side",
+        "opposite_side_5m_flip_occurs_before_same_direction_5m_proof"
+      ],
+      "effect": "block_original_candidate_as_invalid_before_proof",
+      "antiDrift": [
+        "do_not_call_opposite_side_acceptance_wick_defense",
+        "do_not_move_proof_to_later_candle_to_rescue_original_side",
+        "do_not_promote_from_raw_5m_evidence_after_parent_zone_failed"
+      ],
+      "regression": "2026-06-01 bearish 15M zone short candidate blocked by bullish 5M flip before short proof"
     },
     {
       "name": "15M FVG Failure / Breakdown Continuation",
@@ -158,6 +176,13 @@
     "unclearFactsBecomeDiagnosticOnly": true
   },
   "reviewedCaseBindings": [
+    {
+      "date": "2026-06-01",
+      "session": "morning",
+      "rule": "Opposite-Side 5M Flip Before Proof Guard",
+      "status": "research_regression",
+      "lesson": "Bearish 15M zone short candidate is blocked when 5M bullish displacement/acceptance flips through the zone before completed short proof."
+    },
     {
       "date": "2026-01-07",
       "status": "mixed",

@@ -74,6 +74,7 @@ type FiveMinuteDefenseStatus =
   | 'confirmed_defense'
   | 'returned_no_confirmation'
   | 'accepted_through_zone'
+  | 'opposite_side_5m_flip_before_proof'
   | 'not_returned'
   | 'not_selected_15m_battle_zone';
 
@@ -568,6 +569,7 @@ function readFiveMinuteDefense(
 
   const afterReturn = reviewBars.filter((bar) => bar.time >= firstReturn.time);
   const acceptedThrough = afterReturn.find((bar) => overlapsZone(bar, zone) && acceptedThroughAgainstZone(bar, zone)) ?? null;
+  const oppositeSideFlip = afterReturn.find((bar) => isOppositeSideFiveMinuteFlip(bar, zone)) ?? null;
   const wickDefense = afterReturn.find((bar) =>
     overlapsZone(bar, zone) &&
     hasWickDefense(bar, zone.direction) &&
@@ -586,6 +588,16 @@ function readFiveMinuteDefense(
       ? defenseBar
       : afterReturn.find((bar) => bar.time > defenseBar.time && closesContinuationSide(bar, zone))
     : null;
+
+  if (oppositeSideFlip && (!proof || oppositeSideFlip.time <= proof.time)) {
+    return {
+      status: 'opposite_side_5m_flip_before_proof',
+      returnTime: firstReturn.time,
+      wickDefenseTime: null,
+      proofTime: null,
+      detail: `5M returned into the active 15M battle zone, then accepted through it with opposite-side displacement/flip at ${oppositeSideFlip.time} before completed ${zone.direction} proof.`,
+    };
+  }
 
   if (proof) {
     return {
@@ -729,6 +741,19 @@ function buildFvgInventory(args: {
 
 function closesContinuationSide(bar: Bar, zone: Zone): boolean {
   return zone.direction === 'LONG' ? bar.close > zone.upper : bar.close < zone.lower;
+}
+
+function closesOppositeSide(bar: Bar, zone: Zone): boolean {
+  return zone.direction === 'LONG' ? bar.close < zone.lower : bar.close > zone.upper;
+}
+
+function isOppositeSideFiveMinuteFlip(bar: Bar, zone: Zone): boolean {
+  return (
+    overlapsZone(bar, zone) &&
+    acceptedThroughAgainstZone(bar, zone) &&
+    closesOppositeSide(bar, zone) &&
+    bodyPoints(bar) >= 1.5
+  );
 }
 
 function hasWickDefense(bar: Bar, direction: Direction): boolean {
@@ -1343,7 +1368,7 @@ function traceZone(args: {
     reasons.push('Selected 15M battle zone did not receive completed 5M defense confirmation.');
   }
 
-  const structurallyEligible = Boolean(
+  const baseStructurallyEligible = Boolean(
     parentDisplacement &&
     firstReturn &&
     effectiveDefenseBars.length &&
@@ -1401,6 +1426,20 @@ function traceZone(args: {
       target1,
       inventory: fvgInventoryAtProof,
     });
+    const opposingFvgConfirmedAt = opposingFvgObstacleBeforeT1 ? zoneConfirmedAt(opposingFvgObstacleBeforeT1) : null;
+    const oppositeSideFvgBeforeProof = Boolean(
+      opposingFvgObstacleBeforeT1 &&
+      proof &&
+      opposingFvgObstacleBeforeT1.direction !== activeZone.direction &&
+      opposingFvgConfirmedAt &&
+      opposingFvgConfirmedAt <= proof.time
+    );
+    if (oppositeSideFvgBeforeProof) {
+      reasons.push(
+        `Opposite-side 15M FVG confirmed at ${opposingFvgConfirmedAt} before/same as ${activeZone.direction} proof; original candidate is blocked by the opposite-side 5M flip before proof guard.`
+      );
+    }
+    const structurallyEligible = Boolean(baseStructurallyEligible && !oppositeSideFvgBeforeProof);
     const outcome = evaluateOutcome({
       direction: activeZone.direction,
       entry,
