@@ -74,7 +74,7 @@ const contextOnlyEarlyMoveSelection = selectScannerPlan({
   } as any,
   currentPrice: 109,
 });
-assert.equal(contextOnlyEarlyMoveSelection.stateForAlert, 'TriggerPending');
+assert.equal(contextOnlyEarlyMoveSelection.stateForAlert, 'NoTrade');
 assert.equal(contextOnlyEarlyMoveSelection.candidate, null);
 assert.equal(contextOnlyEarlyMoveSelection.reviewStatus, 'early_move_review_no_valid_candidate');
 assert.equal(contextOnlyEarlyMoveSelection.stale.stale, false);
@@ -287,9 +287,15 @@ const htfOpposedShortDoesNotSuppressLong = selectScannerPlan({
   currentPrice: 7434.5,
   latestCompletedBar: { high: 7440, low: 7430.75 },
 });
-assert.equal(htfOpposedShortDoesNotSuppressLong.stateForAlert, 'Missed');
-assert.equal(htfOpposedShortDoesNotSuppressLong.candidate?.direction, 'LONG');
-assert.equal(htfOpposedShortDoesNotSuppressLong.candidate?.setupType, SetupType.SweepMssFvgRetrace);
+assert.equal(htfOpposedShortDoesNotSuppressLong.stateForAlert, 'NoTrade');
+assert.equal(htfOpposedShortDoesNotSuppressLong.state, 'NoTrade');
+assert.equal(htfOpposedShortDoesNotSuppressLong.candidate, null);
+assert.equal(htfOpposedShortDoesNotSuppressLong.reviewStatus, 'entry_trigger_pending_internal');
+assert.ok(
+  htfOpposedShortDoesNotSuppressLong.auditWarnings.some((warning) =>
+    warning.includes('EntryTriggerPending candidate held as internal readback only'),
+  ),
+);
 
 const highQualityLowerRankMicroContinuation = candidate({
   setupType: SetupType.IntradayMssMicroContinuation,
@@ -348,11 +354,11 @@ const strongestRankedReviewSelection = selectScannerPlan({
   currentPrice: 7613.5,
   latestCompletedBar: { high: 7617, low: 7608 },
 });
-assert.equal(strongestRankedReviewSelection.stateForAlert, 'TriggerPending');
-assert.equal(strongestRankedReviewSelection.candidate, strongerRankedHtfBackedReview);
-assert.equal(strongestRankedReviewSelection.candidate?.setupType, SetupType.AfterLunchDriveFvgContinuation);
-assert.equal(strongestRankedReviewSelection.candidate?.rankScore, 256);
-assert.equal(strongestRankedReviewSelection.candidate?.decisionQualityScore, 78);
+assert.equal(strongestRankedReviewSelection.stateForAlert, 'NoTrade');
+assert.equal(strongestRankedReviewSelection.candidate, null);
+assert.equal(strongestRankedReviewSelection.reviewStatus, 'entry_trigger_pending_internal');
+assert.equal(strongestRankedReviewSelection.visibilityMetadata?.discordAction, 'no_trade');
+assert.ok(strongestRankedReviewSelection.auditWarnings.some((warning) => warning.includes('internal readback only')));
 
 const pendingDeskPlayCandidate = candidate({
   setupType: SetupType.SweepMssFvgRetrace,
@@ -384,13 +390,13 @@ const pendingDeskPlaySelection = selectScannerPlan({
   } as any,
   currentPrice: 7313,
 });
-assert.equal(pendingDeskPlaySelection.stateForAlert, 'TriggerPending');
-assert.equal(pendingDeskPlaySelection.candidate, pendingDeskPlayCandidate);
-assert.equal(pendingDeskPlaySelection.candidate?.blockReason, NoTradeReason.EntryTriggerPending);
+assert.equal(pendingDeskPlaySelection.stateForAlert, 'NoTrade');
+assert.equal(pendingDeskPlaySelection.candidate, null);
+assert.equal(pendingDeskPlaySelection.reviewStatus, 'entry_trigger_pending_internal');
 assert.equal(pendingDeskPlaySelection.stale.stale, false);
-assert.equal(pendingDeskPlaySelection.visibilityMetadata?.visibilityMode, 'POST_WATCH');
-assert.equal(pendingDeskPlaySelection.visibilityMetadata?.discordAction, 'post_watch');
-assert.ok(pendingDeskPlaySelection.auditWarnings.some((warning) => warning.includes('EntryTriggerPending candidate surfaced')));
+assert.equal(pendingDeskPlaySelection.visibilityMetadata?.visibilityMode, 'NO_TRADE_WITH_REASON');
+assert.equal(pendingDeskPlaySelection.visibilityMetadata?.discordAction, 'no_trade');
+assert.ok(pendingDeskPlaySelection.auditWarnings.some((warning) => warning.includes('internal readback only')));
 
 const missedPendingDeskPlaySelection = selectScannerPlan({
   normalized: {
@@ -401,11 +407,11 @@ const missedPendingDeskPlaySelection = selectScannerPlan({
   } as any,
   currentPrice: 7398.5,
 });
-assert.equal(missedPendingDeskPlaySelection.stateForAlert, 'Missed');
-assert.equal(missedPendingDeskPlaySelection.candidate, pendingDeskPlayCandidate);
-assert.equal(missedPendingDeskPlaySelection.reviewStatus, 'already_triggered_no_fresh_entry');
-assert.equal(missedPendingDeskPlaySelection.stale.stale, true);
-assert.ok(missedPendingDeskPlaySelection.stale.reason?.includes('No chase'));
+assert.equal(missedPendingDeskPlaySelection.stateForAlert, 'NoTrade');
+assert.equal(missedPendingDeskPlaySelection.candidate, null);
+assert.equal(missedPendingDeskPlaySelection.reviewStatus, 'entry_trigger_pending_internal');
+assert.equal(missedPendingDeskPlaySelection.stale.stale, false);
+assert.equal(missedPendingDeskPlaySelection.visibilityMetadata?.discordAction, 'no_trade');
 
 const staleLongReclaimAfterFailedCampaign = candidate({
   setupType: SetupType.TurtleSoup,
@@ -546,22 +552,11 @@ const intradayMssWatchSelection = selectScannerPlan({
   } as any,
   currentPrice: 7366,
 });
-assert.equal(intradayMssWatchSelection.stateForAlert, 'Conditional');
-assert.notEqual(intradayMssWatchSelection.candidate, intradayMssLongWatch);
-assert.equal(intradayMssWatchSelection.candidate?.setupType, SetupType.IntradayMssMicroContinuation);
-assert.equal(intradayMssWatchSelection.candidate?.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
-assert.equal(intradayMssWatchSelection.candidate?.blockReason, null);
-assert.equal(intradayMssWatchSelection.candidate?.humanReview?.canExecute, false);
-assert.equal(intradayMssWatchSelection.candidate?.humanReview?.discordTradePlanEligible, true);
-assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('Long MSS forming'));
-assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('Campaign active from app-owned completed 5M close-through'));
-assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('Line is 7359.25-7361.00 / HTF line 7361.00'));
-assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('completed 5M hold/retest above'));
-assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('do not chase'));
-assert.ok(intradayMssWatchSelection.candidate?.evidence?.some((item) => item.includes('NinjaTrader OHLC') && item.includes('Gemini/advisory agents may summarize')));
-assert.ok(intradayMssWatchSelection.candidate?.evidence?.some((item) => item.includes('First completed 5M close-through activates the campaign')));
-assert.ok(intradayMssWatchSelection.auditWarnings.some((warning) => warning.includes('First completed 5M close-through activates the campaign')));
-assert.equal(intradayMssWatchSelection.reviewStatus, null);
+assert.equal(intradayMssWatchSelection.stateForAlert, 'NoTrade');
+assert.equal(intradayMssWatchSelection.candidate, null);
+assert.equal(intradayMssWatchSelection.reviewStatus, 'entry_trigger_pending_internal');
+assert.equal(intradayMssWatchSelection.visibilityMetadata?.discordAction, 'no_trade');
+assert.ok(intradayMssWatchSelection.auditWarnings.some((warning) => warning.includes('EntryTriggerPending candidate held as internal readback only')));
 assert.equal(intradayMssWatchSelection.stale.stale, false);
 assert.equal(
   shouldSendScannerAlert({
@@ -571,7 +566,7 @@ assert.equal(
     candidate: intradayMssWatchSelection.candidate,
     stale: intradayMssWatchSelection.stale.stale,
   }).shouldSend,
-  true,
+  false,
 );
 
 const staleFallbackShouldNotSuppressIntradayMssWatch = selectScannerPlan({
@@ -598,10 +593,10 @@ const staleFallbackShouldNotSuppressIntradayMssWatch = selectScannerPlan({
   } as any,
   currentPrice: 108,
 });
-assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.stateForAlert, 'Conditional');
-assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.candidate?.setupType, SetupType.IntradayMssMicroContinuation);
-assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.candidate?.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
-assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.reviewStatus, null);
+assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.stateForAlert, 'NoTrade');
+assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.candidate, null);
+assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.reviewStatus, 'entry_trigger_pending_internal');
+assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.visibilityMetadata?.discordAction, 'no_trade');
 assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.stale.stale, false);
 assert.ok(staleFallbackShouldNotSuppressIntradayMssWatch.auditWarnings.some((warning) => warning.includes('Stale/chasing fallback candidate did not suppress')));
 
@@ -656,16 +651,10 @@ const intradayMssWatchWithoutDuplicatedEvidenceSelection = selectScannerPlan({
   } as any,
   currentPrice: 7366,
 });
-assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.stateForAlert, 'Conditional');
-assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.setupType, SetupType.IntradayMssMicroContinuation);
-assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
-assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.blockReason, null);
-assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.humanReview?.canExecute, false);
-assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.humanReview?.discordTradePlanEligible, true);
-assert.ok(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.requiredTrigger?.includes('Long MSS forming'));
-assert.ok(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.requiredTrigger?.includes('Line is 7359.25-7361.00 / HTF line 7361.00'));
-assert.ok(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.requiredTrigger?.includes('completed 5M hold/retest above'));
-assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.reviewStatus, null);
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.stateForAlert, 'NoTrade');
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate, null);
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.reviewStatus, 'entry_trigger_pending_internal');
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.visibilityMetadata?.discordAction, 'no_trade');
 assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.stale.stale, false);
 
 const blockedPlanCandidate = candidate({
@@ -905,7 +894,7 @@ const tenFifteenSelection = selectScannerPlan({
   normalized: tenFifteenMovePlan,
   currentPrice: morningMoveBars[9].close,
 });
-assert.equal(tenFifteenSelection.stateForAlert, 'TriggerPending');
+assert.equal(tenFifteenSelection.stateForAlert, 'NoTrade');
 assert.equal(tenFifteenSelection.candidate, null);
 assert.equal(tenFifteenSelection.reviewStatus, 'early_move_review_no_valid_candidate');
 assert.equal(tenFifteenSelection.stale.stale, false);

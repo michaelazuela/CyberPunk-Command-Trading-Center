@@ -406,15 +406,18 @@ const intradayMssWatchCandidate = candidate({
 });
 const intradayMssWatchScore = scoreScannerCandidate(intradayMssWatchCandidate, morningWindow, 7366, true, 10 * 60 + 5);
 assert.notEqual(intradayMssWatchScore.hardBlocker, 'no ICT candidate/reference level');
-assert.ok(intradayMssWatchScore.scorecard?.some((item) => item.note.includes('Intraday MSS Micro Continuation watch is active')));
+assert.equal(
+  intradayMssWatchScore.scorecard?.some((item) => item.note.includes('FVG Trading System v1 support watch is active')),
+  false,
+);
 const intradayMssWatchAlert = shouldSendScannerAlert({
   state: 'Conditional',
   confidence: 50,
   window: morningWindow,
   candidate: intradayMssWatchCandidate,
 });
-assert.equal(intradayMssWatchAlert.shouldSend, true);
-assert.ok(intradayMssWatchAlert.reason.includes('Intraday MSS Micro Continuation watch qualified'));
+assert.equal(intradayMssWatchAlert.shouldSend, false);
+assert.ok(intradayMssWatchAlert.reason.includes('Conditional plan below 65 score threshold'));
 
 assert.equal(
   shouldSendScannerAlert({ state: 'Executable', confidence: 80, window: morningWindow, candidate: strongCandidate }).shouldSend,
@@ -432,8 +435,9 @@ const watchAlertDecision = shouldSendScannerAlert({ state: 'Watching', confidenc
 assert.equal(watchAlertDecision.shouldSend, true);
 assert.ok(watchAlertDecision.reason.includes('watch qualified'));
 const triggerPendingWatchDecision = shouldSendScannerAlert({ state: 'TriggerPending', confidence: 65, window: morningWindow, candidate: strongCandidate });
-assert.equal(triggerPendingWatchDecision.shouldSend, true);
-assert.ok(triggerPendingWatchDecision.reason.includes('Watch only'));
+assert.equal(triggerPendingWatchDecision.shouldSend, false);
+assert.match(triggerPendingWatchDecision.reason, /internal readback only/);
+assert.match(triggerPendingWatchDecision.reason, /completed 5M proof/);
 const highQualityTriggerPendingShort = candidate({
   setupType: SetupType.SweepMssFvgRetrace,
   scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
@@ -469,9 +473,9 @@ const highQualityTriggerPendingAlert = shouldSendScannerAlert({
   window: morningWindow,
   candidate: highQualityTriggerPendingShort,
 });
-assert.equal(highQualityTriggerPendingAlert.shouldSend, true);
-assert.match(highQualityTriggerPendingAlert.reason, /High-quality conditional review map qualified/);
-assert.match(highQualityTriggerPendingAlert.reason, /canExecute still control execution/);
+assert.equal(highQualityTriggerPendingAlert.shouldSend, false);
+assert.match(highQualityTriggerPendingAlert.reason, /internal readback only/);
+assert.match(highQualityTriggerPendingAlert.reason, /completed 5M proof/);
 const highQualityTriggerPendingVisibility = classifyScannerVisibility({
   state: 'TriggerPending',
   candidate: highQualityTriggerPendingShort,
@@ -479,8 +483,9 @@ const highQualityTriggerPendingVisibility = classifyScannerVisibility({
   alertDecision: highQualityTriggerPendingAlert,
   canExecute: false,
 });
-assert.equal(highQualityTriggerPendingVisibility.visibilityMode, 'POST_CONDITIONAL');
-assert.equal(highQualityTriggerPendingVisibility.discordAction, 'post_conditional');
+assert.equal(highQualityTriggerPendingVisibility.visibilityMode, 'NO_TRADE_WITH_REASON');
+assert.equal(highQualityTriggerPendingVisibility.discordAction, 'no_trade');
+assert.match(highQualityTriggerPendingVisibility.noTradeWithReason ?? '', /internal readback only/);
 const highQualityTriggerPendingTrace = buildCandidateLifecycleTrace({
   candidates: [highQualityTriggerPendingShort],
   selectedCandidate: highQualityTriggerPendingShort,
@@ -497,9 +502,8 @@ const highQualityTriggerPendingDeskState = buildDeskState({
   currentPrice: 7445.5,
   canExecute: false,
 });
-assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.direction, 'SHORT');
-assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.shortBias.state, 'primary');
-assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.shortBelow, 7445);
+assert.equal(highQualityTriggerPendingDeskState.marketMode, 'no_trade');
+assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.direction, 'WAIT');
 assert.equal(highQualityTriggerPendingDeskState.canExecute, false);
 assert.equal(
   shouldSendScannerAlert({ state: 'MarketMapping', confidence: 100, window: outsideWindow, candidate: strongCandidate }).shouldSend,
@@ -580,11 +584,11 @@ const contextOnlyEarlyMoveSelection = selectScannerPlan({
   } as any,
   currentPrice: 109,
 });
-assert.equal(contextOnlyEarlyMoveSelection.stateForAlert, 'TriggerPending');
+assert.equal(contextOnlyEarlyMoveSelection.stateForAlert, 'NoTrade');
 assert.equal(contextOnlyEarlyMoveSelection.candidate, null);
 assert.equal(contextOnlyEarlyMoveSelection.reviewStatus, 'early_move_review_no_valid_candidate');
 assert.equal(contextOnlyEarlyMoveSelection.stale.stale, false);
-assert.equal(contextOnlyEarlyMoveSelection.visibilityMetadata?.visibilityMode, 'POST_WATCH');
+assert.equal(contextOnlyEarlyMoveSelection.visibilityMetadata?.visibilityMode, 'NO_TRADE_WITH_REASON');
 assert.equal(contextOnlyEarlyMoveSelection.visibilityMetadata?.hasMeaningfulStructuredEvidence, false);
 assert.ok(contextOnlyEarlyMoveSelection.auditWarnings.some((warning) => warning.includes('context only')));
 
@@ -761,7 +765,7 @@ const tenFifteenSelection = selectScannerPlan({
   normalized: tenFifteenMovePlan,
   currentPrice: morningMoveBars[9].close,
 });
-assert.equal(tenFifteenSelection.stateForAlert, 'TriggerPending');
+  assert.equal(tenFifteenSelection.stateForAlert, 'NoTrade');
 assert.equal(tenFifteenSelection.candidate, null);
 assert.equal(tenFifteenSelection.reviewStatus, 'early_move_review_no_valid_candidate');
 assert.equal(tenFifteenSelection.stale.stale, false);
@@ -841,20 +845,21 @@ const auditedSetupTypes = new Set(tradeDecisionMapAudit.entries.map((entry) => e
 for (const entry of SETUP_REGISTRY) {
   assert.equal(auditedSetupTypes.has(entry.setupType), true, `${entry.setupType} is missing from the Phase 9A audit`);
 }
-const deprecatedAuditEntries = tradeDecisionMapAudit.entries.filter((entry) => entry.role === 'deprecated');
-assert.ok(deprecatedAuditEntries.length > 0);
-assert.equal(deprecatedAuditEntries.every((entry) => !entry.discordEligible && !entry.executionEligible), true);
-const supportingAuditEntries = tradeDecisionMapAudit.entries.filter((entry) => entry.role === 'supporting_evidence');
-assert.ok(supportingAuditEntries.length > 0);
-assert.equal(supportingAuditEntries.every((entry) => entry.watchEligible && !entry.planEligible && !entry.executionEligible), true);
-const openingDriveAudit = tradeDecisionMapAudit.entries.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
-assert.equal(openingDriveAudit?.humanReviewOnly, true);
-assert.equal(openingDriveAudit?.executionEligible, false);
-assert.ok(openingDriveAudit?.canExecuteRelationship.includes('canExecute=false'));
-const afterLunchDriveAudit = tradeDecisionMapAudit.entries.find((entry) => entry.setupType === SetupType.AfterLunchDriveFvgContinuation);
-assert.equal(afterLunchDriveAudit?.humanReviewOnly, true);
-assert.equal(afterLunchDriveAudit?.executionEligible, false);
-assert.ok(afterLunchDriveAudit?.canExecuteRelationship.includes('canExecute=false'));
+assert.deepEqual([...auditedSetupTypes], [SetupType.FvgTradingSystemV1]);
+const fvgAudit = tradeDecisionMapAudit.entries[0];
+assert.equal(fvgAudit?.setupType, SetupType.FvgTradingSystemV1);
+assert.equal(fvgAudit?.role, 'primary_model');
+assert.equal(fvgAudit?.watchEligible, true);
+assert.equal(fvgAudit?.planEligible, true);
+assert.equal(fvgAudit?.discordEligible, true);
+assert.equal(fvgAudit?.executionEligible, true);
+assert.equal(fvgAudit?.humanReviewOnly, false);
+assert.equal(fvgAudit?.parentModelFamily, 'FVG_TRADING_SYSTEM_V1');
+assert.ok(fvgAudit?.requiredEvidence.some((line) => line.includes('15M parent FVG')));
+assert.ok(fvgAudit?.requiredEvidence.some((line) => line.includes('nearest protected 5M structure')));
+assert.ok(fvgAudit?.canExecuteRelationship.includes('FVG Trading System v1 can publish decision-support only after'));
+assert.ok(fvgAudit?.canExecuteRelationship.includes('valid same-direction 15M parent FVG or battle zone'));
+assert.ok(fvgAudit?.canExecuteRelationship.includes('No automated orders are authorized'));
 
 const lifecycleTrace = buildCandidateLifecycleTrace({
   candidates: [
@@ -1307,16 +1312,16 @@ assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.dire
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.status, 'aligned');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.sourceOfTruth, 'scanner_protected_structure_model_routing');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.primaryDirection, 'LONG');
-assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.IntradayMssMicroContinuation);
-assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.IntradayMssMicroContinuation);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.FvgTradingSystemV1);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.FvgTradingSystemV1);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.sourceOfTruth, 'scanner_protected_structure_model_fit');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.status, 'best_fit');
-assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.setupType, SetupType.FvgTradingSystemV1);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.shortModelFit.status, 'not_aligned');
-assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.modelFit.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.modelFit.setupType, SetupType.FvgTradingSystemV1);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof');
-assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.IntradayMssMicroContinuation);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.FvgTradingSystemV1);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.canExecuteNow, false);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.tradeReadiness.sourceOfTruth, 'scanner_trade_readiness_routing');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.tradeReadiness.status, 'missed_no_chase');

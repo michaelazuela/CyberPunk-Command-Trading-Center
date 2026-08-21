@@ -1070,13 +1070,14 @@ function candidateDecisionQuality(candidate: SetupCandidate | null | undefined):
 }
 
 function isHighQualityConditionalReviewCandidate(candidate: SetupCandidate | null | undefined): boolean {
+  if (candidate?.blockReason === NoTradeReason.EntryTriggerPending) {
+    return false;
+  }
   const score = candidateDecisionQuality(candidate);
   const executionStatusEligible =
     candidate?.executionStatus === ExecutionStatus.Conditional ||
     candidate?.executionStatus === ExecutionStatus.Executable;
-  const blockerEligible =
-    candidate?.executionStatus === ExecutionStatus.Executable ||
-    candidate?.blockReason === NoTradeReason.EntryTriggerPending;
+  const blockerEligible = !candidate?.blockReason;
   return Boolean(
     candidate &&
     (candidate.direction === 'LONG' || candidate.direction === 'SHORT') &&
@@ -1182,7 +1183,11 @@ export function classifyScannerVisibility(args: {
   } else if (state === 'Conditional') {
     visibilityMode = candidate?.humanReview ? 'POST_REVIEW' : hasFullPlanLevels(candidate) ? 'POST_CONDITIONAL' : 'POST_WATCH';
     discordAction = candidate?.humanReview ? 'post_review' : hasFullPlanLevels(candidate) ? 'post_conditional' : 'post_watch';
-  } else if (state === 'TriggerPending' || state === 'Watching') {
+  } else if (state === 'TriggerPending') {
+    visibilityMode = 'NO_TRADE_WITH_REASON';
+    discordAction = 'no_trade';
+    noTradeWithReason = 'TriggerPending is internal readback only; Discord requires approved completed 5M proof before any trade plan can publish.';
+  } else if (state === 'Watching') {
     visibilityMode = isHighQualityConditionalReviewCandidate(candidate) ? 'POST_CONDITIONAL' : 'POST_WATCH';
     discordAction = isHighQualityConditionalReviewCandidate(candidate) ? 'post_conditional' : 'post_watch';
   } else if (state === 'Blocked' || state === 'Missed') {
@@ -1223,12 +1228,8 @@ export function classifyScannerVisibility(args: {
   };
 }
 
-function registryEntryHumanReviewOnly(entry: SetupRegistryEntry): boolean {
-  return (
-    entry.setupType === SetupType.OpeningDriveFvgContinuation ||
-    entry.setupType === SetupType.AfterLunchDriveFvgContinuation ||
-    entry.setupType === SetupType.IntradayMssMicroContinuation
-  );
+function registryEntryFvgDecisionSupport(entry: SetupRegistryEntry): boolean {
+  return entry.setupType === SetupType.FvgTradingSystemV1 && entry.role === 'primary_model';
 }
 
 function suppressionPathsForRegistryEntry(entry: SetupRegistryEntry): string[] {
@@ -1242,30 +1243,20 @@ function suppressionPathsForRegistryEntry(entry: SetupRegistryEntry): string[] {
     'Structured HTF context below the 30-day sufficiency requirement becomes data-quality visibility, not structural confirmation.',
   ];
 
-  if (entry.role === 'supporting_evidence') {
-    paths.unshift('Supporting-evidence registry role contributes facts/reasons/scoring only and does not create the active candidate by itself.');
-  }
-  if (entry.role === 'deprecated') {
-    paths.unshift('Deprecated registry role is excluded from active scanner, Discord alert, and trade-decision authority.');
-  }
-  if (registryEntryHumanReviewOnly(entry)) {
-    paths.unshift('Human-review-only model metadata keeps canExecute false unless another deterministic app-owned path already allows execution.');
+  if (registryEntryFvgDecisionSupport(entry)) {
+    paths.unshift('FVG Trading System v1 is decision-support only; no automated orders are authorized.');
+  } else {
+    paths.unshift('Legacy/non-FVG model metadata is not eligible for active scanner runtime promotion.');
   }
 
   return paths;
 }
 
 function canExecuteRelationshipForRegistryEntry(entry: SetupRegistryEntry): string {
-  if (entry.role === 'deprecated') {
-    return 'Deprecated registry entry; canExecute must remain false unless a current app-owned primary model separately creates an executable plan.';
+  if (registryEntryFvgDecisionSupport(entry)) {
+    return 'FVG Trading System v1 can publish decision-support only after HTF/15M story, valid same-direction 15M parent FVG or battle zone, completed 5M confirmation, protected 5M structure stop, target/obstacle path, risk, invalidation, and session gates pass. No automated orders are authorized.';
   }
-  if (entry.role === 'supporting_evidence') {
-    return 'Supporting evidence can improve context/scoring only; canExecute is decided by the app-owned active candidate pipeline.';
-  }
-  if (registryEntryHumanReviewOnly(entry)) {
-    return 'Human-review-only primary model; current metadata expects canExecute=false and trader confirmation before action.';
-  }
-  return 'Primary model can be execution-eligible only after deterministic app-owned session, 5M trigger, stop, target, risk, invalidation, and canExecute gates pass.';
+  return 'Legacy/non-FVG model metadata is not eligible for active scanner runtime promotion.';
 }
 
 export function buildTradeDecisionMapAudit(entries: SetupRegistryEntry[] = SETUP_REGISTRY): TradeDecisionMapAudit {
@@ -1275,7 +1266,7 @@ export function buildTradeDecisionMapAudit(entries: SetupRegistryEntry[] = SETUP
     tradingLogicChanged: false,
     entries: entries.map((entry) => {
       const primary = entry.role === 'primary_model';
-      const humanReviewOnly = registryEntryHumanReviewOnly(entry);
+      const fvgDecisionSupport = primary && registryEntryFvgDecisionSupport(entry);
       return {
         setupType: entry.setupType,
         modelName: entry.label,
@@ -1284,11 +1275,11 @@ export function buildTradeDecisionMapAudit(entries: SetupRegistryEntry[] = SETUP
         sessionWindows: [...entry.allowedSessions],
         requiredEvidence: [...entry.requiredEvidence],
         rankWeight: entry.priority,
-        watchEligible: primary || entry.role === 'supporting_evidence',
-        planEligible: primary,
-        discordEligible: primary,
-        executionEligible: primary && !humanReviewOnly,
-        humanReviewOnly,
+        watchEligible: fvgDecisionSupport,
+        planEligible: fvgDecisionSupport,
+        discordEligible: fvgDecisionSupport,
+        executionEligible: fvgDecisionSupport,
+        humanReviewOnly: false,
         canExecuteRelationship: canExecuteRelationshipForRegistryEntry(entry),
         knownSuppressionPaths: suppressionPathsForRegistryEntry(entry),
       };
@@ -1296,7 +1287,7 @@ export function buildTradeDecisionMapAudit(entries: SetupRegistryEntry[] = SETUP
     notes: [
       'Phase 9A audit is inventory metadata only; it does not approve, reject, rank, or suppress trades.',
       'Rank weight mirrors the setup registry priority so drift is visible without changing scanner scoring.',
-      'Execution eligibility describes current authority boundaries; actual execution remains controlled by normalized canExecute.',
+      'Execution eligibility describes decision-support publish authority only; automated orders remain unauthorized and actual publish approval remains controlled by normalized canExecute.',
     ],
   };
 }
@@ -2003,7 +1994,8 @@ function marketModeFromDeskVisibility(args: {
   visibilityMode: ScannerVisibilityMode;
 }): DeskStateMarketMode {
   if (args.state === 'MarketMapping' || args.state === 'MapReady' || args.state === 'NoData') return 'market_mapping';
-  if (args.visibilityMode === 'POST_WATCH' || args.state === 'Watching' || args.state === 'TriggerPending') return 'watching';
+  if (args.state === 'TriggerPending') return 'no_trade';
+  if (args.visibilityMode === 'POST_WATCH' || args.state === 'Watching') return 'watching';
   if (args.visibilityMode === 'POST_CONDITIONAL' || args.state === 'Conditional') return 'conditional';
   if (args.visibilityMode === 'POST_PLAN' || args.visibilityMode === 'POST_REVIEW' || args.state === 'Approved' || args.state === 'Executable') {
     return 'human_review_ready';
@@ -2249,9 +2241,9 @@ function primaryRegistryEntryForSetup(setupType: SetupType | null | undefined): 
   return SETUP_REGISTRY.find((entry) => entry.setupType === setupType && entry.role === 'primary_model') || null;
 }
 
-function protectedStructureFallbackModelEntry(direction: 'LONG' | 'SHORT', map: DeskHtfProtectedStructureMap): SetupRegistryEntry | null {
+function fvgProtectedStructureFallbackEntry(direction: 'LONG' | 'SHORT', map: DeskHtfProtectedStructureMap): SetupRegistryEntry | null {
   if (protectedStructureSupportDirection(map) !== direction) return null;
-  return SETUP_REGISTRY.find((entry) => entry.setupType === SetupType.IntradayMssMicroContinuation && entry.role === 'primary_model') || null;
+  return SETUP_REGISTRY.find((entry) => entry.setupType === SetupType.FvgTradingSystemV1 && entry.role === 'primary_model') || null;
 }
 
 function existingModelFitMissingProof(item: ScannerCandidateLifecycleTraceItem | null): string[] {
@@ -2309,7 +2301,7 @@ function buildApprovedModelFit(args: {
   }
 
   const existingEntry = primaryRegistryEntryForSetup(args.item?.setupType || null);
-  const fallbackEntry = protectedStructureFallbackModelEntry(args.direction, args.htfProtectedStructureMap);
+  const fallbackEntry = fvgProtectedStructureFallbackEntry(args.direction, args.htfProtectedStructureMap);
   const entry = existingEntry || fallbackEntry;
   if (!entry) {
     return {
@@ -2331,7 +2323,7 @@ function buildApprovedModelFit(args: {
   const fitScore = Math.max(0, Math.min(100, Math.round(baseScore + (existingEntry ? 8 : 2))));
   const modelSource = existingEntry
     ? 'existing scanner candidate'
-    : 'protected 15M+5M alignment routed to approved Intraday MSS Micro Continuation model';
+    : 'protected HTF/15M+5M alignment routed to FVG Trading System v1 decision-support model';
   return {
     sourceOfTruth: 'scanner_protected_structure_model_fit',
     setupType: entry.setupType,
@@ -3396,6 +3388,31 @@ function buildPrimaryDeskPlay(args: {
   };
 }
 
+function candidateCanSurfaceInDeskState(args: {
+  state: ScannerState;
+  candidate: SetupCandidate | null;
+}): boolean {
+  if (!args.candidate) return false;
+  if (args.state === 'TriggerPending') return false;
+  if (args.candidate.blockReason) return false;
+  if (args.candidate.executionStatus === ExecutionStatus.Blocked) return false;
+  return true;
+}
+
+function visibleCandidateLifecycleTrace(
+  trace: ScannerCandidateLifecycleTrace,
+  candidate: SetupCandidate | null,
+): ScannerCandidateLifecycleTrace {
+  if (candidate) return trace;
+  return {
+    ...trace,
+    bestLongPlan: null,
+    bestShortPlan: null,
+    selectedCandidateKey: null,
+    selectedCandidate: null,
+  };
+}
+
 export function buildDeskState(args: {
   state: ScannerState;
   candidate?: SetupCandidate | null;
@@ -3407,7 +3424,10 @@ export function buildDeskState(args: {
   canExecute?: boolean;
   chartContext?: Partial<ChartContext> | null;
 }): DeskState {
-  const candidate = args.candidate || null;
+  const rawCandidate = args.candidate || null;
+  const candidate = candidateCanSurfaceInDeskState({ state: args.state, candidate: rawCandidate }) ? rawCandidate : null;
+  const candidateLifecycleTrace = visibleCandidateLifecycleTrace(args.candidateLifecycleTrace, candidate);
+  const canExecute = Boolean(args.canExecute) && Boolean(candidate);
   const marketMode = marketModeFromDeskVisibility({
     state: args.state,
     visibilityMode: args.visibilityMetadata.visibilityMode,
@@ -3415,30 +3435,30 @@ export function buildDeskState(args: {
   const promotion = buildDeskStatePromotionPath({
     marketMode,
     visibilityMetadata: args.visibilityMetadata,
-    candidateLifecycleTrace: args.candidateLifecycleTrace,
+    candidateLifecycleTrace,
     candidate,
-    canExecute: Boolean(args.canExecute),
+    canExecute,
   });
   const primaryDeskPlay = buildPrimaryDeskPlay({
     candidate,
     visibilityMetadata: args.visibilityMetadata,
-    candidateLifecycleTrace: args.candidateLifecycleTrace,
+    candidateLifecycleTrace,
     targetCascade: args.targetCascade,
     htfLiquidityDrawState: args.htfLiquidityDrawState,
     currentPrice: args.currentPrice,
-    canExecute: Boolean(args.canExecute),
+    canExecute,
     chartContext: args.chartContext,
   });
   return {
     sourceOfTruth: 'scanner_desk_state',
     marketMode,
     activeCampaign: candidate?.activeCampaign || null,
-    bestLongPlan: args.candidateLifecycleTrace.bestLongPlan,
-    bestShortPlan: args.candidateLifecycleTrace.bestShortPlan,
-    selectedCandidate: args.candidateLifecycleTrace.selectedCandidate,
+    bestLongPlan: candidateLifecycleTrace.bestLongPlan,
+    bestShortPlan: candidateLifecycleTrace.bestShortPlan,
+    selectedCandidate: candidateLifecycleTrace.selectedCandidate,
     primaryDeskPlay,
     lineInSand: candidate?.activeRuleset?.htfLineInSand?.lineInSand ?? primaryDeskPlay.lineInSand,
-    nextTrigger: args.visibilityMetadata.nextTrigger || primaryDeskPlay.nextTrigger || args.candidateLifecycleTrace.nextTrigger,
+    nextTrigger: args.visibilityMetadata.nextTrigger || primaryDeskPlay.nextTrigger || candidateLifecycleTrace.nextTrigger,
     invalidation: candidate?.invalidation || primaryDeskPlay.invalidation,
     visibilityMode: args.visibilityMetadata.visibilityMode,
     discordAction: args.visibilityMetadata.discordAction,
@@ -3446,12 +3466,12 @@ export function buildDeskState(args: {
     htfContextStatus: htfContextStatusForDeskState(candidate, args.htfLiquidityDrawState),
     dataQualityStatus: dataQualityStatusForDeskState({
       visibilityMetadata: args.visibilityMetadata,
-      candidateLifecycleTrace: args.candidateLifecycleTrace,
+      candidateLifecycleTrace,
     }),
-    canExecute: Boolean(args.canExecute),
+    canExecute,
     promotion,
     visibilityMetadata: args.visibilityMetadata,
-    candidateLifecycleTrace: args.candidateLifecycleTrace,
+    candidateLifecycleTrace,
     notes: [
       'DeskState is the scanner-owned visibility snapshot for Discord, RAG, and UI consumers.',
       'DeskState does not change trade approvals, entry, stop, target, risk, model definitions, or canExecute.',
@@ -3566,11 +3586,11 @@ function directionSign(direction: SetupCandidate['direction']): number {
   return direction === 'LONG' ? 1 : direction === 'SHORT' ? -1 : 0;
 }
 
-const ICT_RULE_WEIGHTS = {
+const FVG_RUNTIME_SIGNAL_WEIGHTS = {
   LIQUIDITY_SWEEP: 25,
   RECLAIM_AFTER_SWEEP: 15,
   WICK_REJECTION_SUPPORT: 10,
-  TURTLE_SOUP_REVERSAL: 20,
+  FVG_FAILURE_REVERSAL: 20,
   DISPLACEMENT_CONFIRMED: 20,
   MARKET_STRUCTURE_SHIFT: 20,
   FVG_OR_IMBALANCE_ENTRY: 15,
@@ -3586,7 +3606,7 @@ const SESSION_TIME_WEIGHTS = {
   outside: 0.0,
 } as const;
 
-const ICT_SCORE_THRESHOLDS = {
+const FVG_RUNTIME_SCORE_THRESHOLDS = {
   NO_TRADE: 0,
   WATCHLIST: 45,
   CONDITIONAL: 65,
@@ -3607,40 +3627,39 @@ function scoreStatus(score: number, max: number): 'strong' | 'partial' | 'weak' 
 
 function recommendationForScore(score: number, hardBlocker?: string | null): string {
   if (hardBlocker) return `No trade: ${hardBlocker}`;
-  if (score >= ICT_SCORE_THRESHOLDS.QUALIFIED) return 'Qualified only if the 5M trigger, structure stop, actual risk, and target room remain confirmed.';
-  if (score >= ICT_SCORE_THRESHOLDS.CONDITIONAL) return 'Conditional: good map, but wait for the missing confirmation before execution.';
-  if (score >= ICT_SCORE_THRESHOLDS.WATCHLIST) return 'Watchlist: monitor the level, but do not execute until the active model and deterministic risk gate complete.';
+  if (score >= FVG_RUNTIME_SCORE_THRESHOLDS.QUALIFIED) return 'Qualified only if the FVG Trading System v1 story, 5M confirmation, structure stop, actual risk, and target room remain confirmed.';
+  if (score >= FVG_RUNTIME_SCORE_THRESHOLDS.CONDITIONAL) return 'Conditional: good FVG map, but wait for the missing confirmation before execution.';
+  if (score >= FVG_RUNTIME_SCORE_THRESHOLDS.WATCHLIST) return 'Watchlist: monitor the FVG battle zone, but do not execute until the active FVG model and deterministic risk gate complete.';
   return 'No trade: score is below the desk threshold or required evidence is missing.';
 }
 
-function isIctHardDisqualified(candidate: SetupCandidate): boolean {
-  return Boolean(ictHardDisqualifierReason(candidate));
-}
-
-function isIntradayMssMicroContinuationWatch(candidate: SetupCandidate | null | undefined): boolean {
+function isFvgTradingSystemSupportWatch(candidate: SetupCandidate | null | undefined): boolean {
   if (!candidate) return false;
+  const hasDecisionArea =
+    (typeof candidate.activeRuleset?.htfLineInSand?.lineInSand === 'number' &&
+      Number.isFinite(candidate.activeRuleset.htfLineInSand.lineInSand) &&
+      candidate.activeRuleset.htfLineInSand.lineInSand > 0) ||
+    (typeof candidate.entry === 'number' && Number.isFinite(candidate.entry) && candidate.entry > 0);
+
   return (
-    candidate.setupType === SetupType.IntradayMssMicroContinuation &&
-    candidate.candidateState === 'MSS_CONTINUATION_RETEST_PENDING' &&
+    candidate.setupType === SetupType.FvgTradingSystemV1 &&
     candidate.executionStatus === ExecutionStatus.Conditional &&
     candidate.humanReview?.canExecute === false &&
     candidate.humanReview.requiresTraderConfirmation === true &&
-    typeof candidate.activeRuleset?.htfLineInSand?.lineInSand === 'number' &&
-    Number.isFinite(candidate.activeRuleset.htfLineInSand.lineInSand) &&
-    candidate.activeRuleset.htfLineInSand.lineInSand > 0
+    hasDecisionArea
   );
 }
 
-function ictHardDisqualifierReason(candidate: SetupCandidate): string | null {
+function fvgRuntimeHardDisqualifierReason(candidate: SetupCandidate): string | null {
   const blockReason = (candidate.blockReason ?? '').toLowerCase();
 
   if (blockReason.includes('chop')) return 'Chop/consolidation no-trade';
   if (blockReason.includes('consolidation')) return 'Chop/consolidation no-trade';
   if (blockReason.includes('overlap')) return 'Chop/consolidation no-trade';
   if (blockReason.includes('no displacement')) return 'No confirmed displacement';
-  if (blockReason.includes('expired')) return 'ICT setup expired: stale/chase guard active';
-  if (blockReason.includes('chase')) return 'ICT setup expired: stale/chase guard active';
-  if (blockReason.includes('stale')) return 'ICT setup expired: stale/chase guard active';
+  if (blockReason.includes('expired')) return 'FVG runtime setup expired: stale/chase guard active';
+  if (blockReason.includes('chase')) return 'FVG runtime setup expired: stale/chase guard active';
+  if (blockReason.includes('stale')) return 'FVG runtime setup expired: stale/chase guard active';
   if (blockReason.includes('outside session')) return 'Outside approved session';
 
   const risk = candidate.riskPoints;
@@ -3662,7 +3681,7 @@ function ictHardDisqualifierReason(candidate: SetupCandidate): string | null {
   return null;
 }
 
-function extractIctSignals(candidate: SetupCandidate) {
+function extractFvgRuntimeSignals(candidate: SetupCandidate) {
   const setupType = (candidate.setupType ?? '').toLowerCase();
   const scenario = [
     candidate.scenarioLabel,
@@ -3698,9 +3717,10 @@ function extractIctSignals(candidate: SetupCandidate) {
       scenario.includes('closed back above swept low') ||
       scenario.includes('closed back below swept high'),
 
-    hasTurtleSoupReversal:
-      scenario.includes('turtle soup') ||
-      setupType.includes('turtle soup') ||
+    hasFvgFailureReversal:
+      scenario.includes('fvg failure') ||
+      scenario.includes('failed fvg') ||
+      setupType.includes('fvg failure') ||
       scenario.includes('failed breakout') ||
       scenario.includes('failed breakdown') ||
       scenario.includes('liquidity raid reversal'),
@@ -3779,19 +3799,19 @@ export function scoreScannerCandidate(
   };
 
   if (!candidate) {
-    const hardBlocker = 'no ICT candidate/reference level';
+    const hardBlocker = 'no FVG Trading System v1 candidate/reference level';
     return {
-      score: ICT_SCORE_THRESHOLDS.NO_TRADE,
+      score: FVG_RUNTIME_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons,
       missingReasons: [hardBlocker],
       hardBlocker,
-      recommendation: recommendationForScore(ICT_SCORE_THRESHOLDS.NO_TRADE, hardBlocker),
+      recommendation: recommendationForScore(FVG_RUNTIME_SCORE_THRESHOLDS.NO_TRADE, hardBlocker),
       scorecard: [{
         label: 'Registered model',
         score: 0,
         max: 25,
         status: 'blocked',
-        note: 'No registered primary Model 1 or Turtle Soup candidate was available.',
+        note: 'No registered FVG Trading System v1 candidate was available.',
       }],
     };
   }
@@ -3799,11 +3819,11 @@ export function scoreScannerCandidate(
   if (!window.allowsDeskPlan || sessionWeight === 0) {
     const hardBlocker = 'outside active Quant Desk scanner window';
     return {
-      score: ICT_SCORE_THRESHOLDS.NO_TRADE,
+      score: FVG_RUNTIME_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons,
       missingReasons: [hardBlocker],
       hardBlocker,
-      recommendation: recommendationForScore(ICT_SCORE_THRESHOLDS.NO_TRADE, hardBlocker),
+      recommendation: recommendationForScore(FVG_RUNTIME_SCORE_THRESHOLDS.NO_TRADE, hardBlocker),
       scorecard: [{
         label: 'Time window',
         score: 0,
@@ -3814,14 +3834,14 @@ export function scoreScannerCandidate(
     };
   }
 
-  const hardDisqualifierReason = ictHardDisqualifierReason(candidate);
+  const hardDisqualifierReason = fvgRuntimeHardDisqualifierReason(candidate);
   if (hardDisqualifierReason) {
     return {
-      score: ICT_SCORE_THRESHOLDS.NO_TRADE,
+      score: FVG_RUNTIME_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons,
       missingReasons: [hardDisqualifierReason],
       hardBlocker: hardDisqualifierReason,
-      recommendation: recommendationForScore(ICT_SCORE_THRESHOLDS.NO_TRADE, hardDisqualifierReason),
+      recommendation: recommendationForScore(FVG_RUNTIME_SCORE_THRESHOLDS.NO_TRADE, hardDisqualifierReason),
       scorecard: [{
         label: 'Hard blocker',
         score: 0,
@@ -3832,24 +3852,24 @@ export function scoreScannerCandidate(
     };
   }
 
-  const signals = extractIctSignals(candidate);
+  const signals = extractFvgRuntimeSignals(candidate);
   const wickOnly =
     signals.hasWickRejectionSupport &&
     !signals.hasReclaimAfterSweep &&
     !signals.hasDisplacement &&
     !signals.hasMarketStructureShift &&
     !signals.hasFvgOrImbalanceEntry &&
-    !signals.hasTurtleSoupReversal &&
+    !signals.hasFvgFailureReversal &&
     !higherTimeframeAligned;
 
   if (wickOnly) {
-    const hardBlocker = 'Wick rejection support is not enough without reclaim, displacement, market structure shift, FVG, Turtle Soup, or higher-timeframe alignment';
+    const hardBlocker = 'Wick rejection support is not enough without a valid FVG Trading System v1 parent story, completed 5M confirmation, protected stop, and target path';
     return {
-      score: ICT_SCORE_THRESHOLDS.NO_TRADE,
+      score: FVG_RUNTIME_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons: [],
       missingReasons: [hardBlocker],
       hardBlocker,
-      recommendation: recommendationForScore(ICT_SCORE_THRESHOLDS.NO_TRADE, hardBlocker),
+      recommendation: recommendationForScore(FVG_RUNTIME_SCORE_THRESHOLDS.NO_TRADE, hardBlocker),
       scorecard: [{
         label: 'Model evidence',
         score: 0,
@@ -3861,23 +3881,23 @@ export function scoreScannerCandidate(
   }
 
   if (!currentPriceAvailable) missingReasons.push('current price unavailable for proximity check');
-  add(signals.hasLiquiditySweep, ICT_RULE_WEIGHTS.LIQUIDITY_SWEEP, 'Liquidity sweep confirmed', 'No confirmed liquidity sweep');
-  add(signals.hasReclaimAfterSweep, ICT_RULE_WEIGHTS.RECLAIM_AFTER_SWEEP, 'Reclaim after sweep confirmed', 'No confirmed liquidity sweep');
-  add(signals.hasWickRejectionSupport, ICT_RULE_WEIGHTS.WICK_REJECTION_SUPPORT, 'Wick rejection support', 'Wick rejection support missing');
-  add(signals.hasTurtleSoupReversal, ICT_RULE_WEIGHTS.TURTLE_SOUP_REVERSAL, 'Turtle Soup reversal', 'No confirmed liquidity sweep');
-  add(signals.hasDisplacement, ICT_RULE_WEIGHTS.DISPLACEMENT_CONFIRMED, 'Displacement confirmed', 'No confirmed displacement');
-  add(signals.hasMarketStructureShift, ICT_RULE_WEIGHTS.MARKET_STRUCTURE_SHIFT, 'Market structure shift confirmed', 'No confirmed market structure shift');
-  add(signals.hasFvgOrImbalanceEntry, ICT_RULE_WEIGHTS.FVG_OR_IMBALANCE_ENTRY, 'Fair value gap / imbalance entry model', 'No fair value gap / imbalance entry model');
-  add(signals.hasPremiumDiscountAlignment, ICT_RULE_WEIGHTS.PREMIUM_DISCOUNT_ALIGNMENT, 'Premium/discount alignment', 'Premium/discount alignment missing');
-  add(higherTimeframeAligned, ICT_RULE_WEIGHTS.HTF_BIAS_ALIGNED, 'Higher-timeframe bias aligned', 'Higher-timeframe bias not aligned');
+  add(signals.hasLiquiditySweep, FVG_RUNTIME_SIGNAL_WEIGHTS.LIQUIDITY_SWEEP, 'Liquidity sweep confirmed', 'No confirmed liquidity sweep');
+  add(signals.hasReclaimAfterSweep, FVG_RUNTIME_SIGNAL_WEIGHTS.RECLAIM_AFTER_SWEEP, 'Reclaim after sweep confirmed', 'No confirmed liquidity sweep');
+  add(signals.hasWickRejectionSupport, FVG_RUNTIME_SIGNAL_WEIGHTS.WICK_REJECTION_SUPPORT, 'Wick rejection support', 'Wick rejection support missing');
+  add(signals.hasFvgFailureReversal, FVG_RUNTIME_SIGNAL_WEIGHTS.FVG_FAILURE_REVERSAL, 'FVG failure/reversal evidence', 'No confirmed FVG failure/reversal evidence');
+  add(signals.hasDisplacement, FVG_RUNTIME_SIGNAL_WEIGHTS.DISPLACEMENT_CONFIRMED, 'Displacement confirmed', 'No confirmed displacement');
+  add(signals.hasMarketStructureShift, FVG_RUNTIME_SIGNAL_WEIGHTS.MARKET_STRUCTURE_SHIFT, 'Market structure shift confirmed', 'No confirmed market structure shift');
+  add(signals.hasFvgOrImbalanceEntry, FVG_RUNTIME_SIGNAL_WEIGHTS.FVG_OR_IMBALANCE_ENTRY, 'Fair value gap / imbalance entry model', 'No fair value gap / imbalance entry model');
+  add(signals.hasPremiumDiscountAlignment, FVG_RUNTIME_SIGNAL_WEIGHTS.PREMIUM_DISCOUNT_ALIGNMENT, 'Premium/discount alignment', 'Premium/discount alignment missing');
+  add(higherTimeframeAligned, FVG_RUNTIME_SIGNAL_WEIGHTS.HTF_BIAS_ALIGNED, 'Higher-timeframe bias aligned', 'Higher-timeframe bias not aligned');
   add(
     candidate.executionStatus === ExecutionStatus.Executable || candidate.executionStatus === ExecutionStatus.Conditional,
-    ICT_RULE_WEIGHTS.EXECUTION_READY,
+    FVG_RUNTIME_SIGNAL_WEIGHTS.EXECUTION_READY,
     'Entry, stop, and target available',
     'Entry, stop, and target unavailable'
   );
 
-  if (signals.isStaleOrChasing) missingReasons.push('ICT setup expired: stale/chase guard active');
+  if (signals.isStaleOrChasing) missingReasons.push('FVG runtime setup expired: stale/chase guard active');
   if (signals.isCountertrendAgainstBigPicture) {
     missingReasons.push('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure');
   }
@@ -3888,9 +3908,9 @@ export function scoreScannerCandidate(
   const modelCompletion = clampScore(
     (signals.hasLiquiditySweep ? 6 : 0) +
     (signals.hasReclaimAfterSweep ? 6 : 0) +
-    (signals.hasTurtleSoupReversal || signals.hasFvgOrImbalanceEntry || isIntradayMssMicroContinuationWatch(candidate) ? 7 : 0) +
+    (signals.hasFvgFailureReversal || signals.hasFvgOrImbalanceEntry || isFvgTradingSystemSupportWatch(candidate) ? 7 : 0) +
     (signals.hasDisplacement || signals.hasMarketStructureShift ? 6 : 0) +
-    (isIntradayMssMicroContinuationWatch(candidate) ? 6 : 0),
+    (isFvgTradingSystemSupportWatch(candidate) ? 6 : 0),
     25
   );
   const executionQuality = clampScore(
@@ -3936,12 +3956,12 @@ export function scoreScannerCandidate(
         score: modelCompletion,
         max: 25,
         status: scoreStatus(modelCompletion, 25),
-        note: isIntradayMssMicroContinuationWatch(candidate)
-          ? 'Intraday MSS Micro Continuation watch is active from aligned 15M/5M MSS and a named line in the sand.'
-          : signals.hasTurtleSoupReversal
-            ? 'Turtle Soup evidence is present.'
+        note: isFvgTradingSystemSupportWatch(candidate)
+          ? 'FVG Trading System v1 support watch is active from aligned HTF/15M story, 5M confirmation, and a named decision area.'
+          : signals.hasFvgFailureReversal
+            ? 'FVG failure/reversal evidence is present.'
             : signals.hasFvgOrImbalanceEntry
-              ? 'Model 1 FVG/imbalance evidence is present.'
+              ? 'FVG parent/entry imbalance evidence is present.'
               : 'Active model is still missing required evidence.',
       },
       {
@@ -4164,15 +4184,10 @@ export function shouldSendScannerAlert(args: {
     return { shouldSend: false, reason: `${args.state} is logged locally but not sent to Discord by default.` };
   }
   if (args.state === 'TriggerPending') {
-    if (isHighQualityConditionalReviewCandidate(args.candidate)) {
-      return {
-        shouldSend: true,
-        reason: 'High-quality conditional review map qualified for Discord: app-owned entry, stop, targets, and line/zone context are present. Completed 5M proof and canExecute still control execution.',
-      };
-    }
-    return args.candidate && args.confidence >= thresholds.conditional
-      ? { shouldSend: true, reason: 'TriggerPending watch qualified for Discord: completed 5M proof is still pending. Watch only; no execution approval.' }
-      : { shouldSend: false, reason: 'TriggerPending is logged locally as developing context until watch alert quality is met.' };
+    return {
+      shouldSend: false,
+      reason: 'TriggerPending is internal readback only; Discord requires an approved plan with completed 5M proof.',
+    };
   }
   if (args.state === 'Missed') {
     return args.confidence >= thresholds.educationalBlocked
@@ -4189,8 +4204,8 @@ export function shouldSendScannerAlert(args: {
       : { shouldSend: false, reason: 'Blocked setup did not meet educational Discord threshold.' };
   }
   if (args.state === 'Conditional') {
-    if (isIntradayMssMicroContinuationWatch(args.candidate) && (args.candidate?.modelConfidenceScore ?? args.confidence) >= 56) {
-      return { shouldSend: true, reason: 'Intraday MSS Micro Continuation watch qualified for Discord: aligned 15M/5M MSS plus named line in the sand. Human review only; no chase.' };
+    if (isFvgTradingSystemSupportWatch(args.candidate) && (args.candidate?.modelConfidenceScore ?? args.confidence) >= 56) {
+      return { shouldSend: true, reason: 'FVG Trading System v1 support watch qualified for Discord: aligned HTF/15M story plus completed 5M confirmation. Decision support only; no automated orders.' };
     }
     return args.confidence >= thresholds.conditional
       ? { shouldSend: true, reason: `${scannerAlertQualityFromScore(args.confidence).label} qualified for Discord.` }

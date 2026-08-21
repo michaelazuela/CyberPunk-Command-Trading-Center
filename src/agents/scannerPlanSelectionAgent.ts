@@ -25,6 +25,7 @@ export interface ScannerPlanSelection {
   reviewStatus:
     | 'already_triggered_no_fresh_entry'
     | 'early_move_review_no_valid_candidate'
+    | 'entry_trigger_pending_internal'
     | null;
   auditWarnings: string[];
   visibilityMetadata?: ScannerVisibilityMetadata;
@@ -76,18 +77,26 @@ function candidateHasOpposingHtfConflict(candidate: SetupCandidate): boolean {
 }
 
 function candidateCanDriveScannerPlan(candidate: SetupCandidate): boolean {
-  const triggerPendingBlock = candidate.blockReason === NoTradeReason.EntryTriggerPending;
-  const specializedIntradayMssWatch =
-    triggerPendingBlock &&
-    candidate.setupType === SetupType.IntradayMssMicroContinuation &&
-    candidate.candidateState === 'MSS_CONTINUATION_RETEST_PENDING';
   return (
     candidate.direction === 'LONG' ||
     candidate.direction === 'SHORT'
   ) && (
     candidate.executionStatus === ExecutionStatus.Executable ||
     candidate.executionStatus === ExecutionStatus.Conditional
-  ) && !specializedIntradayMssWatch && (!candidate.blockReason || triggerPendingBlock);
+  ) && !candidate.blockReason;
+}
+
+function entryTriggerPendingCandidateFromPool(normalized: NormalizedTradePlan): SetupCandidate | null {
+  return (normalized.setupCandidates || [])
+    .filter((candidate) =>
+      (candidate.direction === 'LONG' || candidate.direction === 'SHORT') &&
+      candidate.blockReason === NoTradeReason.EntryTriggerPending
+    )
+    .sort((a, b) => {
+      const htfConflictDiff = Number(candidateHasOpposingHtfConflict(a)) - Number(candidateHasOpposingHtfConflict(b));
+      if (htfConflictDiff !== 0) return htfConflictDiff;
+      return candidateDeskReviewStrengthSort(a, b);
+    })[0] || null;
 }
 
 function candidateInvalidatedByMarketPrice(
@@ -467,18 +476,30 @@ function humanReviewNoChaseState(normalized: NormalizedTradePlan, candidate: Set
 }
 
 function earlyMoveContextOnlyState(normalized: NormalizedTradePlan): ScannerPlanSelection {
+  const reason =
+    normalized.earlyMoveReview?.action || 'Early move context was detected, but no valid app-owned candidate existed first.';
   return {
     candidate: null,
     stale: {
-      state: 'TriggerPending',
+      state: 'NoTrade',
       stale: false,
-      reason: normalized.earlyMoveReview?.action || 'Early move context was detected, but no valid app-owned candidate existed first.',
+      reason,
     },
-    state: 'TriggerPending',
-    stateForAlert: 'TriggerPending',
+    state: 'NoTrade',
+    stateForAlert: 'NoTrade',
     reviewStatus: 'early_move_review_no_valid_candidate',
+    visibilityMetadata: classifyScannerVisibility({
+      state: 'NoTrade',
+      candidate: null,
+      canExecute: false,
+      staleReason: reason,
+      alertDecision: {
+        shouldSend: false,
+        reason: 'Early-move review is context only; no app-owned candidate proof exists for a Discord trade plan.',
+      },
+    }),
     auditWarnings: [
-      'Early-move review is context only because no valid app-owned executable/conditional candidate existed first. Scanner will not classify this as a missed trade.',
+      'Early-move review is context only because no valid app-owned executable/conditional candidate existed first. Scanner will hold it as internal readback only.',
     ],
   };
 }
@@ -503,37 +524,40 @@ function turtleSoupWatchState(candidate: SetupCandidate, earlyMoveIgnored = fals
 }
 
 function intradayMssWatchState(candidate: SetupCandidate, earlyMoveIgnored = false): ScannerPlanSelection {
+  const reason = candidate.requiredTrigger || 'Intraday MSS watch is forming; completed 5M hold/retest is still required.';
   return {
-    candidate,
+    candidate: null,
     stale: {
-      state: 'Conditional',
+      state: 'TriggerPending',
       stale: false,
-      reason: candidate.requiredTrigger || 'Intraday MSS watch is forming; completed 5M hold/retest is still required.',
+      reason,
     },
-    state: 'Conditional',
-    stateForAlert: 'Conditional',
-    reviewStatus: null,
+    state: 'NoTrade',
+    stateForAlert: 'NoTrade',
+    reviewStatus: 'entry_trigger_pending_internal',
     auditWarnings: [
       earlyMoveIgnored
-        ? `Opposite-direction early-move review ignored for IntradayMssMicroContinuation watch. ${INTRADAY_MSS_AUTHORITY_NOTE} Watch remains human-review only and canExecute remains false.`
-        : `IntradayMssMicroContinuation watch surfaced from aligned 15M/5M MSS plus named line in the sand. ${INTRADAY_MSS_LIFECYCLE_NOTE} Completed 5M hold/retest is required and canExecute remains false.`,
+        ? `Opposite-direction early-move review ignored for IntradayMssMicroContinuation watch. ${INTRADAY_MSS_AUTHORITY_NOTE} Watch remains internal readback only and canExecute remains false.`
+        : `IntradayMssMicroContinuation watch held as internal readback only. ${INTRADAY_MSS_LIFECYCLE_NOTE} Completed 5M hold/retest is required before any Discord-facing plan; canExecute remains false.`,
+      `EntryTriggerPending candidate held as internal readback only. Discord requires approved completed 5M proof before any trade plan can publish. Held candidate: ${candidate.setupType} ${candidate.direction}.`,
     ],
   };
 }
 
 function triggerPendingReviewState(candidate: SetupCandidate): ScannerPlanSelection {
+  const reason = candidate.requiredTrigger || candidate.nextAction || 'Completed 5M trigger/retest is still pending.';
   return {
-    candidate,
+    candidate: null,
     stale: {
       state: 'TriggerPending',
       stale: false,
-      reason: candidate.requiredTrigger || candidate.nextAction || 'Completed 5M trigger/retest is still pending.',
+      reason,
     },
-    state: 'TriggerPending',
-    stateForAlert: 'TriggerPending',
-    reviewStatus: null,
+    state: 'NoTrade',
+    stateForAlert: 'NoTrade',
+    reviewStatus: 'entry_trigger_pending_internal',
     auditWarnings: [
-      'EntryTriggerPending candidate surfaced as scanner watch/review context. No entry approval, canExecute, stop, target, or risk gate was changed.',
+      `EntryTriggerPending candidate held as internal readback only. Discord requires approved completed 5M proof before any trade plan can publish. Held candidate: ${candidate.setupType} ${candidate.direction}.`,
     ],
   };
 }
@@ -638,6 +662,9 @@ function selectScannerPlanCore(args: {
       };
     }
 
+    const triggerPendingCandidate = entryTriggerPendingCandidateFromPool(args.normalized);
+    if (triggerPendingCandidate) return triggerPendingReviewState(triggerPendingCandidate);
+
     const humanReviewCandidate = humanReviewCandidateFromFallbackPool(args.normalized, args.currentPrice, args.latestCompletedBar);
     if (humanReviewCandidate && earlyMoveReviewAppliesToCandidate(args.normalized, humanReviewCandidate)) {
       return humanReviewNoChaseState(args.normalized, humanReviewCandidate);
@@ -682,10 +709,15 @@ function selectScannerPlanCore(args: {
 
   const intradayMssWatchCandidate = intradayMssRetestPendingWatchCandidateFromPool(args.normalized, args.currentPrice, args.guards);
   const fallback = withTurtleSoupLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.latestCompletedBar, args.guards));
+  const triggerPendingCandidate = entryTriggerPendingCandidateFromPool(args.normalized);
   if (!fallback) {
+    if (triggerPendingCandidate) return triggerPendingReviewState(triggerPendingCandidate);
     const turtleSoupWatchCandidate = turtleSoupWatchCandidateFromPool(args.normalized, args.currentPrice, args.latestCompletedBar);
     if (turtleSoupWatchCandidate) return turtleSoupWatchState(turtleSoupWatchCandidate);
     if (intradayMssWatchCandidate) return intradayMssWatchState(intradayMssWatchCandidate);
+  }
+  if (fallback?.blockReason === NoTradeReason.EntryTriggerPending) {
+    return triggerPendingReviewState(fallback);
   }
   const stale = applyStaleChaseGuard({
     candidate: fallback,
@@ -708,13 +740,6 @@ function selectScannerPlanCore(args: {
       ...selection,
       auditWarnings: ['Fallback scanner candidate is stale/chasing. Scanner may publish it only as missed/no-fresh-entry review; canExecute remains false.'],
     };
-  }
-
-  if (fallback?.blockReason === NoTradeReason.EntryTriggerPending) {
-    if (intradayMssWatchCandidate && fallback.setupType === SetupType.IntradayMssMicroContinuation) {
-      return intradayMssWatchState(intradayMssWatchCandidate);
-    }
-    return triggerPendingReviewState(fallback);
   }
 
   const state = scannerStateFromDecision({
