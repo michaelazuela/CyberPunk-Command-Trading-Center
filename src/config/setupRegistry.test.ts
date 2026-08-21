@@ -20,100 +20,28 @@ function setupTypes(entries: { setupType: SetupType }[]) {
   return new Set(entries.map((entry) => entry.setupType));
 }
 
-function assertContainsAll(actual: Set<SetupType>, expected: SetupType[], label: string) {
+function assertExactSet(actual: Set<SetupType>, expected: SetupType[], label: string) {
+  assert(actual.size === expected.length, `${label} expected ${expected.length} entries but found ${actual.size}`);
   for (const setupType of expected) {
     assert(actual.has(setupType), `${label} is missing ${setupType}`);
   }
 }
 
-function assertExactSet(actual: Set<SetupType>, expected: SetupType[], label: string) {
-  assert(actual.size === expected.length, `${label} expected ${expected.length} entries but found ${actual.size}`);
-  assertContainsAll(actual, expected, label);
-}
+const fvgOnly = [SetupType.FvgTradingSystemV1];
 
-assertExactSet(setupTypes(SETUP_REGISTRY), REGISTERED_SETUP_TYPES, 'registered setup types');
+assertExactSet(setupTypes(SETUP_REGISTRY), fvgOnly, 'active setup registry');
+assertExactSet(new Set(REGISTERED_SETUP_TYPES), fvgOnly, 'registered setup types');
+assertExactSet(new Set(APPROVED_SETUP_TYPES), fvgOnly, 'approved setup types');
 
-const primaryExpected = [
-  SetupType.SweepMssFvgRetrace,
-  SetupType.TurtleSoup,
-  SetupType.HtfDrawContinuationAfterRaid,
-  SetupType.HtfDisplacementMssContinuation,
-  SetupType.HtfDisplacementFvgContinuation,
-  SetupType.OpeningDriveFvgContinuation,
-  SetupType.AfterLunchDriveFvgContinuation,
-  SetupType.IntradayMssMicroContinuation,
-  SetupType.FailedPlanReversal,
-];
-const supportingExpected = [
-  SetupType.LiquiditySweep,
-  SetupType.FairValueGap,
-  SetupType.FvgImbalancePullback,
-  SetupType.MarketStructureShift,
-  SetupType.EqualHighsLows,
-  SetupType.PreviousDaySweep,
-  SetupType.BreakerBlock,
-];
-const deprecatedExpected = [
-  SetupType.OrderBlock618,
-  SetupType.MomentumRunaway,
-  SetupType.OpeningOrderBlock,
-  SetupType.InitialBalanceExtension,
-  SetupType.OpeningGapFill,
-  SetupType.CompressionBreakout,
-  SetupType.AlgoKillZone,
-  SetupType.MitigationBlock,
-  SetupType.MomentumPullbackBreatherReclaim,
-  SetupType.MorningFailedHighLiquidityRejection,
-  SetupType.MorningReclaimLong,
-  SetupType.MorningOpeningRangeContinuation,
-  SetupType.LunchFailedHighReversal,
-  SetupType.LunchFailedLowReversal,
-  SetupType.LunchCompressionBreakout,
-  SetupType.LunchFailedContinuation,
-  SetupType.LunchRangeReclaim,
-];
-
-const noisyCatalog = [...supportingExpected, ...deprecatedExpected];
-assertExactSet(new Set(APPROVED_SETUP_TYPES), primaryExpected, 'approved setup types compatibility export');
-for (const setupType of noisyCatalog) {
-  assert(!APPROVED_SETUP_TYPES.includes(setupType), `approved setup types must not include non-primary ${setupType}`);
-}
-const parentModelFamilies: ParentModelFamily[] = [
-  'MODEL_1_SWEEP_MSS_FVG_RETRACE',
-  'FAILED_BREAKOUT_REVERSAL',
-  'HTF_DISPLACEMENT_CONTINUATION',
-  'FAILED_PLAN_REVERSAL',
-];
-const expectedFamilyByPrimarySetup = new Map<SetupType, ParentModelFamily>([
-  [SetupType.SweepMssFvgRetrace, 'MODEL_1_SWEEP_MSS_FVG_RETRACE'],
-  [SetupType.TurtleSoup, 'FAILED_BREAKOUT_REVERSAL'],
-  [SetupType.HtfDrawContinuationAfterRaid, 'HTF_DISPLACEMENT_CONTINUATION'],
-  [SetupType.HtfDisplacementMssContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
-  [SetupType.HtfDisplacementFvgContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
-  [SetupType.OpeningDriveFvgContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
-  [SetupType.AfterLunchDriveFvgContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
-  [SetupType.IntradayMssMicroContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
-  [SetupType.FailedPlanReversal, 'FAILED_PLAN_REVERSAL'],
-]);
-
+const parentModelFamilies: ParentModelFamily[] = ['FVG_TRADING_SYSTEM_V1'];
 const configuredFamilies = new Set(
-  SETUP_REGISTRY
-    .filter((entry) => entry.parentModelFamily)
+  SETUP_REGISTRY.filter((entry) => entry.parentModelFamily)
     .map((entry) => entry.parentModelFamily as ParentModelFamily),
 );
-assert(configuredFamilies.size === parentModelFamilies.length, 'registry must keep exactly four parent model families');
+
+assert(configuredFamilies.size === parentModelFamilies.length, 'registry must keep exactly one parent model family');
 for (const family of parentModelFamilies) {
   assert(configuredFamilies.has(family), `registry is missing parent model family ${family}`);
-}
-for (const entry of SETUP_REGISTRY) {
-  if (entry.role === 'primary_model') {
-    assert(
-      entry.parentModelFamily === expectedFamilyByPrimarySetup.get(entry.setupType),
-      `${entry.setupType} has unexpected parent model family ${entry.parentModelFamily}`,
-    );
-  } else {
-    assert(!entry.parentModelFamily, `${entry.setupType} must not define a parent model family because it is ${entry.role}`);
-  }
 }
 
 for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch'] as const) {
@@ -123,52 +51,29 @@ for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch']
   const allowed = getAllowedSetupRegistry(sessionType);
 
   assert(primary.every((entry) => entry.role === 'primary_model'), `${sessionType} primary accessor returned non-primary entries`);
-  assert(
-    supporting.every((entry) => entry.role === 'supporting_evidence'),
-    `${sessionType} supporting accessor returned non-supporting entries`,
-  );
-  assert(deprecated.every((entry) => entry.role === 'deprecated'), `${sessionType} deprecated accessor returned non-deprecated entries`);
-
-  const primaryTypes = setupTypes(primary);
-  const supportingTypes = setupTypes(supporting);
-  const deprecatedTypes = setupTypes(deprecated);
-  const allowedTypes = setupTypes(allowed);
-  const sessionPrimaryExpected = sessionType === 'lunch' || sessionType === 'replay_lunch'
-    ? primaryExpected.filter((setupType) => setupType !== SetupType.OpeningDriveFvgContinuation)
-    : primaryExpected.filter((setupType) => setupType !== SetupType.AfterLunchDriveFvgContinuation);
-
-  assertExactSet(primaryTypes, sessionPrimaryExpected, `${sessionType} primary registry`);
-  assertExactSet(supportingTypes, supportingExpected, `${sessionType} supporting registry`);
-
-  for (const setupType of deprecatedExpected) {
-    assert(!primaryTypes.has(setupType), `${sessionType} primary registry includes deprecated ${setupType}`);
-    assert(!supportingTypes.has(setupType), `${sessionType} supporting registry includes deprecated ${setupType}`);
-  }
-
-  for (const setupType of noisyCatalog) {
-    assert(!primaryTypes.has(setupType), `${sessionType} noisy catalog entry ${setupType} leaked into primary registry`);
-  }
-
-  for (const setupType of deprecatedTypes) {
-    assert(!primaryTypes.has(setupType), `${sessionType} deprecated ${setupType} leaked into primary registry`);
-    assert(!supportingTypes.has(setupType), `${sessionType} deprecated ${setupType} leaked into supporting registry`);
-  }
-
-  assertExactSet(deprecatedTypes, deprecatedExpected.filter((setupType) => allowedTypes.has(setupType)), `${sessionType} deprecated registry`);
-  assertContainsAll(allowedTypes, sessionPrimaryExpected, `${sessionType} compatibility registry`);
-  assertContainsAll(allowedTypes, supportingExpected, `${sessionType} compatibility registry`);
-  assert(
-    allowed.length === primary.length + supporting.length + deprecated.length,
-    `${sessionType} compatibility accessor should still return every role`,
-  );
+  assert(supporting.length === 0, `${sessionType} supporting registry must be empty`);
+  assert(deprecated.length === 0, `${sessionType} deprecated registry must be empty`);
+  assertExactSet(setupTypes(primary), fvgOnly, `${sessionType} primary registry`);
+  assertExactSet(setupTypes(allowed), fvgOnly, `${sessionType} compatibility registry`);
 }
 
-const htfEntry = getPrimarySetupRegistry('morning').find((entry) => entry.setupType === SetupType.HtfDrawContinuationAfterRaid);
-assert(htfEntry, 'HTF draw continuation entry must remain a primary model');
+const fvgEntry = getPrimarySetupRegistry('morning').find((entry) => entry.setupType === SetupType.FvgTradingSystemV1);
+assert(fvgEntry, 'FVG Trading System v1 entry must remain the primary model');
 assert(
-  !/Execute only|take the trade|enter now|buy now|sell now|trade approved/i.test(htfEntry.defaultNextAction),
-  'HTF registry action wording must not imply execution before final gates',
+  fvgEntry.requiredEvidence.some((line) => /HTF\/15M story/.test(line)),
+  'FVG registry must require the HTF/15M story before 5M execution evidence',
 );
-assert(htfEntry.defaultNextAction.includes('canExecute gates'), 'HTF registry action must preserve canExecute gate wording');
+assert(
+  fvgEntry.requiredEvidence.some((line) => /same-direction 15M parent FVG/.test(line)),
+  'FVG registry must require a valid same-direction 15M parent FVG',
+);
+assert(
+  fvgEntry.requiredEvidence.some((line) => /nearest protected 5M structure/.test(line)),
+  'FVG registry must require nearest protected 5M structure stop placement',
+);
+assert(
+  !/Execute only|take the trade|enter now|buy now|sell now|trade approved/i.test(fvgEntry.defaultNextAction),
+  'FVG registry action wording must not imply execution before final gates',
+);
 
-console.log('setupRegistry role accessors verified');
+console.log('setupRegistry FVG-only runtime contract verified');

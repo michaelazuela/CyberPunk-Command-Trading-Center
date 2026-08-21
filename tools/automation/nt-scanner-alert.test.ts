@@ -3002,6 +3002,7 @@ assert.ok(dataLimitedHtfCoverage.summary.includes('cannot invent missing NinjaTr
 
 const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
   state: {
+    modelSurface: 'FVG_TRADING_SYSTEM_V1',
     sent: {},
     alertDeliveries: {
       'prior-long': {

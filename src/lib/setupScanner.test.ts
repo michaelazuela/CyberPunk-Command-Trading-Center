@@ -1480,21 +1480,17 @@ const tests: Array<[string, () => void]> = [
       result: resultWithText('Neutral baseline with no obvious setup.'),
     });
     const primary = getPrimarySetupRegistry('replay_morning');
-    const supporting = getSupportingEvidenceRegistry('replay_morning');
 
     assert.equal(result.candidates.length, primary.length);
+    assert.deepEqual(primary.map((entry) => entry.setupType), [SetupType.FvgTradingSystemV1]);
+    assert.deepEqual(result.candidates.map((candidate) => candidate.setupType), [SetupType.FvgTradingSystemV1]);
     assert.deepEqual(
       new Set(getScannedSetupTypes()),
       new Set(primary.map((entry) => entry.setupType))
     );
-    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace));
-    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.TurtleSoup));
-    for (const entry of supporting) {
-      assert.ok(!result.candidates.some((candidate) => candidate.setupType === entry.setupType));
-    }
-    for (const entry of SETUP_REGISTRY.filter((entry) => entry.role === 'deprecated')) {
-      assert.ok(!result.candidates.some((candidate) => candidate.setupType === entry.setupType));
-    }
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
+    assert.equal(getSupportingEvidenceRegistry('replay_morning').length, 0);
+    assert.equal(SETUP_REGISTRY.length, 1);
   }],
 
   ['deprecated setup text does not create an active candidate', () => {
@@ -5061,9 +5057,7 @@ const tests: Array<[string, () => void]> = [
     });
 
     assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
-    for (const entry of SETUP_REGISTRY.filter((entry) => entry.role === 'deprecated')) {
-      assert.equal(result.candidates.find((candidate) => candidate.setupType === entry.setupType), undefined);
-    }
+    assert.deepEqual(SETUP_REGISTRY.map((entry) => entry.setupType), [SetupType.FvgTradingSystemV1]);
   }],
 
   ['Phase G Breaker plus FVG overlap adds confluence to a valid Model 1 setup', () => {
@@ -5287,9 +5281,7 @@ const tests: Array<[string, () => void]> = [
     });
 
     assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
-    for (const entry of SETUP_REGISTRY.filter((entry) => entry.role === 'deprecated')) {
-      assert.equal(result.candidates.find((candidate) => candidate.setupType === entry.setupType), undefined);
-    }
+    assert.deepEqual(SETUP_REGISTRY.map((entry) => entry.setupType), [SetupType.FvgTradingSystemV1]);
   }],
 
   ['Phase G journal-facing candidate labels do not show BreakerBlock as a primary model', () => {

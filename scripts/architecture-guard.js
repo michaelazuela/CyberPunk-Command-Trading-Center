@@ -257,24 +257,21 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes('scanner_lifecycle_line_confidence') ||
     !ownerContent.includes('scanner_htf_reaction_context') ||
     !ownerContent.includes('scanner_htf_objective_ladder') ||
-    !ownerContent.includes('scanner_htf_protected_structure_map') ||
-    !ownerContent.includes('scanner_protected_structure_model_routing') ||
-    !ownerContent.includes('scanner_protected_structure_model_fit') ||
     !ownerContent.includes('scanner_executable_consideration_gate_metadata') ||
-    !ownerContent.includes('buildApprovedModelFit') ||
     !ownerContent.includes('buildExecutableConsideration') ||
-    !ownerContent.includes('protectedStructureFallbackModelEntry') ||
-    !ownerContent.includes('SetupType.IntradayMssMicroContinuation') ||
+    !ownerContent.includes('registryEntryFvgDecisionSupport') ||
+    !ownerContent.includes('SetupType.FvgTradingSystemV1') ||
+    !ownerContent.includes('FVG Trading System v1 can publish decision-support only after HTF/15M story') ||
+    !ownerContent.includes('valid same-direction 15M parent FVG or battle zone') ||
+    !ownerContent.includes('completed 5M confirmation') ||
+    !ownerContent.includes('protected 5M structure stop') ||
+    !ownerContent.includes('No automated orders are authorized') ||
     !ownerContent.includes('DeskHtfObjectiveLadder') ||
-    !ownerContent.includes('DeskHtfProtectedStructureMap') ||
     !ownerContent.includes('fallbackHtfState') ||
     !ownerContent.includes('htfLiquidityDrawState: args.htfLiquidityDrawState') ||
     !ownerContent.includes('primaryLifecycleItem?: ScannerCandidateLifecycleTraceItem | null') ||
-    !ownerContent.includes('htfObjectiveFromProtectedStructureRow') ||
-    !ownerContent.includes('directionForCurrentHtfBias(row.currentBias) !== direction') ||
-    !ownerContent.includes('scanner_protected_structure_trend_confirmation') ||
-    !ownerContent.includes('buildProtectedStructureTrendConfirmation') ||
     !ownerContent.includes('Desk Direction:') ||
+    !ownerContent.includes('candidateTargetReactionObjective') ||
     !ownerContent.includes('args.candidate?.direction === candidateDirection ? args.candidate?.targetObjectivePlan || null : null') ||
     !ownerContent.includes('numericOrNull(args.primaryLifecycleItem?.target1)') ||
     !ownerContent.includes('numericOrNull(args.primaryLifecycleItem?.target2)') ||
@@ -282,7 +279,7 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes('changesTradeApprovals: false') ||
     !ownerContent.includes('changesCanExecute: false')
   ) {
-    fail('localScannerEngine.ts must keep Desk Play line confidence, HTF reaction context, direction-owned HTF objective ladder, protected-structure model routing, and executable-consideration scanner-owned metadata only.');
+    fail('localScannerEngine.ts must keep FVG-only decision-support publish authority, HTF reaction context, direction-owned HTF objective ladder, protected 5M stop/risk boundaries, and scanner-owned executable-consideration metadata only.');
   }
   if (
     !ownerContent.includes('lifecycleItemPrimaryEligible') ||

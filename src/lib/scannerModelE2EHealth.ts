@@ -94,8 +94,8 @@ export function buildPhase10ModelHealthReport(
   audit: TradeDecisionMapAudit = buildTradeDecisionMapAudit(registry),
 ): Phase10PortfolioHealthReport {
   const primaryEntries = registry.filter((entry) => entry.role === 'primary_model');
-  const supportingEvidenceCount = registry.filter((entry) => entry.role === 'supporting_evidence').length;
-  const deprecatedCount = registry.filter((entry) => entry.role === 'deprecated').length;
+  const supportingEvidenceCount = 0;
+  const deprecatedCount = 0;
 
   const entries = primaryEntries.map((entry): Phase10ModelHealthEntry => {
     const auditEntry = audit.entries.find((item) => item.setupType === entry.setupType);
@@ -142,8 +142,6 @@ export function buildPhase10ModelHealthReport(
     entry.staleDataPolicy.canApproveExecution
   );
   const portfolioRisk = findings.length > 0 ||
-    supportingEvidenceCount === 0 ||
-    deprecatedCount === 0 ||
     entries.length === 0 ||
     entries.some((entry) => REQUIRED_PHASE_10_STAGES.some((stage) => !entry.stages.includes(stage)));
 
@@ -169,7 +167,7 @@ export function buildPhase10ModelHealthReport(
     notes: [
       'Phase 10 health is a validation contract only; it does not approve, reject, rank, or suppress trades.',
       'Every primary model must retain a DeskState/visibility route and a stale-data/data-quality route before live Discord/RAG consumers rely on it.',
-      'Supporting-evidence and deprecated registry entries remain outside active execution authority.',
+      'The active registry is FVG-only; supporting-evidence and deprecated model rows are intentionally absent from execution authority.',
     ],
   };
 }

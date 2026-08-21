@@ -22,6 +22,12 @@ const IGNORED_DIRS = new Set([
   'docs/archive',
 ]);
 
+const IGNORED_FILES = new Set([
+  // Generated local scanner state is not an active scanner/prompt/Discord/UI source.
+  // Active runtime source is covered by guard:fvg-only-runtime.
+  'tools/automation/.nt-scanner-state.json',
+]);
+
 const FORBIDDEN = [
   /Trend Anchor/i,
   /2-Bar Failure/i,
@@ -61,7 +67,10 @@ const TEXT_EXTENSIONS = new Set([
 
 function shouldIgnore(fullPath) {
   const relative = path.relative(ROOT, fullPath).replace(/\\/g, '/');
-  return [...IGNORED_DIRS].some((ignored) => relative === ignored || relative.startsWith(`${ignored}/`));
+  return (
+    IGNORED_FILES.has(relative) ||
+    [...IGNORED_DIRS].some((ignored) => relative === ignored || relative.startsWith(`${ignored}/`))
+  );
 }
 
 function walk(target, files = []) {

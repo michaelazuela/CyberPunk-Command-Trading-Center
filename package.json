@@ -90,7 +90,8 @@
     "guard:schema": "node scripts/schema-guard.js",
     "guard:active-windows": "node scripts/active-window-timestamp-guard.js",
     "guard:fvg-research-windows": "node scripts/fvg-research-window-guard.js",
-    "guard": "npm run guard:no-firebase && npm run guard:bridge-contracts && npm run guard:legacy-rules && npm run guard:architecture && npm run guard:schema && npm run guard:active-windows && npm run guard:fvg-research-windows",
+    "guard:fvg-only-runtime": "node scripts/guard-fvg-only-runtime.js",
+    "guard": "npm run guard:no-firebase && npm run guard:bridge-contracts && npm run guard:legacy-rules && npm run guard:architecture && npm run guard:schema && npm run guard:active-windows && npm run guard:fvg-research-windows && npm run guard:fvg-only-runtime",
     "lint": "npm run guard && tsc --noEmit"
   },
   "dependencies": {

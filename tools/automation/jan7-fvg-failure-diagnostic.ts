@@ -135,7 +135,7 @@ interface ResearchTag {
 }
 
 interface ResearchRule {
-  name: 'FvgBalancedPathContinuation' | 'FvgBattleZoneInventory';
+  name: 'FvgBalancedPathContinuation' | 'FvgBattleZoneInventory' | 'FvgSameDirection5mConfirmationGuard';
   status: 'research_only_supporting_rule';
   definition: string;
   requiredFacts: string[];
@@ -253,6 +253,23 @@ const BATTLE_ZONE_INVENTORY_RULE: ResearchRule = {
     'Middle-zone clutter is promoted over first reaction or final/deepest battle-zone roles.',
     '5M confirmation is used before the 15M battle zone is selected.',
     'The selected 15M battle zone accepts through against the intended direction.',
+  ],
+  notAStandaloneTrigger: true,
+};
+const SAME_DIRECTION_5M_CONFIRMATION_GUARD_RULE: ResearchRule = {
+  name: 'FvgSameDirection5mConfirmationGuard',
+  status: 'research_only_supporting_rule',
+  definition:
+    'A valid FVG research candidate must keep the HTF/15M story first and use only same-direction completed 5M confirmation. Opposite-side 5M displacement or flip blocks the candidate instead of becoming proof.',
+  requiredFacts: [
+    'Valid same-direction 15M parent FVG or selected 15M battle zone exists before 5M review.',
+    'Completed 5M candle returns into or tests the selected 15M FVG area.',
+    'The 5M proof candle closes with the parent direction and does not accept through the zone against it.',
+  ],
+  invalidation: [
+    'The proposed 5M proof candle is an opposite-side displacement/flip against the parent direction.',
+    'Price accepts through the selected 15M FVG area against the candidate before proof.',
+    'The only clean 5M evidence is opposite-side displacement rather than same-direction defense.',
   ],
   notAStandaloneTrigger: true,
 };
@@ -756,6 +773,35 @@ function isOppositeSideFiveMinuteFlip(bar: Bar, zone: Zone): boolean {
   );
 }
 
+function buildSameDirection5mConfirmationGate(zone: Zone, proof: Bar | null): RejectionGate {
+  if (!proof) {
+    return {
+      gate: 'same_direction_5m_confirmation',
+      status: 'fail',
+      detail: 'No completed 5M proof candle is available.',
+    };
+  }
+  if (isOppositeSideFiveMinuteFlip(proof, zone)) {
+    return {
+      gate: 'same_direction_5m_confirmation',
+      status: 'fail',
+      detail: `5M proof ${proof.time} is an opposite-side 5M flip/displacement, so it cannot confirm the ${zone.direction} 15M parent/battle-zone candidate.`,
+    };
+  }
+  if (!closesContinuationSide(proof, zone)) {
+    return {
+      gate: 'same_direction_5m_confirmation',
+      status: 'fail',
+      detail: `5M proof ${proof.time} does not close with the ${zone.direction} 15M parent/battle-zone direction.`,
+    };
+  }
+  return {
+    gate: 'same_direction_5m_confirmation',
+    status: 'pass',
+    detail: `5M proof ${proof.time} closes with the ${zone.direction} 15M parent/battle-zone direction.`,
+  };
+}
+
 function hasWickDefense(bar: Bar, direction: Direction): boolean {
   const body = bodyPoints(bar);
   const range = Math.max(0.25, bar.high - bar.low);
@@ -1197,6 +1243,7 @@ function buildRejectionGates(args: {
   firstReturn: Bar | null;
   wickDefenseBars: Bar[];
   proof: Bar | null;
+  sameDirection5mConfirmation: RejectionGate;
   entry: number | null;
   stop: number | null;
   riskPoints: number | null;
@@ -1240,6 +1287,7 @@ function buildRejectionGates(args: {
         ? `Completed 5M continuation proof closed at ${args.proof.time}.`
         : 'No completed 5M continuation close away from the FVG was found after wick defense.',
     },
+    args.sameDirection5mConfirmation,
     {
       gate: 'entry_stop_risk_contract',
       status: args.entry !== null && args.stop !== null && args.riskPoints !== null && args.riskPoints > 0 ? 'pass' : 'fail',
@@ -1367,12 +1415,17 @@ function traceZone(args: {
   } else if (battleZoneInventory.activeFiveMinuteDefense.status !== 'confirmed_defense') {
     reasons.push('Selected 15M battle zone did not receive completed 5M defense confirmation.');
   }
+  const sameDirection5mConfirmation = buildSameDirection5mConfirmationGate(activeZone, proof);
+  if (sameDirection5mConfirmation.status === 'fail') {
+    reasons.push(sameDirection5mConfirmation.detail);
+  }
 
   const baseStructurallyEligible = Boolean(
     parentDisplacement &&
     firstReturn &&
     effectiveDefenseBars.length &&
     proof &&
+    sameDirection5mConfirmation.status === 'pass' &&
     stop !== null &&
     entry !== null &&
     riskPoints !== null &&
@@ -1388,6 +1441,7 @@ function traceZone(args: {
     firstReturn: firstReturn ?? null,
     wickDefenseBars: effectiveDefenseBars,
     proof,
+    sameDirection5mConfirmation,
     entry,
     stop,
     riskPoints,
@@ -1843,7 +1897,11 @@ async function main(): Promise<void> {
       '240m': coverage['240m'],
     },
     researchTags,
-    researchRules: [BATTLE_ZONE_INVENTORY_RULE, BALANCED_PATH_CONTINUATION_RULE],
+    researchRules: [
+      BATTLE_ZONE_INVENTORY_RULE,
+      SAME_DIRECTION_5M_CONFIRMATION_GUARD_RULE,
+      BALANCED_PATH_CONTINUATION_RULE,
+    ],
     fvgInventoryAtSessionStart,
     traces,
   };

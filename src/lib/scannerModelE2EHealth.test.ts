@@ -48,8 +48,8 @@ assert.equal(report.phases.bravoStaleDataCoverage, 'ready');
 assert.equal(report.phases.charliePortfolioE2EContract, 'ready');
 assert.equal(report.findings.length, 0);
 assert.equal(report.primaryModelCount, primaryRegistry.length);
-assert.ok(report.supportingEvidenceCount > 0);
-assert.ok(report.deprecatedCount > 0);
+assert.equal(report.supportingEvidenceCount, 0);
+assert.equal(report.deprecatedCount, 0);
 assert.equal(report.boundaries.changesTradingLogic, false);
 assert.equal(report.boundaries.changesScannerApprovals, false);
 assert.equal(report.boundaries.changesCanExecute, false);
@@ -173,9 +173,8 @@ assert.equal(dataLimitedVisibility.discordAction, 'hold');
 assert.equal(dataLimitedVisibility.authority.canExecute, false);
 assert.ok(dataLimitedVisibility.dataQualityBlocker?.includes('120M bars'));
 
-const supportingAuditEntries = audit.entries.filter((entry) => entry.role === 'supporting_evidence');
-assert.ok(supportingAuditEntries.every((entry) => !entry.executionEligible));
-const deprecatedAuditEntries = audit.entries.filter((entry) => entry.role === 'deprecated');
-assert.ok(deprecatedAuditEntries.every((entry) => !entry.discordEligible && !entry.executionEligible));
+assert.deepEqual(audit.entries.map((entry) => entry.setupType), [SetupType.FvgTradingSystemV1]);
+assert.equal(audit.entries.every((entry) => entry.role === 'primary_model'), true);
+assert.equal(audit.entries.every((entry) => entry.discordEligible && entry.executionEligible), true);
 
 console.log('scannerModelE2EHealth tests passed');

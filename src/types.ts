@@ -24,6 +24,7 @@ export enum BiasDirection {
 }
 
 export enum SetupType {
+  FvgTradingSystemV1 = 'FvgTradingSystemV1',
   OrderBlock618 = 'OrderBlock618',
   SweepMssFvgRetrace = 'SweepMssFvgRetrace',
   LiquiditySweep = 'LiquiditySweep',

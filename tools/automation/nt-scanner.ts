@@ -152,6 +152,7 @@ type ScannerSetupSession = 'morning' | 'lunch';
 const ACTIVE_MARKET_MAPPING_WINDOWS_TEXT =
   `${MARKET_MAPPING_WINDOW.startHour}:${String(MARKET_MAPPING_WINDOW.startMinute).padStart(2, '0')}-${MARKET_MAPPING_WINDOW.endHour}:${String(MARKET_MAPPING_WINDOW.endMinute).padStart(2, '0')} ET and ` +
   `${EVENING_MARKET_MAPPING_WINDOW.startHour}:${String(EVENING_MARKET_MAPPING_WINDOW.startMinute).padStart(2, '0')}-${EVENING_MARKET_MAPPING_WINDOW.endHour}:${String(EVENING_MARKET_MAPPING_WINDOW.endMinute).padStart(2, '0')} ET`;
+const ACTIVE_SCANNER_MODEL_SURFACE = 'FVG_TRADING_SYSTEM_V1';
 
 export interface ScannerConfig {
   instrument: Instrument;
@@ -184,6 +185,7 @@ export interface ScannerConfig {
 }
 
 interface ScannerStateFile {
+  modelSurface: string;
   sent: Record<string, { state: ScannerState; confidence: number; sentAt: string }>;
   alertDeliveries: Record<string, ScannerAlertDeliveryRecord>;
   activeCampaignSent: Record<string, ScannerActiveCampaignLedgerRecord>;
@@ -1305,6 +1307,7 @@ function sleep(ms: number): Promise<void> {
 
 function emptyScannerState(): ScannerStateFile {
   return {
+    modelSurface: ACTIVE_SCANNER_MODEL_SURFACE,
     sent: {},
     alertDeliveries: {},
     activeCampaignSent: {},
@@ -1329,8 +1332,18 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
   const result = await readRuntimeJson<Partial<ScannerStateFile>>(STATE_FILE);
   const parsed = result.value;
   if (parsed) {
+    if (parsed.modelSurface !== ACTIVE_SCANNER_MODEL_SURFACE) {
+      return {
+        state: emptyScannerState(),
+        health: {
+          status: 'missing_initialized',
+          message: `Scanner state model surface did not match ${ACTIVE_SCANNER_MODEL_SURFACE}; initialized empty state at ${STATE_FILE}.`,
+        },
+      };
+    }
     return {
       state: {
+        modelSurface: ACTIVE_SCANNER_MODEL_SURFACE,
         sent: parsed.sent || {},
         alertDeliveries: parsed.alertDeliveries || {},
         activeCampaignSent: parsed.activeCampaignSent || {},
@@ -1373,7 +1386,10 @@ async function readState(): Promise<ScannerStateFile> {
 }
 
 async function writeState(state: ScannerStateFile): Promise<void> {
-  await writeRuntimeJsonAtomic(STATE_FILE, state);
+  await writeRuntimeJsonAtomic(STATE_FILE, {
+    ...state,
+    modelSurface: ACTIVE_SCANNER_MODEL_SURFACE,
+  });
 }
 
 type LocalMarketDataGapEventRecord = MarketDataGapEventRecord & {
@@ -3745,10 +3761,7 @@ function lifecycleItemShowsFiveMinuteTacticalShift(
 ): boolean {
   if (!item || item.direction !== direction) return false;
   const setupTypes = new Set<SetupType>([
-    SetupType.HtfDisplacementMssContinuation,
-    SetupType.HtfDisplacementFvgContinuation,
-    SetupType.IntradayMssMicroContinuation,
-    SetupType.TurtleSoup,
+    SetupType.FvgTradingSystemV1,
   ]);
   if (!setupTypes.has(item.setupType)) return false;
   const proofText = [
