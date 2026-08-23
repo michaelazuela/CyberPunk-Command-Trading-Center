@@ -139,40 +139,40 @@ function inferBias(result: AnalysisResult | null | undefined): BiasDirection {
 function setupFromText(...parts: Array<unknown>): SetupType {
   const text = parts.filter(Boolean).join(' ').toUpperCase();
   if (!text || text.includes('NO TRADE')) return SetupType.NoSetup;
+  const hasLiveFvgV1Marker =
+    text.includes('FVG_TRADING_SYSTEM_V1') ||
+    text.includes('FVG TRADING SYSTEM V1') ||
+    text.includes('15M FVG BATTLE') ||
+    text.includes('FAIR VALUE GAP') ||
+    text.includes('FVG') ||
+    text.includes('IMBALANCE');
+  const hasFvgV1Ingredient =
+    text.includes('LIQUIDITY') ||
+    text.includes('SWEEP') ||
+    text.includes('RECLAIM') ||
+    text.includes('MSS') ||
+    text.includes('MARKET STRUCTURE SHIFT') ||
+    text.includes('DISPLACEMENT') ||
+    text.includes('WICK DEFENSE') ||
+    text.includes('BATTLE ZONE') ||
+    text.includes('PROTECTED STRUCTURE') ||
+    text.includes('FAILED BREAKOUT') ||
+    text.includes('FAILED BREAKDOWN');
   if (
-    text.includes('FAILED PLAN REVERSAL') ||
-    text.includes('FAILED_PLAN_REVERSAL') ||
-    text.includes('OPPOSITE-SIDE DECISION LEVEL') ||
-    text.includes('OPPOSITE SIDE DECISION LEVEL')
-  ) return SetupType.FailedPlanReversal;
-  if (
+    hasLiveFvgV1Marker ||
+    hasFvgV1Ingredient ||
     text.includes('HTF DISPLACEMENT + FVG CONTINUATION') ||
     text.includes('HTF DISPLACEMENT FVG CONTINUATION') ||
-    text.includes('HTF_DISPLACEMENT_FVG_CONTINUATION')
-  ) return SetupType.HtfDisplacementFvgContinuation;
-  if (
+    text.includes('HTF_DISPLACEMENT_FVG_CONTINUATION') ||
     text.includes('AFTER-LUNCH DRIVE FVG CONTINUATION') ||
     text.includes('AFTER LUNCH DRIVE FVG CONTINUATION') ||
-    text.includes('AFTER_LUNCH_DRIVE_FVG_CONTINUATION')
-  ) return SetupType.AfterLunchDriveFvgContinuation;
-  if (
+    text.includes('AFTER_LUNCH_DRIVE_FVG_CONTINUATION') ||
     text.includes('OPENING DRIVE FVG CONTINUATION') ||
-    text.includes('OPENING_DRIVE_FVG_CONTINUATION')
-  ) return SetupType.OpeningDriveFvgContinuation;
-  if (
+    text.includes('OPENING_DRIVE_FVG_CONTINUATION') ||
     text.includes('INTRADAY MSS MICRO CONTINUATION') ||
     text.includes('INTRADAY_MSS_MICRO_CONTINUATION') ||
     text.includes('MICRO CONTINUATION RETEST')
-  ) return SetupType.IntradayMssMicroContinuation;
-  if (
-    text.includes('HTF DISPLACEMENT + MSS CONTINUATION') ||
-    text.includes('HTF DISPLACEMENT MSS CONTINUATION') ||
-    text.includes('HTF_DISPLACEMENT_MSS_CONTINUATION')
-  ) return SetupType.HtfDisplacementMssContinuation;
-  if (text.includes('TURTLE SOUP') || text.includes('FAILED BREAKOUT REVERSAL') || text.includes('FAILED BREAKDOWN REVERSAL')) return SetupType.TurtleSoup;
-  const hasSweepOrReclaim = text.includes('LIQUIDITY') || text.includes('SWEEP') || text.includes('RECLAIM') || text.includes('FAILED BREAKOUT') || text.includes('FAILED BREAKDOWN');
-  const hasStructureOrImbalance = text.includes('MSS') || text.includes('STRUCTURE SHIFT') || text.includes('FVG') || text.includes('FAIR VALUE') || text.includes('IMBALANCE') || text.includes('DISPLACEMENT');
-  if (hasSweepOrReclaim || hasStructureOrImbalance) return SetupType.SweepMssFvgRetrace;
+  ) return SetupType.FvgTradingSystemV1;
   return SetupType.NoSetup;
 }
 
@@ -373,15 +373,7 @@ function confidenceScore(confidence: Confidence): number {
 
 function setupScore(setupType: SetupType): number {
   switch (setupType) {
-    case SetupType.SweepMssFvgRetrace: return 100;
-    case SetupType.HtfDrawContinuationAfterRaid: return 99;
-    case SetupType.HtfDisplacementMssContinuation: return 99;
-    case SetupType.HtfDisplacementFvgContinuation: return 97;
-    case SetupType.OpeningDriveFvgContinuation: return 98;
-    case SetupType.AfterLunchDriveFvgContinuation: return 98;
-    case SetupType.IntradayMssMicroContinuation: return 97;
-    case SetupType.FailedPlanReversal: return 98;
-    case SetupType.TurtleSoup: return 98;
+    case SetupType.FvgTradingSystemV1: return 100;
     default: return 0;
   }
 }

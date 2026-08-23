@@ -1,6 +1,10 @@
 import { NoTradeReason, SetupType } from '../types';
 import { SYSTEM_RULES } from '../constants';
 
+// Live setup promotion is locked to FVG Trading System v1. Older setup enums
+// remain historical compatibility labels unless the registry/guards are updated.
+const ACTIVE_FVG_RUNTIME_SETUPS = [SetupType.FvgTradingSystemV1] as const;
+
 export const TRADE_RULES = {
   instruments: ['MES', 'MNQ'] as const,
   // Compatibility cap only. New execution logic must use structure stops first,
@@ -67,70 +71,20 @@ export const TRADE_RULES = {
     morning: {
       label: 'Morning Setup Scan',
       requiredScreenshotRange: '9:15 AM through 12:00 PM ET',
-      allowedSetups: [
-        SetupType.SweepMssFvgRetrace,
-        SetupType.TurtleSoup,
-        SetupType.HtfDrawContinuationAfterRaid,
-        SetupType.HtfDisplacementMssContinuation,
-        SetupType.HtfDisplacementFvgContinuation,
-        SetupType.OpeningDriveFvgContinuation,
-        SetupType.IntradayMssMicroContinuation,
-        SetupType.FailedPlanReversal,
-      ],
-      supportingEvidence: [
-        SetupType.LiquiditySweep,
-        SetupType.FairValueGap,
-        SetupType.FvgImbalancePullback,
-        SetupType.MarketStructureShift,
-        SetupType.EqualHighsLows,
-        SetupType.PreviousDaySweep,
-        SetupType.BreakerBlock,
-      ],
+      allowedSetups: [...ACTIVE_FVG_RUNTIME_SETUPS],
+      supportingEvidence: [],
     },
     lunch: {
       label: 'Lunch/PM Setup Scan',
       requiredScreenshotRange: '12:00 PM through 4:00 PM ET',
-      allowedSetups: [
-        SetupType.SweepMssFvgRetrace,
-        SetupType.TurtleSoup,
-        SetupType.HtfDrawContinuationAfterRaid,
-        SetupType.HtfDisplacementMssContinuation,
-        SetupType.HtfDisplacementFvgContinuation,
-        SetupType.AfterLunchDriveFvgContinuation,
-        SetupType.IntradayMssMicroContinuation,
-        SetupType.FailedPlanReversal,
-      ],
-      supportingEvidence: [
-        SetupType.LiquiditySweep,
-        SetupType.FairValueGap,
-        SetupType.FvgImbalancePullback,
-        SetupType.MarketStructureShift,
-        SetupType.EqualHighsLows,
-        SetupType.PreviousDaySweep,
-        SetupType.BreakerBlock,
-      ],
+      allowedSetups: [...ACTIVE_FVG_RUNTIME_SETUPS],
+      supportingEvidence: [],
     },
     evening: {
       label: 'Evening Setup Scan',
       requiredScreenshotRange: '6:45 PM through 10:15 PM ET',
-      allowedSetups: [
-        SetupType.SweepMssFvgRetrace,
-        SetupType.TurtleSoup,
-        SetupType.HtfDrawContinuationAfterRaid,
-        SetupType.HtfDisplacementMssContinuation,
-        SetupType.HtfDisplacementFvgContinuation,
-        SetupType.IntradayMssMicroContinuation,
-        SetupType.FailedPlanReversal,
-      ],
-      supportingEvidence: [
-        SetupType.LiquiditySweep,
-        SetupType.FairValueGap,
-        SetupType.FvgImbalancePullback,
-        SetupType.MarketStructureShift,
-        SetupType.EqualHighsLows,
-        SetupType.PreviousDaySweep,
-        SetupType.BreakerBlock,
-      ],
+      allowedSetups: [...ACTIVE_FVG_RUNTIME_SETUPS],
+      supportingEvidence: [],
     },
   },
   noTradeSeverity: {

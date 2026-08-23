@@ -812,17 +812,7 @@ function stepStatus(result: ReturnType<typeof run>, step: TradeDecisionStep) {
 }
 
 function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
-  return (
-    candidate.setupType === SetupType.SweepMssFvgRetrace ||
-    candidate.setupType === SetupType.TurtleSoup ||
-    candidate.setupType === SetupType.HtfDrawContinuationAfterRaid ||
-    candidate.setupType === SetupType.HtfDisplacementMssContinuation ||
-    candidate.setupType === SetupType.HtfDisplacementFvgContinuation ||
-    candidate.setupType === SetupType.OpeningDriveFvgContinuation ||
-    candidate.setupType === SetupType.AfterLunchDriveFvgContinuation ||
-    candidate.setupType === SetupType.IntradayMssMicroContinuation ||
-    candidate.setupType === SetupType.FailedPlanReversal
-  );
+  return candidate.setupType === SetupType.FvgTradingSystemV1;
 }
 
 const tests: Array<[string, () => void]> = [
