@@ -112,6 +112,14 @@ if (!decisionPipeline.includes('return SetupType.FvgTradingSystemV1;')) {
   failures.push('Narrative fallback must map eligible FVG language to FvgTradingSystemV1.');
 }
 
+if (!decisionPipeline.includes('const LIVE_RUNTIME_SETUP_TYPES = new Set<SetupType>([SetupType.FvgTradingSystemV1]);')) {
+  failures.push('Decision pipeline must define the live runtime setup filter as FvgTradingSystemV1 only.');
+}
+
+if (!decisionPipeline.includes('.filter(isLiveRuntimeSetupCandidate)')) {
+  failures.push('Decision pipeline must filter merged setup/conditional candidates to the live runtime setup surface.');
+}
+
 for (const oldReturn of [
   'return SetupType.SweepMssFvgRetrace;',
   'return SetupType.TurtleSoup;',

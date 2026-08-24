@@ -75,6 +75,8 @@ interface CandidateInput {
   noTradeReason?: NoTradeReason | null;
 }
 
+const LIVE_RUNTIME_SETUP_TYPES = new Set<SetupType>([SetupType.FvgTradingSystemV1]);
+
 function parsePrice(value: unknown): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (typeof value === 'string') {
@@ -421,6 +423,10 @@ function chooseCandidate(candidates: CandidateInput[], sessionType: PipelineSess
       const scoreB = setupScore(b.setupType) + confidenceScore(b.confidence) + (b.priorityScore || 0) * 10 - riskB;
       return scoreB - scoreA;
     })[0] || null;
+}
+
+function isLiveRuntimeSetupCandidate(candidate: SetupCandidate): boolean {
+  return LIVE_RUNTIME_SETUP_TYPES.has(candidate.setupType);
 }
 
 function makeRiskAssessment(candidate: CandidateInput | null): RiskAssessment {
@@ -922,7 +928,11 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     chartContext,
   });
   const setupCandidates = enrichDecisionQuality(applyTargetObjectivesToCandidates(
-    blockInvalidatedCandidates(mergeSetupCandidates(setupScan.candidates, buildConditionalPlans(chartContext)), chartContext),
+    blockInvalidatedCandidates(
+      mergeSetupCandidates(setupScan.candidates, buildConditionalPlans(chartContext))
+        .filter(isLiveRuntimeSetupCandidate),
+      chartContext
+    ),
     chartContext.structuralLevels || []
   ), chartContext).sort(qualitySort);
   const finalSelectionCandidates = [...setupCandidates].sort(finalSelectionSort);
