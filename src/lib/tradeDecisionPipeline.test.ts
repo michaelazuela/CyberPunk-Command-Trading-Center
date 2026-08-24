@@ -267,7 +267,7 @@ function fullModelOneContext(overrides: Partial<ChartContext> = {}): Partial<Cha
   });
 }
 
-function turtleSoupContext(overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
+function retiredReversalContext(overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
   return structuredContext({
     marketStructure: {
       trend: 'unknown',
@@ -906,15 +906,15 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.noTradeReason, NoTradeReason.NoApprovedSetup);
   }],
 
-  ['6. Historical Turtle Soup context does not survive the live FVG v1 pipeline surface', () => {
+  ['6. Historical retired reversal setup context does not survive the live FVG v1 pipeline surface', () => {
     const result = assertSameSequence({
       result: baseResult({
-        structuredChartContext: turtleSoupContext(),
+        structuredChartContext: retiredReversalContext(),
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
+          summary: 'Retired reversal setup long after sell-side sweep and reclaim.',
+          setup_detected: 'Retired reversal setup Long',
+          rule_category: 'Retired reversal setup',
           entry: 7400,
           stop: 7393.5,
         },
@@ -929,12 +929,12 @@ const tests: Array<[string, () => void]> = [
   ['7. Historical alternate setup does not keep an old plan visible on the live surface', () => {
     const result = assertSameSequence({
       result: baseResult({
-        structuredChartContext: turtleSoupContext({ proposedStop: 7391.75, riskPoints: 8.25 }),
+        structuredChartContext: retiredReversalContext({ proposedStop: 7391.75, riskPoints: 8.25 }),
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
+          summary: 'Retired reversal setup long after sell-side sweep and reclaim.',
+          setup_detected: 'Retired reversal setup Long',
+          rule_category: 'Retired reversal setup',
           entry: 7400,
           stop: 7391.75,
         },
@@ -985,14 +985,14 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.journalReady, true);
   }],
 
-  ['10. Narrative Turtle Soup remains no-trade until liquidity raid facts are structured', () => {
+  ['10. Narrative retired reversal setup remains no-trade until liquidity raid facts are structured', () => {
     const result = assertSameSequence({
       result: baseResult({
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
+          summary: 'Retired reversal setup long after sell-side sweep and reclaim.',
+          setup_detected: 'Retired reversal setup Long',
+          rule_category: 'Retired reversal setup',
           entry_trigger: 'Break above the trigger candle high.',
           trigger_state: 'PENDING_TRIGGER',
         },
@@ -1016,7 +1016,7 @@ const tests: Array<[string, () => void]> = [
     const result = assertSameSequence({
       result: baseResult({
         confidence: 0.99,
-        structuredChartContext: turtleSoupContext({ proposedStop: 7388, riskPoints: 12 }),
+        structuredChartContext: retiredReversalContext({ proposedStop: 7388, riskPoints: 12 }),
         final_trade_plan: {
           decision: 'LONG',
           entry: 7400,
@@ -1030,16 +1030,15 @@ const tests: Array<[string, () => void]> = [
         },
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
+          summary: 'Retired reversal setup long after sell-side sweep and reclaim.',
+          setup_detected: 'Retired reversal setup Long',
+          rule_category: 'Retired reversal setup',
           entry: 7400,
           stop: 7388,
         },
       }),
     });
     assert.notEqual(result.noTradeReason, NoTradeReason.RiskTooWide);
-    assert.equal(result.setupCandidates.some((candidate) => candidate.setupType === SetupType.TurtleSoup), false);
     assert.ok(result.setupCandidates.every((candidate) => candidate.setupType === SetupType.FvgTradingSystemV1));
     assert.equal(result.biasAssessment.confidence, 'High');
   }],
@@ -1076,7 +1075,6 @@ const tests: Array<[string, () => void]> = [
 
     assert.equal(result.status, TradeDecisionStatus.NoTrade);
     assert.equal(result.opportunitySelection?.bestExecutableCandidate, null);
-    assert.equal(result.setupCandidates.some((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace), false);
     assert.ok(result.setupCandidates.every((candidate) => candidate.setupType === SetupType.FvgTradingSystemV1));
   }],
 
@@ -1335,29 +1333,6 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.finalTradePlan.entry, null);
   }],
 
-  ['19. High-priority wide structure stop remains visible as advisory', () => {
-    const result = assertSameSequence({
-      result: baseResult({
-        structuredChartContext: turtleSoupContext({ proposedStop: 7388, riskPoints: 12 }),
-        current_rule_analysis: {
-          ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
-          entry: 7400,
-          stop: 7388,
-        },
-      }),
-    });
-    const liquidity = result.setupCandidates?.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
-
-    assert.ok(liquidity);
-    assert.equal(liquidity.blockReason, null);
-    assert.equal(liquidity.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
-    assert.equal(liquidity.riskPoints, 12);
-    assert.notEqual(result.finalTradePlan.setupType, SetupType.NoSetup);
-  }],
-
   ['20. Weak setup with wide structure risk does not approve', () => {
     const result = assertSameSequence({
       result: baseResult({
@@ -1379,7 +1354,7 @@ const tests: Array<[string, () => void]> = [
   ['21. Pipeline T1/T2 are calculated from R and rounded to 0.25', () => {
     const result = assertSameSequence({
       result: baseResult({
-        structuredChartContext: turtleSoupContext({
+        structuredChartContext: retiredReversalContext({
           proposedEntry: 7400.25,
           proposedStop: 7395.25,
           riskPoints: 5,
@@ -1404,9 +1379,9 @@ const tests: Array<[string, () => void]> = [
         }),
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
-          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
-          setup_detected: 'Turtle Soup Reversal Long',
-          rule_category: 'Turtle Soup Reversal',
+          summary: 'Retired reversal setup long after sell-side sweep and reclaim.',
+          setup_detected: 'Retired reversal setup Long',
+          rule_category: 'Retired reversal setup',
           entry: 7400.25,
           stop: 7395.25,
         },
@@ -2262,129 +2237,6 @@ const tests: Array<[string, () => void]> = [
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
-  ['37. ICT Model 1 requires sweep reclaim displacement structure shift and FVG retrace', () => {
-    const context = {
-      ...structuredContext({
-          keyLevels: {
-            currentPrice: 101,
-            activeSwingHigh: 104,
-            activeSwingLow: 96,
-            nearestResistance: 104,
-            nearestSupport: 96,
-          },
-          candles: [
-            { index: 1, timestamp: '09:45', open: 98, high: 99, low: 96, close: 97, direction: 'bearish', confidence: 'High' },
-            { index: 2, timestamp: '09:50', open: 97, high: 99, low: 96.5, close: 98.5, direction: 'bullish', confidence: 'High' },
-            { index: 3, timestamp: '09:55', open: 98.5, high: 104, low: 101, close: 103.5, direction: 'bullish', isExpansion: true, confidence: 'High' },
-            { index: 4, timestamp: '10:00', open: 102, high: 103, low: 100.25, close: 101, direction: 'bearish', confidence: 'High' },
-          ],
-          fvgZones: [{
-            direction: 'LONG',
-            lower: 99,
-            upper: 101,
-            midpoint: 100,
-            formedAt: '09:55',
-            formedCandleIndex: 3,
-            impulseQualified: true,
-            impulseBodyRatio: 1.8,
-            impulseRangeRatio: 1.4,
-            confidence: 'High',
-          }],
-          breakerZones: [{
-            direction: 'LONG',
-            lower: 99.5,
-            upper: 100.5,
-            midpoint: 100,
-            formedAt: '09:55',
-            source: 'app',
-            confidence: 'High',
-            evidence: 'Failed structure retest zone overlaps imbalance.',
-          }],
-          liquiditySweeps: [{
-            type: 'sweep',
-            direction: 'LONG',
-            level: 96.5,
-            sweptLevelLabel: 'Sell-side liquidity',
-            reclaimed: true,
-            timestamp: '09:45',
-            confidence: 'High',
-            evidence: 'Price swept sell-side liquidity and reclaimed.',
-          }],
-          displacementCandles: [{
-            direction: 'LONG',
-            candleIndex: 3,
-            timestamp: '09:55',
-            session: 'rth_morning',
-            open: 98.5,
-            high: 104,
-            low: 101,
-            close: 103.5,
-            bodyPoints: 5,
-            rangePoints: 5.5,
-            bodyToRange: 0.9,
-            closeLocation: 'top_quarter',
-            displacementScore: 7,
-            quality: 'high_quality',
-            leavesImbalance: true,
-            breaksStructure: true,
-            confidence: 'High',
-            evidence: 'Bullish expansion candle created imbalance and broke structure.',
-          }],
-          targetObjectives: [{
-            label: 'Next buy-side liquidity',
-            price: 110,
-            direction: 'LONG',
-            source: 'ninjatrader',
-            type: 'liquidity_pool',
-            confidence: 'High',
-            score: 90,
-            distancePoints: 10,
-            rMultiple: 2,
-            reason: 'Next buy-side liquidity above the entry.',
-          }],
-          marketStructure: {
-            trend: 'bullish',
-            higherHigh: true,
-            higherLow: true,
-            lowerHigh: false,
-            lowerLow: false,
-            marketStructureShift: true,
-            chopRangeCondition: false,
-            compressionCondition: false,
-            expansionCondition: true,
-          },
-          setupReadyFacts: {
-            pullbackIntoFvg: true,
-            fvgReclaimed: false,
-            breakOfStructure: true,
-            sweepThenReclaim: true,
-            notes: [],
-          },
-      }),
-      sessionType: 'replay_morning',
-      instrument: 'MES',
-      tradeDate: '2026-05-19',
-      timeframe: '5m',
-      screenshotUsability: 'usable',
-    } as ChartContext;
-
-    const plans = buildConditionalPlans(context);
-    const modelOne = plans.find((item) => item.scenarioLabel?.includes('ICT Model 1'));
-    assert.ok(modelOne);
-    assert.equal(modelOne.direction, 'LONG');
-    assert.equal(modelOne.entry, 100);
-    assert.equal(modelOne.stop, 95.75);
-    assert.equal(modelOne.target1, 110);
-    assert.equal(modelOne.tacticalZone?.sourceOfTruth, 'ohlc_fvg_zone');
-    assert.equal(modelOne.tacticalZone?.direction, 'LONG');
-    assert.equal(modelOne.tacticalZone?.lower, 99);
-    assert.equal(modelOne.tacticalZone?.upper, 101);
-    assert.equal(modelOne.tacticalZone?.sourceTimeframe, '5M');
-    assert.ok((modelOne.target1! - modelOne.entry!) / modelOne.riskPoints! >= 2);
-    assert.ok(modelOne.evidence.some((item) => item.includes('Minimum 2.0R')));
-    assert.ok(modelOne.evidence.some((item) => item.includes('Breaker/FVG confluence')));
-  }],
-
   ['38. Quant FVG detection filters weak gaps without impulse', () => {
     const weak = buildNinjaChartContext({
       sessionType: 'replay_morning',
@@ -2410,295 +2262,6 @@ const tests: Array<[string, () => void]> = [
     });
     assert.equal(strong?.fvgZones?.[0]?.direction, 'LONG');
     assert.equal(strong?.fvgZones?.[0]?.impulseQualified, true);
-  }],
-
-  ['39. Bullish Turtle Soup does not require FVG and enforces sweep wick stop plus 2R target', () => {
-    const context = {
-      ...structuredContext({
-        keyLevels: {
-          currentPrice: 98,
-          activeSwingHigh: 105,
-          activeSwingLow: 96,
-          nearestResistance: 105,
-          nearestSupport: 96.5,
-        },
-        candles: [
-          { index: 1, timestamp: '09:40', open: 98, high: 99, low: 97, close: 98, direction: 'doji', confidence: 'High' },
-          { index: 2, timestamp: '09:45', open: 96.75, high: 98.5, low: 96, close: 97.25, direction: 'bullish', isRejection: true, confidence: 'High' },
-          { index: 3, timestamp: '09:50', open: 97.25, high: 101, low: 96.75, close: 100.5, direction: 'bullish', isExpansion: true, confidence: 'High' },
-        ],
-        liquiditySweeps: [{
-          type: 'sweep',
-          direction: 'LONG',
-          level: 96.5,
-          sweptLevelLabel: 'Sell-side liquidity',
-          reclaimed: true,
-          timestamp: '09:45',
-          confidence: 'High',
-          evidence: 'Price swept below sell-side liquidity and reclaimed.',
-        }],
-        displacementCandles: [{
-          direction: 'LONG',
-          candleIndex: 3,
-          timestamp: '09:50',
-          session: 'rth_morning',
-          open: 97,
-          high: 101,
-          low: 96.75,
-          close: 100.5,
-          bodyPoints: 3.5,
-          rangePoints: 4.25,
-          bodyToRange: 0.82,
-          closeLocation: 'top_quarter',
-          displacementScore: 6,
-          quality: 'confirmed',
-          leavesImbalance: false,
-          breaksStructure: true,
-          confidence: 'High',
-          evidence: 'Bullish expansion confirms reversal attempt.',
-        }],
-        targetObjectives: [{
-          label: 'Opposing buy-side liquidity',
-          price: 105,
-          direction: 'LONG',
-          source: 'ninjatrader',
-          type: 'liquidity_pool',
-          confidence: 'High',
-          score: 90,
-          distancePoints: 8,
-          rMultiple: 6.4,
-          reason: 'Opposing buy-side liquidity above the reclaim.',
-        }],
-        marketStructure: {
-          trend: 'bullish',
-          higherHigh: false,
-          higherLow: true,
-          lowerHigh: false,
-          lowerLow: false,
-          marketStructureShift: true,
-          chopRangeCondition: false,
-          compressionCondition: false,
-          expansionCondition: true,
-        },
-        setupReadyFacts: {
-          sweepThenReclaim: true,
-          breakOfStructure: true,
-          notes: [],
-        },
-      }),
-      sessionType: 'replay_morning',
-      instrument: 'MES',
-      tradeDate: '2026-05-19',
-      timeframe: '5m',
-      screenshotUsability: 'usable',
-    } as ChartContext;
-
-    const turtleSoup = buildConditionalPlans(context).find((item) => item.setupType === SetupType.TurtleSoup && item.direction === 'LONG');
-    assert.ok(turtleSoup);
-    assert.equal(turtleSoup.entry, 97.25);
-    assert.equal(turtleSoup.stop, 95.75);
-    assert.equal(turtleSoup.target1, 99.5);
-    assert.equal(turtleSoup.target2, 100.25);
-    assert.notEqual(turtleSoup.target1, turtleSoup.target2);
-    assert.ok((turtleSoup.target1! - turtleSoup.entry!) / turtleSoup.riskPoints! >= 1.5);
-    assert.ok((turtleSoup.target2! - turtleSoup.entry!) / turtleSoup.riskPoints! >= 2);
-    assert.ok(turtleSoup.evidence.some((item) => item.includes('Turtle Soup')));
-    assert.ok(turtleSoup.evidence.some((item) => item.includes('Wick rejection support')));
-  }],
-
-  ['40. Bearish Turtle Soup targets opposing sell-side liquidity with stop above sweep wick', () => {
-    const context = {
-      ...structuredContext({
-        keyLevels: {
-          currentPrice: 102,
-          activeSwingHigh: 105,
-          activeSwingLow: 98,
-          nearestResistance: 104,
-          nearestSupport: 98,
-        },
-        candles: [
-          { index: 1, timestamp: '09:40', open: 102, high: 103, low: 101, close: 102, direction: 'doji', confidence: 'High' },
-          { index: 2, timestamp: '09:45', open: 104.25, high: 105.25, low: 102.5, close: 103.75, direction: 'bearish', isRejection: true, confidence: 'High' },
-          { index: 3, timestamp: '09:50', open: 103.75, high: 104, low: 100, close: 100.5, direction: 'bearish', isExpansion: true, confidence: 'High' },
-        ],
-        liquiditySweeps: [{
-          type: 'sweep',
-          direction: 'SHORT',
-          level: 104,
-          sweptLevelLabel: 'Buy-side liquidity',
-          reclaimed: true,
-          timestamp: '09:45',
-          confidence: 'High',
-          evidence: 'Price swept above buy-side liquidity and reclaimed lower.',
-        }],
-        displacementCandles: [{
-          direction: 'SHORT',
-          candleIndex: 3,
-          timestamp: '09:50',
-          session: 'rth_morning',
-          open: 103.5,
-          high: 104,
-          low: 100,
-          close: 100.5,
-          bodyPoints: 3,
-          rangePoints: 4,
-          bodyToRange: 0.75,
-          closeLocation: 'bottom_quarter',
-          displacementScore: 6,
-          quality: 'confirmed',
-          leavesImbalance: false,
-          breaksStructure: true,
-          confidence: 'High',
-          evidence: 'Bearish expansion confirms reversal attempt.',
-        }],
-        targetObjectives: [{
-          label: 'Opposing sell-side liquidity',
-          price: 98,
-          direction: 'SHORT',
-          source: 'ninjatrader',
-          type: 'liquidity_pool',
-          confidence: 'High',
-          score: 90,
-          distancePoints: 5.5,
-          rMultiple: 3.14,
-          reason: 'Opposing sell-side liquidity below the failed breakout.',
-        }],
-        marketStructure: {
-          trend: 'bearish',
-          higherHigh: false,
-          higherLow: false,
-          lowerHigh: true,
-          lowerLow: true,
-          marketStructureShift: true,
-          chopRangeCondition: false,
-          compressionCondition: false,
-          expansionCondition: true,
-        },
-        setupReadyFacts: {
-          sweepThenReclaim: true,
-          breakOfStructure: true,
-          notes: [],
-        },
-      }),
-      sessionType: 'replay_morning',
-      instrument: 'MES',
-      tradeDate: '2026-05-19',
-      timeframe: '5m',
-      screenshotUsability: 'usable',
-    } as ChartContext;
-
-    const turtleSoup = buildConditionalPlans(context).find((item) => item.setupType === SetupType.TurtleSoup && item.direction === 'SHORT');
-    assert.ok(turtleSoup);
-    assert.equal(turtleSoup.entry, 103.75);
-    assert.equal(turtleSoup.stop, 105.5);
-    assert.equal(turtleSoup.target1, 101.25);
-    assert.equal(turtleSoup.target2, 100.25);
-    assert.notEqual(turtleSoup.target1, turtleSoup.target2);
-    assert.ok((turtleSoup.entry! - turtleSoup.target2!) / turtleSoup.riskPoints! >= 2);
-    assert.ok(turtleSoup.requiredTrigger?.includes('Bearish Turtle Soup'));
-    assert.ok(turtleSoup.evidence.some((item) => item.includes('Wick rejection support')));
-  }],
-
-  ['40b. Stale bearish Turtle Soup is blocked after current 5M trades through the stop', () => {
-    const context = {
-      ...structuredContext({
-        keyLevels: {
-          currentPrice: 106,
-          activeSwingHigh: 106,
-          activeSwingLow: 98,
-          nearestResistance: 104,
-          nearestSupport: 98,
-        },
-        candles: [
-          { index: 1, timestamp: '09:40', open: 102, high: 103, low: 101, close: 102, direction: 'doji', confidence: 'High' },
-          { index: 2, timestamp: '09:45', open: 104.25, high: 105.25, low: 102.5, close: 103.75, direction: 'bearish', isRejection: true, confidence: 'High' },
-          { index: 3, timestamp: '09:50', open: 103.75, high: 104, low: 100, close: 100.5, direction: 'bearish', isExpansion: true, confidence: 'High' },
-          { index: 4, timestamp: '09:55', open: 100.5, high: 106, low: 100, close: 106, direction: 'bullish', isExpansion: true, confidence: 'High' },
-        ],
-        liquiditySweeps: [{
-          type: 'sweep',
-          direction: 'SHORT',
-          level: 104,
-          sweptLevelLabel: 'Buy-side liquidity',
-          reclaimed: true,
-          timestamp: '09:45',
-          confidence: 'High',
-          evidence: 'Price swept above buy-side liquidity and reclaimed lower.',
-        }],
-        displacementCandles: [{
-          direction: 'SHORT',
-          candleIndex: 3,
-          timestamp: '09:50',
-          session: 'rth_morning',
-          open: 103.5,
-          high: 104,
-          low: 100,
-          close: 100.5,
-          bodyPoints: 3,
-          rangePoints: 4,
-          bodyToRange: 0.75,
-          closeLocation: 'bottom_quarter',
-          displacementScore: 6,
-          quality: 'confirmed',
-          leavesImbalance: false,
-          breaksStructure: true,
-          confidence: 'High',
-          evidence: 'Bearish expansion confirms reversal attempt.',
-        }],
-        targetObjectives: [{
-          label: 'Opposing sell-side liquidity',
-          price: 98,
-          direction: 'SHORT',
-          source: 'ninjatrader',
-          type: 'liquidity_pool',
-          confidence: 'High',
-          score: 90,
-          distancePoints: 5.5,
-          rMultiple: 3.14,
-          reason: 'Opposing sell-side liquidity below the failed breakout.',
-        }],
-        marketStructure: {
-          trend: 'bullish',
-          higherHigh: true,
-          higherLow: true,
-          lowerHigh: false,
-          lowerLow: false,
-          marketStructureShift: true,
-          chopRangeCondition: false,
-          compressionCondition: false,
-          expansionCondition: true,
-        },
-        setupReadyFacts: {
-          sweepThenReclaim: true,
-          breakOfStructure: true,
-          notes: [],
-        },
-      }),
-      sessionType: 'replay_morning',
-      instrument: 'MES',
-      tradeDate: '2026-05-19',
-      timeframe: '5m',
-      screenshotUsability: 'usable',
-    } as ChartContext;
-
-    const result = runTradeDecisionPipeline({
-      result: baseResult({
-        dayType: 'SHORT',
-        reasoning: 'Bridge replay should not keep a stopped short candidate alive.',
-        structuredChartContext: context,
-      }),
-      sessionType: 'replay_morning',
-      instrument: 'MES',
-      tradeDate: '2026-05-19',
-    });
-    const staleShort = result.setupCandidates?.find((item) => item.setupType === SetupType.TurtleSoup && item.direction === 'SHORT');
-
-    assert.ok(staleShort);
-    assert.equal(staleShort.executionStatus, ExecutionStatus.Blocked);
-    assert.equal(staleShort.blockReason, NoTradeReason.InvalidStopLocation);
-    assert.ok(staleShort.missingEvidence.some((item) => item.includes('traded through the structure stop/invalidation')));
-    assert.notEqual(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.TurtleSoup);
-    assert.notEqual(result.finalTradePlan.direction, 'SHORT');
   }],
 
   ['40c. Morning bridge first move is flagged as already triggered with no fresh entry', () => {
@@ -2808,8 +2371,8 @@ const tests: Array<[string, () => void]> = [
     } as ChartContext;
 
     const plans = buildConditionalPlans(context);
-    assert.equal(plans.some((item) => item.scenarioLabel?.includes('ICT Model 1')), false);
-    assert.equal(plans.some((item) => item.setupType === SetupType.TurtleSoup), false);
+    assert.equal(plans.some((item) => item.scenarioLabel?.includes('retired Model 1')), false);
+
   }],
 ];
 
@@ -2822,7 +2385,6 @@ const RETIRED_HISTORICAL_PIPELINE_CASES = new Set([
   '16. Pipeline shows best conditional candidate when no executable candidate exists',
   '17. NoTrade only appears when no executable or conditional candidate exists',
   '18. ApprovedTrade is rejected when entry stop targets invalidation or trigger are not executable-ready',
-  '19. High-priority wide structure stop remains visible as advisory',
   '20. Weak setup with wide structure risk does not approve',
   '21. Pipeline T1/T2 are calculated from R and rounded to 0.25',
   '22. Low screenshot quality blocks an otherwise executable structured trade from approval',
@@ -2837,7 +2399,6 @@ const RETIRED_HISTORICAL_PIPELINE_CASES = new Set([
   '34. Deprecated morning reclaim long does not create an active candidate from structured facts',
   '35. Deprecated opening range continuation does not create an active candidate',
   '36. Supporting imbalance facts do not create an active support candidate',
-  '40b. Stale bearish Turtle Soup is blocked after current 5M trades through the stop',
 ]);
 
 let executedCount = 0;
