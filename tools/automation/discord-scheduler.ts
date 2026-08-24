@@ -1634,10 +1634,16 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
 async function schedulerLoop(config: SchedulerConfig, dryRun: boolean): Promise<void> {
   console.log('Quant Desk Master Trading Desk Discord scheduler started.');
   console.log(`Bridge: ${config.bridgeUrl} | Instrument: ${config.bridgeInstrument} | Discord: ${dryRun ? 'dry-run' : 'enabled'}`);
+  let lastHeartbeatLogAt = 0;
   while (true) {
     const state = await readState();
     const tradeDate = getEtTradeDate();
     const clock = getEtClock();
+    const nowMs = Date.now();
+    if (nowMs - lastHeartbeatLogAt >= 60_000) {
+      lastHeartbeatLogAt = nowMs;
+      console.log(`[discord-scheduler] heartbeat ${new Date(nowMs).toISOString()} ET ${tradeDate} ${clock} | Discord: ${dryRun ? 'dry-run' : 'enabled'}`);
+    }
     for (const [jobName, jobConfig] of Object.entries(config.jobs) as Array<[AlertJob, SchedulerConfig['jobs'][AlertJob]]>) {
       const key = `${tradeDate}:${jobName}`;
       if (jobName === 'weekly' && getDayOfWeek(tradeDate) !== 'Sunday') continue;
