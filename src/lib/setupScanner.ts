@@ -73,6 +73,7 @@ interface ModelOneValidation {
 }
 
 type TurtleSoupValidation = ModelOneValidation;
+type FvgTradingSystemV1Validation = ModelOneValidation;
 
 interface EstablishedSweepLevelResult {
   established: boolean;
@@ -573,7 +574,12 @@ function inferredStructureQualityContext(
   const hasBos = Boolean(chartContext.setupReadyFacts?.breakOfStructure || chartContext.marketStructure?.marketStructureShift);
   if (!hasBos) return null;
 
+  const hasFvgFailureEngineeredLiquidity = Boolean(
+    validation?.evidence.some((item) => item.includes('15M FVG failure accepted beyond the battle-zone boundary')) &&
+    validation?.evidence.some((item) => item.includes('5M') && item.includes('FVG retest/rejection confirmed'))
+  );
   const hasInducementSweep = Boolean(
+    hasFvgFailureEngineeredLiquidity ||
     validation?.evidence.some((item) =>
       item === 'Liquidity sweep confirmed' ||
       item === 'Liquidity raid confirmed' ||
@@ -1325,6 +1331,148 @@ function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirm
   };
 }
 
+function sameDirectionFifteenMinuteFvgZone(chartContext: ChartContext, direction: Direction): NonNullable<ChartContext['fvgZones']>[number] | null {
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  return (chartContext.multiTimeframeContext?.fifteenMinute.fvgZones || [])
+    .filter((zone) =>
+      zone.direction === direction &&
+      isReadableConfidence(zone.confidence) &&
+      zone.impulseQualified !== false &&
+      parsePrice(zone.lower) !== null &&
+      parsePrice(zone.upper) !== null
+    )
+    .sort((a, b) => {
+      const aTime = Date.parse(String(a.formedAt || ''));
+      const bTime = Date.parse(String(b.formedAt || ''));
+      return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
+    })[0] || null;
+}
+
+function priceAcceptedBeyondZoneFailure(candle: NonNullable<ChartContext['candles']>[number] | undefined, direction: Direction, zone: ReturnType<typeof sameDirectionFifteenMinuteFvgZone>): boolean {
+  if (!candle || !zone || (direction !== 'LONG' && direction !== 'SHORT')) return false;
+  const close = parsePrice(candle.close);
+  const lower = parsePrice(zone.lower);
+  const upper = parsePrice(zone.upper);
+  if (close === null || lower === null || upper === null) return false;
+  return direction === 'SHORT'
+    ? close < Math.min(lower, upper)
+    : close > Math.max(lower, upper);
+}
+
+function noChaseStillAvailable(direction: Direction, entry: number | null, stop: number | null, currentPrice: number | null): boolean {
+  if (direction !== 'LONG' && direction !== 'SHORT') return false;
+  if (entry === null || stop === null || currentPrice === null) return false;
+  const risk = riskPoints(entry, stop);
+  if (risk === null || risk <= 0) return false;
+  const t1 = direction === 'LONG' ? entry + risk * TRADE_RULES.targetModel.t1R : entry - risk * TRADE_RULES.targetModel.t1R;
+  return direction === 'LONG' ? currentPrice < t1 : currentPrice > t1;
+}
+
+function validateFvgTradingSystemV1(chartContext?: ChartContext | null, manualLevelConfirmation = false): FvgTradingSystemV1Validation | null {
+  if (!chartContext) return null;
+  const direction = intradayMssOrDisplacementDirection(chartContext);
+  const evidence: string[] = [];
+  const missingEvidence: string[] = [];
+
+  if (direction !== 'LONG' && direction !== 'SHORT') {
+    return {
+      detected: false,
+      possible: false,
+      direction: 'NO TRADE',
+      entry: null,
+      stop: null,
+      target1: null,
+      target2: null,
+      risk: null,
+      invalidation: null,
+      requiredTrigger: 'Wait for 15M FVG context and completed 5M MSS/rejection proof.',
+      confidence: 'Low',
+      evidence,
+      missingEvidence: ['Aligned 15M context and confirmed 5M MSS/displacement'],
+      hasPendingTrigger: true,
+    };
+  }
+
+  const htfGate = htfContextGate(chartContext);
+  const parentFvg = sameDirectionFifteenMinuteFvgZone(chartContext, direction);
+  const fiveMinuteFvg = directionalFvgZone(chartContext, direction);
+  const retest = fvgRetestRejectionPlan(chartContext, direction, fiveMinuteFvg);
+  const rejectionCandle = readableCompletedFiveMinuteCandles(chartContext)
+    .find((candle) => candle.timestamp === retest.timestamp);
+  const parentFailureAccepted = priceAcceptedBeyondZoneFailure(rejectionCandle, direction, parentFvg);
+  const hasFiveMinuteMss = completedFiveMinuteMssCloseConfirmed(chartContext, direction);
+  const entry = manualLevelConfirmation ? null : retest.entry;
+  const stop = manualLevelConfirmation ? null : retest.stop;
+  const stopIsDirectionallyValid = hasDirectionallyValidStop(direction, entry, stop);
+  const actualRisk = stopIsDirectionallyValid ? riskPoints(entry, stop) : null;
+  const riskWithinStandardLimit = actualRisk !== null && actualRisk > 0 && actualRisk <= TRADE_RULES.maxRiskPoints;
+  const targets = computedTargets(direction, entry, stop);
+  const target2Room = actualRisk !== null && actualRisk > 0 && targets.target2 !== null;
+  const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? latestCompletedClose(chartContext);
+  const noChase = noChaseStillAvailable(direction, entry, stop, currentPrice);
+
+  if (htfGate.sufficient) evidence.push('Full 30-day HTF context gate satisfied');
+  else missingEvidence.push(...htfGate.missingEvidence);
+  if (parentFvg) evidence.push('15M same-direction FVG battle zone present');
+  else missingEvidence.push('15M same-direction FVG battle zone');
+  if (parentFailureAccepted) evidence.push('15M FVG failure accepted beyond the battle-zone boundary by completed 5M close');
+  else missingEvidence.push('15M FVG failure acceptance by completed 5M close');
+  if (fiveMinuteFvg) evidence.push('5M FVG / imbalance trigger zone present');
+  else missingEvidence.push('5M FVG / imbalance trigger zone');
+  if (retest.confirmed) evidence.push(retest.reason);
+  else missingEvidence.push(retest.reason);
+  if (hasFiveMinuteMss) evidence.push('Completed 5M MSS confirms execution direction');
+  else missingEvidence.push('Completed 5M MSS confirms execution direction');
+  if (stop !== null && stopIsDirectionallyValid) evidence.push('Stop tied to protected 5M structure');
+  else missingEvidence.push(retest.stopBlocker || 'Protected 5M structure stop');
+  if (riskWithinStandardLimit) evidence.push(`Actual entry-to-stop risk validated at ${actualRisk} points`);
+  else missingEvidence.push(`Actual entry-to-stop risk within ${TRADE_RULES.maxRiskPoints} points`);
+  if (target2Room) evidence.push('App T1/T2 available from actual entry-to-stop risk');
+  else missingEvidence.push('App T1/T2 from actual entry-to-stop risk');
+  if (noChase) evidence.push('No-chase gate clean: price has not already reached T1 from the trigger entry');
+  else missingEvidence.push('No-chase gate: price already extended to or beyond T1 from the trigger entry');
+
+  const fullSequence = Boolean(
+    htfGate.sufficient &&
+    parentFvg &&
+    parentFailureAccepted &&
+    fiveMinuteFvg &&
+    retest.confirmed &&
+    hasFiveMinuteMss &&
+    entry !== null &&
+    stop !== null &&
+    stopIsDirectionallyValid &&
+    riskWithinStandardLimit &&
+    targets.target1 !== null &&
+    targets.target2 !== null &&
+    noChase
+  );
+  const partialCount = [parentFvg, fiveMinuteFvg, retest.confirmed, hasFiveMinuteMss, stopIsDirectionallyValid, target2Room].filter(Boolean).length;
+
+  return {
+    detected: fullSequence,
+    possible: !fullSequence && partialCount >= 3,
+    direction,
+    entry,
+    stop,
+    target1: targets.target1,
+    target2: targets.target2,
+    risk: actualRisk,
+    invalidation: stop !== null
+      ? direction === 'LONG'
+        ? `Invalid if price trades below the protected 5M FVG/MSS structure stop near ${stop}.`
+        : `Invalid if price trades above the protected 5M FVG/MSS structure stop near ${stop}.`
+      : null,
+    requiredTrigger: direction === 'SHORT'
+      ? 'Completed 5M candle must reject the bearish 5M FVG, accept below the 15M FVG battle zone, and confirm bearish MSS before any short is executable.'
+      : 'Completed 5M candle must reject the bullish 5M FVG, accept above the 15M FVG battle zone, and confirm bullish MSS before any long is executable.',
+    confidence: fullSequence ? 'High' : partialCount >= 4 ? 'Medium' : 'Low',
+    evidence: Array.from(new Set(evidence)),
+    missingEvidence: Array.from(new Set(missingEvidence)),
+    hasPendingTrigger: !fullSequence,
+  };
+}
+
 function sweepExtremeForDirection(
   chartContext: ChartContext,
   direction: Direction,
@@ -1977,13 +2125,16 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
   const allowNarrativeFallback = !structuredFactsPresent;
   const structuredEvidence = setupEvidenceFromContext(entry, input.chartContext);
   const manualLevelConfirmation = levelsRequireManualConfirmation(input.chartContext);
+  const fvgTradingSystemV1Validation = entry.setupType === SetupType.FvgTradingSystemV1
+    ? validateFvgTradingSystemV1(input.chartContext, manualLevelConfirmation)
+    : null;
   const modelOneValidation = entry.setupType === SetupType.SweepMssFvgRetrace
     ? validateModelOne(input.chartContext, manualLevelConfirmation)
     : null;
   const turtleSoupValidation = entry.setupType === SetupType.TurtleSoup
     ? validateTurtleSoup(input.chartContext, manualLevelConfirmation)
     : null;
-  const primaryValidation = modelOneValidation || turtleSoupValidation;
+  const primaryValidation = fvgTradingSystemV1Validation || modelOneValidation || turtleSoupValidation;
   const bigPicture = bigPictureStructureForDirection(input.chartContext, primaryValidation?.direction || 'NO TRADE');
   const facts = allowNarrativeFallback ? findRelevantFacts(entry, extractPlanFacts(input.result), text) : [];
   const bestFact = facts.find((fact) => fact.entry !== null && fact.stop !== null) || facts[0] || null;
@@ -2000,7 +2151,9 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
   const detected = structuredDetected || narrativeDetected;
   const possible = !detected && (structuredPossible || narrativePossible);
   const structuredDirection = structuredDirectionForSetup(entry, input.chartContext);
-  const direction = structuredDirection && structuredDirection !== 'NO TRADE'
+  const direction = primaryValidation?.direction && primaryValidation.direction !== 'NO TRADE'
+    ? primaryValidation.direction
+    : structuredDirection && structuredDirection !== 'NO TRADE'
     ? structuredDirection
     : bestFact?.direction && bestFact.direction !== 'NO TRADE'
     ? bestFact.direction
