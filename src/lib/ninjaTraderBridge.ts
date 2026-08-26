@@ -11,6 +11,7 @@ import type {
   ReclaimEventFact,
   StructuralLevel,
   TimeframeFactSet,
+  StructureQualityContext,
 } from '../types';
 import { buildStructuralLevels } from './sessionStructure';
 import { buildSessionLevelContext } from './sessionLevelContextEngine';
@@ -649,6 +650,100 @@ function detectLiquidityAndReclaims(candles: ChartCandleFact[]): {
   };
 }
 
+function buildOhlcStructureQualityContext(args: {
+  direction: 'LONG' | 'SHORT';
+  timeframeMssEvidence: ReturnType<typeof buildMultiTimeframeMssEvidenceLayer>;
+  setupReadyFacts: NonNullable<ChartContext['setupReadyFacts']>;
+  liquidityFacts: ReturnType<typeof detectLiquidityAndReclaims>;
+  fiveMinuteFvgs: FvgZoneFact[];
+  contextFvgs: FvgZoneFact[];
+  candles: ChartCandleFact[];
+}): StructureQualityContext | undefined {
+  const fiveMinute = args.timeframeMssEvidence.timeframes['5M'];
+  const expectedMssDirection = args.direction === 'LONG' ? 'bullish' : 'bearish';
+  const structureBreakConfirmedByClose = Boolean(
+    fiveMinute &&
+    fiveMinute.direction === expectedMssDirection &&
+    fiveMinute.status === 'confirmed_mss' &&
+    fiveMinute.breaksStructure &&
+    fiveMinute.structureBreak?.wickOnlyBreak !== true
+  );
+  const sameDirectionSweep = args.liquidityFacts.liquiditySweeps.some((event) =>
+    event.direction === args.direction &&
+    event.reclaimed === true &&
+    event.confidence !== 'Low'
+  );
+  const sameDirectionFvgPullback = args.setupReadyFacts.pullbackIntoFvg && [
+    ...args.fiveMinuteFvgs,
+    ...args.contextFvgs,
+  ].some((zone) => zone.direction === args.direction && zone.confidence !== 'Low');
+  const sameDirectionReclaim = args.setupReadyFacts.fvgReclaimed && [
+    ...args.fiveMinuteFvgs,
+    ...args.contextFvgs,
+  ].some((zone) => zone.direction === args.direction && zone.reclaimed);
+  const inducementSwept = Boolean(sameDirectionSweep || sameDirectionFvgPullback || sameDirectionReclaim);
+  const validPullbackConfirmed = Boolean(
+    inducementSwept &&
+    structureBreakConfirmedByClose &&
+    (args.setupReadyFacts.pullbackIntoFvg || args.setupReadyFacts.fvgReclaimed)
+  );
+  const hasMeaningfulFvgLocation = [...args.fiveMinuteFvgs, ...args.contextFvgs]
+    .some((zone) => zone.direction === args.direction && zone.confidence !== 'Low');
+  const hasDirectionalDisplacement = args.candles.some((candle) =>
+    (args.direction === 'LONG' ? candle.direction === 'bullish' : candle.direction === 'bearish') &&
+    (candle.isExpansion || candle.bodyQuality === 'large')
+  );
+
+  if (!structureBreakConfirmedByClose && !inducementSwept && !hasDirectionalDisplacement) {
+    return undefined;
+  }
+
+  const reasons = [
+    structureBreakConfirmedByClose
+      ? `5M ${expectedMssDirection} MSS confirmed by completed OHLC close.`
+      : null,
+    sameDirectionSweep
+      ? 'Same-direction 5M sweep/reclaim was detected before the structure break.'
+      : null,
+    sameDirectionFvgPullback
+      ? 'Same-direction FVG pullback/mitigation was detected before the structure break.'
+      : null,
+    sameDirectionReclaim
+      ? 'Same-direction FVG reclaim was detected before the structure break.'
+      : null,
+    hasMeaningfulFvgLocation
+      ? 'Structure shift occurred at a readable FVG/imbalance location.'
+      : null,
+  ].filter((item): item is string => Boolean(item));
+
+  const missingReasons = [
+    structureBreakConfirmedByClose ? null : '5M MSS close-through was not confirmed by completed OHLC.',
+    inducementSwept ? null : 'No same-direction sweep, FVG pullback, or FVG reclaim was confirmed before the structure break.',
+    validPullbackConfirmed ? null : 'Valid pullback/mitigation sequence is incomplete.',
+  ].filter((item): item is string => Boolean(item));
+
+  return {
+    direction: args.direction,
+    structureEvent: structureBreakConfirmedByClose && inducementSwept ? 'major_bos' : structureBreakConfirmedByClose ? 'minor_bos' : 'none',
+    structureTimeframe: '5m',
+    executionTimeframeConfirmed: structureBreakConfirmedByClose,
+    inducementSwept,
+    validPullbackConfirmed,
+    structureBreakConfirmedByClose,
+    wickOnlyBreak: !structureBreakConfirmedByClose,
+    oldInducementStale: !inducementSwept,
+    newInducementRequired: !inducementSwept,
+    noChaseRequired: !inducementSwept,
+    inducementFresh: inducementSwept,
+    inducementAgeBars: null,
+    chochAtMeaningfulLocation: hasMeaningfulFvgLocation,
+    chochLocationType: hasMeaningfulFvgLocation ? 'fvg' : 'unknown',
+    conflictsWithHigherTimeframeThesis: false,
+    reasons,
+    missingReasons,
+  };
+}
+
 function isPrice(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
@@ -987,7 +1082,7 @@ export function buildNinjaChartContext({
   });
   const timeframeMssEvidence = buildMultiTimeframeMssEvidenceLayer({
     barsByTimeframe: {
-      '5M': htfFiveMinuteBars,
+      '5M': executionBars,
       '15M': normalizedBars15m,
       '60M': normalizedBars60m,
       '120M': normalizedBars120m,
@@ -997,6 +1092,36 @@ export function buildNinjaChartContext({
     barTimestampMode: 'open',
     barTimeZone,
   });
+  const setupReadyFacts: NonNullable<ChartContext['setupReadyFacts']> = {
+    pullbackIntoFvg: fvgZones.some(zone =>
+      typeof zone.lower === 'number' &&
+      typeof zone.upper === 'number' &&
+      executionBars.some(bar => bar.low <= zone.upper && bar.high >= zone.lower)
+    ),
+    fvgReclaimed: fvgZones.some(zone => zone.reclaimed),
+    breakOfStructure: pullbackPresent && rejectionPresent,
+    sweepThenReclaim: liquidityFacts.liquiditySweeps.some(event => event.reclaimed),
+    notes: [
+      fvgZones.length ? `Detected ${fvgZones.length} FVG zone(s) from OHLC.` : 'No FVG zones detected from OHLC.',
+      liquidityFacts.liquiditySweeps.length ? `Detected ${liquidityFacts.liquiditySweeps.length} sweep/reclaim event(s).` : 'No sweep/reclaim events detected from OHLC.',
+    ],
+  };
+  const structureQualityDirection = timeframeMssEvidence.timeframes['5M']?.direction === 'bullish'
+    ? 'LONG'
+    : timeframeMssEvidence.timeframes['5M']?.direction === 'bearish'
+      ? 'SHORT'
+      : null;
+  const structureQualityContext = structureQualityDirection
+    ? buildOhlcStructureQualityContext({
+      direction: structureQualityDirection,
+      timeframeMssEvidence,
+      setupReadyFacts,
+      liquidityFacts,
+      fiveMinuteFvgs: fvgZones,
+      contextFvgs: contextFvgZones,
+      candles,
+    })
+    : undefined;
 
   return {
     sessionType,
@@ -1052,20 +1177,8 @@ export function buildNinjaChartContext({
       closeAboveKeyLevel: activeSwingHigh != null ? last.close > activeSwingHigh : undefined,
       closeBelowKeyLevel: activeSwingLow != null ? last.close < activeSwingLow : undefined,
     },
-    setupReadyFacts: {
-      pullbackIntoFvg: fvgZones.some(zone =>
-        typeof zone.lower === 'number' &&
-        typeof zone.upper === 'number' &&
-        executionBars.some(bar => bar.low <= zone.upper && bar.high >= zone.lower)
-      ),
-      fvgReclaimed: fvgZones.some(zone => zone.reclaimed),
-      breakOfStructure: pullbackPresent && rejectionPresent,
-      sweepThenReclaim: liquidityFacts.liquiditySweeps.some(event => event.reclaimed),
-      notes: [
-        fvgZones.length ? `Detected ${fvgZones.length} FVG zone(s) from OHLC.` : 'No FVG zones detected from OHLC.',
-        liquidityFacts.liquiditySweeps.length ? `Detected ${liquidityFacts.liquiditySweeps.length} sweep/reclaim event(s).` : 'No sweep/reclaim events detected from OHLC.',
-      ],
-    },
+    setupReadyFacts,
+    structureQualityContext,
     screenshotQuality: confidence,
     levelReadConfidence: confidence,
     candleReadConfidence: confidence,

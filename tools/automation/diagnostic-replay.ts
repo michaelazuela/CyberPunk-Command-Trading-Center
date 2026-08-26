@@ -4,10 +4,12 @@ import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   getNinjaHistoricalBars,
+  buildNinjaChartContext,
   type NinjaBridgeBar,
   type NinjaBridgeTimeframe,
 } from '../../src/lib/ninjaTraderBridge';
 import { parseBridgeTime } from '../../src/lib/localScannerEngine';
+import { scanSetupCandidates } from '../../src/lib/setupScanner';
 import {
   runBridgeDiagnosticReplay,
   type BridgeDiagnosticReplayInput,
@@ -15,6 +17,7 @@ import {
 } from '../../src/agents/bridgeDiagnosticReplayAgent';
 import { loadScannerAuditHistory } from './scanner-audit-import';
 import { SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS } from './nt-scanner';
+import { ExecutionStatus, SetupType, type ChartContext } from '../../src/types';
 
 type BarTimestampMode = 'open' | 'close';
 type BarTimeZoneMode = 'eastern' | 'central' | 'pacific' | 'local';
@@ -36,6 +39,38 @@ export interface DiagnosticReplayCliOptions {
   json: boolean;
   auditDir: string;
 }
+
+interface CurrentFvgV1EngineReplay {
+  source: 'current_code_setupScanner';
+  setupType: SetupType.FvgTradingSystemV1;
+  sessionType: Exclude<DiagnosticReplaySession, 'evening'>;
+  candidateFound: boolean;
+  executableCandidateFound: boolean;
+  bestCandidate: {
+    direction: string;
+    detectedStatus: string;
+    executionStatus: string;
+    entry: number | null;
+    stop: number | null;
+    target1: number | null;
+    target2: number | null;
+    riskPoints: number | null;
+    blockReason: string | null;
+    evidence: string[];
+    missingEvidence: string[];
+  } | null;
+  blockers: string[];
+  authority: {
+    replayApprovesTrade: false;
+    replayChangesRules: false;
+    replayPostsDiscord: false;
+    replayPlacesOrders: false;
+  };
+}
+
+type DiagnosticReplayCliReport = ReturnType<typeof runBridgeDiagnosticReplay> & {
+  currentFvgV1EngineReplay: CurrentFvgV1EngineReplay;
+};
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -194,7 +229,82 @@ async function buildReplayInput(options: DiagnosticReplayCliOptions): Promise<Br
   };
 }
 
-function formatPretty(report: ReturnType<typeof runBridgeDiagnosticReplay>): string {
+function toSetupSession(session: DiagnosticReplaySession): Exclude<DiagnosticReplaySession, 'evening'> {
+  return session === 'evening' ? 'replay_lunch' : session;
+}
+
+function currentFvgV1EngineReplay(input: BridgeDiagnosticReplayInput): CurrentFvgV1EngineReplay {
+  const sessionType = toSetupSession(input.session);
+  const context = buildNinjaChartContext({
+    bars5m: input.bars5m,
+    htfBars5m: input.bars5mContext?.length ? input.bars5mContext : input.bars5m,
+    bars15m: input.bars15m,
+    bars60m: input.bars60m,
+    bars120m: input.bars120m,
+    bars240m: input.bars240m,
+    sessionType,
+    instrument: input.instrument === 'MNQ' ? 'MNQ' : 'MES',
+    tradeDate: input.tradeDate,
+    barTimestampMode: 'open',
+    barTimeZone: 'eastern',
+  }) as ChartContext | null;
+  if (!context) {
+    return {
+      source: 'current_code_setupScanner',
+      setupType: SetupType.FvgTradingSystemV1,
+      sessionType,
+      candidateFound: false,
+      executableCandidateFound: false,
+      bestCandidate: null,
+      blockers: ['Current-code FVG v1 replay could not build a structured NinjaTrader OHLC chart context.'],
+      authority: {
+        replayApprovesTrade: false,
+        replayChangesRules: false,
+        replayPostsDiscord: false,
+        replayPlacesOrders: false,
+      },
+    };
+  }
+  const scan = scanSetupCandidates({ sessionType, chartContext: context, result: null });
+  const candidates = scan.candidates.filter((candidate) =>
+    candidate.setupType === SetupType.FvgTradingSystemV1 &&
+    candidate.direction !== 'NO TRADE' &&
+    candidate.detectedStatus !== 'NotDetected' &&
+    candidate.executionStatus !== ExecutionStatus.NotDetected
+  );
+  const best = candidates.find((candidate) => candidate.executionStatus === ExecutionStatus.Executable) || candidates[0] || null;
+  return {
+    source: 'current_code_setupScanner',
+    setupType: SetupType.FvgTradingSystemV1,
+    sessionType,
+    candidateFound: Boolean(best),
+    executableCandidateFound: Boolean(best && best.executionStatus === ExecutionStatus.Executable),
+    bestCandidate: best
+      ? {
+        direction: best.direction,
+        detectedStatus: best.detectedStatus,
+        executionStatus: best.executionStatus,
+        entry: best.entry ?? null,
+        stop: best.stop ?? null,
+        target1: best.target1 ?? null,
+        target2: best.target2 ?? null,
+        riskPoints: best.riskPoints ?? null,
+        blockReason: best.blockReason ?? null,
+        evidence: (best.evidence || []).slice(0, 16),
+        missingEvidence: (best.missingEvidence || []).slice(0, 16),
+      }
+      : null,
+    blockers: best?.missingEvidence || ['No FVG Trading System v1 candidate was produced by current setupScanner.'],
+    authority: {
+      replayApprovesTrade: false,
+      replayChangesRules: false,
+      replayPostsDiscord: false,
+      replayPlacesOrders: false,
+    },
+  };
+}
+
+function formatPretty(report: DiagnosticReplayCliReport): string {
   const lines = [
     `Classification: ${report.finalClassification}`,
     `Label: ${report.classificationLabel}`,
@@ -211,6 +321,7 @@ function formatPretty(report: ReturnType<typeof runBridgeDiagnosticReplay>): str
     `Phase 9F replay: ${report.phase9FReplayValidation.status}; watch=${report.phase9FReplayValidation.checks.watchAppearedBeforeMove.status}; line=${report.phase9FReplayValidation.checks.lineInSandMatchedMarketStructure.status}; promotion=${report.phase9FReplayValidation.checks.planPromotedCorrectly.status}; noChase=${report.phase9FReplayValidation.checks.noChasePreserved.status}; noTrade=${report.phase9FReplayValidation.checks.noTradeExplainedClearly.status}; aligned=${report.phase9FReplayValidation.checks.discordRagUiReflectSameDeskState.status}`,
     `Timeframe MSS Evidence: ${report.timeframeMssEvidenceDiagnostics.timeframes.map((item) => `${item.timeframe} ${item.status} ${item.direction} break=${item.breaksStructure} completed=${item.completedBarStatus}`).join('; ')}`,
     `Active MSS Ruleset: ${report.activeTimeframeMssRulesetDiagnostics.summary}`,
+    `Current FVG v1 engine: candidate=${report.currentFvgV1EngineReplay.candidateFound}; executable=${report.currentFvgV1EngineReplay.executableCandidateFound}; ${report.currentFvgV1EngineReplay.bestCandidate ? `${report.currentFvgV1EngineReplay.bestCandidate.direction} ${report.currentFvgV1EngineReplay.bestCandidate.executionStatus} entry=${report.currentFvgV1EngineReplay.bestCandidate.entry ?? 'n/a'} stop=${report.currentFvgV1EngineReplay.bestCandidate.stop ?? 'n/a'} T1=${report.currentFvgV1EngineReplay.bestCandidate.target1 ?? 'n/a'} T2=${report.currentFvgV1EngineReplay.bestCandidate.target2 ?? 'n/a'} risk=${report.currentFvgV1EngineReplay.bestCandidate.riskPoints ?? 'n/a'}` : report.currentFvgV1EngineReplay.blockers.join(' | ')}`,
     `Recommendation: ${report.newPlanRecommendation.recommendationType} - ${report.newPlanRecommendation.reason}`,
     `Data boundary: Review requests ${SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS} calendar days of structured context for 15M/1H/2H/4H and is bounded to currently available completed bars.`,
     `Authority: diagnostic only; no rules changed; no trade approval created.`,
@@ -218,7 +329,7 @@ function formatPretty(report: ReturnType<typeof runBridgeDiagnosticReplay>): str
   return lines.join('\n');
 }
 
-function writeReport(path: string, report: ReturnType<typeof runBridgeDiagnosticReplay>): string {
+function writeReport(path: string, report: DiagnosticReplayCliReport): string {
   const resolved = resolve(path);
   const file = extname(resolved)
     ? resolved
@@ -231,7 +342,10 @@ function writeReport(path: string, report: ReturnType<typeof runBridgeDiagnostic
 export async function runDiagnosticReplayCli(rawArgs = process.argv.slice(2)): Promise<void> {
   const options = parseDiagnosticReplayArgs(rawArgs);
   const input = await buildReplayInput(options);
-  const report = runBridgeDiagnosticReplay(input);
+  const report: DiagnosticReplayCliReport = {
+    ...runBridgeDiagnosticReplay(input),
+    currentFvgV1EngineReplay: currentFvgV1EngineReplay(input),
+  };
 
   if (options.out) {
     const file = writeReport(options.out, report);
