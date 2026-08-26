@@ -69,6 +69,123 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     defaultNextAction:
       'Build a decision-support plan only after the 15M parent, 5M confirmation, protected stop, target room, and obstacle path are all clean.',
   },
+  {
+    setupType: SetupType.OpeningDriveFvgContinuation,
+    role: 'primary_model',
+    parentModelFamily: 'FVG_TRADING_SYSTEM_V1',
+    label: 'Opening Drive FVG Continuation',
+    aliases: [
+      'Opening Drive FVG Continuation',
+      'Opening Battle Zone Continuation',
+      'Morning Defended Battle Zone Continuation',
+    ],
+    priority: 96,
+    allowedSessions: ['morning', 'replay_morning'],
+    detectionKeywords: [
+      'opening drive fvg continuation',
+      'opening battle zone continuation',
+      'morning defended battle zone',
+      'opening 5m fvg retest',
+    ],
+    possibleKeywords: [
+      '15m opening displacement',
+      '5m opening displacement',
+      'opening fvg mitigation',
+      'opening drive review',
+    ],
+    requiredEvidence: [
+      '15M opening-drive displacement or defended battle-zone context is present.',
+      '5M confirms same-direction structure or displacement from completed OHLC.',
+      'A same-direction 5M FVG/imbalance zone is available.',
+      'Human-review plan waits for completed 5M retest/mitigation in the review window.',
+      'Stop is tied to protected 5M structure.',
+      'T1/T2 are computed from actual entry-to-stop risk.',
+      'Forward target room and no-chase conditions remain required.',
+      'This route is decision-support only and never sets canExecute true.',
+    ],
+    defaultRequiredTrigger:
+      'Completed 5M FVG retest/mitigation after 15M opening-drive displacement, with protected stop and app-owned targets.',
+    defaultNextAction:
+      'Wait for the opening-drive FVG retest/mitigation, protected 5M stop, app targets, and forward target room before human-review plan output.',
+  },
+  {
+    setupType: SetupType.AfterLunchDriveFvgContinuation,
+    role: 'primary_model',
+    parentModelFamily: 'FVG_TRADING_SYSTEM_V1',
+    label: 'After-Lunch Drive FVG Continuation',
+    aliases: [
+      'After-Lunch Drive FVG Continuation',
+      'PM Drive FVG Continuation',
+      'Lunch/PM Defended Battle Zone Continuation',
+    ],
+    priority: 94,
+    allowedSessions: ['lunch', 'replay_lunch'],
+    detectionKeywords: [
+      'after-lunch drive fvg continuation',
+      'pm drive fvg continuation',
+      'lunch defended battle zone',
+      'afternoon 5m fvg retest',
+    ],
+    possibleKeywords: [
+      'post-lunch displacement',
+      'pm displacement',
+      '5m fvg mitigation',
+      'after-lunch drive review',
+    ],
+    requiredEvidence: [
+      '15M after-lunch displacement or defended battle-zone context is present.',
+      '5M confirms same-direction structure or displacement from completed OHLC.',
+      'A same-direction 5M FVG/imbalance zone is available.',
+      'Human-review plan waits for completed 5M retest/mitigation in the review window.',
+      'Stop is tied to protected 5M structure.',
+      'T1/T2 are computed from actual entry-to-stop risk.',
+      'Forward target room and no-chase conditions remain required.',
+      'This route is decision-support only and never sets canExecute true.',
+    ],
+    defaultRequiredTrigger:
+      'Completed 5M FVG retest/mitigation after lunch/PM displacement, with protected stop and app-owned targets.',
+    defaultNextAction:
+      'Wait for the after-lunch FVG retest/mitigation, protected 5M stop, app targets, and forward target room before human-review plan output.',
+  },
+  {
+    setupType: SetupType.IntradayMssMicroContinuation,
+    role: 'primary_model',
+    parentModelFamily: 'FVG_TRADING_SYSTEM_V1',
+    label: 'Intraday MSS Micro Continuation',
+    aliases: [
+      'Intraday MSS Micro Continuation',
+      'Late-Day 5M MSS Continuation',
+      'Protected 5M FVG Continuation',
+    ],
+    priority: 92,
+    allowedSessions: ['lunch', 'replay_lunch'],
+    detectionKeywords: [
+      'intraday mss micro continuation',
+      'late-day 5m mss continuation',
+      'protected 5m fvg continuation',
+      '15m and 5m bullish continuation',
+    ],
+    possibleKeywords: [
+      '5m mss around 1500',
+      '15m 5m aligned continuation',
+      'late-day fvg retest',
+      'protected 5m structure',
+    ],
+    requiredEvidence: [
+      'Late-day review window is active from app-owned timeWindows.ts.',
+      '15M MSS/displacement context supports the candidate direction.',
+      '5M MSS or app-owned close-through/retest confirmation is present.',
+      'A same-direction 5M FVG/imbalance zone or close-through decision level is available.',
+      'Stop is tied to protected 5M structure.',
+      'T1/T2 are computed from actual entry-to-stop risk.',
+      'HTF context is reported as support/caution only.',
+      'This route is decision-support only and never sets canExecute true.',
+    ],
+    defaultRequiredTrigger:
+      'Completed late-day 5M MSS/FVG retest or close-through/retest confirmation with protected stop and app-owned targets.',
+    defaultNextAction:
+      'Wait for completed 5M retest/rejection or close-through confirmation, protected stop, app targets, and target room before human-review plan output.',
+  },
 ];
 
 export const REGISTERED_SETUP_TYPES = SETUP_REGISTRY.map((entry) => entry.setupType);
@@ -87,7 +204,7 @@ export function getDeprecatedSetupRegistry(_sessionType: SetupSession): SetupReg
 }
 
 /**
- * @deprecated Use getPrimarySetupRegistry. The active setup registry is FVG Trading System v1 only.
+ * @deprecated Use getPrimarySetupRegistry. The active setup registry is the FVG Trading System v1 model family.
  */
 export function getAllowedSetupRegistry(sessionType: SetupSession): SetupRegistryEntry[] {
   return getPrimarySetupRegistry(sessionType);

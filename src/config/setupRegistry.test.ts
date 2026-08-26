@@ -27,11 +27,16 @@ function assertExactSet(actual: Set<SetupType>, expected: SetupType[], label: st
   }
 }
 
-const fvgOnly = [SetupType.FvgTradingSystemV1];
+const activeFvgFamily = [
+  SetupType.FvgTradingSystemV1,
+  SetupType.OpeningDriveFvgContinuation,
+  SetupType.AfterLunchDriveFvgContinuation,
+  SetupType.IntradayMssMicroContinuation,
+];
 
-assertExactSet(setupTypes(SETUP_REGISTRY), fvgOnly, 'active setup registry');
-assertExactSet(new Set(REGISTERED_SETUP_TYPES), fvgOnly, 'registered setup types');
-assertExactSet(new Set(APPROVED_SETUP_TYPES), fvgOnly, 'approved setup types');
+assertExactSet(setupTypes(SETUP_REGISTRY), activeFvgFamily, 'active setup registry');
+assertExactSet(new Set(REGISTERED_SETUP_TYPES), activeFvgFamily, 'registered setup types');
+assertExactSet(new Set(APPROVED_SETUP_TYPES), activeFvgFamily, 'approved setup types');
 
 const parentModelFamilies: ParentModelFamily[] = ['FVG_TRADING_SYSTEM_V1'];
 const configuredFamilies = new Set(
@@ -53,8 +58,11 @@ for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch']
   assert(primary.every((entry) => entry.role === 'primary_model'), `${sessionType} primary accessor returned non-primary entries`);
   assert(supporting.length === 0, `${sessionType} supporting registry must be empty`);
   assert(deprecated.length === 0, `${sessionType} deprecated registry must be empty`);
-  assertExactSet(setupTypes(primary), fvgOnly, `${sessionType} primary registry`);
-  assertExactSet(setupTypes(allowed), fvgOnly, `${sessionType} compatibility registry`);
+  const expected = sessionType === 'morning' || sessionType === 'replay_morning'
+    ? [SetupType.FvgTradingSystemV1, SetupType.OpeningDriveFvgContinuation]
+    : [SetupType.FvgTradingSystemV1, SetupType.AfterLunchDriveFvgContinuation, SetupType.IntradayMssMicroContinuation];
+  assertExactSet(setupTypes(primary), expected, `${sessionType} primary registry`);
+  assertExactSet(setupTypes(allowed), expected, `${sessionType} compatibility registry`);
 }
 
 const fvgEntry = getPrimarySetupRegistry('morning').find((entry) => entry.setupType === SetupType.FvgTradingSystemV1);
@@ -76,4 +84,4 @@ assert(
   'FVG registry action wording must not imply execution before final gates',
 );
 
-console.log('setupRegistry FVG-only runtime contract verified');
+console.log('setupRegistry FVG family runtime contract verified');

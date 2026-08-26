@@ -75,7 +75,12 @@ interface CandidateInput {
   noTradeReason?: NoTradeReason | null;
 }
 
-const LIVE_RUNTIME_SETUP_TYPES = new Set<SetupType>([SetupType.FvgTradingSystemV1]);
+const LIVE_RUNTIME_SETUP_TYPES = new Set<SetupType>([
+  SetupType.FvgTradingSystemV1,
+  SetupType.OpeningDriveFvgContinuation,
+  SetupType.AfterLunchDriveFvgContinuation,
+  SetupType.IntradayMssMicroContinuation,
+]);
 
 function parsePrice(value: unknown): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;

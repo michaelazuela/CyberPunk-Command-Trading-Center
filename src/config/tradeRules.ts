@@ -3,7 +3,12 @@ import { SYSTEM_RULES } from '../constants';
 
 // Live setup promotion is locked to FVG Trading System v1. Older setup enums
 // remain historical compatibility labels unless the registry/guards are updated.
-const ACTIVE_FVG_RUNTIME_SETUPS = [SetupType.FvgTradingSystemV1] as const;
+const ACTIVE_FVG_RUNTIME_SETUPS = [
+  SetupType.FvgTradingSystemV1,
+  SetupType.OpeningDriveFvgContinuation,
+  SetupType.AfterLunchDriveFvgContinuation,
+  SetupType.IntradayMssMicroContinuation,
+] as const;
 
 export const TRADE_RULES = {
   instruments: ['MES', 'MNQ'] as const,

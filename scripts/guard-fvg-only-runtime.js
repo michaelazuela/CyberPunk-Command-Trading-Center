@@ -20,6 +20,9 @@ const runtimePaths = [
 
 const required = [
   'SetupType.FvgTradingSystemV1',
+  'SetupType.OpeningDriveFvgContinuation',
+  'SetupType.AfterLunchDriveFvgContinuation',
+  'SetupType.IntradayMssMicroContinuation',
   'FVG_TRADING_SYSTEM_V1',
   'HTF/15M story is written before execution evidence is considered.',
   'Valid same-direction 15M parent FVG or 15M battle zone is present.',
@@ -38,9 +41,6 @@ const forbidden = [
   'SetupType.HtfDrawContinuationAfterRaid',
   'SetupType.HtfDisplacementMssContinuation',
   'SetupType.HtfDisplacementFvgContinuation',
-  'SetupType.OpeningDriveFvgContinuation',
-  'SetupType.AfterLunchDriveFvgContinuation',
-  'SetupType.IntradayMssMicroContinuation',
   'SetupType.FailedPlanReversal',
   'MODEL_1_SWEEP_MSS_FVG_RETRACE',
   'FAILED_BREAKOUT_REVERSAL',
@@ -55,12 +55,8 @@ const runtimeForbidden = [
   'SetupType.TurtleSoup',
   'SetupType.HtfDisplacementMssContinuation',
   'SetupType.HtfDisplacementFvgContinuation',
-  'SetupType.OpeningDriveFvgContinuation',
-  'SetupType.AfterLunchDriveFvgContinuation',
-  'SetupType.IntradayMssMicroContinuation',
   'Turtle Soup',
   'TurtleSoup',
-  'Intraday MSS',
   'ICT_RULE',
   'ICT_SCORE',
   'Model 1',
@@ -85,8 +81,8 @@ for (const needle of forbidden) {
 }
 
 const setupEntryCount = (registry.match(/setupType:\s*SetupType\./g) || []).length;
-if (setupEntryCount !== 1) {
-  failures.push(`Expected exactly one active setup registry entry, found ${setupEntryCount}`);
+if (setupEntryCount !== 4) {
+  failures.push(`Expected exactly four active FVG-family setup registry entries, found ${setupEntryCount}`);
 }
 
 for (const [label, sourcePath] of runtimePaths) {
@@ -104,16 +100,26 @@ for (const needle of forbidden.filter((entry) => entry.startsWith('SetupType.'))
   }
 }
 
-if (!tradeRules.includes('const ACTIVE_FVG_RUNTIME_SETUPS = [SetupType.FvgTradingSystemV1] as const;')) {
-  failures.push('Trade rules must define the active runtime setup set as FvgTradingSystemV1 only.');
+if (
+  !tradeRules.includes('SetupType.FvgTradingSystemV1') ||
+  !tradeRules.includes('SetupType.OpeningDriveFvgContinuation') ||
+  !tradeRules.includes('SetupType.AfterLunchDriveFvgContinuation') ||
+  !tradeRules.includes('SetupType.IntradayMssMicroContinuation')
+) {
+  failures.push('Trade rules must define the active runtime setup set as the approved FVG-family routes.');
 }
 
 if (!decisionPipeline.includes('return SetupType.FvgTradingSystemV1;')) {
   failures.push('Narrative fallback must map eligible FVG language to FvgTradingSystemV1.');
 }
 
-if (!decisionPipeline.includes('const LIVE_RUNTIME_SETUP_TYPES = new Set<SetupType>([SetupType.FvgTradingSystemV1]);')) {
-  failures.push('Decision pipeline must define the live runtime setup filter as FvgTradingSystemV1 only.');
+if (
+  !decisionPipeline.includes('SetupType.FvgTradingSystemV1') ||
+  !decisionPipeline.includes('SetupType.OpeningDriveFvgContinuation') ||
+  !decisionPipeline.includes('SetupType.AfterLunchDriveFvgContinuation') ||
+  !decisionPipeline.includes('SetupType.IntradayMssMicroContinuation')
+) {
+  failures.push('Decision pipeline must define the live runtime setup filter as the approved FVG-family routes.');
 }
 
 if (!decisionPipeline.includes('.filter(isLiveRuntimeSetupCandidate)')) {
@@ -126,9 +132,6 @@ for (const oldReturn of [
   'return SetupType.HtfDrawContinuationAfterRaid;',
   'return SetupType.HtfDisplacementMssContinuation;',
   'return SetupType.HtfDisplacementFvgContinuation;',
-  'return SetupType.OpeningDriveFvgContinuation;',
-  'return SetupType.AfterLunchDriveFvgContinuation;',
-  'return SetupType.IntradayMssMicroContinuation;',
   'return SetupType.FailedPlanReversal;',
 ]) {
   if (decisionPipeline.includes(oldReturn)) {
@@ -136,8 +139,8 @@ for (const oldReturn of [
   }
 }
 
-if (!gemini.includes('The active live scanner model surface is SetupType.FvgTradingSystemV1 / FVG_TRADING_SYSTEM_V1.')) {
-  failures.push('Gemini prompt must state the live FVG v1 model surface.');
+if (!gemini.includes('The active live scanner model surface is the SetupType.FvgTradingSystemV1 / FVG_TRADING_SYSTEM_V1 model family.')) {
+  failures.push('Gemini prompt must state the live FVG v1 model-family surface.');
 }
 
 if (!gemini.includes('There is no active FVG Trading System v2')) {

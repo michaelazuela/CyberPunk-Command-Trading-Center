@@ -173,7 +173,15 @@ assert.equal(dataLimitedVisibility.discordAction, 'hold');
 assert.equal(dataLimitedVisibility.authority.canExecute, false);
 assert.ok(dataLimitedVisibility.dataQualityBlocker?.includes('120M bars'));
 
-assert.deepEqual(audit.entries.map((entry) => entry.setupType), [SetupType.FvgTradingSystemV1]);
+assert.deepEqual(
+  new Set(audit.entries.map((entry) => entry.setupType)),
+  new Set([
+    SetupType.FvgTradingSystemV1,
+    SetupType.OpeningDriveFvgContinuation,
+    SetupType.AfterLunchDriveFvgContinuation,
+    SetupType.IntradayMssMicroContinuation,
+  ])
+);
 assert.equal(audit.entries.every((entry) => entry.role === 'primary_model'), true);
 assert.equal(audit.entries.every((entry) => entry.discordEligible && entry.executionEligible), true);
 

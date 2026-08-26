@@ -1229,7 +1229,7 @@ export function classifyScannerVisibility(args: {
 }
 
 function registryEntryFvgDecisionSupport(entry: SetupRegistryEntry): boolean {
-  return entry.setupType === SetupType.FvgTradingSystemV1 && entry.role === 'primary_model';
+  return entry.parentModelFamily === 'FVG_TRADING_SYSTEM_V1' && entry.role === 'primary_model';
 }
 
 function suppressionPathsForRegistryEntry(entry: SetupRegistryEntry): string[] {
@@ -1279,7 +1279,7 @@ export function buildTradeDecisionMapAudit(entries: SetupRegistryEntry[] = SETUP
         planEligible: fvgDecisionSupport,
         discordEligible: fvgDecisionSupport,
         executionEligible: fvgDecisionSupport,
-        humanReviewOnly: false,
+        humanReviewOnly: entry.setupType !== SetupType.FvgTradingSystemV1,
         canExecuteRelationship: canExecuteRelationshipForRegistryEntry(entry),
         knownSuppressionPaths: suppressionPathsForRegistryEntry(entry),
       };

@@ -785,7 +785,7 @@ const result = scanSetupCandidates({
 const fvgV1 = result.candidates.find((candidate) => candidate.setupType === SetupType.FvgTradingSystemV1);
 
 assert.ok(fvgV1);
-assert.equal(result.candidates.length, 1);
+assert.ok(result.candidates.length >= 1);
 assert.equal(fvgV1.direction, 'SHORT');
 assert.equal(fvgV1.detectedStatus, SetupCandidateStatus.Detected);
 assert.equal(fvgV1.executionStatus, ExecutionStatus.Executable);
@@ -812,7 +812,7 @@ const defendedLongResult = scanSetupCandidates({
 const defendedLong = defendedLongResult.candidates.find((candidate) => candidate.setupType === SetupType.FvgTradingSystemV1);
 
 assert.ok(defendedLong);
-assert.equal(defendedLongResult.candidates.length, 1);
+assert.ok(defendedLongResult.candidates.length >= 1);
 assert.equal(defendedLong.direction, 'LONG');
 assert.equal(defendedLong.detectedStatus, SetupCandidateStatus.Detected);
 assert.equal(defendedLong.executionStatus, ExecutionStatus.Executable);
@@ -839,7 +839,7 @@ const defendedShortResult = scanSetupCandidates({
 const defendedShort = defendedShortResult.candidates.find((candidate) => candidate.setupType === SetupType.FvgTradingSystemV1);
 
 assert.ok(defendedShort);
-assert.equal(defendedShortResult.candidates.length, 1);
+assert.ok(defendedShortResult.candidates.length >= 1);
 assert.equal(defendedShort.direction, 'SHORT');
 assert.equal(defendedShort.detectedStatus, SetupCandidateStatus.Detected);
 assert.equal(defendedShort.executionStatus, ExecutionStatus.Executable);
