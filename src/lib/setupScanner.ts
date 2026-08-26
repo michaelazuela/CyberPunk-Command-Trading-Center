@@ -1368,6 +1368,180 @@ function noChaseStillAvailable(direction: Direction, entry: number | null, stop:
   return direction === 'LONG' ? currentPrice < t1 : currentPrice > t1;
 }
 
+function defendedFvgZoneEntry(direction: Direction, zone: ReturnType<typeof sameDirectionFifteenMinuteFvgZone>): number | null {
+  if (!zone || (direction !== 'LONG' && direction !== 'SHORT')) return null;
+  const lower = parsePrice(zone.lower);
+  const upper = parsePrice(zone.upper);
+  if (lower === null || upper === null) return null;
+  return roundToTick(direction === 'LONG' ? Math.max(lower, upper) : Math.min(lower, upper));
+}
+
+function completedFiveMinuteDefenseCandle(
+  chartContext: ChartContext,
+  direction: Direction,
+  zone: ReturnType<typeof sameDirectionFifteenMinuteFvgZone>,
+) {
+  if (!zone || (direction !== 'LONG' && direction !== 'SHORT')) return { candle: null as ReturnType<typeof readableCompletedFiveMinuteCandles>[number] | null, index: -1, reason: '15M FVG battle zone is not available.' };
+  const lower = parsePrice(zone.lower);
+  const upper = parsePrice(zone.upper);
+  if (lower === null || upper === null) return { candle: null as ReturnType<typeof readableCompletedFiveMinuteCandles>[number] | null, index: -1, reason: '15M FVG battle zone has incomplete bounds.' };
+  const low = Math.min(lower, upper);
+  const high = Math.max(lower, upper);
+  const tolerance = TRADE_RULES.targetModel.tickSize;
+  const candles = readableCompletedFiveMinuteCandles(chartContext)
+    .filter((candle) => isAfterReferenceCandle(candle, {
+      candleIndex: zone.formedCandleIndex ?? null,
+      timestamp: zone.formedAt ?? null,
+    }));
+  const index = candles.findIndex((candle) => {
+    const candleHigh = parsePrice(candle.high);
+    const candleLow = parsePrice(candle.low);
+    const close = parsePrice(candle.close);
+    if (candleHigh === null || candleLow === null || close === null) return false;
+    const touchesZone = candleLow <= high + tolerance && candleHigh >= low - tolerance;
+    if (!touchesZone) return false;
+    if (direction === 'LONG') return close >= high && (candle.direction === 'bullish' || candle.isRejection || candle.isReclaim || candle.isExpansion);
+    return close <= low && (candle.direction === 'bearish' || candle.isRejection || candle.isReclaim || candle.isExpansion);
+  });
+  if (index < 0) {
+    return {
+      candle: null as ReturnType<typeof readableCompletedFiveMinuteCandles>[number] | null,
+      index: -1,
+      reason: direction === 'LONG'
+        ? '5M defended-first continuation pending: no completed 5M candle has defended the bullish 15M FVG battle zone and closed back above it.'
+        : '5M defended-first continuation pending: no completed 5M candle has defended the bearish 15M FVG battle zone and closed back below it.',
+    };
+  }
+  return { candle: candles[index], index, reason: direction === 'LONG'
+    ? `Completed 5M bullish defense held the 15M FVG battle zone${candles[index].timestamp ? ` at ${candles[index].timestamp}` : ''}.`
+    : `Completed 5M bearish defense held the 15M FVG battle zone${candles[index].timestamp ? ` at ${candles[index].timestamp}` : ''}.`
+  };
+}
+
+function protectedDefendedFvgStopResult(chartContext: ChartContext, direction: Direction, entry: number | null, defenseCandle: ReturnType<typeof readableCompletedFiveMinuteCandles>[number] | null): ProtectedMssStopResult {
+  if (direction !== 'LONG' && direction !== 'SHORT') return { stop: null, reason: 'Protected defended-FVG stop requires a LONG or SHORT direction.' };
+  const tick = TRADE_RULES.targetModel.tickSize;
+  const activeSwing = direction === 'LONG'
+    ? parsePrice(chartContext.keyLevels.activeSwingLow)
+    : parsePrice(chartContext.keyLevels.activeSwingHigh);
+  const defenseExtreme = direction === 'LONG'
+    ? parsePrice(defenseCandle?.low)
+    : parsePrice(defenseCandle?.high);
+  const candidates = [activeSwing, defenseExtreme]
+    .filter((price): price is number => price !== null && Number.isFinite(price))
+    .filter((price) => entry === null || (direction === 'LONG' ? price < entry : price > entry));
+  if (!candidates.length) {
+    return { stop: null, reason: direction === 'LONG'
+      ? 'Protected 5M structure stop blocked: no protected active swing low or defended-zone low is available below the entry reference.'
+      : 'Protected 5M structure stop blocked: no protected active swing high or defended-zone high is available above the entry reference.'
+    };
+  }
+  const structure = direction === 'LONG' ? Math.min(...candidates) : Math.max(...candidates);
+  return { stop: roundToTick(direction === 'LONG' ? structure - tick : structure + tick), reason: null };
+}
+
+function validateFvgDefendedContinuationV1(
+  chartContext: ChartContext,
+  direction: Direction,
+  manualLevelConfirmation: boolean,
+): FvgTradingSystemV1Validation | null {
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  const htfGate = htfContextGate(chartContext);
+  const parentFvg = sameDirectionFifteenMinuteFvgZone(chartContext, direction);
+  const fifteenDisplacement = displacementCandleFor(chartContext, direction, '15m');
+  const fiveDisplacement = displacementCandleFor(chartContext, direction, '5m');
+  const defense = completedFiveMinuteDefenseCandle(chartContext, direction, parentFvg);
+  const hasFiveMinuteMss = completedFiveMinuteMssCloseConfirmed(chartContext, direction);
+  const cleanStructure = Boolean(
+    chartContext.structureQualityContext?.direction === direction &&
+    chartContext.structureQualityContext.structureEvent === 'major_bos' &&
+    chartContext.structureQualityContext.inducementSwept &&
+    chartContext.structureQualityContext.validPullbackConfirmed &&
+    chartContext.structureQualityContext.structureBreakConfirmedByClose &&
+    !chartContext.structureQualityContext.wickOnlyBreak
+  );
+  const entry = manualLevelConfirmation ? null : defendedFvgZoneEntry(direction, parentFvg);
+  const stopResult = manualLevelConfirmation ? { stop: null, reason: 'Protected 5M structure stop requires confirmed entry/stop levels.' } : protectedDefendedFvgStopResult(chartContext, direction, entry, defense.candle);
+  const stop = stopResult.stop;
+  const stopIsDirectionallyValid = hasDirectionallyValidStop(direction, entry, stop);
+  const actualRisk = stopIsDirectionallyValid ? riskPoints(entry, stop) : null;
+  const riskWithinStandardLimit = actualRisk !== null && actualRisk > 0 && actualRisk <= TRADE_RULES.maxRiskPoints;
+  const targets = computedTargets(direction, entry, stop);
+  const target2Room = actualRisk !== null && actualRisk > 0 && targets.target2 !== null;
+  const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? latestCompletedClose(chartContext);
+  const noChase = noChaseStillAvailable(direction, entry, stop, currentPrice);
+  const evidence: string[] = [];
+  const missingEvidence: string[] = [];
+
+  if (htfGate.sufficient) evidence.push('Full 30-day HTF context gate satisfied');
+  else missingEvidence.push(...htfGate.missingEvidence);
+  if (parentFvg) evidence.push('15M same-direction FVG battle zone present');
+  else missingEvidence.push('15M same-direction FVG battle zone');
+  if (fifteenDisplacement) evidence.push(`15M ${directionLabel(direction)} displacement/support context is present before defended-first continuation`);
+  else missingEvidence.push(`15M ${directionLabel(direction)} displacement/support context`);
+  if (fiveDisplacement || chartContext.setupReadyFacts?.pullbackIntoFvg || chartContext.setupReadyFacts?.fvgReclaimed) {
+    evidence.push('5M FVG/imbalance or pullback context supports the defended-first continuation read');
+  } else {
+    missingEvidence.push('5M FVG/imbalance or pullback context supports defended-first continuation');
+  }
+  if (defense.candle) evidence.push(defense.reason);
+  else missingEvidence.push(defense.reason);
+  if (hasFiveMinuteMss) evidence.push('Completed 5M MSS confirms execution direction');
+  else missingEvidence.push('Completed 5M MSS confirms execution direction');
+  if (cleanStructure) evidence.push('Defended-first continuation has clean 5M structure-quality proof');
+  else missingEvidence.push('Defended-first continuation requires explicit clean 5M structure-quality proof');
+  if (stop !== null && stopIsDirectionallyValid) evidence.push('Stop tied to protected 5M structure');
+  else missingEvidence.push(stopResult.reason || 'Protected 5M structure stop');
+  if (riskWithinStandardLimit) evidence.push(`Actual entry-to-stop risk validated at ${actualRisk} points`);
+  else missingEvidence.push(`Actual entry-to-stop risk within ${TRADE_RULES.maxRiskPoints} points`);
+  if (target2Room) evidence.push('App T1/T2 available from actual entry-to-stop risk');
+  else missingEvidence.push('App T1/T2 from actual entry-to-stop risk');
+  if (noChase) evidence.push('No-chase gate clean: price has not already reached T1 from the trigger entry');
+  else missingEvidence.push('No-chase gate: price already extended to or beyond T1 from the trigger entry');
+
+  const fullSequence = Boolean(
+    htfGate.sufficient &&
+    parentFvg &&
+    fifteenDisplacement &&
+    (fiveDisplacement || chartContext.setupReadyFacts?.pullbackIntoFvg || chartContext.setupReadyFacts?.fvgReclaimed) &&
+    defense.candle &&
+    hasFiveMinuteMss &&
+    cleanStructure &&
+    entry !== null &&
+    stop !== null &&
+    stopIsDirectionallyValid &&
+    riskWithinStandardLimit &&
+    targets.target1 !== null &&
+    targets.target2 !== null &&
+    noChase
+  );
+  const partialCount = [parentFvg, fifteenDisplacement, fiveDisplacement, defense.candle, hasFiveMinuteMss, cleanStructure, stopIsDirectionallyValid, target2Room].filter(Boolean).length;
+  if (!fullSequence && partialCount < 4) return null;
+
+  return {
+    detected: fullSequence,
+    possible: !fullSequence,
+    direction,
+    entry,
+    stop,
+    target1: targets.target1,
+    target2: targets.target2,
+    risk: actualRisk,
+    invalidation: stop !== null
+      ? direction === 'LONG'
+        ? `Invalid if price trades below the protected 5M defended-FVG structure stop near ${stop}.`
+        : `Invalid if price trades above the protected 5M defended-FVG structure stop near ${stop}.`
+      : null,
+    requiredTrigger: direction === 'LONG'
+      ? 'Completed 5M candle must defend the bullish 15M FVG battle zone, confirm bullish 5M MSS, hold protected 5M structure, keep actual risk within limits, and leave app T1/T2 room before any long is executable.'
+      : 'Completed 5M candle must defend the bearish 15M FVG battle zone, confirm bearish 5M MSS, hold protected 5M structure, keep actual risk within limits, and leave app T1/T2 room before any short is executable.',
+    confidence: fullSequence ? 'High' : partialCount >= 5 ? 'Medium' : 'Low',
+    evidence: Array.from(new Set(evidence)),
+    missingEvidence: Array.from(new Set(missingEvidence)),
+    hasPendingTrigger: !fullSequence,
+  };
+}
+
 function validateFvgTradingSystemV1(chartContext?: ChartContext | null, manualLevelConfirmation = false): FvgTradingSystemV1Validation | null {
   if (!chartContext) return null;
   const direction = intradayMssOrDisplacementDirection(chartContext);
@@ -1392,6 +1566,9 @@ function validateFvgTradingSystemV1(chartContext?: ChartContext | null, manualLe
       hasPendingTrigger: true,
     };
   }
+
+  const defendedContinuation = validateFvgDefendedContinuationV1(chartContext, direction, manualLevelConfirmation);
+  if (defendedContinuation?.detected) return defendedContinuation;
 
   const htfGate = htfContextGate(chartContext);
   const parentFvg = sameDirectionFifteenMinuteFvgZone(chartContext, direction);
