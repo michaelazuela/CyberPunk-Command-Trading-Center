@@ -15,9 +15,9 @@ import { flattenDiscordPayloadText } from './discord-alert-format';
 import { prepareLiveScannerDiscordAlertArtifacts } from './nt-scanner';
 
 const candidate: SetupCandidate = {
-  setupType: SetupType.DefendedBattleZoneContinuation,
-  scenarioLabel: 'Defended battle-zone continuation',
-  pathway: 'defended_battle_zone_continuation',
+  setupType: SetupType.FvgStrengthContinuation,
+  scenarioLabel: 'FVG Strength Continuation',
+  pathway: 'fvg_strength_continuation',
   candidateState: 'HUMAN_REVIEW_READY',
   direction: 'LONG',
   detectedStatus: SetupCandidateStatus.Conditional,
@@ -33,8 +33,8 @@ const candidate: SetupCandidate = {
   target2: 7727.75,
   riskPoints: 13.75,
   riskAdvisoryStatus: 'RISK_EXTENDED_STRUCTURAL',
-  invalidation: 'Invalid below the defended 5M battle-zone low at 7686.50.',
-  requiredTrigger: 'Review only: higher-timeframe bias aligned; completed 5M close holds the defended 15M FVG and reclaims above 7700.25.',
+  invalidation: 'Invalid below the protected 5M structure stop at 7686.50.',
+  requiredTrigger: 'Review only: higher-timeframe bias aligned; completed 5M close holds the trend-side 15M FVG. No sweep required.',
   tacticalZone: {
     sourceOfTruth: 'ohlc_fvg_zone',
     direction: 'LONG',
@@ -43,7 +43,7 @@ const candidate: SetupCandidate = {
     label: 'Defended 5M FVG support',
     sourceTimeframe: '5M',
     confidence: 'High',
-    evidence: 'Last 5M battle zone was defended after the 15M support zone held.',
+    evidence: 'First trend-side FVG was defended after the 15M support zone held. No sweep required.',
   },
   activeRuleset: {
     timeframeMss: {
@@ -66,7 +66,7 @@ const candidate: SetupCandidate = {
       affectsExecution: false,
       direction: 'LONG',
       lineInSand: 7676,
-      lineReason: '15M defended FVG support remains the line in sand for review.',
+      lineReason: '15M defended trend-side FVG support remains the line in sand for review. No sweep required.',
       requiredClose: '5M close must hold above 7676.00 after reclaim.',
       obstacleType: 'imbalance_zone',
       obstacleSource: 'ninjatrader',
@@ -79,13 +79,13 @@ const candidate: SetupCandidate = {
     canExecute: false,
     requiresTraderConfirmation: true,
     discordTradePlanEligible: true,
-    reason: 'Wide protected-structure risk makes this a human-review Discord plan, not executable approval.',
+    reason: 'Trend-side FVG defense makes this a human-review Discord plan, not executable approval.',
   },
   evidence: [
-    '15M defended fair value gap / FVG battle zone held as discount support.',
+    '15M trend-side fair value gap / FVG held as discount support.',
     '15M HTF support and higher-timeframe bias aligned with the continuation.',
-    'Sell-side liquidity sweep printed into the zone, followed by reclaim.',
-    'Wick rejection support formed inside the defended area.',
+    'Sweep is not required for this FVG Strength Continuation path.',
+    'Wick rejection support formed inside the defended FVG area.',
     '5M market structure shift / MSS confirmed reclaim away from the protected support zone.',
     'Bullish displacement candle expanded from the defended FVG / imbalance.',
     'Protected 5M structure stop is visible.',
@@ -93,7 +93,7 @@ const candidate: SetupCandidate = {
   ],
   missingEvidence: [],
   blockReason: null,
-  nextAction: 'Human Review Ready LONG defended battle-zone continuation plan. No chase; trader confirmation required and canExecute remains false.',
+  nextAction: 'Human Review Ready LONG FVG Strength Continuation. First trend-side FVG defended; no sweep required; trader confirmation required and canExecute remains false.',
   reducedRiskPlan: null,
   target1Reason: 'App target T1 = 1.5R from actual entry-to-stop risk.',
   target2Reason: 'App target T2 = 2.0R from actual entry-to-stop risk.',
@@ -169,7 +169,7 @@ const lifecycle = buildCandidateLifecycleTrace({
   alertDecision,
   canExecute: false,
 });
-assert.equal(lifecycle.selectedCandidate?.setupType, SetupType.DefendedBattleZoneContinuation);
+assert.equal(lifecycle.selectedCandidate?.setupType, SetupType.FvgStrengthContinuation);
 assert.equal(lifecycle.discordDecision.shouldSend, true);
 assert.equal(lifecycle.sourceOfTruth, 'scanner_candidate_lifecycle_trace');
 
@@ -267,6 +267,8 @@ try {
   assert.ok(text.includes('T1:'));
   assert.ok(text.includes('T2:'));
   assert.ok(text.includes('Decision support only. No automated orders.'));
+  assert.ok(text.includes('FVG Strength Continuation') || text.includes('FVG'));
+  assert.ok(/No sweep required/i.test(text));
   assert.ok(!/trade now|place orders?|guaranteed|prediction theater/i.test(text));
 
   const audit = JSON.parse(await fs.readFile(result.auditLogPath, 'utf8'));
@@ -275,7 +277,7 @@ try {
   assert.equal(audit.deskState.canExecute, false);
   assert.equal(audit.visibility.authority.discordEligible, true);
   assert.equal(audit.candidateLifecycleTrace.discordDecision.shouldSend, true);
-  assert.equal(audit.candidate.setupType, SetupType.DefendedBattleZoneContinuation);
+  assert.equal(audit.candidate.setupType, SetupType.FvgStrengthContinuation);
   assert.equal(audit.attachments.chartMarkup, result.chartMarkup);
 } finally {
   await fs.rm(tempDir, { recursive: true, force: true });

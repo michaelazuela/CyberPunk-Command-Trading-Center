@@ -23,6 +23,7 @@ const required = [
   'SetupType.OpeningDriveFvgContinuation',
   'SetupType.AfterLunchDriveFvgContinuation',
   'SetupType.IntradayMssMicroContinuation',
+  'SetupType.FvgStrengthContinuation',
   'SetupType.DefendedBattleZoneContinuation',
   'FVG_TRADING_SYSTEM_V1',
   'HTF/15M story is written before execution evidence is considered.',
@@ -82,8 +83,8 @@ for (const needle of forbidden) {
 }
 
 const setupEntryCount = (registry.match(/setupType:\s*SetupType\./g) || []).length;
-if (setupEntryCount !== 5) {
-  failures.push(`Expected exactly five active FVG-family setup registry entries, found ${setupEntryCount}`);
+if (setupEntryCount !== 6) {
+  failures.push(`Expected exactly six active FVG-family setup registry entries, found ${setupEntryCount}`);
 }
 
 for (const [label, sourcePath] of runtimePaths) {
@@ -106,6 +107,7 @@ if (
   !tradeRules.includes('SetupType.OpeningDriveFvgContinuation') ||
   !tradeRules.includes('SetupType.AfterLunchDriveFvgContinuation') ||
   !tradeRules.includes('SetupType.IntradayMssMicroContinuation') ||
+  !tradeRules.includes('SetupType.FvgStrengthContinuation') ||
   !tradeRules.includes('SetupType.DefendedBattleZoneContinuation')
 ) {
   failures.push('Trade rules must define the active runtime setup set as the approved FVG-family routes.');
@@ -120,6 +122,7 @@ if (
   !decisionPipeline.includes('SetupType.OpeningDriveFvgContinuation') ||
   !decisionPipeline.includes('SetupType.AfterLunchDriveFvgContinuation') ||
   !decisionPipeline.includes('SetupType.IntradayMssMicroContinuation') ||
+  !decisionPipeline.includes('SetupType.FvgStrengthContinuation') ||
   !decisionPipeline.includes('SetupType.DefendedBattleZoneContinuation')
 ) {
   failures.push('Decision pipeline must define the live runtime setup filter as the approved FVG-family routes.');

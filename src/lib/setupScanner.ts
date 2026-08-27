@@ -322,6 +322,7 @@ function evidenceKeyForSetup(setupType: SetupType): keyof NonNullable<ChartConte
     case SetupType.AlgoKillZone: return 'algoKillZone';
     case SetupType.MitigationBlock: return 'mitigationBlock';
     case SetupType.MomentumPullbackBreatherReclaim: return 'momentumPullbackBreatherReclaim';
+    case SetupType.FvgStrengthContinuation: return 'fairValueGap';
     case SetupType.MorningFailedHighLiquidityRejection: return 'morningFailedHighLiquidityRejection';
     case SetupType.MorningReclaimLong: return 'morningReclaimLong';
     case SetupType.MorningOpeningRangeContinuation: return 'openingRangeContinuation';
@@ -3595,6 +3596,258 @@ function defendedBattleZoneContinuationConfidenceScore(args: {
   );
 }
 
+type FvgStrengthZoneRole = 'first_fvg' | 'final_boss_zone';
+
+interface FvgStrengthZoneSelection {
+  zone: NonNullable<ChartContext['fvgZones']>[number];
+  role: FvgStrengthZoneRole;
+  lower: number;
+  upper: number;
+  defense: ReturnType<typeof completedFiveMinuteDefenseCandle>;
+}
+
+function trendDirectionForFvgStrengthContinuation(chartContext: ChartContext): Exclude<Direction, 'NO TRADE'> | null {
+  const aligned = chartContext.multiTimeframeContext?.alignment?.alignedDirection;
+  if (aligned === 'LONG' || aligned === 'SHORT') return aligned;
+  const thesis = chartContext.higherTimeframeThesis?.direction;
+  if (thesis === 'LONG' || thesis === 'SHORT') return thesis;
+  const displacement = htfDisplacementDirection(chartContext);
+  if (displacement === 'LONG' || displacement === 'SHORT') return displacement;
+  return null;
+}
+
+function trendSideFifteenMinuteFvgZones(chartContext: ChartContext, direction: Exclude<Direction, 'NO TRADE'>) {
+  return (chartContext.multiTimeframeContext?.fifteenMinute.fvgZones || [])
+    .filter((zone) =>
+      zone.direction === direction &&
+      isReadableConfidence(zone.confidence) &&
+      zone.impulseQualified !== false &&
+      parsePrice(zone.lower) !== null &&
+      parsePrice(zone.upper) !== null
+    )
+    .map((zone) => {
+      const lower = parsePrice(zone.lower) as number;
+      const upper = parsePrice(zone.upper) as number;
+      return {
+        zone,
+        lower: roundToTick(Math.min(lower, upper)),
+        upper: roundToTick(Math.max(lower, upper)),
+        formedTime: Date.parse(String(zone.formedAt || '')),
+      };
+    });
+}
+
+function finalBossZoneFor(
+  zones: ReturnType<typeof trendSideFifteenMinuteFvgZones>,
+  direction: Exclude<Direction, 'NO TRADE'>,
+) {
+  return [...zones].sort((a, b) => direction === 'LONG'
+    ? a.lower - b.lower || a.upper - b.upper
+    : b.upper - a.upper || b.lower - a.lower
+  )[0] || null;
+}
+
+function selectFvgStrengthDefenseZone(
+  chartContext: ChartContext,
+  direction: Exclude<Direction, 'NO TRADE'>,
+): FvgStrengthZoneSelection | null {
+  const zones = trendSideFifteenMinuteFvgZones(chartContext, direction);
+  if (!zones.length) return null;
+  const finalBoss = finalBossZoneFor(zones, direction);
+  const defended = zones
+    .map((item) => ({
+      ...item,
+      role: item.zone === finalBoss?.zone ? 'final_boss_zone' as const : 'first_fvg' as const,
+      defense: completedFiveMinuteDefenseCandle(chartContext, direction, item.zone),
+    }))
+    .filter((item) => Boolean(item.defense.candle))
+    .sort((a, b) => b.defense.index - a.defense.index || ((Number.isFinite(b.formedTime) ? b.formedTime : 0) - (Number.isFinite(a.formedTime) ? a.formedTime : 0)));
+  if (!defended.length) return null;
+  return {
+    zone: defended[0].zone,
+    role: defended[0].role,
+    lower: defended[0].lower,
+    upper: defended[0].upper,
+    defense: defended[0].defense,
+  };
+}
+
+function fvgStrengthContinuationConfidenceScore(args: {
+  htfGate: boolean;
+  hasDefense: boolean;
+  hasEntryStopTargets: boolean;
+  hasTarget: boolean;
+  noChase: boolean;
+  trendAligned: boolean;
+  riskWithinStandardLimit: boolean;
+}): number {
+  return Math.min(100,
+    (args.hasDefense ? 38 : 0) +
+    (args.trendAligned ? 18 : 0) +
+    (args.hasEntryStopTargets ? 16 : 0) +
+    (args.htfGate ? 10 : 0) +
+    (args.hasTarget ? 8 : 0) +
+    (args.noChase ? 6 : 0) +
+    (args.riskWithinStandardLimit ? 4 : 0)
+  );
+}
+
+function buildFvgStrengthContinuationCandidate(input: SetupScannerInput): SetupCandidate | null {
+  const chartContext = input.chartContext;
+  if (!chartContext) return null;
+  const registry = getPrimarySetupRegistry(input.sessionType).find((entry) => entry.setupType === SetupType.FvgStrengthContinuation);
+  if (!registry) return null;
+  const direction = trendDirectionForFvgStrengthContinuation(chartContext);
+  if (!direction) return null;
+
+  const htfGate = htfContextGate(chartContext);
+  const selected = selectFvgStrengthDefenseZone(chartContext, direction);
+  if (!selected) return null;
+
+  const entryFromDefense = parsePrice(selected.defense.candle?.close);
+  const entry = entryFromDefense !== null ? roundToTick(entryFromDefense) : defendedFvgZoneEntry(direction, selected.zone);
+  const stopResult = protectedDefendedFvgStopResult(chartContext, direction, entry, selected.defense.candle);
+  const stop = stopResult.stop;
+  const stopIsDirectionallyValid = hasDirectionallyValidStop(direction, entry, stop);
+  const targets = computedTargets(direction, entry, stop);
+  const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
+    (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
+  const riskWithinStandardLimit = risk !== null && risk > 0 && risk <= TRADE_RULES.maxRiskPoints;
+  const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? latestCompletedClose(chartContext) ?? entry;
+  const target = liquidityTargetForContinuation(chartContext, direction, entry, currentPrice);
+  const noChase = noChaseStillAvailable(direction, entry, stop, currentPrice);
+  const alreadyInvalidated = currentPrice !== null && stop !== null
+    ? direction === 'LONG'
+      ? currentPrice <= stop
+      : currentPrice >= stop
+    : false;
+  const hasEntryStopTargets = entry !== null && stop !== null && stopIsDirectionallyValid && targets.target1 !== null && targets.target2 !== null;
+  const humanReviewReady = hasEntryStopTargets && Boolean(target) && noChase && !alreadyInvalidated;
+  const trendAligned = htfAlignmentSupportsDirection(chartContext, direction) || htfDisplacementDirection(chartContext) === direction;
+  const score = fvgStrengthContinuationConfidenceScore({
+    htfGate: htfGate.sufficient,
+    hasDefense: true,
+    hasEntryStopTargets,
+    hasTarget: Boolean(target),
+    noChase,
+    trendAligned,
+    riskWithinStandardLimit,
+  });
+  const dirLabel = directionLabel(direction);
+  const zoneLabel = `${formatLinePrice(selected.lower)}-${formatLinePrice(selected.upper)}`;
+  const roleLabel = selected.role === 'final_boss_zone' ? 'Final Boss Zone' : 'first trend-side FVG';
+  const tacticalZone: TacticalZoneBounds = {
+    sourceOfTruth: 'ohlc_fvg_zone',
+    direction,
+    lower: selected.lower,
+    upper: selected.upper,
+    midpoint: roundToTick(parsePrice(selected.zone.midpoint) ?? (selected.lower + selected.upper) / 2),
+    label: `${roleLabel} defended: ${zoneLabel}`,
+    sourceTimeframe: '15M',
+    formedAt: selected.zone.formedAt ?? null,
+    formedCandleIndex: typeof selected.zone.formedCandleIndex === 'number' ? selected.zone.formedCandleIndex : null,
+    confidence: selected.zone.confidence,
+    evidence: '15M trend-side FVG promoted from structured NinjaTrader/OHLC facts. Sweep is not required for this model.',
+  };
+  const invalidation = stop !== null
+    ? direction === 'LONG'
+      ? `Invalid if price trades below the protected 5M structure stop near ${formatLinePrice(stop)}.`
+      : `Invalid if price trades above the protected 5M structure stop near ${formatLinePrice(stop)}.`
+    : null;
+  const riskAdvisoryStatus = riskAdvisoryStatusFor(risk);
+  const riskNote = riskAdvisoryNote(risk);
+  const missingEvidence = Array.from(new Set([
+    ...htfGate.missingEvidence,
+    ...(stopResult.reason ? [stopResult.reason] : []),
+    ...(entry === null ? ['Defined 5M defended-FVG entry reference'] : []),
+    ...(stop === null || !stopIsDirectionallyValid ? ['Protected 5M structure stop from the defended area'] : []),
+    ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
+    ...(!target ? ['Forward liquidity/target context in the trade direction'] : []),
+    ...(!noChase ? ['No-chase review gate: price already extended to or beyond T1 from the defended-FVG entry'] : []),
+    ...(alreadyInvalidated ? [`No fresh review: latest completed 5M close ${formatLinePrice(currentPrice)} has already traded through the protected stop ${formatLinePrice(stop)}.`] : []),
+  ]));
+
+  return {
+    setupType: SetupType.FvgStrengthContinuation,
+    scenarioLabel: registry.label,
+    candidateState: humanReviewReady ? 'HUMAN_REVIEW_READY' : 'BATTLE_ZONE_DEFENSE_PENDING',
+    pathway: 'fvg_strength_continuation',
+    tacticalZone,
+    activeRuleset: {
+      htfLineInSand: {
+        applied: true,
+        status: alreadyInvalidated ? 'blocked' : 'passed',
+        required: 'completed_5m_or_15m_close_beyond_htf_line',
+        appliesToAllModels: true,
+        affectsExecution: false,
+        direction,
+        lineInSand: direction === 'LONG' ? selected.lower : selected.upper,
+        lineReason: `${roleLabel} is the defended trend-side 15M FVG. No sweep required.`,
+        requiredClose: direction === 'LONG'
+          ? `5M close must hold above ${formatLinePrice(selected.upper)} after trading into the FVG area.`
+          : `5M close must hold below ${formatLinePrice(selected.lower)} after trading into the FVG area.`,
+        obstacleType: 'imbalance_zone',
+        obstacleSource: 'ninjatrader',
+        evidence: [`${roleLabel} ${zoneLabel} defended by completed 5M OHLC.`],
+        blockers: alreadyInvalidated ? ['Latest completed 5M close already crossed the protected structure stop.'] : [],
+      },
+    },
+    humanReview: {
+      status: humanReviewReady ? 'HumanReviewReady' : 'OpeningObservationArmed',
+      canExecute: false,
+      requiresTraderConfirmation: true,
+      discordTradePlanEligible: humanReviewReady,
+      reason: humanReviewReady
+        ? 'FVG Strength Continuation is qualified for human-review Discord visibility. Trader confirmation is required before action.'
+        : 'FVG Strength Continuation watch is active; publish waits for protected stop, app targets, target room, and no-chase review state.',
+    },
+    direction,
+    detectedStatus: humanReviewReady ? SetupCandidateStatus.Conditional : SetupCandidateStatus.Possible,
+    confidence: score >= 82 ? 'High' : score >= 70 ? 'Medium' : 'Low',
+    priority: registry.priority,
+    entry,
+    stop,
+    target1: targets.target1,
+    target2: targets.target2,
+    riskPoints: risk,
+    riskAdvisoryStatus,
+    riskPolicy: riskAdvisoryStatus === 'RISK_WITHIN_STANDARD_LIMIT' ? 'STANDARD_RISK' : 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    modelConfidenceScore: score,
+    invalidation,
+    entryClarity: entry !== null ? 0.85 : 0.25,
+    stopClarity: stop !== null ? 0.85 : 0.25,
+    targetClarity: targets.target1 !== null && targets.target2 !== null && target ? 0.8 : 0.25,
+    proximityScore: noChase ? 0.75 : 0.25,
+    levelContextScore: score / 5,
+    levelContextSummary: `FVG Strength Continuation: ${dirLabel} ${roleLabel} ${zoneLabel} was defended by completed 5M OHLC. No sweep required. App targets first; HTF/session levels remain context.`,
+    evidence: Array.from(new Set([
+      `${dirLabel} trend-side 15M FVG active from NinjaTrader OHLC: ${zoneLabel}`,
+      `${roleLabel} selected; a single 15M FVG can qualify as the Final Boss Zone when it is the only trend-side FVG.`,
+      selected.defense.reason.replace('15M FVG battle zone', `${roleLabel} ${zoneLabel}`),
+      'Sweep is not required for FVG Strength Continuation.',
+      ...(entry !== null ? [`Defended-FVG entry reference from completed 5M close: ${formatLinePrice(entry)}.`] : []),
+      ...(stop !== null ? [`Protected 5M structure stop: ${formatLinePrice(stop)}.`] : []),
+      ...(risk !== null ? [`Actual entry-to-stop risk measured at ${risk} points.`] : []),
+      ...(targets.target1 !== null && targets.target2 !== null ? [`App targets: T1 ${formatLinePrice(targets.target1)}, T2 ${formatLinePrice(targets.target2)}.`] : []),
+      ...htfGate.evidence,
+      ...(target ? [`Forward liquidity/target context: ${target.label} ${target.price}`] : []),
+      'Human review required. Decision-support plan only. Trader must confirm entry before action.',
+      'FvgStrengthContinuation never sets canExecute true and does not approve broker execution.',
+      ...(riskNote ? [riskNote] : []),
+    ])),
+    missingEvidence,
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: humanReviewReady ? null : NoTradeReason.EntryTriggerPending,
+    requiredTrigger: direction === 'LONG'
+      ? `Human-review long: bullish trend-side FVG ${zoneLabel} defended by completed 5M hold/reclaim. No sweep required. ${roleLabel} remains the line in the sand.`
+      : `Human-review short: bearish trend-side FVG ${zoneLabel} defended by completed 5M hold/reject. No sweep required. ${roleLabel} remains the line in the sand.`,
+    nextAction: humanReviewReady
+      ? `Human Review Ready ${direction} FVG Strength Continuation. ${roleLabel} defended; no sweep required; trader confirmation required and canExecute remains false.${riskNote ? ` ${riskNote}` : ''}`
+      : `FVG Strength Continuation watch. ${missingEvidence[0] || 'Wait for completed 5M defense, protected stop, app targets, and target room.'}`,
+    reducedRiskPlan: null,
+  };
+}
+
 function buildDefendedBattleZoneContinuationCandidate(input: SetupScannerInput): SetupCandidate | null {
   const chartContext = input.chartContext;
   if (!chartContext) return null;
@@ -4538,6 +4791,48 @@ function dataLimitedIntradayMssMicroContinuationCandidate(entry: SetupRegistryEn
     nextAction: uniqueBlockers.length
       ? `Data-limited Intraday MSS review. ${uniqueBlockers.join(' ')} Repair/backfill OHLC before promotion; no line, stop, or targets are invented.`
       : 'Data-limited Intraday MSS review. Repair/backfill OHLC before promotion; no line, stop, or targets are invented.',
+    reducedRiskPlan: null,
+  };
+}
+
+function notDetectedFvgStrengthContinuationCandidate(entry: SetupRegistryEntry): SetupCandidate {
+  return {
+    setupType: entry.setupType,
+    scenarioLabel: entry.label,
+    candidateState: 'NO_QUALIFIED_STATE',
+    pathway: 'fvg_strength_continuation',
+    humanReview: {
+      status: 'OpeningObservationArmed',
+      canExecute: false,
+      requiresTraderConfirmation: true,
+      discordTradePlanEligible: false,
+      reason: 'FVG Strength Continuation is not armed.',
+    },
+    direction: 'NO TRADE',
+    detectedStatus: SetupCandidateStatus.NotDetected,
+    confidence: 'Low',
+    priority: entry.priority,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    riskAdvisoryStatus: 'RISK_INVALID_OR_UNDEFINED',
+    riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    modelConfidenceScore: 0,
+    invalidation: null,
+    entryClarity: 0,
+    stopClarity: 0,
+    targetClarity: 0,
+    proximityScore: 0,
+    levelContextScore: 0,
+    levelContextSummary: 'FVG Strength Continuation requires trend-side 15M FVG context, a completed 5M defense/hold/reclaim from the FVG area, protected 5M structure stop, app targets, target room, and no chase. No sweep is required.',
+    evidence: [],
+    missingEvidence: entry.requiredEvidence,
+    executionStatus: ExecutionStatus.NotDetected,
+    blockReason: null,
+    requiredTrigger: null,
+    nextAction: 'Track trend-side 15M FVGs. The first defended FVG or Final Boss Zone can publish for human review after completed 5M defense, protected stop, app targets, and target room. No sweep required.',
     reducedRiskPlan: null,
   };
 }
@@ -6168,6 +6463,7 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
   const openingDriveFvgCandidate = buildSessionDriveFvgContinuationCandidate(input, SetupType.OpeningDriveFvgContinuation);
   const afterLunchDriveFvgCandidate = buildSessionDriveFvgContinuationCandidate(input, SetupType.AfterLunchDriveFvgContinuation);
   const intradayMssMicroCandidate = buildIntradayMssMicroContinuationCandidate(input);
+  const fvgStrengthContinuationCandidate = buildFvgStrengthContinuationCandidate(input);
   const defendedBattleZoneCandidate = buildDefendedBattleZoneContinuationCandidate(input);
   const intradayMssMicroDataLimitedCandidate = !intradayMssMicroCandidate && input.chartContext
     ? (() => {
@@ -6193,6 +6489,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           ? afterLunchDriveFvgCandidate
           : entry.setupType === SetupType.IntradayMssMicroContinuation && intradayMssMicroCandidate
           ? intradayMssMicroCandidate
+          : entry.setupType === SetupType.FvgStrengthContinuation && fvgStrengthContinuationCandidate
+          ? fvgStrengthContinuationCandidate
           : entry.setupType === SetupType.DefendedBattleZoneContinuation && defendedBattleZoneCandidate
           ? defendedBattleZoneCandidate
           : entry.setupType === SetupType.IntradayMssMicroContinuation && intradayMssMicroDataLimitedCandidate
@@ -6211,6 +6509,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           ? notDetectedSessionDriveFvgCandidate(entry)
           : entry.setupType === SetupType.IntradayMssMicroContinuation
           ? notDetectedIntradayMssMicroContinuationCandidate(entry)
+          : entry.setupType === SetupType.FvgStrengthContinuation
+          ? notDetectedFvgStrengthContinuationCandidate(entry)
           : entry.setupType === SetupType.DefendedBattleZoneContinuation
           ? notDetectedDefendedBattleZoneContinuationCandidate(entry)
           : entry.setupType === SetupType.FailedPlanReversal

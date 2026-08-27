@@ -80,6 +80,7 @@ const LIVE_RUNTIME_SETUP_TYPES = new Set<SetupType>([
   SetupType.OpeningDriveFvgContinuation,
   SetupType.AfterLunchDriveFvgContinuation,
   SetupType.IntradayMssMicroContinuation,
+  SetupType.FvgStrengthContinuation,
   SetupType.DefendedBattleZoneContinuation,
 ]);
 

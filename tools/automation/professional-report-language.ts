@@ -3,6 +3,7 @@ import { SetupType, type SetupCandidate } from '../../src/types';
 export type ProfessionalModelLabel =
   | 'Liquidity Sweep -> Structure Shift -> Imbalance Pullback'
   | 'Failed Breakout Reversal'
+  | 'FVG Strength Continuation'
   | 'Drive FVG Continuation'
   | 'Intraday Structure-Shift Micro Continuation'
   | 'Failed Plan Reversal'
@@ -16,6 +17,7 @@ export const PROFESSIONAL_FALLBACK_LABEL: ProfessionalModelLabel = 'Trade setup'
 export function professionalModelLabel(setupType?: SetupType | string | null): ProfessionalModelLabel {
   if (setupType === SetupType.SweepMssFvgRetrace) return PROFESSIONAL_MODEL_ONE_LABEL;
   if (setupType === SetupType.TurtleSoup) return PROFESSIONAL_MODEL_TWO_LABEL;
+  if (setupType === SetupType.FvgStrengthContinuation) return 'FVG Strength Continuation';
   if (setupType === SetupType.OpeningDriveFvgContinuation || setupType === SetupType.AfterLunchDriveFvgContinuation) return 'Drive FVG Continuation';
   if (setupType === SetupType.IntradayMssMicroContinuation) return 'Intraday Structure-Shift Micro Continuation';
   if (setupType === SetupType.FailedPlanReversal) return 'Failed Plan Reversal';
@@ -50,6 +52,7 @@ export function professionalizeReportText(value?: string | null): string {
     .replace(/native 5M imbalance/g, 'native 5M FVG')
     .replace(/Price imbalance \/ imbalance decision zone/g, 'FVG / imbalance decision zone')
     .replace(/imbalance \/ imbalance decision zone/g, 'FVG / imbalance decision zone')
+    .replace(/imbalance Strength Continuation/g, 'FVG Strength Continuation')
     .replace(/imbalance is a reaction\/management zone only/g, 'FVG is a reaction/management zone only')
     .replace(/this imbalance into/g, 'this FVG into')
     .replace(/beyond the imbalance/g, 'beyond the FVG')

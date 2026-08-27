@@ -1454,6 +1454,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     `${args.instrument} Current Desk Plan`,
     '',
     `Primary: ${primaryPlanLabel(direction)}`,
+    `Model: ${professionalCandidateModelLabel(candidate)}`,
     discordPromotionDecisionLine(candidate, normalized, status),
     `Bias: ${biasEmoji(direction === 'LONG' ? 'BULL' : 'BEAR')} ${candidateBiasSummary(candidate)}`,
     ...(candidateHtfContextLine(candidate) ? [candidateHtfContextLine(candidate)!] : []),

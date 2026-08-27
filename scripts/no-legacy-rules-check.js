@@ -20,6 +20,7 @@ const IGNORED_DIRS = new Set([
   'build',
   'coverage',
   'docs/archive',
+  'tools/automation/discord-audit',
 ]);
 
 const IGNORED_FILES = new Set([

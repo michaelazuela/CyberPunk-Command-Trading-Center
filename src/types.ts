@@ -39,6 +39,7 @@ export enum SetupType {
   OpeningDriveFvgContinuation = 'OpeningDriveFvgContinuation',
   AfterLunchDriveFvgContinuation = 'AfterLunchDriveFvgContinuation',
   IntradayMssMicroContinuation = 'IntradayMssMicroContinuation',
+  FvgStrengthContinuation = 'FvgStrengthContinuation',
   DefendedBattleZoneContinuation = 'DefendedBattleZoneContinuation',
   FailedPlanReversal = 'FailedPlanReversal',
   OpeningOrderBlock = 'OpeningOrderBlock',
@@ -1133,7 +1134,7 @@ export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
   candidateState?: TradingPlanCandidateState;
-  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation' | 'opening_drive_fvg_continuation' | 'after_lunch_drive_fvg_continuation' | 'intraday_mss_micro_continuation' | 'defended_battle_zone_continuation' | 'failed_plan_reversal';
+  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation' | 'opening_drive_fvg_continuation' | 'after_lunch_drive_fvg_continuation' | 'intraday_mss_micro_continuation' | 'fvg_strength_continuation' | 'defended_battle_zone_continuation' | 'failed_plan_reversal';
   activeCampaign?: ActiveCampaign;
   htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
   failedPlanReversal?: FailedPlanReversalContext;
