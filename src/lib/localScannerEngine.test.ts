@@ -764,9 +764,11 @@ const tenOhFiveSelection = selectScannerPlan({
   currentPrice: morningMoveBars[7].close,
 });
 assert.notEqual(tenOhFiveSelection.stateForAlert, 'Approved');
-assert.equal(tenOhFiveSelection.stateForAlert, 'Executable');
-assert.equal(tenOhFiveSelection.candidate?.direction, 'SHORT');
-assert.ok(tenOhFiveSelection.auditWarnings.some((warning) => warning.includes('Opposite-direction early-move review ignored')));
+assert.notEqual(tenOhFiveSelection.stateForAlert, 'Executable');
+assert.equal(tenOhFiveSelection.stateForAlert, 'NoTrade');
+assert.equal(tenOhFiveSelection.candidate, null);
+assert.equal(tenOhFiveSelection.reviewStatus, 'early_move_review_no_valid_candidate');
+assert.ok(tenOhFiveSelection.auditWarnings.some((warning) => warning.includes('Early-move review is context only')));
 
 const tenFifteenMovePlan = normalizedFromMorningMoveThrough(9);
 const tenFifteenSelection = selectScannerPlan({
@@ -853,7 +855,7 @@ const auditedSetupTypes = new Set(tradeDecisionMapAudit.entries.map((entry) => e
 for (const entry of SETUP_REGISTRY) {
   assert.equal(auditedSetupTypes.has(entry.setupType), true, `${entry.setupType} is missing from the Phase 9A audit`);
 }
-assert.deepEqual([...auditedSetupTypes], [SetupType.FvgTradingSystemV1]);
+assert.deepEqual([...auditedSetupTypes], SETUP_REGISTRY.map((entry) => entry.setupType));
 const fvgAudit = tradeDecisionMapAudit.entries[0];
 assert.equal(fvgAudit?.setupType, SetupType.FvgTradingSystemV1);
 assert.equal(fvgAudit?.role, 'primary_model');

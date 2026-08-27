@@ -1369,7 +1369,7 @@ const tacticalCampaignFromLifecycle = scannerTacticalCampaignMapFromDeskState({
     ...baseDeskPlanRefreshState,
     bestShortPlan: {
       ...baseDeskPlanRefreshState.bestShortPlan,
-      setupType: SetupType.HtfDisplacementMssContinuation,
+      setupType: SetupType.FvgTradingSystemV1,
       direction: 'SHORT',
       candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
       requiredTrigger: 'Completed 5M close-through/retest below 7416.50 required before short continuation can execute.',
@@ -2124,7 +2124,7 @@ const tacticalRequiredTriggerDeskPlaySuppression = evaluateScannerDeskPlayDiscor
     ...baseDeskPlanRefreshState,
     bestShortPlan: {
       ...baseDeskPlanRefreshState.bestShortPlan,
-      setupType: SetupType.HtfDisplacementMssContinuation,
+      setupType: SetupType.FvgTradingSystemV1,
       direction: 'SHORT',
       candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
       requiredTrigger: 'Completed 5M close-through/retest below 7416.50 required before short continuation can execute.',
@@ -2862,12 +2862,13 @@ assert.equal(tapeEvent.candidateLifecycleTrace.discordDecision.shouldSend, false
 assert.equal(tapeEvent.candidateLifecycleTrace.discordDecision.reason, 'TriggerPending is logged locally as developing context.');
 assert.equal(tapeEvent.tradeDecisionMapAudit.sourceOfTruth, 'setup_registry_trade_decision_map_audit');
 assert.equal(tapeEvent.tradeDecisionMapAudit.tradingLogicChanged, false);
-assert.ok(tapeEvent.tradeDecisionMapAudit.entries.some((entry: any) => entry.setupType === SetupType.TurtleSoup));
+assert.ok(tapeEvent.tradeDecisionMapAudit.entries.some((entry: any) => entry.setupType === SetupType.FvgTradingSystemV1));
+assert.equal(tapeEvent.tradeDecisionMapAudit.entries.every((entry: any) => entry.parentModelFamily === 'FVG_TRADING_SYSTEM_V1'), true);
 assert.equal(tapeEvent.reversalWatch.lines.sourceOfTruth, 'scanner_campaign_exhaustion_reversal_watch_lines');
 assert.equal(tapeEvent.reversalWatch.state.sourceOfTruth, 'scanner_campaign_exhaustion_reversal_watch_state');
 assert.equal(tapeEvent.reversalWatch.state.approvalBoundary.changesCanExecute, false);
 assert.equal(tapeEvent.deskState.sourceOfTruth, 'scanner_desk_state');
-assert.equal(tapeEvent.deskState.marketMode, 'watching');
+assert.equal(tapeEvent.deskState.marketMode, 'no_trade');
 assert.equal(tapeEvent.deskState.visibilityMode, tapeEvent.visibility.visibilityMode);
 assert.equal(tapeEvent.deskState.canExecute, false);
 assert.equal(tapeEvent.deskState.promotion.sourceOfTruth, 'scanner_desk_state_promotion_path');
@@ -3215,8 +3216,8 @@ const chartContext: Partial<ChartContext> = {
 };
 
 const candidate: SetupCandidate = {
-  setupType: SetupType.LiquiditySweep,
-  scenarioLabel: 'Liquidity sweep reclaim',
+  setupType: SetupType.FvgTradingSystemV1,
+  scenarioLabel: 'FVG Trading System v1 defended reclaim',
   direction: 'LONG',
   detectedStatus: SetupCandidateStatus.Detected,
   confidence: 'High',

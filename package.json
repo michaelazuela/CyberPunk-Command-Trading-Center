@@ -15,6 +15,7 @@
     "nt:discord-alerts": "tsx tools/automation/discord-scheduler.ts",
     "nt:scanner": "tsx tools/automation/nt-scanner.ts",
     "nt:live-discord-rollout": "tsx tools/automation/live-discord-rollout.ts",
+    "test:scanner-24h-loopback": "tsx tools/automation/scanner-24h-discord-loopback.test.ts",
     "supervisor:start": "tsx tools/supervisor/index.ts start",
     "supervisor:check": "tsx tools/supervisor/index.ts check",
     "supervisor:status": "tsx tools/supervisor/index.ts status",
