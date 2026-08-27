@@ -1421,9 +1421,7 @@ function completedFiveMinuteDefenseCandle(
 
 interface DefendedBattleZoneSequence {
   zone: NonNullable<ChartContext['fvgZones']>[number];
-  sweepCandle: ReturnType<typeof readableCompletedFiveMinuteCandles>[number];
   defenseCandle: ReturnType<typeof readableCompletedFiveMinuteCandles>[number];
-  sweepIndex: number;
   defenseIndex: number;
   lower: number;
   upper: number;
@@ -1460,18 +1458,8 @@ function defendedBattleZoneSequence(chartContext: ChartContext, direction: Direc
         candleIndex: null,
         timestamp: zone.formedAt ?? null,
       }));
-    const sweep = afterZone.find(({ candle }) => {
-      const candleLow = parsePrice(candle.low);
-      const candleHigh = parsePrice(candle.high);
-      const close = parsePrice(candle.close);
-      if (candleLow === null || candleHigh === null || close === null) return false;
-      return direction === 'LONG'
-        ? candleLow < low - tolerance
-        : candleHigh > high + tolerance;
-    });
-    if (!sweep) continue;
     const defense = afterZone.find(({ candle, index }) => {
-      if (index < sweep.index) return false;
+      void index;
       const candleLow = parsePrice(candle.low);
       const candleHigh = parsePrice(candle.high);
       const close = parsePrice(candle.close);
@@ -1486,16 +1474,14 @@ function defendedBattleZoneSequence(chartContext: ChartContext, direction: Direc
     const entry = parsePrice(defense.candle.close);
     return {
       zone,
-      sweepCandle: sweep.candle,
       defenseCandle: defense.candle,
-      sweepIndex: sweep.index,
       defenseIndex: defense.index,
       lower: low,
       upper: high,
       entry: entry !== null ? roundToTick(entry) : null,
       reason: direction === 'LONG'
-        ? `Completed 5M sweep/reclaim defended the 15M battle zone ${formatLinePrice(low)}-${formatLinePrice(high)}${defense.candle.timestamp ? ` at ${defense.candle.timestamp}` : ''}.`
-        : `Completed 5M sweep/reject defended the 15M battle zone ${formatLinePrice(low)}-${formatLinePrice(high)}${defense.candle.timestamp ? ` at ${defense.candle.timestamp}` : ''}.`,
+        ? `Completed 5M defense held the 15M battle zone ${formatLinePrice(low)}-${formatLinePrice(high)} and closed back above it${defense.candle.timestamp ? ` at ${defense.candle.timestamp}` : ''}.`
+        : `Completed 5M defense held the 15M battle zone ${formatLinePrice(low)}-${formatLinePrice(high)} and closed back below it${defense.candle.timestamp ? ` at ${defense.candle.timestamp}` : ''}.`,
     };
   }
   return null;
@@ -1503,22 +1489,19 @@ function defendedBattleZoneSequence(chartContext: ChartContext, direction: Direc
 
 function protectedBattleZoneDefenseStopResult(direction: Direction, sequence: DefendedBattleZoneSequence | null, entry: number | null): ProtectedMssStopResult {
   if (!sequence || (direction !== 'LONG' && direction !== 'SHORT')) {
-    return { stop: null, reason: 'Protected battle-zone stop requires a completed 5M sweep/reclaim or sweep/reject sequence.' };
+    return { stop: null, reason: 'Protected battle-zone stop requires a completed 5M defended-zone sequence.' };
   }
   const tick = TRADE_RULES.targetModel.tickSize;
-  const sweepExtreme = direction === 'LONG'
-    ? parsePrice(sequence.sweepCandle.low)
-    : parsePrice(sequence.sweepCandle.high);
   const defenseExtreme = direction === 'LONG'
     ? parsePrice(sequence.defenseCandle.low)
     : parsePrice(sequence.defenseCandle.high);
-  const candidates = [sweepExtreme, defenseExtreme]
+  const candidates = [defenseExtreme]
     .filter((price): price is number => price !== null && Number.isFinite(price))
     .filter((price) => entry === null || (direction === 'LONG' ? price < entry : price > entry));
   if (!candidates.length) {
     return { stop: null, reason: direction === 'LONG'
-      ? 'Protected 5M battle-zone stop blocked: no sweep/reclaim low is available below entry.'
-      : 'Protected 5M battle-zone stop blocked: no sweep/reject high is available above entry.'
+      ? 'Protected 5M battle-zone stop blocked: no defended 5M structure low is available below entry.'
+      : 'Protected 5M battle-zone stop blocked: no defended 5M structure high is available above entry.'
     };
   }
   const structure = direction === 'LONG' ? Math.min(...candidates) : Math.max(...candidates);
@@ -3747,7 +3730,7 @@ function buildFvgStrengthContinuationCandidate(input: SetupScannerInput): SetupC
     formedAt: selected.zone.formedAt ?? null,
     formedCandleIndex: typeof selected.zone.formedCandleIndex === 'number' ? selected.zone.formedCandleIndex : null,
     confidence: selected.zone.confidence,
-    evidence: '15M trend-side FVG promoted from structured NinjaTrader/OHLC facts. Sweep is not required for this model.',
+    evidence: '15M trend-side FVG promoted from structured NinjaTrader/OHLC facts. Boundary break is not required for this model.',
   };
   const invalidation = stop !== null
     ? direction === 'LONG'
@@ -3782,7 +3765,7 @@ function buildFvgStrengthContinuationCandidate(input: SetupScannerInput): SetupC
         affectsExecution: false,
         direction,
         lineInSand: direction === 'LONG' ? selected.lower : selected.upper,
-        lineReason: `${roleLabel} is the defended trend-side 15M FVG. No sweep required.`,
+        lineReason: `${roleLabel} is the defended trend-side 15M FVG. Boundary break is not required.`,
         requiredClose: direction === 'LONG'
           ? `5M close must hold above ${formatLinePrice(selected.upper)} after trading into the FVG area.`
           : `5M close must hold below ${formatLinePrice(selected.lower)} after trading into the FVG area.`,
@@ -3819,12 +3802,12 @@ function buildFvgStrengthContinuationCandidate(input: SetupScannerInput): SetupC
     targetClarity: targets.target1 !== null && targets.target2 !== null && target ? 0.8 : 0.25,
     proximityScore: noChase ? 0.75 : 0.25,
     levelContextScore: score / 5,
-    levelContextSummary: `FVG Strength Continuation: ${dirLabel} ${roleLabel} ${zoneLabel} was defended by completed 5M OHLC. No sweep required. App targets first; HTF/session levels remain context.`,
+    levelContextSummary: `FVG Strength Continuation: ${dirLabel} ${roleLabel} ${zoneLabel} was defended by completed 5M OHLC. Boundary break is not required. App targets first; HTF/session levels remain context.`,
     evidence: Array.from(new Set([
       `${dirLabel} trend-side 15M FVG active from NinjaTrader OHLC: ${zoneLabel}`,
       `${roleLabel} selected; a single 15M FVG can qualify as the Final Boss Zone when it is the only trend-side FVG.`,
       selected.defense.reason.replace('15M FVG battle zone', `${roleLabel} ${zoneLabel}`),
-      'Sweep is not required for FVG Strength Continuation.',
+      'Boundary break is not required for FVG Strength Continuation.',
       ...(entry !== null ? [`Defended-FVG entry reference from completed 5M close: ${formatLinePrice(entry)}.`] : []),
       ...(stop !== null ? [`Protected 5M structure stop: ${formatLinePrice(stop)}.`] : []),
       ...(risk !== null ? [`Actual entry-to-stop risk measured at ${risk} points.`] : []),
@@ -3839,10 +3822,10 @@ function buildFvgStrengthContinuationCandidate(input: SetupScannerInput): SetupC
     executionStatus: ExecutionStatus.Conditional,
     blockReason: humanReviewReady ? null : NoTradeReason.EntryTriggerPending,
     requiredTrigger: direction === 'LONG'
-      ? `Human-review long: bullish trend-side FVG ${zoneLabel} defended by completed 5M hold/reclaim. No sweep required. ${roleLabel} remains the line in the sand.`
-      : `Human-review short: bearish trend-side FVG ${zoneLabel} defended by completed 5M hold/reject. No sweep required. ${roleLabel} remains the line in the sand.`,
+      ? `Human-review long: bullish trend-side FVG ${zoneLabel} defended by completed 5M hold from the zone. Boundary break is not required. ${roleLabel} remains the line in the sand.`
+      : `Human-review short: bearish trend-side FVG ${zoneLabel} defended by completed 5M rejection from the zone. Boundary break is not required. ${roleLabel} remains the line in the sand.`,
     nextAction: humanReviewReady
-      ? `Human Review Ready ${direction} FVG Strength Continuation. ${roleLabel} defended; no sweep required; trader confirmation required and canExecute remains false.${riskNote ? ` ${riskNote}` : ''}`
+      ? `Human Review Ready ${direction} FVG Strength Continuation. ${roleLabel} defended; boundary break is not required; trader confirmation required and canExecute remains false.${riskNote ? ` ${riskNote}` : ''}`
       : `FVG Strength Continuation watch. ${missingEvidence[0] || 'Wait for completed 5M defense, protected stop, app targets, and target room.'}`,
     reducedRiskPlan: null,
   };
@@ -3960,11 +3943,11 @@ function buildDefendedBattleZoneContinuationCandidate(input: SetupScannerInput):
     targetClarity: targets.target1 !== null && targets.target2 !== null && target ? 0.8 : 0.25,
     proximityScore: noChase ? 0.75 : 0.25,
     levelContextScore: score / 5,
-    levelContextSummary: `Defended Battle Zone Continuation: ${dirLabel} 15M battle zone ${zoneLabel} was swept and ${direction === 'LONG' ? 'reclaimed' : 'rejected'} by completed 5M OHLC. App targets first; HTF/session levels remain context.`,
+    levelContextSummary: `Defended Battle Zone Continuation: ${dirLabel} 15M battle zone ${zoneLabel} was defended by completed 5M OHLC. App targets first; HTF/session levels remain context.`,
     evidence: Array.from(new Set([
       `${dirLabel} 15M FVG battle zone present from NinjaTrader OHLC: ${zoneLabel}`,
       sequence.reason,
-      `5M sweep candle: ${sequence.sweepCandle.timestamp || 'unknown time'}`,
+      `5M defense candle: ${sequence.defenseCandle.timestamp || 'unknown time'}`,
       ...(entry !== null ? [`Battle-zone defense entry reference: ${formatLinePrice(entry)}`] : []),
       ...(stop !== null ? [`Protected 5M battle-zone structure stop: ${formatLinePrice(stop)}.`] : []),
       ...(risk !== null ? [`Actual entry-to-stop risk measured at ${risk} points.`] : []),
@@ -3979,8 +3962,8 @@ function buildDefendedBattleZoneContinuationCandidate(input: SetupScannerInput):
     executionStatus: ExecutionStatus.Conditional,
     blockReason: humanReviewReady ? null : NoTradeReason.EntryTriggerPending,
     requiredTrigger: direction === 'LONG'
-      ? `Human-review long: prior 15M bullish battle zone ${zoneLabel}, completed 5M sweep below and reclaim above the zone, protected 5M stop, app T1/T2, no chase, and forward buy-side target context.`
-      : `Human-review short: prior 15M bearish battle zone ${zoneLabel}, completed 5M sweep above and rejection below the zone, protected 5M stop, app T1/T2, no chase, and forward sell-side target context.`,
+      ? `Human-review long: prior 15M bullish battle zone ${zoneLabel}, completed 5M defense held the zone, protected 5M stop, app T1/T2, no chase, and forward buy-side target context. Boundary break is not required.`
+      : `Human-review short: prior 15M bearish battle zone ${zoneLabel}, completed 5M defense held the zone, protected 5M stop, app T1/T2, no chase, and forward sell-side target context. Boundary break is not required.`,
     nextAction: humanReviewReady
       ? `Human Review Ready ${dirLabel} defended battle-zone continuation plan. No chase; trader confirmation required and canExecute remains false.${riskNote ? ` ${riskNote}` : ''}`
       : `Defended battle-zone continuation watch. ${missingEvidence[0] || 'Wait for completed 5M defense, protected stop, app targets, and target room.'}`,
@@ -4736,13 +4719,13 @@ function notDetectedDefendedBattleZoneContinuationCandidate(entry: SetupRegistry
     targetClarity: 0,
     proximityScore: 0,
     levelContextScore: 0,
-    levelContextSummary: 'Defended Battle Zone Continuation requires a prior 15M FVG battle zone, completed 5M sweep/reclaim or sweep/reject, protected stop, app targets, and no chase.',
+    levelContextSummary: 'Defended Battle Zone Continuation requires a prior 15M FVG battle zone, completed 5M defended-zone reaction, protected stop, app targets, and no chase. Boundary break is not required.',
     evidence: [],
     missingEvidence: entry.requiredEvidence,
     executionStatus: ExecutionStatus.NotDetected,
     blockReason: null,
     requiredTrigger: null,
-    nextAction: 'Wait for a completed 5M sweep/reclaim or sweep/reject of the prior 15M battle zone. Human confirmation remains required.',
+    nextAction: 'Wait for a completed 5M defense of the prior 15M battle zone. Human confirmation remains required; boundary break is not required.',
     reducedRiskPlan: null,
   };
 }
@@ -4826,13 +4809,13 @@ function notDetectedFvgStrengthContinuationCandidate(entry: SetupRegistryEntry):
     targetClarity: 0,
     proximityScore: 0,
     levelContextScore: 0,
-    levelContextSummary: 'FVG Strength Continuation requires trend-side 15M FVG context, a completed 5M defense/hold/reclaim from the FVG area, protected 5M structure stop, app targets, target room, and no chase. No sweep is required.',
+    levelContextSummary: 'FVG Strength Continuation requires trend-side 15M FVG context, a completed 5M defense/hold from the FVG area, protected 5M structure stop, app targets, target room, and no chase. Boundary break is not required.',
     evidence: [],
     missingEvidence: entry.requiredEvidence,
     executionStatus: ExecutionStatus.NotDetected,
     blockReason: null,
     requiredTrigger: null,
-    nextAction: 'Track trend-side 15M FVGs. The first defended FVG or Final Boss Zone can publish for human review after completed 5M defense, protected stop, app targets, and target room. No sweep required.',
+    nextAction: 'Track trend-side 15M FVGs. The first defended FVG or Final Boss Zone can publish for human review after completed 5M defense, protected stop, app targets, and target room. Boundary break is not required.',
     reducedRiskPlan: null,
   };
 }

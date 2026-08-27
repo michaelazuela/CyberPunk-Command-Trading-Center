@@ -75,7 +75,7 @@ function context(direction: 'LONG' | 'SHORT', oneZoneOnly = false): ChartContext
     chartTimestamp: bullish ? '2026-08-27T09:50:00-04:00' : '2026-08-27T10:05:00-04:00',
     screenshotTimezone: 'EST',
     screenshotUsability: 'usable',
-    marketContext: 'FVG Strength Continuation fixture. No sweep required.',
+    marketContext: 'FVG Strength Continuation fixture. Boundary break is not required.',
     keyLevels: bullish
       ? { currentPrice: oneZoneOnly ? 7710 : 7730.25, activeSwingLow: oneZoneOnly ? 7698.75 : 7721.75, previousDayHigh: 7750, activeSwingHigh: 7750 }
       : { currentPrice: oneZoneOnly ? 7709 : 7691.25, activeSwingHigh: oneZoneOnly ? 7722.25 : 7705.25, previousDayLow: 7672, activeSwingLow: 7672 },
@@ -155,8 +155,8 @@ for (const direction of ['LONG', 'SHORT'] as const) {
   assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
   assert.equal(candidate.humanReview?.canExecute, false);
   assert.equal(candidate.humanReview?.discordTradePlanEligible, true);
-  assert.match(candidate.requiredTrigger || '', /No sweep required/);
-  assert.ok(candidate.evidence.some((item) => /Sweep is not required/i.test(item)));
+  assert.match(candidate.requiredTrigger || '', /Boundary break is not required/);
+  assert.ok(candidate.evidence.some((item) => /Boundary break is not required/i.test(item)));
   assert.ok(!candidate.evidence.some((item) => /sweep\/reclaim|sweep\/reject|sweep below|sweep above/i.test(item)));
   assert.ok(candidate.stop !== null);
   assert.ok(candidate.target1 !== null);

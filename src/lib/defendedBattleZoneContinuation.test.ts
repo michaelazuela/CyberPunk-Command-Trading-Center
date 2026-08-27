@@ -107,6 +107,11 @@ for (const direction of ['LONG', 'SHORT'] as const) {
   assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
   assert.equal(candidate.humanReview?.canExecute, false);
   assert.equal(candidate.humanReview?.discordTradePlanEligible, true);
+  assert.match(candidate.requiredTrigger || '', /Boundary break is not required/i);
+  assert.doesNotMatch(candidate.requiredTrigger || '', /sweep|swept|reclaim above|rejection below/i);
+  assert.doesNotMatch(candidate.levelContextSummary || '', /sweep|swept|reclaim above|rejection below/i);
+  assert.equal(candidate.evidence.some((item) => /sweep|swept|reclaim above|rejection below/i.test(item)), false);
+  assert.ok(candidate.evidence.some((item) => /5M defense candle/i.test(item)));
   assert.equal(result.bestExecutableCandidate?.setupType, undefined);
 }
 
