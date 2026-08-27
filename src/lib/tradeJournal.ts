@@ -18,6 +18,7 @@ export type TradeJournalModelType =
   | 'Opening Drive FVG Continuation'
   | 'After-Lunch Drive FVG Continuation'
   | 'Intraday MSS Micro Continuation'
+  | 'Defended Battle Zone Continuation'
   | 'Failed Plan Reversal'
   | 'ICT setup';
 

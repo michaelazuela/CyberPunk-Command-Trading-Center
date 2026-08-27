@@ -186,6 +186,47 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     defaultNextAction:
       'Wait for completed 5M retest/rejection or close-through confirmation, protected stop, app targets, and target room before human-review plan output.',
   },
+  {
+    setupType: SetupType.DefendedBattleZoneContinuation,
+    role: 'primary_model',
+    parentModelFamily: 'FVG_TRADING_SYSTEM_V1',
+    label: 'Defended Battle Zone Continuation',
+    aliases: [
+      'Defended Battle Zone Continuation',
+      'Prior 15M Battle Zone Defense',
+      '15M FVG Sweep Reclaim Continuation',
+      '15M FVG Sweep Reject Continuation',
+    ],
+    priority: 95,
+    allowedSessions: ALL_RESEARCH_SESSIONS,
+    detectionKeywords: [
+      'defended battle zone continuation',
+      'prior 15m battle zone defense',
+      '15m fvg sweep reclaim',
+      '15m fvg sweep reject',
+      'battle zone defended',
+    ],
+    possibleKeywords: [
+      'prior 15m fvg',
+      'sweep below reclaim above',
+      'sweep above reject below',
+      '5m reclaim of battle zone',
+      '5m rejection from battle zone',
+    ],
+    requiredEvidence: [
+      'A prior 15M/HTF FVG battle zone is present from structured OHLC.',
+      'Completed 5M candles sweep through the battle-zone boundary.',
+      'Completed 5M candle reclaims above a long battle zone or rejects below a short battle zone.',
+      'Stop is tied to protected 5M defended-zone structure.',
+      'T1/T2 are computed from actual entry-to-stop risk.',
+      'Forward target room and no-chase conditions remain required.',
+      'This route is decision-support only and never sets canExecute true.',
+    ],
+    defaultRequiredTrigger:
+      'Completed 5M sweep/reclaim or sweep/reject of a prior 15M FVG battle zone, with protected 5M stop and app-owned targets.',
+    defaultNextAction:
+      'Wait for completed 5M battle-zone defense, protected stop, app targets, forward target room, and human confirmation before any action.',
+  },
 ];
 
 export const REGISTERED_SETUP_TYPES = SETUP_REGISTRY.map((entry) => entry.setupType);

@@ -80,6 +80,7 @@ const LIVE_RUNTIME_SETUP_TYPES = new Set<SetupType>([
   SetupType.OpeningDriveFvgContinuation,
   SetupType.AfterLunchDriveFvgContinuation,
   SetupType.IntradayMssMicroContinuation,
+  SetupType.DefendedBattleZoneContinuation,
 ]);
 
 function parsePrice(value: unknown): number | null {
@@ -631,6 +632,8 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
               ? 'After-lunch drive FVG continuation sequence quality.'
           : candidate.setupType === SetupType.IntradayMssMicroContinuation
               ? 'Intraday MSS micro-continuation sequence quality.'
+          : candidate.setupType === SetupType.DefendedBattleZoneContinuation
+              ? 'Defended battle-zone continuation sequence quality.'
           : candidate.setupType === SetupType.FailedPlanReversal
               ? 'Failed plan reversal sequence quality.'
             : 'Sweep -> MSS -> FVG retrace sequence quality.',

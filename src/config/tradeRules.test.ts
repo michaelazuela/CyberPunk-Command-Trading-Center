@@ -7,6 +7,7 @@ const approvedFvgFamily = [
   SetupType.OpeningDriveFvgContinuation,
   SetupType.AfterLunchDriveFvgContinuation,
   SetupType.IntradayMssMicroContinuation,
+  SetupType.DefendedBattleZoneContinuation,
 ];
 
 for (const session of [TRADE_RULES.sessions.morning, TRADE_RULES.sessions.lunch, TRADE_RULES.sessions.evening]) {

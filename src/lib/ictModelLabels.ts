@@ -9,6 +9,7 @@ export type IctModelLabel =
   | 'Opening Drive FVG Continuation'
   | 'After-Lunch Drive FVG Continuation'
   | 'Intraday MSS Micro Continuation'
+  | 'Defended Battle Zone Continuation'
   | 'Failed Plan Reversal'
   | 'ICT setup';
 
@@ -21,6 +22,7 @@ export function normalizeIctModelLabel(setupType?: SetupType | string | null): I
   if (setupType === SetupType.OpeningDriveFvgContinuation) return 'Opening Drive FVG Continuation';
   if (setupType === SetupType.AfterLunchDriveFvgContinuation) return 'After-Lunch Drive FVG Continuation';
   if (setupType === SetupType.IntradayMssMicroContinuation) return 'Intraday MSS Micro Continuation';
+  if (setupType === SetupType.DefendedBattleZoneContinuation) return 'Defended Battle Zone Continuation';
   if (setupType === SetupType.FailedPlanReversal) return 'Failed Plan Reversal';
   return 'ICT setup';
 }

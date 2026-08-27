@@ -82,6 +82,7 @@ function formatSetupType(setupType?: SetupType | string): string {
     [SetupType.FvgImbalancePullback]: 'FVG / Imbalance Pullback',
     [SetupType.MarketStructureShift]: 'Market Structure Shift / ChoCH',
     [SetupType.HtfDrawContinuationAfterRaid]: 'HTF Draw Continuation After Raid/Reclaim',
+    [SetupType.DefendedBattleZoneContinuation]: 'Defended Battle Zone Continuation',
     [SetupType.OpeningOrderBlock]: 'Opening Order Block',
     [SetupType.EqualHighsLows]: 'Equal Highs / Equal Lows',
     [SetupType.InitialBalanceExtension]: 'Initial Balance Extension',

@@ -8,6 +8,7 @@ const ACTIVE_FVG_RUNTIME_SETUPS = [
   SetupType.OpeningDriveFvgContinuation,
   SetupType.AfterLunchDriveFvgContinuation,
   SetupType.IntradayMssMicroContinuation,
+  SetupType.DefendedBattleZoneContinuation,
 ] as const;
 
 export const TRADE_RULES = {

@@ -32,6 +32,7 @@ const activeFvgFamily = [
   SetupType.OpeningDriveFvgContinuation,
   SetupType.AfterLunchDriveFvgContinuation,
   SetupType.IntradayMssMicroContinuation,
+  SetupType.DefendedBattleZoneContinuation,
 ];
 
 assertExactSet(setupTypes(SETUP_REGISTRY), activeFvgFamily, 'active setup registry');
@@ -59,8 +60,8 @@ for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch']
   assert(supporting.length === 0, `${sessionType} supporting registry must be empty`);
   assert(deprecated.length === 0, `${sessionType} deprecated registry must be empty`);
   const expected = sessionType === 'morning' || sessionType === 'replay_morning'
-    ? [SetupType.FvgTradingSystemV1, SetupType.OpeningDriveFvgContinuation]
-    : [SetupType.FvgTradingSystemV1, SetupType.AfterLunchDriveFvgContinuation, SetupType.IntradayMssMicroContinuation];
+    ? [SetupType.FvgTradingSystemV1, SetupType.OpeningDriveFvgContinuation, SetupType.DefendedBattleZoneContinuation]
+    : [SetupType.FvgTradingSystemV1, SetupType.AfterLunchDriveFvgContinuation, SetupType.IntradayMssMicroContinuation, SetupType.DefendedBattleZoneContinuation];
   assertExactSet(setupTypes(primary), expected, `${sessionType} primary registry`);
   assertExactSet(setupTypes(allowed), expected, `${sessionType} compatibility registry`);
 }

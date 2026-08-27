@@ -1418,6 +1418,112 @@ function completedFiveMinuteDefenseCandle(
   };
 }
 
+interface DefendedBattleZoneSequence {
+  zone: NonNullable<ChartContext['fvgZones']>[number];
+  sweepCandle: ReturnType<typeof readableCompletedFiveMinuteCandles>[number];
+  defenseCandle: ReturnType<typeof readableCompletedFiveMinuteCandles>[number];
+  sweepIndex: number;
+  defenseIndex: number;
+  lower: number;
+  upper: number;
+  entry: number | null;
+  reason: string;
+}
+
+function defendedBattleZoneSequence(chartContext: ChartContext, direction: Direction): DefendedBattleZoneSequence | null {
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  const tolerance = TRADE_RULES.targetModel.tickSize;
+  const zones = (chartContext.multiTimeframeContext?.fifteenMinute.fvgZones || [])
+    .filter((zone) =>
+      zone.direction === direction &&
+      isReadableConfidence(zone.confidence) &&
+      zone.impulseQualified !== false &&
+      parsePrice(zone.lower) !== null &&
+      parsePrice(zone.upper) !== null
+    )
+    .sort((a, b) => {
+      const aTime = Date.parse(String(a.formedAt || ''));
+      const bTime = Date.parse(String(b.formedAt || ''));
+      return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
+    });
+  const candles = readableCompletedFiveMinuteCandles(chartContext);
+  for (const zone of zones) {
+    const lower = parsePrice(zone.lower);
+    const upper = parsePrice(zone.upper);
+    if (lower === null || upper === null) continue;
+    const low = Math.min(lower, upper);
+    const high = Math.max(lower, upper);
+    const afterZone = candles
+      .map((candle, index) => ({ candle, index }))
+      .filter(({ candle }) => isAfterReferenceCandle(candle, {
+        candleIndex: null,
+        timestamp: zone.formedAt ?? null,
+      }));
+    const sweep = afterZone.find(({ candle }) => {
+      const candleLow = parsePrice(candle.low);
+      const candleHigh = parsePrice(candle.high);
+      const close = parsePrice(candle.close);
+      if (candleLow === null || candleHigh === null || close === null) return false;
+      return direction === 'LONG'
+        ? candleLow < low - tolerance
+        : candleHigh > high + tolerance;
+    });
+    if (!sweep) continue;
+    const defense = afterZone.find(({ candle, index }) => {
+      if (index < sweep.index) return false;
+      const candleLow = parsePrice(candle.low);
+      const candleHigh = parsePrice(candle.high);
+      const close = parsePrice(candle.close);
+      if (candleLow === null || candleHigh === null || close === null) return false;
+      const touchesZone = candleLow <= high + tolerance && candleHigh >= low - tolerance;
+      if (!touchesZone) return false;
+      return direction === 'LONG'
+        ? close >= high && (candle.direction === 'bullish' || candle.isReclaim || candle.isRejection || candle.isExpansion)
+        : close <= low && (candle.direction === 'bearish' || candle.isReclaim || candle.isRejection || candle.isExpansion);
+    });
+    if (!defense) continue;
+    const entry = parsePrice(defense.candle.close);
+    return {
+      zone,
+      sweepCandle: sweep.candle,
+      defenseCandle: defense.candle,
+      sweepIndex: sweep.index,
+      defenseIndex: defense.index,
+      lower: low,
+      upper: high,
+      entry: entry !== null ? roundToTick(entry) : null,
+      reason: direction === 'LONG'
+        ? `Completed 5M sweep/reclaim defended the 15M battle zone ${formatLinePrice(low)}-${formatLinePrice(high)}${defense.candle.timestamp ? ` at ${defense.candle.timestamp}` : ''}.`
+        : `Completed 5M sweep/reject defended the 15M battle zone ${formatLinePrice(low)}-${formatLinePrice(high)}${defense.candle.timestamp ? ` at ${defense.candle.timestamp}` : ''}.`,
+    };
+  }
+  return null;
+}
+
+function protectedBattleZoneDefenseStopResult(direction: Direction, sequence: DefendedBattleZoneSequence | null, entry: number | null): ProtectedMssStopResult {
+  if (!sequence || (direction !== 'LONG' && direction !== 'SHORT')) {
+    return { stop: null, reason: 'Protected battle-zone stop requires a completed 5M sweep/reclaim or sweep/reject sequence.' };
+  }
+  const tick = TRADE_RULES.targetModel.tickSize;
+  const sweepExtreme = direction === 'LONG'
+    ? parsePrice(sequence.sweepCandle.low)
+    : parsePrice(sequence.sweepCandle.high);
+  const defenseExtreme = direction === 'LONG'
+    ? parsePrice(sequence.defenseCandle.low)
+    : parsePrice(sequence.defenseCandle.high);
+  const candidates = [sweepExtreme, defenseExtreme]
+    .filter((price): price is number => price !== null && Number.isFinite(price))
+    .filter((price) => entry === null || (direction === 'LONG' ? price < entry : price > entry));
+  if (!candidates.length) {
+    return { stop: null, reason: direction === 'LONG'
+      ? 'Protected 5M battle-zone stop blocked: no sweep/reclaim low is available below entry.'
+      : 'Protected 5M battle-zone stop blocked: no sweep/reject high is available above entry.'
+    };
+  }
+  const structure = direction === 'LONG' ? Math.min(...candidates) : Math.max(...candidates);
+  return { stop: roundToTick(direction === 'LONG' ? structure - tick : structure + tick), reason: null };
+}
+
 function protectedDefendedFvgStopResult(chartContext: ChartContext, direction: Direction, entry: number | null, defenseCandle: ReturnType<typeof readableCompletedFiveMinuteCandles>[number] | null): ProtectedMssStopResult {
   if (direction !== 'LONG' && direction !== 'SHORT') return { stop: null, reason: 'Protected defended-FVG stop requires a LONG or SHORT direction.' };
   const tick = TRADE_RULES.targetModel.tickSize;
@@ -3471,6 +3577,164 @@ function openingDriveConfidenceScore(args: {
   );
 }
 
+function defendedBattleZoneContinuationConfidenceScore(args: {
+  htfGate: boolean;
+  hasSequence: boolean;
+  hasEntryStopTargets: boolean;
+  hasTarget: boolean;
+  noChase: boolean;
+  riskWithinStandardLimit: boolean;
+}): number {
+  return Math.min(100,
+    (args.hasSequence ? 42 : 0) +
+    (args.hasEntryStopTargets ? 18 : 0) +
+    (args.htfGate ? 12 : 0) +
+    (args.hasTarget ? 10 : 0) +
+    (args.noChase ? 10 : 0) +
+    (args.riskWithinStandardLimit ? 8 : 0)
+  );
+}
+
+function buildDefendedBattleZoneContinuationCandidate(input: SetupScannerInput): SetupCandidate | null {
+  const chartContext = input.chartContext;
+  if (!chartContext) return null;
+  const registry = getPrimarySetupRegistry(input.sessionType).find((entry) => entry.setupType === SetupType.DefendedBattleZoneContinuation);
+  if (!registry) return null;
+
+  const sequenceOptions = (['LONG', 'SHORT'] as const)
+    .map((direction) => ({ direction, sequence: defendedBattleZoneSequence(chartContext, direction) }))
+    .filter((item): item is { direction: Exclude<Direction, 'NO TRADE'>; sequence: DefendedBattleZoneSequence } => Boolean(item.sequence))
+    .sort((a, b) => {
+      const aligned = chartContext.multiTimeframeContext?.alignment?.alignedDirection;
+      if (a.direction === aligned && b.direction !== aligned) return -1;
+      if (b.direction === aligned && a.direction !== aligned) return 1;
+      return b.sequence.defenseIndex - a.sequence.defenseIndex;
+    });
+  const selected = sequenceOptions[0];
+  if (!selected) return null;
+
+  const { direction, sequence } = selected;
+  const htfGate = htfContextGate(chartContext);
+  const entry = sequence.entry;
+  const stopResult = protectedBattleZoneDefenseStopResult(direction, sequence, entry);
+  const stop = stopResult.stop;
+  const stopIsDirectionallyValid = hasDirectionallyValidStop(direction, entry, stop);
+  const targets = computedTargets(direction, entry, stop);
+  const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
+    (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
+  const riskWithinStandardLimit = risk !== null && risk > 0 && risk <= TRADE_RULES.maxRiskPoints;
+  const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? latestCompletedClose(chartContext) ?? entry;
+  const target = liquidityTargetForContinuation(chartContext, direction, entry, currentPrice);
+  const noChase = noChaseStillAvailable(direction, entry, stop, currentPrice);
+  const alreadyInvalidated = currentPrice !== null && stop !== null
+    ? direction === 'LONG'
+      ? currentPrice <= stop
+      : currentPrice >= stop
+    : false;
+  const hasEntryStopTargets = entry !== null && stop !== null && stopIsDirectionallyValid && targets.target1 !== null && targets.target2 !== null;
+  const humanReviewReady = htfGate.sufficient && hasEntryStopTargets && Boolean(target) && noChase && !alreadyInvalidated;
+  const score = defendedBattleZoneContinuationConfidenceScore({
+    htfGate: htfGate.sufficient,
+    hasSequence: true,
+    hasEntryStopTargets,
+    hasTarget: Boolean(target),
+    noChase,
+    riskWithinStandardLimit,
+  });
+  const dirLabel = directionLabel(direction);
+  const zoneLabel = `${formatLinePrice(sequence.lower)}-${formatLinePrice(sequence.upper)}`;
+  const tacticalZone: TacticalZoneBounds = {
+    sourceOfTruth: 'ohlc_fvg_zone',
+    direction,
+    lower: sequence.lower,
+    upper: sequence.upper,
+    midpoint: roundToTick(parsePrice(sequence.zone.midpoint) ?? (sequence.lower + sequence.upper) / 2),
+    label: `15M defended battle zone: ${zoneLabel}`,
+    sourceTimeframe: '15M',
+    formedAt: sequence.zone.formedAt ?? null,
+    formedCandleIndex: typeof sequence.zone.formedCandleIndex === 'number' ? sequence.zone.formedCandleIndex : null,
+    confidence: sequence.zone.confidence,
+    evidence: '15M battle zone promoted from structured NinjaTrader/OHLC FVG facts.',
+  };
+  const invalidation = stop !== null
+    ? direction === 'LONG'
+      ? `Invalid if price trades below the protected 5M battle-zone defense stop near ${formatLinePrice(stop)}.`
+      : `Invalid if price trades above the protected 5M battle-zone defense stop near ${formatLinePrice(stop)}.`
+    : null;
+  const riskAdvisoryStatus = riskAdvisoryStatusFor(risk);
+  const riskNote = riskAdvisoryNote(risk);
+  const missingEvidence = Array.from(new Set([
+    ...htfGate.missingEvidence,
+    ...(stopResult.reason ? [stopResult.reason] : []),
+    ...(entry === null ? ['Defined 5M battle-zone reclaim/reject entry'] : []),
+    ...(stop === null || !stopIsDirectionallyValid ? ['Protected 5M battle-zone structure stop'] : []),
+    ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
+    ...(!target ? ['Forward liquidity/target context in the trade direction'] : []),
+    ...(!noChase ? ['No-chase gate: price already extended to or beyond T1 from the battle-zone defense entry'] : []),
+    ...(alreadyInvalidated ? [`No fresh entry: latest completed 5M close ${formatLinePrice(currentPrice)} has already traded through the protected stop ${formatLinePrice(stop)}.`] : []),
+  ]));
+
+  return {
+    setupType: SetupType.DefendedBattleZoneContinuation,
+    scenarioLabel: registry.label,
+    candidateState: humanReviewReady ? 'HUMAN_REVIEW_READY' : 'BATTLE_ZONE_DEFENSE_PENDING',
+    pathway: 'defended_battle_zone_continuation',
+    tacticalZone,
+    humanReview: {
+      status: humanReviewReady ? 'HumanReviewReady' : 'OpeningObservationArmed',
+      canExecute: false,
+      requiresTraderConfirmation: true,
+      discordTradePlanEligible: humanReviewReady,
+      reason: humanReviewReady
+        ? 'Defended battle-zone continuation is structurally qualified for human review. Trader confirmation is required before action.'
+        : 'Defended battle-zone continuation watch is active; wait for protected stop, app targets, forward room, and human confirmation.',
+    },
+    direction,
+    detectedStatus: humanReviewReady ? SetupCandidateStatus.Conditional : SetupCandidateStatus.Possible,
+    confidence: score >= 82 ? 'High' : score >= 70 ? 'Medium' : 'Low',
+    priority: registry.priority,
+    entry,
+    stop,
+    target1: targets.target1,
+    target2: targets.target2,
+    riskPoints: risk,
+    riskAdvisoryStatus,
+    riskPolicy: riskAdvisoryStatus === 'RISK_WITHIN_STANDARD_LIMIT' ? 'STANDARD_RISK' : 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    modelConfidenceScore: score,
+    invalidation,
+    entryClarity: entry !== null ? 0.85 : 0.25,
+    stopClarity: stop !== null ? 0.85 : 0.25,
+    targetClarity: targets.target1 !== null && targets.target2 !== null && target ? 0.8 : 0.25,
+    proximityScore: noChase ? 0.75 : 0.25,
+    levelContextScore: score / 5,
+    levelContextSummary: `Defended Battle Zone Continuation: ${dirLabel} 15M battle zone ${zoneLabel} was swept and ${direction === 'LONG' ? 'reclaimed' : 'rejected'} by completed 5M OHLC. App targets first; HTF/session levels remain context.`,
+    evidence: Array.from(new Set([
+      `${dirLabel} 15M FVG battle zone present from NinjaTrader OHLC: ${zoneLabel}`,
+      sequence.reason,
+      `5M sweep candle: ${sequence.sweepCandle.timestamp || 'unknown time'}`,
+      ...(entry !== null ? [`Battle-zone defense entry reference: ${formatLinePrice(entry)}`] : []),
+      ...(stop !== null ? [`Protected 5M battle-zone structure stop: ${formatLinePrice(stop)}.`] : []),
+      ...(risk !== null ? [`Actual entry-to-stop risk measured at ${risk} points.`] : []),
+      ...(targets.target1 !== null && targets.target2 !== null ? [`App targets: T1 ${formatLinePrice(targets.target1)}, T2 ${formatLinePrice(targets.target2)}.`] : []),
+      ...htfGate.evidence,
+      ...(target ? [`Forward liquidity/target context: ${target.label} ${target.price}`] : []),
+      'Human review required. Decision-support plan only. Trader must confirm entry before action.',
+      'DefendedBattleZoneContinuation never sets canExecute true and does not approve broker execution.',
+      ...(riskNote ? [riskNote] : []),
+    ])),
+    missingEvidence,
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: humanReviewReady ? null : NoTradeReason.EntryTriggerPending,
+    requiredTrigger: direction === 'LONG'
+      ? `Human-review long: prior 15M bullish battle zone ${zoneLabel}, completed 5M sweep below and reclaim above the zone, protected 5M stop, app T1/T2, no chase, and forward buy-side target context.`
+      : `Human-review short: prior 15M bearish battle zone ${zoneLabel}, completed 5M sweep above and rejection below the zone, protected 5M stop, app T1/T2, no chase, and forward sell-side target context.`,
+    nextAction: humanReviewReady
+      ? `Human Review Ready ${dirLabel} defended battle-zone continuation plan. No chase; trader confirmation required and canExecute remains false.${riskNote ? ` ${riskNote}` : ''}`
+      : `Defended battle-zone continuation watch. ${missingEvidence[0] || 'Wait for completed 5M defense, protected stop, app targets, and target room.'}`,
+    reducedRiskPlan: null,
+  };
+}
+
 function buildSessionDriveFvgContinuationCandidate(
   input: SetupScannerInput,
   setupType: SetupType.OpeningDriveFvgContinuation | SetupType.AfterLunchDriveFvgContinuation,
@@ -4184,6 +4448,48 @@ function notDetectedIntradayMssMicroContinuationCandidate(entry: SetupRegistryEn
     blockReason: null,
     requiredTrigger: null,
     nextAction: 'Wait for aligned 15M/5M completed MSS and a completed 5M FVG retest/rejection or close-through beyond the named HTF line in the sand. Human confirmation remains required.',
+    reducedRiskPlan: null,
+  };
+}
+
+function notDetectedDefendedBattleZoneContinuationCandidate(entry: SetupRegistryEntry): SetupCandidate {
+  return {
+    setupType: entry.setupType,
+    scenarioLabel: entry.label,
+    candidateState: 'NO_QUALIFIED_STATE',
+    pathway: 'defended_battle_zone_continuation',
+    humanReview: {
+      status: 'OpeningObservationArmed',
+      canExecute: false,
+      requiresTraderConfirmation: true,
+      discordTradePlanEligible: false,
+      reason: 'Defended Battle Zone Continuation is not armed.',
+    },
+    direction: 'NO TRADE',
+    detectedStatus: SetupCandidateStatus.NotDetected,
+    confidence: 'Low',
+    priority: entry.priority,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    riskAdvisoryStatus: 'RISK_INVALID_OR_UNDEFINED',
+    riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    modelConfidenceScore: 0,
+    invalidation: null,
+    entryClarity: 0,
+    stopClarity: 0,
+    targetClarity: 0,
+    proximityScore: 0,
+    levelContextScore: 0,
+    levelContextSummary: 'Defended Battle Zone Continuation requires a prior 15M FVG battle zone, completed 5M sweep/reclaim or sweep/reject, protected stop, app targets, and no chase.',
+    evidence: [],
+    missingEvidence: entry.requiredEvidence,
+    executionStatus: ExecutionStatus.NotDetected,
+    blockReason: null,
+    requiredTrigger: null,
+    nextAction: 'Wait for a completed 5M sweep/reclaim or sweep/reject of the prior 15M battle zone. Human confirmation remains required.',
     reducedRiskPlan: null,
   };
 }
@@ -5807,7 +6113,7 @@ function applyActiveTimeframeMssRulesToCandidate(candidate: SetupCandidate, char
   if (alignedHigherTimeframeMss.length) {
     evidence.push(`Active timeframe MSS context aligned on ${alignedHigherTimeframeMss.map((item) => item.timeframe).join(', ')}.`);
   }
-  const humanReviewHtfCautionOnly = openingDriveHumanReview || candidate.pathway === 'intraday_mss_micro_continuation';
+  const humanReviewHtfCautionOnly = openingDriveHumanReview || candidate.pathway === 'intraday_mss_micro_continuation' || candidate.pathway === 'defended_battle_zone_continuation';
   if (humanReviewHtfCautionOnly && opposingHigherTimeframeMss.length) {
     evidence.push(`HTF caution: opposing completed HTF MSS on ${opposingHigherTimeframeMss.map((item) => item.timeframe).join(', ')} is reported for human review, not used to erase raw evidence or suppress the human-review plan.`);
   }
@@ -5862,6 +6168,7 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
   const openingDriveFvgCandidate = buildSessionDriveFvgContinuationCandidate(input, SetupType.OpeningDriveFvgContinuation);
   const afterLunchDriveFvgCandidate = buildSessionDriveFvgContinuationCandidate(input, SetupType.AfterLunchDriveFvgContinuation);
   const intradayMssMicroCandidate = buildIntradayMssMicroContinuationCandidate(input);
+  const defendedBattleZoneCandidate = buildDefendedBattleZoneContinuationCandidate(input);
   const intradayMssMicroDataLimitedCandidate = !intradayMssMicroCandidate && input.chartContext
     ? (() => {
       const entry = getPrimarySetupRegistry(input.sessionType).find((item) => item.setupType === SetupType.IntradayMssMicroContinuation);
@@ -5886,6 +6193,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           ? afterLunchDriveFvgCandidate
           : entry.setupType === SetupType.IntradayMssMicroContinuation && intradayMssMicroCandidate
           ? intradayMssMicroCandidate
+          : entry.setupType === SetupType.DefendedBattleZoneContinuation && defendedBattleZoneCandidate
+          ? defendedBattleZoneCandidate
           : entry.setupType === SetupType.IntradayMssMicroContinuation && intradayMssMicroDataLimitedCandidate
           ? intradayMssMicroDataLimitedCandidate
           : entry.setupType === SetupType.FailedPlanReversal && failedPlanReversalCandidate
@@ -5902,6 +6211,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           ? notDetectedSessionDriveFvgCandidate(entry)
           : entry.setupType === SetupType.IntradayMssMicroContinuation
           ? notDetectedIntradayMssMicroContinuationCandidate(entry)
+          : entry.setupType === SetupType.DefendedBattleZoneContinuation
+          ? notDetectedDefendedBattleZoneContinuationCandidate(entry)
           : entry.setupType === SetupType.FailedPlanReversal
           ? notDetectedFailedPlanReversalCandidate(entry)
           : candidateForEntry(entry, input, text)

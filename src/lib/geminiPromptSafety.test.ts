@@ -30,6 +30,7 @@ assert.ok(htfRule.includes('HtfDisplacementFvgContinuation'));
 assert.ok(htfRule.includes('OpeningDriveFvgContinuation'));
 assert.ok(htfRule.includes('AfterLunchDriveFvgContinuation'));
 assert.ok(htfRule.includes('IntradayMssMicroContinuation'));
+assert.ok(htfRule.includes('DefendedBattleZoneContinuation'));
 assert.ok(htfRule.includes('FailedPlanReversal'));
 assert.ok(htfRule.includes('TurtleSoup'));
 assert.ok(htfRule.includes('SweepMssFvgRetrace'));
