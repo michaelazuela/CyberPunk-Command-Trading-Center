@@ -89,6 +89,17 @@ export const EVENING_MARKET_MAPPING_WINDOW = {
   note: "Scanner desk-plan and market-map coverage runs during the approved evening setup scan from 6:45 PM through 10:15 PM ET.",
 } as const;
 
+export const CONTINUOUS_HIGH_CONFIDENCE_REVIEW_WINDOW = {
+  label: "24-Hour High-Confidence Review Monitor",
+  startHour: 0,
+  startMinute: 0,
+  endHour: 24,
+  endMinute: 0,
+  timezone: "America/New_York",
+  authority: "discord_human_review_only",
+  note: "Live scanner may monitor and publish high-confidence decision-support review plans any time the futures market is open. This does not approve execution, place orders, or bypass deterministic 5M/risk/no-chase gates.",
+} as const;
+
 export type WindowKey = "morning" | "lunch" | "evening";
 export type ActiveSetupScanWindow = 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'EVENING_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
 
@@ -159,6 +170,10 @@ export function classifyActiveSetupScanWindowByEtMinutes(minutes: number): Activ
 export function isMarketMappingWindowByEtMinutes(minutes: number): boolean {
   return (minutes >= MARKET_MAPPING_WINDOW_START && minutes < MARKET_MAPPING_WINDOW_END) ||
     (minutes >= EVENING_MARKET_MAPPING_WINDOW_START && minutes < EVENING_MARKET_MAPPING_WINDOW_END);
+}
+
+export function isContinuousHighConfidenceReviewWindowByEtMinutes(minutes: number): boolean {
+  return minutes >= 0 && minutes < 24 * 60;
 }
 
 export function isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes: number): boolean {

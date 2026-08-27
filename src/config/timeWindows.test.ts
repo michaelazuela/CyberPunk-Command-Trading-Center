@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import {
   classifyActiveSetupScanWindowByEtMinutes,
+  CONTINUOUS_HIGH_CONFIDENCE_REVIEW_WINDOW,
   isMarketMappingWindowByEtMinutes,
+  isContinuousHighConfidenceReviewWindowByEtMinutes,
   isIntradayMssMicroContinuationLateDayReviewByEtMinutes,
   EVENING_MARKET_MAPPING_WINDOW,
   MARKET_MAPPING_WINDOW,
@@ -37,6 +39,9 @@ assert.equal(EVENING_MARKET_MAPPING_WINDOW.startHour, 18);
 assert.equal(EVENING_MARKET_MAPPING_WINDOW.startMinute, 45);
 assert.equal(EVENING_MARKET_MAPPING_WINDOW.endHour, 22);
 assert.equal(EVENING_MARKET_MAPPING_WINDOW.endMinute, 15);
+assert.equal(CONTINUOUS_HIGH_CONFIDENCE_REVIEW_WINDOW.startHour, 0);
+assert.equal(CONTINUOUS_HIGH_CONFIDENCE_REVIEW_WINDOW.endHour, 24);
+assert.equal(CONTINUOUS_HIGH_CONFIDENCE_REVIEW_WINDOW.authority, 'discord_human_review_only');
 
 assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('09:14')), 'OUTSIDE_SETUP_SCAN');
 assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('09:15')), 'MORNING_SETUP_SCAN');
@@ -71,5 +76,9 @@ assert.equal(isMarketMappingWindowByEtMinutes(minutes('18:44')), false);
 assert.equal(isMarketMappingWindowByEtMinutes(minutes('18:45')), true);
 assert.equal(isMarketMappingWindowByEtMinutes(minutes('22:14')), true);
 assert.equal(isMarketMappingWindowByEtMinutes(minutes('22:15')), false);
+assert.equal(isContinuousHighConfidenceReviewWindowByEtMinutes(minutes('00:00')), true);
+assert.equal(isContinuousHighConfidenceReviewWindowByEtMinutes(minutes('08:00')), true);
+assert.equal(isContinuousHighConfidenceReviewWindowByEtMinutes(minutes('16:05')), true);
+assert.equal(isContinuousHighConfidenceReviewWindowByEtMinutes(minutes('22:15')), true);
 
 console.log('Active setup scan windows verified.');

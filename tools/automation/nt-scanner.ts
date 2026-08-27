@@ -150,6 +150,7 @@ type Instrument = 'MES' | 'MNQ';
 type LiveSession = 'morning' | 'lunch' | 'evening';
 type ScannerSetupSession = 'morning' | 'lunch';
 const ACTIVE_MARKET_MAPPING_WINDOWS_TEXT =
+  `continuous high-confidence review monitoring while the futures market is open; primary map windows remain ` +
   `${MARKET_MAPPING_WINDOW.startHour}:${String(MARKET_MAPPING_WINDOW.startMinute).padStart(2, '0')}-${MARKET_MAPPING_WINDOW.endHour}:${String(MARKET_MAPPING_WINDOW.endMinute).padStart(2, '0')} ET and ` +
   `${EVENING_MARKET_MAPPING_WINDOW.startHour}:${String(EVENING_MARKET_MAPPING_WINDOW.startMinute).padStart(2, '0')}-${EVENING_MARKET_MAPPING_WINDOW.endHour}:${String(EVENING_MARKET_MAPPING_WINDOW.endMinute).padStart(2, '0')} ET`;
 const ACTIVE_SCANNER_MODEL_SURFACE = 'FVG_TRADING_SYSTEM_V1';

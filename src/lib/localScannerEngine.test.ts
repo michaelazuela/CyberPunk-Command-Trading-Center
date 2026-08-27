@@ -19,6 +19,7 @@ import {
   scoreScannerCandidate,
   shouldSendScannerAlert,
   validateDeskStateReplayPath,
+  CONTINUOUS_REVIEW_MONITOR_LABEL,
 } from './localScannerEngine';
 import { SETUP_REGISTRY } from '../config/setupRegistry';
 import { actualResultRFromExit, buildTradeJournalRecord } from './tradeJournal';
@@ -142,19 +143,24 @@ assert.equal(postScanWindow.allowsMarketMapping, true);
 assert.equal(postScanWindow.allowsDeskPlan, true);
 assert.equal(scannerContextLogLabel(postScanWindow), 'Market Mapping Mode');
 assert.equal(scannerContextState(postScanWindow), 'MapReady');
-assert.equal(outsideWindow.allowsDiscordAlert, false);
-assert.equal(outsideWindow.allowsMarketMapping, false);
-assert.equal(outsideWindow.allowsDeskPlan, false);
-assert.equal(scannerContextLogLabel(outsideWindow), MARKET_MAPPING_OFF_HOURS_LABEL);
-assert.equal(scannerContextState(outsideWindow), 'NoData');
-assert.equal(closeWindow.allowsMarketMapping, false);
-assert.equal(closeWindow.allowsDeskPlan, false);
-assert.equal(scannerContextLogLabel(closeWindow), MARKET_MAPPING_OFF_HOURS_LABEL);
-assert.equal(scannerContextState(closeWindow), 'NoData');
-assert.equal(beforeEveningWindow.session, 'outside');
+assert.equal(outsideWindow.session, 'premarket');
+assert.equal(outsideWindow.label, CONTINUOUS_REVIEW_MONITOR_LABEL);
+assert.equal(outsideWindow.allowsTradePlan, true);
+assert.equal(outsideWindow.allowsDiscordAlert, true);
+assert.equal(outsideWindow.allowsMarketMapping, true);
+assert.equal(outsideWindow.allowsDeskPlan, true);
+assert.equal(scannerContextLogLabel(outsideWindow), CONTINUOUS_REVIEW_MONITOR_LABEL);
+assert.equal(scannerContextState(outsideWindow), 'MapReady');
+assert.equal(closeWindow.session, 'afternoon');
+assert.equal(closeWindow.allowsMarketMapping, true);
+assert.equal(closeWindow.allowsDeskPlan, true);
+assert.equal(scannerContextLogLabel(closeWindow), CONTINUOUS_REVIEW_MONITOR_LABEL);
+assert.equal(scannerContextState(closeWindow), 'MapReady');
+assert.equal(beforeEveningWindow.session, 'afternoon');
 assert.equal(beforeEveningWindow.nextWindowLabel, 'Evening Setup Scan');
-assert.equal(beforeEveningWindow.allowsTradePlan, false);
-assert.equal(beforeEveningWindow.allowsMarketMapping, false);
+assert.equal(beforeEveningWindow.allowsTradePlan, true);
+assert.equal(beforeEveningWindow.allowsDiscordAlert, true);
+assert.equal(beforeEveningWindow.allowsMarketMapping, true);
 assert.equal(eveningWindow.session, 'evening');
 assert.equal(eveningWindow.label, 'Evening Setup Scan');
 assert.equal(eveningWindow.allowsTradePlan, true);
@@ -165,9 +171,10 @@ assert.equal(scannerContextLogLabel(eveningWindow), 'Market Mapping Mode');
 assert.equal(scannerContextState(eveningWindow), 'MapReady');
 assert.equal(lateEveningWindow.session, 'evening');
 assert.equal(lateEveningWindow.allowsTradePlan, true);
-assert.equal(eveningCloseWindow.session, 'outside');
-assert.equal(eveningCloseWindow.allowsTradePlan, false);
-assert.equal(eveningCloseWindow.allowsMarketMapping, false);
+assert.equal(eveningCloseWindow.session, 'premarket');
+assert.equal(eveningCloseWindow.allowsTradePlan, true);
+assert.equal(eveningCloseWindow.allowsDiscordAlert, true);
+assert.equal(eveningCloseWindow.allowsMarketMapping, true);
 assert.equal(fridayEveningClosureWindow.session, 'outside');
 assert.equal(fridayEveningClosureWindow.label, 'Market Closed - Weekend');
 assert.equal(fridayEveningClosureWindow.allowsTradePlan, false);
@@ -292,9 +299,10 @@ assert.ok(lunchScore.score < midMorningScore.score);
 assert.ok(lunchScore.score >= 45);
 
 const outsideScore = scoreScannerCandidate(strongCandidate, outsideWindow, 101, true, 8 * 60);
-assert.equal(outsideScore.score, 0);
+assert.ok(outsideScore.score >= 75);
+assert.equal(outsideScore.hardBlocker, null);
 
-const lowEvScore = scoreScannerCandidate(candidate({ target1: 106 }), morningWindow, 101, true, 10 * 60 + 5);
+const lowEvScore = scoreScannerCandidate(candidate({ target1: 106, target2: 106 }), morningWindow, 101, true, 10 * 60 + 5);
 assert.equal(lowEvScore.score, 0);
 
 const staleScore = scoreScannerCandidate(candidate({ blockReason: 'stale setup' as NoTradeReason }), morningWindow, 101, true, 10 * 60 + 5);
@@ -511,7 +519,7 @@ assert.equal(
 );
 assert.equal(
   shouldSendScannerAlert({ state: 'Conditional', confidence: 100, window: outsideWindow, candidate: strongCandidate }).shouldSend,
-  false
+  true
 );
 assert.equal(
   shouldSendScannerAlert({ state: 'Conditional', confidence: 100, window: morningWindow, candidate: strongCandidate, duplicate: true }).shouldSend,

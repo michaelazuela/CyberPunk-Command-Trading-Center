@@ -1,5 +1,5 @@
 import { TRADE_RULES } from '../config/tradeRules';
-import { isMarketMappingWindowByEtMinutes } from '../config/timeWindows';
+import { CONTINUOUS_HIGH_CONFIDENCE_REVIEW_WINDOW, isContinuousHighConfidenceReviewWindowByEtMinutes, isMarketMappingWindowByEtMinutes } from '../config/timeWindows';
 import { SETUP_REGISTRY, type ParentModelFamily, type SetupRegistryEntry, type SetupRole, type SetupSession } from '../config/setupRegistry';
 import { ChartContext, ExecutionStatus, FvgZoneFact, NoTradeReason, SetupCandidate, SetupType, TacticalZoneBounds, TargetObjective, TimeframeFactSet, TradeDecisionStatus } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
@@ -36,6 +36,7 @@ export interface ScannerWindowState {
 
 export const MARKET_MAPPING_LABEL = 'Market Mapping Mode';
 export const MARKET_MAPPING_OFF_HOURS_LABEL = 'Market Mapping Off Hours';
+export const CONTINUOUS_REVIEW_MONITOR_LABEL = CONTINUOUS_HIGH_CONFIDENCE_REVIEW_WINDOW.label;
 
 export const MARKET_MAPPING_COVERAGE = [
   'ETH high/low',
@@ -826,7 +827,8 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
   const minutes = etClockMinutes(date);
   const windows = TRADE_RULES.executionWindows;
   const isWeekendClosure = isEtWeekendClosure(date, minutes);
-  const allowsMarketMapping = !isWeekendClosure && isMarketMappingWindowByEtMinutes(minutes);
+  const allowsReviewMonitor = !isWeekendClosure && isContinuousHighConfidenceReviewWindowByEtMinutes(minutes);
+  const allowsMarketMapping = !isWeekendClosure && (isMarketMappingWindowByEtMinutes(minutes) || allowsReviewMonitor);
 
   if (isWeekendClosure) {
     return {
@@ -890,15 +892,18 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
   void afternoonEnabled;
 
   return {
-    session: 'outside',
-    label: 'Outside Approved Execution Window',
-    quality: 'outside',
-    enabled: false,
-    allowsTradePlan: false,
-    allowsDiscordAlert: false,
+    session:
+      minutes >= minutesFromClock(windows.middayTrapReversal.endET) && minutes < minutesFromClock(windows.eveningExecution.startET)
+        ? 'afternoon'
+        : 'premarket',
+    label: CONTINUOUS_REVIEW_MONITOR_LABEL,
+    quality: 'observe_only',
+    enabled: allowsReviewMonitor,
+    allowsTradePlan: allowsReviewMonitor,
+    allowsDiscordAlert: allowsReviewMonitor,
     allowsMarketMapping,
-    allowsDeskPlan: allowsMarketMapping,
-      nextWindowLabel:
+    allowsDeskPlan: allowsReviewMonitor,
+    nextWindowLabel:
       minutes < minutesFromClock(windows.morningExecution.startET)
         ? windows.morningExecution.label
         : minutes < minutesFromClock(windows.middayTrapReversal.startET)
@@ -1234,7 +1239,7 @@ function registryEntryFvgDecisionSupport(entry: SetupRegistryEntry): boolean {
 
 function suppressionPathsForRegistryEntry(entry: SetupRegistryEntry): string[] {
   const paths = [
-    'Outside canonical Morning/Lunch setup-scan windows.',
+    'Futures weekend closure or scanner service offline.',
     'Missing required structured evidence from the setup scanner.',
     'Missing completed 5M trigger, protected structure stop, invalidation, target room, or risk proof.',
     'Stale/chase guard marks the setup missed or blocked.',
@@ -3665,8 +3670,8 @@ function fvgRuntimeHardDisqualifierReason(candidate: SetupCandidate): string | n
   const risk = candidate.riskPoints;
 
   const reward =
-    typeof candidate.target1 === 'number' && typeof candidate.entry === 'number'
-      ? Math.abs(candidate.target1 - candidate.entry)
+    typeof candidate.target2 === 'number' && typeof candidate.entry === 'number'
+      ? Math.abs(candidate.target2 - candidate.entry)
       : null;
 
   if (
@@ -3817,7 +3822,7 @@ export function scoreScannerCandidate(
   }
 
   if (!window.allowsDeskPlan || sessionWeight === 0) {
-    const hardBlocker = 'outside active Quant Desk scanner window';
+    const hardBlocker = 'futures market closed or scanner review monitor disabled';
     return {
       score: FVG_RUNTIME_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons,
@@ -3829,7 +3834,7 @@ export function scoreScannerCandidate(
         score: 0,
         max: 10,
         status: 'blocked',
-        note: 'The scanner is outside the 9:15 AM-4:00 PM ET and 6:45 PM-10:15 PM ET desk-plan windows.',
+        note: 'The scanner only pauses review-plan evaluation during futures weekend closure or when the review monitor is disabled.',
       }],
     };
   }
@@ -4170,7 +4175,7 @@ export function shouldSendScannerAlert(args: {
 }): ScannerAlertDecision {
   const thresholds = { ...DEFAULT_THRESHOLDS, ...(args.thresholds || {}) };
   if (!args.window.allowsDiscordAlert) {
-    return { shouldSend: false, reason: 'Outside approved alert window. Context updated only.' };
+    return { shouldSend: false, reason: 'Futures market closed or Discord review monitor disabled. Context updated locally only.' };
   }
   if (args.duplicate && !args.stateImproved) {
     return { shouldSend: false, reason: 'Duplicate alert suppressed for same setup/reference/direction/state.' };
