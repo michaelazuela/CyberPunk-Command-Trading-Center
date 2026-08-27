@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   classifyActiveSetupScanWindowByEtMinutes,
   CONTINUOUS_HIGH_CONFIDENCE_REVIEW_WINDOW,
+  isCmeEquityIndexMarketClosedEt,
   isMarketMappingWindowByEtMinutes,
   isContinuousHighConfidenceReviewWindowByEtMinutes,
   isIntradayMssMicroContinuationLateDayReviewByEtMinutes,
@@ -80,5 +81,13 @@ assert.equal(isContinuousHighConfidenceReviewWindowByEtMinutes(minutes('00:00'))
 assert.equal(isContinuousHighConfidenceReviewWindowByEtMinutes(minutes('08:00')), true);
 assert.equal(isContinuousHighConfidenceReviewWindowByEtMinutes(minutes('16:05')), true);
 assert.equal(isContinuousHighConfidenceReviewWindowByEtMinutes(minutes('22:15')), true);
+assert.equal(isCmeEquityIndexMarketClosedEt('Sun', minutes('17:59')), true);
+assert.equal(isCmeEquityIndexMarketClosedEt('Sun', minutes('18:00')), false);
+assert.equal(isCmeEquityIndexMarketClosedEt('Mon', minutes('16:59')), false);
+assert.equal(isCmeEquityIndexMarketClosedEt('Mon', minutes('17:30')), true);
+assert.equal(isCmeEquityIndexMarketClosedEt('Mon', minutes('18:00')), false);
+assert.equal(isCmeEquityIndexMarketClosedEt('Fri', minutes('16:59')), false);
+assert.equal(isCmeEquityIndexMarketClosedEt('Fri', minutes('17:00')), true);
+assert.equal(isCmeEquityIndexMarketClosedEt('Sat', minutes('10:00')), true);
 
 console.log('Active setup scan windows verified.');

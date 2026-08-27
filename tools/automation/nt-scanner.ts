@@ -127,11 +127,7 @@ import {
   discordWebhookUrlForPayload,
   loadCanonicalDiscordOutcomeSecretFromEnvLocal,
 } from './discord-outcome-buttons';
-import {
-  PROFESSIONAL_MODEL_ONE_LABEL,
-  PROFESSIONAL_MODEL_TWO_LABEL,
-  professionalizeReportText,
-} from './professional-report-language';
+import { professionalizeReportText } from './professional-report-language';
 import { resolveCurrentBridgeInstrument, type BridgeInstrumentResolution } from './bridge-instrument-resolver';
 import { etDateTime } from './et-time';
 import { isGeminiAdvisoryFallbackEnabled } from '../../src/config/geminiFallback';
@@ -6700,118 +6696,6 @@ async function sendScannerDataQualityNoticeIfNeeded(args: {
   }
 }
 
-function buildWindowStartPayload(args: {
-  session: LiveSession;
-  tradeDate: string;
-  config: ScannerConfig;
-  currentPrice: number | null;
-  completed5m: NinjaBridgeBar | null;
-  windowLabel: string;
-}): DiscordWebhookPayload {
-  const sessionLabel = args.session === 'morning' ? 'Morning' : args.session === 'evening' ? 'Evening' : 'Lunch';
-  const windowRange = args.session === 'morning'
-    ? `${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET`
-    : args.session === 'evening'
-      ? `${TRADE_RULES.executionWindows.eveningExecution.startET}-${TRADE_RULES.executionWindows.eveningExecution.endET} ET`
-    : `${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET`;
-  const activeDeskPlanWindow = '09:15-16:00 ET and 18:45-22:15 ET';
-  const fullSchedule = [
-    '⏸️ Before 09:15 ET: scanner health only; execution paused',
-    `🔎 ${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET: Morning execution scan`,
-    `🍽️ ${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Lunch/PM execution scan`,
-    `🌙 ${TRADE_RULES.executionWindows.eveningExecution.startET}-${TRADE_RULES.executionWindows.eveningExecution.endET} ET: Evening execution scan`,
-    '⏸️ Outside those windows: scanner health only; execution paused',
-  ].join('\n');
-  return {
-    username: 'Quant Desk',
-    content: `# 🟢 Quant Desk Scanner Window Active — ${sessionLabel}\n⚠️ Decision support only. No automated orders were placed.`,
-    embeds: [
-      {
-        title: `🟢 ${sessionLabel} Setup Scanner Online — ${args.tradeDate}`,
-        description: '🔎 The live scanner is connected and actively checking the two approved trade models. Keep an eye out for a confirmed setup during this window. This notice is not a trade alert, and no-trade remains a valid professional decision.',
-        color: 0x00bcd4,
-        fields: [
-          {
-            name: '🕒 Scanner Window',
-            value: clip([
-              `🪟 Window: ${args.windowLabel}`,
-              `⏰ Active execution/desk-plan time: ${activeDeskPlanWindow}`,
-              `✅ Execution scan window: ${windowRange}`,
-              `📈 Instrument: ${args.config.instrument}`,
-              `🌉 Bridge instrument: ${args.config.bridgeInstrument}`,
-            ].join('\n')),
-            inline: false,
-          },
-          {
-            name: '📅 Full Scanner Schedule',
-            value: clip(fullSchedule),
-            inline: false,
-          },
-          {
-            name: '📡 Live Data',
-            value: clip([
-              `🌉 Bridge: ${args.config.bridgeUrl}`,
-              `🔁 Poll cadence: ${args.config.pollSeconds}s`,
-              `💵 Current price: ${money(args.currentPrice)}`,
-              `🕯️ Latest completed 5M: ${args.completed5m?.time || 'N/A'}`,
-            ].join('\n')),
-            inline: false,
-          },
-          {
-            name: '✅ Approved Models',
-            value: `1️⃣ ${PROFESSIONAL_MODEL_ONE_LABEL}\n2️⃣ ${PROFESSIONAL_MODEL_TWO_LABEL}`,
-            inline: false,
-          },
-        ],
-        footer: { text: 'Quant Desk • Scanner heartbeat • Trade approval still requires full 5M confirmation' },
-        timestamp: new Date().toISOString(),
-      },
-    ],
-  };
-}
-
-async function sendWindowStartAlert(args: {
-  config: ScannerConfig;
-  state: ScannerStateFile;
-  tradeDate: string;
-  session: LiveSession;
-  windowLabel: string;
-  currentPrice: number | null;
-  completed5m: NinjaBridgeBar | null;
-}): Promise<void> {
-  const key = `${args.tradeDate}:${args.session}:scanner-window-start`;
-  if (args.state.windowStartSent[key]) return;
-
-  const payload = buildWindowStartPayload({
-    session: args.session,
-    tradeDate: args.tradeDate,
-    config: args.config,
-    currentPrice: args.currentPrice,
-    completed5m: args.completed5m,
-    windowLabel: args.windowLabel,
-  });
-
-  const receipt = await postDiscord(payload, args.config);
-  const replaceResult = await replacePriorScannerDiscordOperationalMessages({
-    state: args.state,
-    config: args.config,
-    kind: 'window_start',
-    currentKey: key,
-  });
-  if (replaceResult.checked > 0) {
-    console.log(`[scanner] Replaced prior scanner window-start Discord notices: deleted=${replaceResult.deleted} failed=${replaceResult.failed} skipped=${replaceResult.skipped}`);
-  }
-  recordScannerDiscordCleanupMessage({
-    state: args.state,
-    config: args.config,
-    receipt,
-    kind: 'window_start',
-    key,
-  });
-  args.state.windowStartSent[key] = new Date().toISOString();
-  console.log(`[scanner] Sent ${args.session} scanner window start heartbeat.`);
-}
-
 function liveMarketMapStatus(liveBars: Partial<Record<MarketBarTimeframe, NinjaBridgeBar[]>>) {
   const availableTimeframes = TIMEFRAMES.filter((timeframe) => (liveBars[timeframe] || []).length > 0);
   const usableBars = availableTimeframes.reduce((total, timeframe) => total + (liveBars[timeframe] || []).length, 0);
@@ -7401,21 +7285,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   if (!completed5m) {
     console.log(`[scanner] ${window.label}: NoData, no completed 5M candle available.`);
     return;
-  }
-
-  try {
-    await sendWindowStartAlert({
-      config,
-      state,
-      tradeDate,
-      session,
-      windowLabel: window.label,
-      currentPrice,
-      completed5m,
-    });
-    await writeState(state);
-  } catch (error) {
-    console.warn(`[scanner] ${session} window start heartbeat skipped: ${formatError(error)}`);
   }
 
   let preloadedLookLeft: Awaited<ReturnType<typeof fetchLookLeftContext>> | null = null;

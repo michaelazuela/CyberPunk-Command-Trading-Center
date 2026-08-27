@@ -1,5 +1,11 @@
 import { TRADE_RULES } from '../config/tradeRules';
-import { CONTINUOUS_HIGH_CONFIDENCE_REVIEW_WINDOW, isContinuousHighConfidenceReviewWindowByEtMinutes, isMarketMappingWindowByEtMinutes } from '../config/timeWindows';
+import {
+  CME_EQUITY_INDEX_REOPEN_MINUTES_ET,
+  CONTINUOUS_HIGH_CONFIDENCE_REVIEW_WINDOW,
+  isCmeEquityIndexMarketClosedEt,
+  isContinuousHighConfidenceReviewWindowByEtMinutes,
+  isMarketMappingWindowByEtMinutes,
+} from '../config/timeWindows';
 import { SETUP_REGISTRY, type ParentModelFamily, type SetupRegistryEntry, type SetupRole, type SetupSession } from '../config/setupRegistry';
 import { ChartContext, ExecutionStatus, FvgZoneFact, NoTradeReason, SetupCandidate, SetupType, TacticalZoneBounds, TargetObjective, TimeframeFactSet, TradeDecisionStatus } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
@@ -780,12 +786,9 @@ function etParts(date: Date) {
   };
 }
 
-function isEtWeekendClosure(date: Date, minutes = etClockMinutes(date)): boolean {
+function isCmeMarketClosed(date: Date, minutes = etClockMinutes(date)): boolean {
   const weekday = etParts(date).weekday;
-  if (weekday === 'Sat') return true;
-  if (weekday === 'Sun') return minutes < minutesFromClock(TRADE_RULES.executionWindows.eveningExecution.startET);
-  if (weekday === 'Fri') return minutes >= minutesFromClock(TRADE_RULES.executionWindows.eveningExecution.startET);
-  return false;
+  return isCmeEquityIndexMarketClosedEt(weekday, minutes);
 }
 
 function minutesFromClock(clock: string): number {
@@ -826,14 +829,16 @@ export function getScannerTradeDate(date = new Date()): string {
 export function resolveScannerWindow(date = new Date(), afternoonEnabled = false): ScannerWindowState {
   const minutes = etClockMinutes(date);
   const windows = TRADE_RULES.executionWindows;
-  const isWeekendClosure = isEtWeekendClosure(date, minutes);
-  const allowsReviewMonitor = !isWeekendClosure && isContinuousHighConfidenceReviewWindowByEtMinutes(minutes);
-  const allowsMarketMapping = !isWeekendClosure && (isMarketMappingWindowByEtMinutes(minutes) || allowsReviewMonitor);
+  const isMarketClosed = isCmeMarketClosed(date, minutes);
+  const allowsReviewMonitor = !isMarketClosed && isContinuousHighConfidenceReviewWindowByEtMinutes(minutes);
+  const allowsMarketMapping = !isMarketClosed && (isMarketMappingWindowByEtMinutes(minutes) || allowsReviewMonitor);
 
-  if (isWeekendClosure) {
+  if (isMarketClosed) {
+    const parts = etParts(date);
+    const isDailyMaintenance = parts.weekday !== 'Sat' && parts.weekday !== 'Sun' && minutes >= 17 * 60 && minutes < 18 * 60;
     return {
       session: 'outside',
-      label: 'Market Closed - Weekend',
+      label: isDailyMaintenance ? 'Market Closed - CME Maintenance' : 'Market Closed - Weekend',
       quality: 'outside',
       enabled: false,
       allowsTradePlan: false,
@@ -841,30 +846,32 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
       allowsMarketMapping: false,
       allowsDeskPlan: false,
       nextWindowLabel:
-        etParts(date).weekday === 'Sun' && minutes < minutesFromClock(windows.eveningExecution.startET)
-          ? windows.eveningExecution.label
-          : windows.morningExecution.label,
+        parts.weekday === 'Sun' && minutes < CME_EQUITY_INDEX_REOPEN_MINUTES_ET
+          ? CONTINUOUS_REVIEW_MONITOR_LABEL
+          : isDailyMaintenance
+            ? CONTINUOUS_REVIEW_MONITOR_LABEL
+            : null,
     };
   }
 
   if (isBetween(minutes, windows.morningExecution.startET, windows.morningExecution.endET)) {
     return {
       session: 'morning',
-      label: windows.morningExecution.label,
+      label: CONTINUOUS_REVIEW_MONITOR_LABEL,
       quality: 'approved',
       enabled: windows.morningExecution.enabled,
       allowsTradePlan: windows.morningExecution.enabled,
       allowsDiscordAlert: windows.morningExecution.enabled,
       allowsMarketMapping,
       allowsDeskPlan: allowsMarketMapping,
-      nextWindowLabel: windows.middayTrapReversal.label,
+      nextWindowLabel: null,
     };
   }
 
   if (isBetween(minutes, windows.middayTrapReversal.startET, windows.middayTrapReversal.endET)) {
     return {
       session: 'lunch',
-      label: windows.middayTrapReversal.label,
+      label: CONTINUOUS_REVIEW_MONITOR_LABEL,
       quality: 'strict',
       enabled: windows.middayTrapReversal.enabled,
       allowsTradePlan: windows.middayTrapReversal.enabled,
@@ -878,7 +885,7 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
   if (isBetween(minutes, windows.eveningExecution.startET, windows.eveningExecution.endET)) {
     return {
       session: 'evening',
-      label: windows.eveningExecution.label,
+      label: CONTINUOUS_REVIEW_MONITOR_LABEL,
       quality: 'approved',
       enabled: windows.eveningExecution.enabled,
       allowsTradePlan: windows.eveningExecution.enabled,
@@ -893,7 +900,7 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
 
   return {
     session:
-      minutes >= minutesFromClock(windows.middayTrapReversal.endET) && minutes < minutesFromClock(windows.eveningExecution.startET)
+      minutes >= minutesFromClock(windows.middayTrapReversal.endET) && minutes < 17 * 60
         ? 'afternoon'
         : 'premarket',
     label: CONTINUOUS_REVIEW_MONITOR_LABEL,
@@ -903,14 +910,7 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
     allowsDiscordAlert: allowsReviewMonitor,
     allowsMarketMapping,
     allowsDeskPlan: allowsReviewMonitor,
-    nextWindowLabel:
-      minutes < minutesFromClock(windows.morningExecution.startET)
-        ? windows.morningExecution.label
-        : minutes < minutesFromClock(windows.middayTrapReversal.startET)
-          ? windows.middayTrapReversal.label
-          : minutes < minutesFromClock(windows.eveningExecution.startET)
-            ? windows.eveningExecution.label
-          : null,
+    nextWindowLabel: null,
   };
 }
 

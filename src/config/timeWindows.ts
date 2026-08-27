@@ -119,6 +119,15 @@ const INTRADAY_MSS_MICRO_LATE_DAY_START =
 const INTRADAY_MSS_MICRO_LATE_DAY_END =
   MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.endHour * 60 +
   MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.endMinute;
+export const CME_EQUITY_INDEX_DAILY_CLOSE_MINUTES_ET = 17 * 60;
+export const CME_EQUITY_INDEX_REOPEN_MINUTES_ET = 18 * 60;
+
+export function isCmeEquityIndexMarketClosedEt(weekday: string, minutes: number): boolean {
+  if (weekday === "Sat") return true;
+  if (weekday === "Sun") return minutes < CME_EQUITY_INDEX_REOPEN_MINUTES_ET;
+  if (weekday === "Fri") return minutes >= CME_EQUITY_INDEX_DAILY_CLOSE_MINUTES_ET;
+  return minutes >= CME_EQUITY_INDEX_DAILY_CLOSE_MINUTES_ET && minutes < CME_EQUITY_INDEX_REOPEN_MINUTES_ET;
+}
 
 /** Get NY time details */
 function getNYTime() {
@@ -133,12 +142,11 @@ function getNYTime() {
   const hour = parseInt(h, 10);
   const minute = parseInt(m, 10);
   const currentTime = hour * 60 + minute;
-  const eveningOpen = TIME_WINDOWS.evening.openHour * 60 + TIME_WINDOWS.evening.openMinute;
   return {
     hour,
     minute,
     weekday,
-    isWeekendClosure: weekday === "Sat" || (weekday === "Sun" && currentTime < eveningOpen) || (weekday === "Fri" && currentTime >= eveningOpen),
+    isWeekendClosure: isCmeEquityIndexMarketClosedEt(weekday, currentTime),
   };
 }
 

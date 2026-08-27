@@ -806,10 +806,12 @@ assert.ok(preMarketDataMissingCompletedFive.completedFiveMinuteMessage.includes(
 
 const scannerSource = await fs.readFile(path.join(process.cwd(), 'tools/automation/nt-scanner.ts'), 'utf8');
 const windowStartIndex = scannerSource.indexOf('await sendWindowStartAlert({');
-const readinessGateIndex = scannerSource.indexOf('if (shouldRunPreMarketDataReadinessGate(config, window))', windowStartIndex);
+const windowStartFunctionIndex = scannerSource.indexOf('function buildWindowStartPayload');
+const readinessGateIndex = scannerSource.indexOf('if (shouldRunPreMarketDataReadinessGate(config, window))');
 const readinessDataQualityIndex = scannerSource.indexOf('await sendScannerDataQualityNoticeIfNeeded({', readinessGateIndex);
-assert.ok(windowStartIndex > 0, 'scanner must send an active-window heartbeat in the live scan path');
-assert.ok(readinessGateIndex > windowStartIndex, 'active-window heartbeat must not be suppressed by pre-market data readiness');
+assert.equal(windowStartIndex, -1, 'scanner must not post active-window heartbeat messages to Discord');
+assert.equal(windowStartFunctionIndex, -1, 'scanner must not keep obsolete active-window Discord payload builders');
+assert.ok(readinessGateIndex > 0, 'pre-market data readiness gate must remain in the live scan path');
 assert.ok(readinessDataQualityIndex > readinessGateIndex, 'data-readiness blockers must send a data-quality notice before returning');
 assert.ok(scannerSource.includes('readEnvWithWindowsUserFallback'), 'scanner webhook resolver must read Windows user-scope env when process env is missing');
 
