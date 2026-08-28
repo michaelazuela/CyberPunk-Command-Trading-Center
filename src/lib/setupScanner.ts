@@ -6232,6 +6232,44 @@ function obstacleLayer(candidate: SetupCandidate): ActiveCampaignEvidenceLayer {
   };
 }
 
+function isFvgFamilyActiveCampaignCandidate(candidate: SetupCandidate): boolean {
+  return candidate.setupType === SetupType.FvgTradingSystemV1 ||
+    candidate.setupType === SetupType.FvgStrengthContinuation ||
+    candidate.setupType === SetupType.DefendedBattleZoneContinuation ||
+    candidate.setupType === SetupType.OpeningDriveFvgContinuation ||
+    candidate.setupType === SetupType.AfterLunchDriveFvgContinuation;
+}
+
+function activeCampaignZoneIdentity(candidate: SetupCandidate): string | null {
+  const zone = candidate.tacticalZone;
+  if (!zone || typeof zone.lower !== 'number' || typeof zone.upper !== 'number') return null;
+  return `${formatLinePrice(zone.lower)}-${formatLinePrice(zone.upper)}`;
+}
+
+function buildActiveCampaignId(candidate: SetupCandidate, chartContext?: ChartContext | null): string {
+  const baseParts = [
+    chartContext?.tradeDate || 'unknown-date',
+    candidate.direction,
+  ];
+  if (isFvgFamilyActiveCampaignCandidate(candidate)) {
+    const zone = activeCampaignZoneIdentity(candidate);
+    return [
+      ...baseParts,
+      candidate.setupType,
+      zone ? `zone-${zone}` : 'zone-unmapped',
+      typeof candidate.entry === 'number' ? `entry-${formatLinePrice(candidate.entry)}` : 'entry-unmapped',
+    ].join(':');
+  }
+  return [
+    ...baseParts,
+    mssEvidenceLayer(chartContext, candidate.direction).status === 'confirmed'
+      ? '15M5M-MSS'
+      : htfFailedAuctionEvidenceLayer(chartContext, candidate.direction).status === 'confirmed'
+      ? 'HTF-FAILED-AUCTION'
+      : 'candidate',
+  ].join(':');
+}
+
 function buildActiveCampaignForCandidate(candidate: SetupCandidate, chartContext?: ChartContext | null): ActiveCampaign | undefined {
   if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return undefined;
   const mssLayer = mssEvidenceLayer(chartContext, candidate.direction);
@@ -6255,16 +6293,9 @@ function buildActiveCampaignForCandidate(candidate: SetupCandidate, chartContext
       ? 'support'
       : htf.relationship;
   const confidenceAdjustment = htf.confidenceAdjustment + (hasFailedAuctionSupport ? 6 : 0);
+  const fvgFamilyCampaign = isFvgFamilyActiveCampaignCandidate(candidate);
   return {
-    id: [
-      chartContext?.tradeDate || 'unknown-date',
-      candidate.direction,
-      mssLayer.status === 'confirmed'
-        ? '15M5M-MSS'
-        : hasFailedAuctionSupport
-        ? 'HTF-FAILED-AUCTION'
-        : 'candidate',
-    ].join(':'),
+    id: buildActiveCampaignId(candidate, chartContext),
     source: 'app_owned_structured_ohlc',
     authority: 'campaign_context_only_not_execution_authority',
     status,
@@ -6291,10 +6322,13 @@ function buildActiveCampaignForCandidate(candidate: SetupCandidate, chartContext
     deDuplication: {
       oneTradePerCampaignRecommended: true,
       enforced: true,
-      resetPolicy: 'trade_date_direction_campaign',
+      resetPolicy: fvgFamilyCampaign ? 'trade_date_direction_setup_zone_entry' : 'trade_date_direction_campaign',
     },
     notes: [
       'ActiveCampaign de-duplication is enforced by the scanner alert ledger; it does not change approvals, scanner ranking, bridge behavior, or canExecute.',
+      fvgFamilyCampaign
+        ? 'FVG-family campaign identity includes setup type, defended zone, and entry so separate same-direction zones can publish independently.'
+        : 'Non-FVG campaign identity remains trade-date/direction/campaign based.',
       'HTF conflict becomes caution/management context and does not erase raw 15M/5M MSS evidence.',
       'Failed HTF auction at a named line can support or caution the active campaign, but it is not standalone execution authority.',
       '5M remains execution authority for entry, stop, risk, invalidation, and app targets.',

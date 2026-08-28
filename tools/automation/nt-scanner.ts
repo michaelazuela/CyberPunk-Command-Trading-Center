@@ -208,7 +208,7 @@ interface ScannerStateReadResult {
 }
 
 export type ScannerAlertDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped' | 'failed_stale_no_retry';
-export type ScannerActiveCampaignResetPolicy = 'trade_date_direction_campaign';
+export type ScannerActiveCampaignResetPolicy = 'trade_date_direction_campaign' | 'trade_date_direction_setup_zone_entry';
 export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'morning_htf_desk_map' | 'end_of_day_market_recap' | 'watchlist' | 'window_start' | 'health' | 'data_quality' | 'live_hold_notice';
 export type ScannerDiscordDeliverySource = ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | 'phase11_boundary' | null;
 

@@ -1611,6 +1611,8 @@ function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
     candidate.setupType === SetupType.OpeningDriveFvgContinuation ||
     candidate.setupType === SetupType.AfterLunchDriveFvgContinuation ||
     candidate.setupType === SetupType.IntradayMssMicroContinuation ||
+    candidate.setupType === SetupType.FvgStrengthContinuation ||
+    candidate.setupType === SetupType.DefendedBattleZoneContinuation ||
     candidate.setupType === SetupType.FailedPlanReversal
   );
 }
@@ -1731,15 +1733,21 @@ const tests: Array<[string, () => void]> = [
     const primary = getPrimarySetupRegistry('replay_morning');
 
     assert.equal(result.candidates.length, primary.length);
-    assert.deepEqual(primary.map((entry) => entry.setupType), [SetupType.FvgTradingSystemV1]);
-    assert.deepEqual(result.candidates.map((candidate) => candidate.setupType), [SetupType.FvgTradingSystemV1]);
+    assert.ok(primary.some((entry) => entry.setupType === SetupType.FvgTradingSystemV1));
+    assert.ok(primary.some((entry) => entry.setupType === SetupType.DefendedBattleZoneContinuation));
+    assert.deepEqual(
+      new Set(result.candidates.map((candidate) => candidate.setupType)),
+      new Set(primary.map((entry) => entry.setupType))
+    );
     assert.deepEqual(
       new Set(getScannedSetupTypes()),
       new Set(primary.map((entry) => entry.setupType))
     );
     assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
     assert.equal(getSupportingEvidenceRegistry('replay_morning').length, 0);
-    assert.equal(SETUP_REGISTRY.length, 1);
+    for (const entry of getPrimarySetupRegistry('replay_morning')) {
+      assert.ok(SETUP_REGISTRY.some((registryEntry) => registryEntry.setupType === entry.setupType));
+    }
   }],
 
   ['deprecated setup text does not create an active candidate', () => {
@@ -5306,7 +5314,7 @@ const tests: Array<[string, () => void]> = [
     });
 
     assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
-    assert.deepEqual(SETUP_REGISTRY.map((entry) => entry.setupType), [SetupType.FvgTradingSystemV1]);
+    assert.ok(SETUP_REGISTRY.some((entry) => entry.setupType === SetupType.FvgTradingSystemV1));
   }],
 
   ['FVG v1 detects 2026-08-25 MES morning 15M FVG failure short when 5M gates are clean', () => {
@@ -5318,7 +5326,7 @@ const tests: Array<[string, () => void]> = [
     const fvgV1 = result.candidates.find((candidate) => candidate.setupType === SetupType.FvgTradingSystemV1);
 
     assert.ok(fvgV1);
-    assert.equal(result.candidates.length, 1);
+    assert.equal(result.candidates.length, getPrimarySetupRegistry('replay_morning').length);
     assert.equal(fvgV1.direction, 'SHORT');
     assert.equal(fvgV1.detectedStatus, SetupCandidateStatus.Detected);
     assert.equal(fvgV1.executionStatus, ExecutionStatus.Executable);

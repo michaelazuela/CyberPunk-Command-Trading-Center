@@ -107,6 +107,9 @@ for (const direction of ['LONG', 'SHORT'] as const) {
   assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
   assert.equal(candidate.humanReview?.canExecute, false);
   assert.equal(candidate.humanReview?.discordTradePlanEligible, true);
+  assert.equal(candidate.activeCampaign?.deDuplication.resetPolicy, 'trade_date_direction_setup_zone_entry');
+  assert.match(candidate.activeCampaign?.id || '', /DefendedBattleZoneContinuation:zone-/);
+  assert.match(candidate.activeCampaign?.id || '', /:entry-/);
   assert.match(candidate.requiredTrigger || '', /Boundary break is not required/i);
   assert.doesNotMatch(candidate.requiredTrigger || '', /sweep|swept|reclaim above|rejection below/i);
   assert.doesNotMatch(candidate.levelContextSummary || '', /sweep|swept|reclaim above|rejection below/i);

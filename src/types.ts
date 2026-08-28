@@ -909,7 +909,7 @@ export interface ActiveCampaign {
   deDuplication: {
     oneTradePerCampaignRecommended: true;
     enforced: boolean;
-    resetPolicy: 'trade_date_direction_campaign';
+    resetPolicy: 'trade_date_direction_campaign' | 'trade_date_direction_setup_zone_entry';
   };
   notes: string[];
 }

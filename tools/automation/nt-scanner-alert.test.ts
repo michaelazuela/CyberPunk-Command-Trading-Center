@@ -845,6 +845,80 @@ assert.deepEqual(resolveScannerOperationalDiscordWebhookUrl({
   usingGenericFallback: false,
 });
 
+const firstFvgCampaignCandidate = {
+  setupType: SetupType.DefendedBattleZoneContinuation,
+  direction: 'LONG',
+  entry: 7735.25,
+  stop: 7731.25,
+  target1: 7741.25,
+  target2: 7743.25,
+  activeCampaign: {
+    id: '2026-08-27:LONG:DefendedBattleZoneContinuation:zone-7734.00-7735.25:entry-7735.25',
+    source: 'app_owned_structured_ohlc',
+    authority: 'campaign_context_only_not_execution_authority',
+    status: 'watch',
+    direction: 'LONG',
+    primaryTrigger: 'NONE',
+    executionTimeframe: '5M',
+    htfRelationship: 'support',
+    confidenceAdjustment: 0,
+    evidenceLayers: [],
+    htfSupportTimeframes: [],
+    htfConflictTimeframes: [],
+    obstacleMap: { lineInSand: null, reason: null, role: 'none', caution: null },
+    deDuplication: {
+      oneTradePerCampaignRecommended: true,
+      enforced: true,
+      resetPolicy: 'trade_date_direction_setup_zone_entry',
+    },
+    notes: [],
+  },
+} as SetupCandidate;
+const secondFvgCampaignCandidate = {
+  ...firstFvgCampaignCandidate,
+  entry: 7740.25,
+  activeCampaign: {
+    ...firstFvgCampaignCandidate.activeCampaign!,
+    id: '2026-08-27:LONG:DefendedBattleZoneContinuation:zone-7739.75-7741.75:entry-7740.25',
+  },
+} as SetupCandidate;
+assert.equal(
+  scannerActiveCampaignKeyForTradeDate(firstFvgCampaignCandidate, '2026-08-27'),
+  '2026-08-27:LONG:DefendedBattleZoneContinuation:zone-7734.00-7735.25:entry-7735.25',
+);
+assert.equal(
+  scannerActiveCampaignKeyForTradeDate(secondFvgCampaignCandidate, '2026-08-27'),
+  '2026-08-27:LONG:DefendedBattleZoneContinuation:zone-7739.75-7741.75:entry-7740.25',
+);
+assert.notEqual(
+  scannerActiveCampaignKeyForTradeDate(firstFvgCampaignCandidate, '2026-08-27'),
+  scannerActiveCampaignKeyForTradeDate(secondFvgCampaignCandidate, '2026-08-27'),
+  'Separate same-direction FVG zones must not suppress each other as duplicate campaign alerts.',
+);
+assert.equal(
+  shouldSuppressActiveCampaignScannerAlert({
+    activeCampaignSent: {
+      '2026-08-27:LONG:DefendedBattleZoneContinuation:zone-7734.00-7735.25:entry-7735.25': {
+        campaignId: '2026-08-27:LONG:DefendedBattleZoneContinuation:zone-7734.00-7735.25:entry-7735.25',
+        tradeDate: '2026-08-27',
+        direction: 'LONG',
+        setupType: SetupType.DefendedBattleZoneContinuation,
+        state: 'Conditional',
+        confidence: 75,
+        firstAlertKey: 'first-alert',
+        firstSentAt: '2026-08-28T02:35:00.000Z',
+        lastSeenAt: '2026-08-28T02:35:00.000Z',
+        suppressedCount: 0,
+        resetPolicy: 'trade_date_direction_setup_zone_entry',
+      },
+    },
+    candidate: secondFvgCampaignCandidate,
+    tradeDate: '2026-08-27',
+  }).shouldSuppress,
+  false,
+  'A later defended FVG in a different zone must remain Discord-eligible instead of being blocked by the first zone.',
+);
+
 const watchlistScopedBars = barsForMorningContinuationWatchlist({
   tradeDate: '2026-06-03',
   barTimeZone: 'eastern',
