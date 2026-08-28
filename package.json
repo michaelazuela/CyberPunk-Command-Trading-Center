@@ -28,6 +28,7 @@
     "supervisor:notify-self-heal": "tsx tools/supervisor/index.ts notify-self-heal",
     "supervisor:test-child": "tsx tools/supervisor/test-child.ts",
     "diagnostic:replay": "tsx tools/automation/diagnostic-replay.ts",
+    "replay:scanner-day": "tsx tools/automation/replay-scanner-day.ts",
     "diagnostic:htf-mss-actual-ohlc": "tsx tools/automation/htf-mss-actual-ohlc-replay.ts",
     "diagnostic:active-mss-replay": "tsx tools/automation/protected-structure-trend-confirmation-replay.test.ts",
     "diagnostic:protected-structure-trend-confirmation": "tsx tools/automation/protected-structure-trend-confirmation-replay.test.ts",

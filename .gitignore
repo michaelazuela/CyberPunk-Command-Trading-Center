@@ -36,5 +36,7 @@ tools/automation/.weekly-trading-report-state.json
 # Local bulky FVG raw replay dumps retained through the active contract lifecycle.
 tools/automation/replay-diagnostics/current-morning-*/
 tools/automation/replay-diagnostics/current-morning-scanner-replay-*.json
+tools/automation/replay-diagnostics/scanner-day-*/
+tools/automation/replay-diagnostics/scanner-day-replay-*.json
 tools/automation/replay-diagnostics/fvg-battle-zone-review-jan30-mes0926.json
 tools/automation/replay-diagnostics/fvg-jan30-full-rth-corrected-replay-v1.json
