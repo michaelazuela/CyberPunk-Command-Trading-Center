@@ -22,6 +22,10 @@ tools/automation/.macro-calendar-cache.json
 tools/automation/discord-report-state.json
 tools/automation/chart-markups/
 tools/automation/discord-audit/
+tools/automation/.ai-trade-observer-state.json
+tools/automation/.ai-trade-observer-smoke-state.json
+tools/automation/ai-observer-reports/
+tools/automation/ai-observer-smoke/
 tools/automation/diagnostic-reports/
 tools/automation/research-reports/
 tools/automation/research-outcome-reports/
