@@ -37,6 +37,13 @@ export interface WeeklyReportCliOptions {
 
 interface WeeklyReportState {
   sent: Record<string, string>;
+  receipts?: Record<string, WeeklyReportDiscordReceipt>;
+}
+
+interface WeeklyReportDiscordReceipt {
+  sentAt: string;
+  discordMessageId: string | null;
+  webhookSource: 'DISCORD_WEBHOOK_URL';
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -257,15 +264,26 @@ export function shouldSendWeeklyDiscordReport(state: WeeklyReportState, report: 
   return !state.sent[weeklyReportKey(report)];
 }
 
-async function postDiscordReport(report: WeeklyTradingAnalysisReport): Promise<void> {
+export function discordWebhookWaitUrl(webhookUrl: string): string {
+  const separator = webhookUrl.includes('?') ? '&' : '?';
+  return `${webhookUrl}${separator}wait=true`;
+}
+
+async function postDiscordReport(report: WeeklyTradingAnalysisReport): Promise<WeeklyReportDiscordReceipt> {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) throw new Error('DISCORD_WEBHOOK_URL is required for --discord true.');
-  const response = await fetch(webhookUrl, {
+  const response = await fetch(discordWebhookWaitUrl(webhookUrl), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(report.discordPayload),
   });
   if (!response.ok) throw new Error(`Discord webhook failed (${response.status}): ${await response.text()}`);
+  const body = await response.json().catch(() => null) as { id?: unknown } | null;
+  return {
+    sentAt: new Date().toISOString(),
+    discordMessageId: typeof body?.id === 'string' ? body.id : null,
+    webhookSource: 'DISCORD_WEBHOOK_URL',
+  };
 }
 
 function writeReport(out: string, report: WeeklyTradingAnalysisReport): string {
@@ -294,10 +312,12 @@ export async function runWeeklyReportCli(rawArgs = process.argv.slice(2)): Promi
       } else if (!process.env.DISCORD_WEBHOOK_URL) {
         console.log(`Weekly Discord report skipped; DISCORD_WEBHOOK_URL is not configured: ${weeklyReportKey(report)}`);
       } else {
-        await postDiscordReport(report);
-        state.sent[weeklyReportKey(report)] = new Date().toISOString();
+        const key = weeklyReportKey(report);
+        const receipt = await postDiscordReport(report);
+        state.sent[key] = receipt.sentAt;
+        state.receipts = { ...(state.receipts || {}), [key]: receipt };
         await writeState(options.stateFile, state);
-        console.log(`Weekly Discord report sent: ${weeklyReportKey(report)}`);
+        console.log(`Weekly Discord report sent: ${key}${receipt.discordMessageId ? ` | Discord message ${receipt.discordMessageId}` : ''}`);
       }
     } else {
       console.log(`Weekly Discord report already sent: ${weeklyReportKey(report)}`);
@@ -347,8 +367,10 @@ export async function publishWeeklyTradingNewsletter(options: {
   if (!shouldSendWeeklyDiscordReport(state, report)) return { report, sent: false, skippedReason: 'Already sent.' };
   if (options.dryRun) return { report, sent: false, skippedReason: 'Dry run.' };
   if (!process.env.DISCORD_WEBHOOK_URL) return { report, sent: false, skippedReason: 'DISCORD_WEBHOOK_URL missing.' };
-  await postDiscordReport(report);
-  state.sent[weeklyReportKey(report)] = new Date().toISOString();
+  const key = weeklyReportKey(report);
+  const receipt = await postDiscordReport(report);
+  state.sent[key] = receipt.sentAt;
+  state.receipts = { ...(state.receipts || {}), [key]: receipt };
   await writeState(cliOptions.stateFile, state);
   return { report, sent: true, skippedReason: null };
 }
