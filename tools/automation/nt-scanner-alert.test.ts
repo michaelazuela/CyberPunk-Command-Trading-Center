@@ -64,6 +64,7 @@ import {
   buildScannerReversalWatchLines,
   buildScannerMorningHtfDeskMapPayload,
   buildScannerLiveDiscordSendBoundaryReport,
+  buildScannerTrafficCopTrace,
   buildScannerLiveHoldNoticePayload,
   buildScannerEndOfDayMarketRecapPayload,
   classifyScannerReversalWatchState,
@@ -226,6 +227,7 @@ const scannerDataQualityNoticeConfig: ScannerConfig = {
   preMarketDataGate: true,
   macroCalendarEnabled: true,
   geminiAdvisoryFallbackEnabled: false,
+  aiObserverEnabled: false,
   barTimestampMode: 'close',
   barTimeZone: 'eastern',
   discordMessageCleanupEnabled: true,
@@ -3574,7 +3576,7 @@ const highConfidenceConditionalBoundaryWithoutChecklist = buildScannerLiveDiscor
 });
 assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.eligible, false);
 assert.ok(
-  highConfidenceConditionalBoundaryWithoutChecklist.blockers.some((item) => item.includes('POST_PLAN with canExecute=true')),
+  highConfidenceConditionalBoundaryWithoutChecklist.blockers.some((item) => item.includes('executable POST_PLAN or human-review POST_REVIEW')),
 );
 assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.authorityBoundary.changesCanExecute, false);
 assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.authorityBoundary.createsTradeApproval, false);
@@ -3600,6 +3602,108 @@ assert.equal(approvedExecutableBoundaryWithoutChecklist.blockers.length, 0);
 assert.equal(approvedExecutableBoundaryWithoutChecklist.authorityBoundary.changesCanExecute, false);
 assert.equal(approvedExecutableBoundaryWithoutChecklist.authorityBoundary.createsTradeApproval, false);
 
+const humanReviewCandidate: SetupCandidate = {
+  ...candidate,
+  setupType: SetupType.FvgStrengthContinuation,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: null,
+  entry: 7738.75,
+  stop: 7726.25,
+  target1: 7757.5,
+  target2: 7763.75,
+  riskPoints: 12.5,
+  humanReview: {
+    status: 'HumanReviewReady',
+    canExecute: false,
+    requiresTraderConfirmation: true,
+    discordTradePlanEligible: true,
+    reason: 'High-confidence FVG human-review plan shall post.',
+  },
+};
+const humanReviewVisibility: ScannerVisibilityMetadata = {
+  sourceOfTruth: 'scanner_desk_state_visibility_metadata',
+  visibilityMode: 'POST_REVIEW',
+  discordAction: 'post_review',
+  suppressionReason: null,
+  nextTrigger: 'FVG defended. Human review only.',
+  dataQualityBlocker: null,
+  holdWithReason: null,
+  noTradeWithReason: null,
+  hasMeaningfulStructuredEvidence: true,
+  authority: {
+    registeredModel: true,
+    activeModel: true,
+    watchEligible: true,
+    planEligible: true,
+    discordEligible: true,
+    executionEligible: false,
+    humanReviewOnly: true,
+    canExecute: false,
+  },
+  notes: [],
+};
+const humanReviewDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: humanReviewCandidate,
+  visibilityMetadata: humanReviewVisibility,
+  candidateLifecycleTrace: buildCandidateLifecycleTrace({
+    candidates: [humanReviewCandidate],
+    selectedCandidate: humanReviewCandidate,
+    state: 'Conditional',
+    alertDecision: { shouldSend: true, reason: 'Watchlist / Conditional Plan qualified for Discord.' },
+    canExecute: false,
+  }),
+  canExecute: false,
+});
+const humanReviewBoundary = buildScannerLiveDiscordSendBoundaryReport({
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: true,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: humanReviewDeskState,
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-08-28-MES-morning.json'),
+  auditPath: path.join(auditDir, 'scanner-morning-2026-08-28-MES-FVG-HUMAN-REVIEW.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+});
+assert.equal(humanReviewBoundary.eligible, true);
+assert.equal(humanReviewBoundary.authorityBoundary.changesCanExecute, false);
+assert.equal(humanReviewBoundary.authorityBoundary.createsTradeApproval, false);
+const humanReviewTrace = buildScannerTrafficCopTrace({
+  tradeDate: '2026-08-28',
+  instrument: 'MES',
+  session: 'morning',
+  completed5m: { time: '2026-08-28T10:15:00.0000000', open: 7738.75, high: 7740, low: 7726.5, close: 7731, volume: 1000 },
+  candidate: humanReviewCandidate,
+  state: 'Conditional',
+  confidence: {
+    score: 75,
+    qualifiedReasons: [],
+    missingReasons: [],
+    hardBlocker: null,
+    recommendation: 'Human review.',
+    scorecard: [],
+  },
+  alertDecision: { shouldSend: true, reason: 'Watchlist / Conditional Plan qualified for Discord.' },
+  visibilityMetadata: humanReviewVisibility,
+  deskState: humanReviewDeskState,
+  staleReason: null,
+  liveDiscordBoundary: humanReviewBoundary,
+});
+assert.equal(humanReviewTrace.gates.scannerSawCandidate, true);
+assert.equal(humanReviewTrace.gates.scoringPassed, true);
+assert.equal(humanReviewTrace.gates.dedupePassed, true);
+assert.equal(humanReviewTrace.gates.visibilityPassed, true);
+assert.equal(humanReviewTrace.gates.humanReviewReady, true);
+assert.equal(humanReviewTrace.gates.canExecute, false);
+assert.equal(humanReviewTrace.gates.liveDiscordBoundary, 'passed');
+assert.equal(humanReviewTrace.authorityBoundary.traceApprovesTrade, false);
+
 const liveBoundaryWithChecklist = buildScannerLiveDiscordSendBoundaryReport({
   config: {
     dryRun: false,
@@ -3617,7 +3721,7 @@ const liveBoundaryWithChecklist = buildScannerLiveDiscordSendBoundaryReport({
   webhookConfigured: true,
 });
 assert.equal(liveBoundaryWithChecklist.eligible, false);
-assert.ok(liveBoundaryWithChecklist.blockers.some((item) => item.includes('POST_PLAN with canExecute=true')));
+assert.ok(liveBoundaryWithChecklist.blockers.some((item) => item.includes('executable POST_PLAN or human-review POST_REVIEW')));
 assert.equal(scannerLiveDiscordHoldNoticeEligible(liveBoundaryWithoutChecklist), false);
 
 const heldDeskState = {

@@ -2397,8 +2397,8 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
   if (validFiles.length > 0 && validFiles.length < 2 && !hasDeskPlaySingleChart) {
     console.warn('Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.');
   }
-  if (validFiles.length > 0 && mainText.length > 1600) {
-    throw new Error(`Discord payload blocked: trade-plan compact alert text is ${mainText.length} characters; keep image-backed trade alerts under 1600.`);
+  if (validFiles.length > 0 && mainText.length > 1900) {
+    throw new Error(`Discord payload blocked: trade-plan compact alert text is ${mainText.length} characters; keep image-backed trade alerts under 1900.`);
   }
   if (mainText.length > 1200) {
     console.warn(`Discord payload warning: compact alert text is ${mainText.length} characters; preferred normal output is under 1200.`);

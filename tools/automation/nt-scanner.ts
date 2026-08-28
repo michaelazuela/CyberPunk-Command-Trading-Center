@@ -174,6 +174,7 @@ export interface ScannerConfig {
   preMarketDataGate: boolean;
   macroCalendarEnabled: boolean;
   geminiAdvisoryFallbackEnabled: boolean;
+  aiObserverEnabled: boolean;
   barTimestampMode: BridgeTimestampMode;
   barTimeZone: BridgeTimeZoneMode;
   discordMessageCleanupEnabled?: boolean;
@@ -211,6 +212,68 @@ export type ScannerAlertDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skippe
 export type ScannerActiveCampaignResetPolicy = 'trade_date_direction_campaign' | 'trade_date_direction_setup_zone_entry';
 export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'morning_htf_desk_map' | 'end_of_day_market_recap' | 'watchlist' | 'window_start' | 'health' | 'data_quality' | 'live_hold_notice';
 export type ScannerDiscordDeliverySource = ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | 'phase11_boundary' | null;
+
+export interface ScannerTrafficCopTrace {
+  sourceOfTruth: 'scanner_traffic_cop_trace';
+  barTime: string | null;
+  instrument: Instrument;
+  tradeDate: string;
+  session: LiveSession;
+  scannerState: ScannerState;
+  candidate: {
+    setupType: string | null;
+    direction: string | null;
+    zoneLower: number | null;
+    zoneUpper: number | null;
+    entry: number | null;
+    stop: number | null;
+    target1: number | null;
+    target2: number | null;
+    riskPoints: number | null;
+    executionStatus: string | null;
+    humanReviewStatus: string | null;
+    humanReviewDiscordEligible: boolean;
+  };
+  gates: {
+    scannerSawCandidate: boolean;
+    scoringPassed: boolean;
+    dedupePassed: boolean;
+    visibilityPassed: boolean;
+    humanReviewReady: boolean;
+    canExecute: boolean;
+    liveDiscordBoundary: 'pending' | 'passed' | 'blocked';
+    delivery: 'pending' | 'sent' | 'skipped' | 'failed' | 'failed_stale_no_retry' | 'not_attempted';
+  };
+  reasons: {
+    score: number;
+    alertDecision: string;
+    staleReason: string | null;
+    dedupe: string | null;
+    visibility: string | null;
+    liveDiscordBoundary: string | null;
+    delivery: string | null;
+  };
+  authorityBoundary: {
+    traceApprovesTrade: false;
+    traceChangesRules: false;
+    traceChangesCanExecute: false;
+    tracePostsDiscord: false;
+  };
+}
+
+export interface ScannerAiObserverReview {
+  sourceOfTruth: 'scanner_ai_observer_advisory';
+  status: 'disabled' | 'queued' | 'aligned' | 'caution' | 'mismatch' | 'data_limited' | 'unavailable';
+  summary: string;
+  evidence: string[];
+  rawText?: string | null;
+  authorityBoundary: {
+    observerApprovesTrade: false;
+    observerChangesPlan: false;
+    observerChangesCanExecute: false;
+    observerBlocksDiscord: false;
+  };
+}
 
 export interface ScannerDiscordCleanupRecord {
   key: string;
@@ -1245,6 +1308,7 @@ function printHelp() {
     '  --discord-message-cleanup true Delete scanner Discord messages after the configured TTL. Defaults to true.',
     '  --discord-message-ttl-minutes 15  Age in minutes before scanner Discord messages are deleted; 0 disables cleanup.',
     '  --live-discord-policy-confirmed  Confirms Phase 11A dry-scan/replay checklist before live scanner trade/DeskState posts.',
+    '  --ai-observer true             Writes advisory observer review requests into decision tape. Never approves trades.',
     '  --preflight-active-campaign-ledger  Verify Supabase campaign ledger env/table and exit.',
     '',
     'Discord webhook precedence:',
@@ -1290,6 +1354,7 @@ function loadConfig(): ScannerConfig {
     preMarketDataGate: boolArg('pre-market-data-gate', true),
     macroCalendarEnabled: boolArg('macro-calendar', true),
     geminiAdvisoryFallbackEnabled: isGeminiAdvisoryFallbackEnabled(),
+    aiObserverEnabled: boolArg('ai-observer', boolEnv('QUANT_DESK_AI_OBSERVER_ENABLED', false)),
     barTimestampMode: timestampMode,
     barTimeZone,
     discordMessageCleanupEnabled: cleanupEnabled,
@@ -2225,6 +2290,133 @@ function boolField(record: Record<string, unknown> | null, keys: string[]): bool
   return null;
 }
 
+function finiteNumberOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function candidateZoneLower(candidate: SetupCandidate | null): number | null {
+  const record = asRecord(candidate);
+  const activeCampaign = asRecord(record?.activeCampaign);
+  return finiteNumberOrNull(activeCampaign?.zoneLower ?? record?.zoneLower ?? record?.fvgZoneLower);
+}
+
+function candidateZoneUpper(candidate: SetupCandidate | null): number | null {
+  const record = asRecord(candidate);
+  const activeCampaign = asRecord(record?.activeCampaign);
+  return finiteNumberOrNull(activeCampaign?.zoneUpper ?? record?.zoneUpper ?? record?.fvgZoneUpper);
+}
+
+export function buildScannerTrafficCopTrace(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  completed5m: NinjaBridgeBar | null;
+  candidate: SetupCandidate | null;
+  state: ScannerState;
+  confidence: ScannerConfidenceBreakdown;
+  alertDecision: ScannerAlertDecision;
+  activeCampaignClaim?: ScannerActiveCampaignClaimResult | null;
+  visibilityMetadata?: ScannerVisibilityMetadata;
+  deskState?: DeskState | null;
+  staleReason: string | null;
+  liveDiscordBoundary?: LiveDiscordEligibilityReport | null;
+  deliveryStatus?: ScannerAlertDeliveryStatus | 'not_attempted' | null;
+  deliveryReason?: string | null;
+}): ScannerTrafficCopTrace {
+  const candidate = args.candidate;
+  const humanReview = candidate?.humanReview;
+  const liveDiscordBoundary = args.liveDiscordBoundary
+    ? args.liveDiscordBoundary.eligible
+      ? 'passed'
+      : 'blocked'
+    : 'pending';
+  return {
+    sourceOfTruth: 'scanner_traffic_cop_trace',
+    barTime: args.completed5m?.time || null,
+    instrument: args.instrument,
+    tradeDate: args.tradeDate,
+    session: args.session,
+    scannerState: args.state,
+    candidate: {
+      setupType: candidate?.setupType || null,
+      direction: candidate?.direction || null,
+      zoneLower: candidateZoneLower(candidate),
+      zoneUpper: candidateZoneUpper(candidate),
+      entry: finiteNumberOrNull(candidate?.entry),
+      stop: finiteNumberOrNull(candidate?.stop),
+      target1: finiteNumberOrNull(candidate?.target1),
+      target2: finiteNumberOrNull(candidate?.target2),
+      riskPoints: finiteNumberOrNull(candidate?.riskPoints),
+      executionStatus: candidate?.executionStatus || null,
+      humanReviewStatus: humanReview?.status || null,
+      humanReviewDiscordEligible: humanReview?.discordTradePlanEligible === true,
+    },
+    gates: {
+      scannerSawCandidate: Boolean(candidate),
+      scoringPassed: args.confidence.score >= 65,
+      dedupePassed: args.activeCampaignClaim ? !args.activeCampaignClaim.shouldSuppress : true,
+      visibilityPassed: args.visibilityMetadata?.authority?.discordEligible === true && args.visibilityMetadata?.discordAction !== 'hold' && args.visibilityMetadata?.discordAction !== 'no_trade',
+      humanReviewReady: humanReview?.status === 'HumanReviewReady' && humanReview.discordTradePlanEligible === true,
+      canExecute: args.deskState?.canExecute === true,
+      liveDiscordBoundary,
+      delivery: args.deliveryStatus || 'not_attempted',
+    },
+    reasons: {
+      score: args.confidence.score,
+      alertDecision: args.alertDecision.reason,
+      staleReason: args.staleReason,
+      dedupe: args.activeCampaignClaim?.reason || null,
+      visibility: args.visibilityMetadata?.suppressionReason || args.visibilityMetadata?.nextTrigger || null,
+      liveDiscordBoundary: args.liveDiscordBoundary?.blockers.join(' | ') || null,
+      delivery: args.deliveryReason || null,
+    },
+    authorityBoundary: {
+      traceApprovesTrade: false,
+      traceChangesRules: false,
+      traceChangesCanExecute: false,
+      tracePostsDiscord: false,
+    },
+  };
+}
+
+function disabledAiObserverReview(summary = 'AI observer disabled. Traffic-cop trace remains deterministic authority.'): ScannerAiObserverReview {
+  return {
+    sourceOfTruth: 'scanner_ai_observer_advisory',
+    status: 'disabled',
+    summary,
+    evidence: [],
+    authorityBoundary: {
+      observerApprovesTrade: false,
+      observerChangesPlan: false,
+      observerChangesCanExecute: false,
+      observerBlocksDiscord: false,
+    },
+  };
+}
+
+export function validateScannerPlanWithAiObserver(args: {
+  config: Pick<ScannerConfig, 'aiObserverEnabled'>;
+  trace: ScannerTrafficCopTrace;
+}): ScannerAiObserverReview {
+  if (!args.config.aiObserverEnabled) return disabledAiObserverReview();
+  return {
+    sourceOfTruth: 'scanner_ai_observer_advisory',
+    status: 'queued',
+    summary: 'AI observer review requested from scanner traffic-cop trace. Scanner/Discord remain deterministic and unblocked.',
+    evidence: [
+      `Candidate: ${args.trace.candidate.setupType || 'none'} ${args.trace.candidate.direction || 'none'}.`,
+      `Boundary: liveDiscord=${args.trace.gates.liveDiscordBoundary}, delivery=${args.trace.gates.delivery}.`,
+    ],
+    rawText: null,
+    authorityBoundary: {
+      observerApprovesTrade: false,
+      observerChangesPlan: false,
+      observerChangesCanExecute: false,
+      observerBlocksDiscord: false,
+    },
+  };
+}
+
 function latestFactSummary(facts: unknown[]): { count: number; latest: Record<string, unknown> | null } {
   const records = facts.map(asRecord).filter((record): record is Record<string, unknown> => Boolean(record));
   return {
@@ -2385,6 +2577,8 @@ export async function writeScannerDecisionTapeAuditLog(args: {
   tradeDecisionMapAudit?: TradeDecisionMapAudit;
   targetCascade?: TargetCascadeResult | null;
   deskState?: DeskState;
+  trafficCopTrace?: ScannerTrafficCopTrace;
+  aiObserverReview?: ScannerAiObserverReview;
   planVersionId: string;
   dryRun: boolean;
   historyCoverage?: ScannerHistoryCoverageRecord[];
@@ -2470,6 +2664,20 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     candidateLifecycleTrace,
     tradeDecisionMapAudit,
     deskState,
+    trafficCopTrace: args.trafficCopTrace || buildScannerTrafficCopTrace({
+      tradeDate: args.tradeDate,
+      instrument: args.instrument,
+      session: args.session,
+      completed5m: args.completed5m,
+      candidate: args.candidate,
+      state: args.state,
+      confidence: args.confidence,
+      alertDecision: args.alertDecision,
+      visibilityMetadata,
+      deskState,
+      staleReason: args.staleReason,
+    }),
+    aiObserverReview: args.aiObserverReview || disabledAiObserverReview(),
     reversalWatch: {
       lines: reversalWatchLines,
       state: reversalWatchState,
@@ -7715,6 +7923,32 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       };
     }
   }
+  const trafficCopTrace = buildScannerTrafficCopTrace({
+    tradeDate,
+    instrument: config.instrument,
+    session,
+    completed5m,
+    candidate,
+    state: stateForAlert,
+    confidence,
+    alertDecision,
+    activeCampaignClaim,
+    visibilityMetadata,
+    deskState,
+    staleReason: stale.reason,
+  });
+  const aiObserverReview = candidate && (alertDecision.shouldSend || candidate.humanReview?.status === 'HumanReviewReady')
+    ? validateScannerPlanWithAiObserver({ config, trace: trafficCopTrace })
+    : disabledAiObserverReview('AI observer skipped because no postable or human-review candidate is active on this 5M bar.');
+  if (aiObserverReview.status !== 'disabled') {
+    deskState = {
+      ...deskState,
+      notes: [
+        ...deskState.notes,
+        `AI observer advisory: ${aiObserverReview.status} - ${aiObserverReview.summary}`,
+      ],
+    };
+  }
   const decisionTapePath = await writeScannerDecisionTapeAuditLog({
     session,
     tradeDate,
@@ -7734,6 +7968,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     candidateLifecycleTrace,
     targetCascade,
     deskState,
+    trafficCopTrace,
+    aiObserverReview,
     planVersionId,
     dryRun: config.dryRun,
     historyCoverage,
@@ -7754,6 +7990,57 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     discordPayloadValidated: true,
     webhookConfigured: Boolean(resolveScannerDiscordWebhookUrl().url),
   });
+  const writeTrafficCopTraceUpdate = async (args: {
+    liveDiscordBoundary: LiveDiscordEligibilityReport | null;
+    deliveryStatus: ScannerAlertDeliveryStatus | 'not_attempted' | null;
+    deliveryReason: string | null;
+  }): Promise<void> => {
+    try {
+      await writeScannerDecisionTapeAuditLog({
+        session,
+        tradeDate,
+        instrument: config.instrument,
+        completed5m,
+        currentPrice,
+        chartContext: analysis.structuredChartContext || null,
+        candidate,
+        normalized,
+        state: stateForAlert,
+        confidence,
+        staleReason: stale.reason,
+        scannerReviewStatus: selection.reviewStatus,
+        scannerAuditWarnings: [...selection.auditWarnings, ...historyWarnings],
+        alertDecision,
+        visibilityMetadata,
+        candidateLifecycleTrace,
+        targetCascade,
+        deskState,
+        trafficCopTrace: buildScannerTrafficCopTrace({
+          tradeDate,
+          instrument: config.instrument,
+          session,
+          completed5m,
+          candidate,
+          state: stateForAlert,
+          confidence,
+          alertDecision,
+          activeCampaignClaim,
+          visibilityMetadata,
+          deskState,
+          staleReason: stale.reason,
+          liveDiscordBoundary: args.liveDiscordBoundary,
+          deliveryStatus: args.deliveryStatus,
+          deliveryReason: args.deliveryReason,
+        }),
+        aiObserverReview,
+        planVersionId,
+        dryRun: config.dryRun,
+        historyCoverage,
+      });
+    } catch (error) {
+      console.warn(`[scanner] Traffic-cop trace update skipped safely: ${sanitizedError(error)}`);
+    }
+  };
 
   if (window.allowsDiscordAlert && shouldSendScannerMorningHtfDeskMap({
     tradeDate,
@@ -8128,6 +8415,11 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       deskState,
     });
     const alertLiveBoundary = liveDiscordSendBoundary(alertArtifacts.auditLogPath);
+    await writeTrafficCopTraceUpdate({
+      liveDiscordBoundary: alertLiveBoundary,
+      deliveryStatus: 'pending',
+      deliveryReason: alertLiveBoundary.eligible ? 'Live Discord boundary passed; delivery pending.' : alertLiveBoundary.blockers.join(' | '),
+    });
     if (shouldPersistScannerAlertToRag(deskState) && (config.dryRun || !config.discordEnabled || alertLiveBoundary.eligible)) {
       try {
         await upsertScannerDiscordAlertRagRecord({
@@ -8227,6 +8519,11 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           webhookSource: receipt.webhookSource,
           discordMessageId: receipt.discordMessageId,
         });
+        await writeTrafficCopTraceUpdate({
+          liveDiscordBoundary: alertLiveBoundary,
+          deliveryStatus: 'sent',
+          deliveryReason: `Discord delivery sent via ${receipt.webhookSource || 'unknown webhook'}.`,
+        });
       } else {
         state.alertDeliveries[alertKey] = markScannerAlertDeliverySkipped(pendingDelivery, {
           reason: `Discord delivery skipped: ${receipt.webhookSource || 'unknown'}.`,
@@ -8250,6 +8547,11 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
             postKind: 'trade_alert',
           });
         }
+        await writeTrafficCopTraceUpdate({
+          liveDiscordBoundary: alertLiveBoundary,
+          deliveryStatus: 'skipped',
+          deliveryReason: `Discord delivery skipped: ${receipt.webhookSource || 'unknown'}.`,
+        });
         await releaseDurableActiveCampaignScannerAlertClaim({
           config: activeCampaignClaim.source === 'supabase' ? durableLedgerConfig : null,
           campaignId: activeCampaignClaim.campaignId,
@@ -8275,6 +8577,11 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         reason: sanitizedError(error),
       }).catch((releaseError) => {
         console.warn(`[scanner-delivery] ActiveCampaign durable claim release failed safely: ${sanitizedError(releaseError)}`);
+      });
+      await writeTrafficCopTraceUpdate({
+        liveDiscordBoundary: alertLiveBoundary,
+        deliveryStatus: 'failed',
+        deliveryReason: sanitizedError(error),
       });
       console.warn(`[scanner-delivery] Executable alert delivery failed safely; scanner remains active and may retry while the setup remains fresh: ${sanitizedError(error)}`);
     }

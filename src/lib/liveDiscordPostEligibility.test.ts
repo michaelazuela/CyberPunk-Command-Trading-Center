@@ -210,7 +210,44 @@ const watchOnlyBlocked = evaluateLiveDiscordPostEligibility(input({
   },
 }));
 assert.equal(watchOnlyBlocked.eligible, false);
-assert.ok(watchOnlyBlocked.blockers.some((item) => item.includes('POST_PLAN with canExecute=true')));
+assert.ok(watchOnlyBlocked.blockers.some((item) => item.includes('executable POST_PLAN or human-review POST_REVIEW')));
+
+const humanReviewPostReviewEligible = evaluateLiveDiscordPostEligibility(input({
+  deskState: {
+    ...deskState(),
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    canExecute: false,
+    selectedCandidate: {
+      ...deskState().selectedCandidate,
+      executionStatus: 'Conditional',
+      humanReview: {
+        status: 'HumanReviewReady',
+        canExecute: false,
+        requiresTraderConfirmation: true,
+        discordTradePlanEligible: true,
+        reason: 'FVG human-review shall-post fixture.',
+      },
+    } as DeskState['selectedCandidate'],
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      visibilityMode: 'POST_REVIEW',
+      discordAction: 'post_review',
+      authority: {
+        ...deskState().visibilityMetadata.authority,
+        planEligible: true,
+        discordEligible: true,
+        executionEligible: false,
+        humanReviewOnly: true,
+        canExecute: false,
+      },
+    },
+  },
+}));
+assert.equal(humanReviewPostReviewEligible.eligible, true);
+assert.equal(humanReviewPostReviewEligible.blockers.length, 0);
+assert.equal(humanReviewPostReviewEligible.authorityBoundary.changesCanExecute, false);
+assert.equal(humanReviewPostReviewEligible.authorityBoundary.createsTradeApproval, false);
 
 const dryRunBlocked = evaluateLiveDiscordPostEligibility(input({
   scannerHealth: health('DEGRADED'),
