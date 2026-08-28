@@ -1,5 +1,6 @@
 function getOpenAIKey(env = {}) {
-  return env.OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
+  const processEnv = typeof process !== 'undefined' ? process.env : {};
+  return env.OPENAI_API_KEY || processEnv.OPENAI_API_KEY || '';
 }
 
 function messagesToResponsesInput(messages = []) {
