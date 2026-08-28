@@ -430,16 +430,24 @@ async function main() {
   const options = parseAiTradeObserverArgs();
   do {
     const tradeDate = options.tradeDateLocked ? options.tradeDate : etDate();
-    const session = options.sessionLocked ? options.session : etSession();
-    const { report, reportPath } = await buildAiTradeObserverReport({
-      ...options,
-      tradeDate,
-      session,
-    });
-    if (options.json && !options.watch) {
-      console.log(JSON.stringify({ reportPath, ...report }, null, 2));
-    } else {
-      console.log(`[ai-observer] ${report.instrument} ${report.tradeDate} ${report.session}: reviewed=${report.reviews.length} liveAiCall=${report.liveAiCall} report=${reportPath}`);
+    const sessions: SessionName[] = options.sessionLocked ? [options.session] : ['morning', 'lunch', 'evening'];
+    for (const session of sessions) {
+      try {
+        const { report, reportPath } = await buildAiTradeObserverReport({
+          ...options,
+          tradeDate,
+          session,
+        });
+        if (options.json && !options.watch) {
+          console.log(JSON.stringify({ reportPath, ...report }, null, 2));
+        } else {
+          console.log(`[ai-observer] ${report.instrument} ${report.tradeDate} ${report.session}: reviewed=${report.reviews.length} liveAiCall=${report.liveAiCall} report=${reportPath}`);
+        }
+      } catch (error) {
+        if (options.sessionLocked || !String(error instanceof Error ? error.message : error).includes('Scanner decision tape not found')) {
+          throw error;
+        }
+      }
     }
     if (!options.watch) break;
     await sleep(Math.max(15, options.pollSeconds) * 1000);
