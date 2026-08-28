@@ -2,6 +2,18 @@ function getOpenAIKey(env = {}) {
   return env.OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
 }
 
+function messagesToResponsesInput(messages = []) {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .filter((message) => message && typeof message === 'object')
+    .map((message) => ({
+      role: message.role || 'user',
+      content: typeof message.content === 'string'
+        ? [{ type: 'input_text', text: message.content }]
+        : message.content,
+    }));
+}
+
 export async function onRequestPost(context) {
   try {
     const requestData = await context.request.json();
@@ -21,14 +33,14 @@ export async function onRequestPost(context) {
     }
 
     const payload = {
-      model: requestData.model || context.env.OPENAI_MODEL || 'gpt-4o-mini',
-      messages: requestData.messages || [],
-      temperature: requestData.temperature ?? 0,
-      response_format: requestData.response_format || { type: 'json_object' },
-      max_tokens: requestData.max_tokens || 2500,
+      model: requestData.model || context.env.OPENAI_MODEL || 'gpt-5.6-terra',
+      input: requestData.input || messagesToResponsesInput(requestData.messages),
+      reasoning: requestData.reasoning || undefined,
+      text: requestData.text || { format: requestData.response_format || { type: 'json_object' } },
+      max_output_tokens: requestData.max_output_tokens || requestData.max_tokens || 2500,
     };
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,

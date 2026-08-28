@@ -84,6 +84,9 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
   const barTimeZone = env.SUPERVISOR_BAR_TIME_ZONE?.trim() || 'eastern';
   const enabledServices = env.SUPERVISOR_SERVICES;
   const scannerDiscordEnabled = boolEnv(env.SUPERVISOR_SCANNER_DISCORD_ENABLED, true);
+  const aiObserverLiveCall = boolEnv(env.SUPERVISOR_AI_OBSERVER_LIVE_AI_CALL, false);
+  const aiObserverPostDiscord = boolEnv(env.SUPERVISOR_AI_OBSERVER_POST_DISCORD, false);
+  const aiObserverEndpointUrl = env.QUANT_DESK_AI_OBSERVER_ENDPOINT_URL?.trim() || '';
 
   return [
     {
@@ -126,6 +129,20 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
       npmScript: 'nt:discord-alerts',
       args: [],
       enabled: csvIncludes(enabledServices, 'discord-alerts', false),
+    },
+    {
+      id: 'ai-trade-observer',
+      label: 'AI trade observer',
+      npmScript: 'live:ai-trade-observer',
+      args: [
+        '--instrument', instrument,
+        '--watch',
+        '--poll-seconds', pollSeconds,
+        ...(aiObserverEndpointUrl ? ['--endpoint-url', aiObserverEndpointUrl] : []),
+        ...(aiObserverLiveCall ? ['--live-ai-call'] : []),
+        ...(aiObserverPostDiscord ? ['--post-discord'] : []),
+      ],
+      enabled: csvIncludes(enabledServices, 'ai-trade-observer', false),
     },
   ];
 }

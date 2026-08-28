@@ -64,11 +64,12 @@ assert.equal(defaultConfig.status, 'valid');
 assert.equal(defaultConfig.config.host, '127.0.0.1');
 assert.equal(defaultConfig.config.port, 8797);
 assert.equal(defaultConfig.config.statusPath, '/status');
-assert.equal(defaultConfig.config.childServices.length, 4);
+assert.equal(defaultConfig.config.childServices.length, 5);
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'candle-recorder')?.enabled, true);
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'scanner')?.enabled, true);
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'companion-proxy')?.enabled, false);
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'discord-alerts')?.enabled, false);
+assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'ai-trade-observer')?.enabled, false);
 assert.equal(defaultConfig.config.htfPreload.enabled, true);
 assert.equal(defaultConfig.config.htfPreload.days, 30);
 assert.equal(defaultConfig.config.htfPreload.maxAttempts, 3);
@@ -159,9 +160,28 @@ const serviceFilteredConfig = loadSupervisorConfig(
 );
 assert.equal(serviceFilteredConfig.config.childServices.find((service) => service.id === 'candle-recorder')?.enabled, true);
 assert.equal(serviceFilteredConfig.config.childServices.find((service) => service.id === 'scanner')?.enabled, false);
+assert.equal(serviceFilteredConfig.config.childServices.find((service) => service.id === 'ai-trade-observer')?.enabled, false);
 assert.ok(serviceFilteredConfig.config.childServices.find((service) => service.id === 'candle-recorder')?.args.includes('MNQ'));
 assert.equal(serviceFilteredConfig.config.health.restartEnabled, true);
 assert.equal(serviceFilteredConfig.config.health.maxRestartAttempts, 3);
+
+const aiObserverSupervisorConfig = loadSupervisorConfig(
+  {
+    SUPERVISOR_SERVICES: 'candle-recorder,scanner,ai-trade-observer',
+    SUPERVISOR_INSTRUMENT: 'MES',
+    SUPERVISOR_POLL_SECONDS: '45',
+    QUANT_DESK_AI_OBSERVER_ENDPOINT_URL: 'https://quant-desk.example.com/api/openai',
+    SUPERVISOR_AI_OBSERVER_LIVE_AI_CALL: 'true',
+  },
+  'C:\\quant-desk',
+);
+const aiObserverService = aiObserverSupervisorConfig.config.childServices.find((service) => service.id === 'ai-trade-observer');
+assert.ok(aiObserverService);
+assert.equal(aiObserverService.enabled, true);
+assert.equal(aiObserverService.npmScript, 'live:ai-trade-observer');
+assert.ok(aiObserverService.args.includes('--watch'));
+assert.ok(aiObserverService.args.includes('--live-ai-call'));
+assert.ok(aiObserverService.args.includes('https://quant-desk.example.com/api/openai'));
 
 const scannerDiscordDisabledConfig = loadSupervisorConfig(
   {
