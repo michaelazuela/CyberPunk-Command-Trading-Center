@@ -6,6 +6,7 @@ import { getNinjaBridgeBars, getNinjaHistoricalBars } from '../../src/lib/ninjaT
 import { assessBridgeBarStaleness, latestCompletedBar, type BridgeTimestampMode, type BridgeTimeZoneMode } from '../../src/lib/localScannerEngine';
 import { loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
+import { barsMatchRequestedTimeframe } from './market-data-ingestion';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -180,6 +181,10 @@ async function recordOnce({
       : await fetchRecorderBars({ bridgeUrl, bridgeInstrument, timeframe, limit, maxStaleBarMinutes, barTimestampMode, barTimeZone });
     if (!bars.length) {
       console.warn(`[market-cache] ${timeframe}: no bars returned from bridge.`);
+      continue;
+    }
+    if (!barsMatchRequestedTimeframe(bars, timeframe)) {
+      console.warn(`[market-cache] ${timeframe}: skipped ${bars.length} bridge bars because their spacing does not match ${timeframe}.`);
       continue;
     }
     try {

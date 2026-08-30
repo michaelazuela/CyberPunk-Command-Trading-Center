@@ -109,7 +109,7 @@ function isAlignedToTimeframeMinute(value: string | null | undefined, timeframe:
 
 export function countMarketBarTimeframeIntervalMismatches(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe): number {
   const expectedMs = timeframeMinutes(timeframe) * 60_000;
-  const minimumAllowedMs = expectedMs * 0.4;
+  const minimumAllowedMs = expectedMs * 0.9;
   const sorted = bars
     .map((bar) => ({ bar, ms: marketBarTimeMs(bar.time) }))
     .filter((item): item is { bar: NinjaBridgeBar; ms: number } => item.ms !== null)
@@ -124,7 +124,7 @@ export function countMarketBarTimeframeIntervalMismatches(bars: NinjaBridgeBar[]
 
 export function filterBarsToRequestedTimeframe(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe): NinjaBridgeBar[] {
   const expectedMs = timeframeMinutes(timeframe) * 60_000;
-  const minimumAllowedMs = expectedMs * 0.4;
+  const minimumAllowedMs = expectedMs * 0.9;
   const sorted = bars
     .map((bar) => ({ bar, ms: marketBarTimeMs(bar.time) }))
     .filter((item): item is { bar: NinjaBridgeBar; ms: number } => item.ms !== null && isAlignedToTimeframeMinute(item.bar.time, timeframe))

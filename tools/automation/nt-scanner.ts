@@ -137,6 +137,7 @@ import {
   upsertDiscordAlertRagPayload,
 } from './discord-rag-persistence';
 import { repairDuplicateAuditTargets } from './audit-target-repair';
+import { aggregateFiveMinuteBarsToTimeframe } from './repair-market-bars-timeframe';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -2838,6 +2839,47 @@ function scannerHistoryRepairBarsForTimeframe(
   return [];
 }
 
+async function buildScannerHtfRepairFromCachedFiveMinute(args: {
+  config: ScannerConfig;
+  marketConfig: MarketDataConfig | null;
+  timeframe: MarketBarTimeframe;
+  from: string;
+  to: string;
+  limit: number;
+}): Promise<NinjaBridgeBar[]> {
+  if (!args.marketConfig || args.timeframe === '5m') return [];
+  try {
+    const fiveMinuteBars = await fetchCachedMarketBars({
+      instrument: args.config.bridgeInstrument,
+      timeframe: '5m',
+      from: args.from,
+      to: args.to,
+      config: args.marketConfig,
+      limit: args.limit,
+    });
+    if (!barsCoverRequestedLookback(fiveMinuteBars, args.from, args.to, '5m')) return [];
+    const rebuilt = scannerHistoryRepairBarsForTimeframe(
+      args.timeframe,
+      aggregateFiveMinuteBarsToTimeframe(fiveMinuteBars, args.timeframe),
+      'trusted 5M-derived HTF repair',
+    );
+    if (!rebuilt.length) return [];
+    if (!barsCoverRequestedLookback(rebuilt, args.from, args.to, args.timeframe)) return [];
+    await upsertMarketBars({
+      bars: rebuilt,
+      instrument: args.config.instrument,
+      bridgeInstrument: args.config.bridgeInstrument,
+      timeframe: args.timeframe,
+      config: args.marketConfig,
+    });
+    console.log(`[scanner-history] ${args.timeframe}: rebuilt HTF cache from trusted 5M market_bars (${rebuilt.length} bars).`);
+    return rebuilt;
+  } catch (error) {
+    console.warn(`[scanner-history] ${args.timeframe}: trusted 5M-derived HTF repair failed: ${formatError(error)}`);
+    return [];
+  }
+}
+
 async function fetchLiveBars(config: ScannerConfig): Promise<Record<MarketBarTimeframe, NinjaBridgeBar[]>> {
   const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
     const bars = await fetchFreshBridgeBars(config, timeframe, 220);
@@ -2888,6 +2930,20 @@ async function fetchScannerHistoryFrame(args: {
   let repaired: NinjaBridgeBar[] = [];
   const cacheSufficient = barsCoverRequestedLookback(cached, args.from, args.to, args.timeframe);
   if (!cacheSufficient) {
+    const derivedFromFiveMinute = await buildScannerHtfRepairFromCachedFiveMinute({
+      config: args.config,
+      marketConfig,
+      timeframe: args.timeframe,
+      from: args.from,
+      to: args.to,
+      limit: args.limit,
+    });
+    if (derivedFromFiveMinute.length) {
+      repaired = mergeBars(derivedFromFiveMinute, repaired);
+    }
+  }
+
+  if (!cacheSufficient && !barsCoverRequestedLookback(repaired, args.from, args.to, args.timeframe)) {
     try {
       const historical = await getNinjaHistoricalBars({
         instrument: args.config.bridgeInstrument,

@@ -177,6 +177,100 @@ function assertTargetTimeframe(value: string): MarketBarTimeframe {
   return timeframe;
 }
 
+export function parseTargetTimeframes(value: string | null): MarketBarTimeframe[] {
+  if (!value) return [];
+  if (value === 'all-htf') return [...TARGET_TIMEFRAMES];
+  const requested = value.split(',').map((part) => part.trim()).filter(Boolean);
+  if (requested.length === 0) return [];
+  return requested.map(assertTargetTimeframe);
+}
+
+async function repairOneTimeframe(args: {
+  instrument: Instrument;
+  bridgeInstrument: string;
+  bridgeUrl: string;
+  targetTimeframe: MarketBarTimeframe;
+  from: string;
+  to: string;
+  limit: number;
+  apply: boolean;
+  config: NonNullable<ReturnType<typeof loadMarketDataConfig>>;
+  sourceFiveMinuteBars: NinjaBridgeBar[];
+}): Promise<void> {
+  const rawTargetBars = await fetchRawCachedMarketBars({
+    instrument: args.bridgeInstrument,
+    timeframe: args.targetTimeframe,
+    from: args.from,
+    to: args.to,
+    config: args.config,
+    limit: args.limit,
+  });
+  const rebuilt = aggregateFiveMinuteBarsToTimeframe(args.sourceFiveMinuteBars, args.targetTimeframe).filter((bar) => {
+    const ms = etWallClockMs(bar.time);
+    const fromMs = etWallClockMs(args.from);
+    const toMs = etWallClockMs(args.to);
+    return ms !== null && fromMs !== null && toMs !== null && ms >= fromMs && ms <= toMs;
+  });
+  const plan = repairTimeframeRowsPlan({
+    rawTargetBars,
+    sourceFiveMinuteBars: args.sourceFiveMinuteBars,
+    targetTimeframe: args.targetTimeframe,
+    from: args.from,
+    to: args.to,
+  });
+
+  console.log(JSON.stringify({
+    reportType: 'market_bars_timeframe_repair',
+    mode: args.apply ? 'apply' : 'dry_run',
+    instrument: args.instrument,
+    bridgeInstrument: args.bridgeInstrument,
+    targetTimeframe: args.targetTimeframe,
+    sourceTimeframe: '5m',
+    from: normalizeCandleTimeEt(args.from),
+    to: normalizeCandleTimeEt(args.to),
+    ...plan,
+    boundary: 'market_data_cache_repair_only_no_trading_logic_changed',
+  }, null, 2));
+
+  if (plan.rebuiltRows === 0) throw new Error(`Repair aborted: rebuilt ${args.targetTimeframe} row count is zero.`);
+  if (plan.rebuiltIntervalMismatches > 0) throw new Error(`Repair aborted: rebuilt ${args.targetTimeframe} rows are malformed.`);
+
+  if (!args.apply) return;
+
+  const deleted = await deleteMarketBarsRange({
+    instrument: args.bridgeInstrument,
+    timeframe: args.targetTimeframe,
+    from: args.from,
+    to: args.to,
+    config: args.config,
+  });
+  const upserted = await upsertMarketBars({
+    bars: rebuilt,
+    instrument: args.instrument,
+    bridgeInstrument: args.bridgeInstrument,
+    timeframe: args.targetTimeframe,
+    config: args.config,
+  });
+  const verified = await fetchRawCachedMarketBars({
+    instrument: args.bridgeInstrument,
+    timeframe: args.targetTimeframe,
+    from: args.from,
+    to: args.to,
+    config: args.config,
+    limit: args.limit,
+  });
+  const verifiedMismatches = countMarketBarTimeframeIntervalMismatches(verified, args.targetTimeframe);
+  console.log(JSON.stringify({
+    action: 'repair_applied',
+    targetTimeframe: args.targetTimeframe,
+    deleted: deleted.deleted,
+    upserted: upserted.upserted,
+    verifiedRows: verified.length,
+    verifiedIntervalMismatches: verifiedMismatches,
+  }, null, 2));
+  if (verifiedMismatches > 0) throw new Error(`Repair verification failed for ${args.targetTimeframe}: ${verifiedMismatches} interval mismatch(es) remain.`);
+}
+
 async function main() {
   const config = loadMarketDataConfig();
   if (!config) throw new Error('Repair requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DISCORD_RAG_USER_ID in .env.local.');
@@ -185,87 +279,30 @@ async function main() {
   if (instrument !== 'MES' && instrument !== 'MNQ') throw new Error('--instrument must be MES or MNQ.');
   const bridgeInstrument = argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || `${instrument} 09-26`;
   const bridgeUrl = argValue('bridge-url') || process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765';
-  const targetTimeframe = assertTargetTimeframe(argValue('target-timeframe') || '120m');
+  const targetTimeframes = parseTargetTimeframes(argValue('target-timeframes'));
+  if (targetTimeframes.length === 0) targetTimeframes.push(assertTargetTimeframe(argValue('target-timeframe') || '120m'));
   const from = argValue('from') || '2026-05-22T00:00:00-04:00';
   const to = argValue('to') || '2026-06-21T23:59:00-04:00';
   const limit = Math.max(100, Math.trunc(Number(argValue('limit') || '20000')));
   const apply = hasFlag('apply');
 
-  const rawTargetBars = await fetchRawCachedMarketBars({
-    instrument: bridgeInstrument,
-    timeframe: targetTimeframe,
-    from,
-    to,
-    config,
-    limit,
-  });
   const sourceFiveMinuteBars = await loadTrustedFiveMinuteBars({ bridgeInstrument, bridgeUrl, from, to, limit });
-  const rebuilt = aggregateFiveMinuteBarsToTimeframe(sourceFiveMinuteBars, targetTimeframe).filter((bar) => {
-    const ms = etWallClockMs(bar.time);
-    const fromMs = etWallClockMs(from);
-    const toMs = etWallClockMs(to);
-    return ms !== null && fromMs !== null && toMs !== null && ms >= fromMs && ms <= toMs;
-  });
-  const plan = repairTimeframeRowsPlan({
-    rawTargetBars,
-    sourceFiveMinuteBars,
-    targetTimeframe,
-    from,
-    to,
-  });
-
-  console.log(JSON.stringify({
-    reportType: 'market_bars_timeframe_repair',
-    mode: apply ? 'apply' : 'dry_run',
-    instrument,
-    bridgeInstrument,
-    targetTimeframe,
-    sourceTimeframe: '5m',
-    from: normalizeCandleTimeEt(from),
-    to: normalizeCandleTimeEt(to),
-    ...plan,
-    boundary: 'market_data_cache_repair_only_no_trading_logic_changed',
-  }, null, 2));
-
-  if (plan.rebuiltRows === 0) throw new Error('Repair aborted: rebuilt row count is zero.');
-  if (plan.rebuiltIntervalMismatches > 0) throw new Error(`Repair aborted: rebuilt ${targetTimeframe} rows are malformed.`);
-
-  if (!apply) {
-    console.log('[repair] Dry-run only. Re-run with --apply to delete and replace target timeframe rows.');
-    return;
+  for (const targetTimeframe of targetTimeframes) {
+    await repairOneTimeframe({
+      instrument,
+      bridgeInstrument,
+      bridgeUrl,
+      targetTimeframe,
+      from,
+      to,
+      limit,
+      apply,
+      config,
+      sourceFiveMinuteBars,
+    });
   }
 
-  const deleted = await deleteMarketBarsRange({
-    instrument: bridgeInstrument,
-    timeframe: targetTimeframe,
-    from,
-    to,
-    config,
-  });
-  const upserted = await upsertMarketBars({
-    bars: rebuilt,
-    instrument,
-    bridgeInstrument,
-    timeframe: targetTimeframe,
-    config,
-  });
-  const verified = await fetchRawCachedMarketBars({
-    instrument: bridgeInstrument,
-    timeframe: targetTimeframe,
-    from,
-    to,
-    config,
-    limit,
-  });
-  const verifiedMismatches = countMarketBarTimeframeIntervalMismatches(verified, targetTimeframe);
-  console.log(JSON.stringify({
-    action: 'repair_applied',
-    deleted: deleted.deleted,
-    upserted: upserted.upserted,
-    verifiedRows: verified.length,
-    verifiedIntervalMismatches: verifiedMismatches,
-  }, null, 2));
-  if (verifiedMismatches > 0) throw new Error(`Repair verification failed: ${verifiedMismatches} interval mismatch(es) remain.`);
+  if (!apply) console.log('[repair] Dry-run only. Re-run with --apply to delete and replace target timeframe rows.');
 }
 
 if (process.argv[1]?.replace(/\\/g, '/').endsWith('/tools/automation/repair-market-bars-timeframe.ts')) {

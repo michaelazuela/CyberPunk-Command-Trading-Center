@@ -109,6 +109,11 @@ assert.equal(countMarketBarTimeframeIntervalMismatches([
   bar('2026-06-21T18:00:00-04:00'),
   bar('2026-06-21T19:45:00-04:00'),
 ], '120m') > 0, true);
+assert.equal(countMarketBarTimeframeIntervalMismatches([
+  bar('2026-06-21T00:00:00-04:00'),
+  bar('2026-06-21T02:00:00-04:00'),
+  bar('2026-06-21T04:00:00-04:00'),
+], '240m') > 0, true);
 const filteredTwoHourCache = filterBarsToRequestedTimeframe([
   bar('2026-06-21T18:00:00-04:00'),
   bar('2026-06-21T18:05:00-04:00'),
