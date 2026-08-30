@@ -99,7 +99,7 @@ const { report, reportPath } = await buildAiTradeObserverReport({
 assert.equal(report.reportType, 'ai_trade_observer_report');
 assert.equal(report.reviews.length, 2);
 assert.equal(report.reviews[0].status, 'dry_run');
-assert.equal(report.reviews[0].modelRoute.model, 'gpt-5.6-terra');
+assert.equal(report.reviews[0].modelRoute.model, 'gpt-5-nano');
 assert.equal(report.reviews[1].modelRoute.model, 'gpt-5.6-sol');
 assert.equal(report.authorityBoundary.changesScannerState, false);
 assert.equal(report.authorityBoundary.blocksDiscord, false);

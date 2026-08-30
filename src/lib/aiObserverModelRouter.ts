@@ -6,6 +6,7 @@ export type AiObserverWorkload =
   | 'summary';
 
 export type AiObserverModel =
+  | 'gpt-5-nano'
   | 'gpt-5.6-terra'
   | 'gpt-5.6-sol'
   | 'gpt-5.6-luna';
@@ -53,11 +54,11 @@ export function routeAiObserverModel(input: AiObserverRouteInput): AiObserverMod
   if (input.workload === 'summary') {
     return {
       sourceOfTruth: 'ai_observer_model_router',
-      model: 'gpt-5.6-luna',
+      model: 'gpt-5-nano',
       reasoningEffort: 'low',
       maxOutputTokens: 800,
       responseFormat: 'json_object',
-      routeReason: 'Summary workload uses the efficient model because it does not adjudicate a live plan.',
+      routeReason: 'Summary workload uses GPT-5 nano because it is the lowest-cost observer route and does not adjudicate a live plan.',
       authorityBoundary: {
         modelRouterApprovesTrade: false,
         modelRouterChangesPlan: false,
@@ -86,11 +87,11 @@ export function routeAiObserverModel(input: AiObserverRouteInput): AiObserverMod
 
   return {
     sourceOfTruth: 'ai_observer_model_router',
-    model: 'gpt-5.6-terra',
-    reasoningEffort: input.humanReviewReady || input.canExecute ? 'medium' : 'low',
+    model: 'gpt-5-nano',
+    reasoningEffort: 'low',
     maxOutputTokens: 1200,
     responseFormat: 'json_object',
-    routeReason: 'Normal live observer validation uses the balanced model for plan consistency review.',
+    routeReason: 'Normal live observer validation uses GPT-5 nano to keep autonomous plan checks low cost; escalation remains reserved for disputes, blocked high-score candidates, failed delivery, and deep replay.',
     authorityBoundary: {
       modelRouterApprovesTrade: false,
       modelRouterChangesPlan: false,

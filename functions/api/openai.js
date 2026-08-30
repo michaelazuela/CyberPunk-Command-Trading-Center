@@ -34,7 +34,7 @@ export async function onRequestPost(context) {
     }
 
     const payload = {
-      model: requestData.model || context.env.OPENAI_MODEL || 'gpt-5.6-terra',
+      model: requestData.model || context.env.OPENAI_MODEL || 'gpt-5-nano',
       input: requestData.input || messagesToResponsesInput(requestData.messages),
       reasoning: requestData.reasoning || undefined,
       text: requestData.text || { format: requestData.response_format || { type: 'json_object' } },

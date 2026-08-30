@@ -15,8 +15,8 @@ const base: AiObserverRouteInput = {
 };
 
 const live = routeAiObserverModel(base);
-assert.equal(live.model, 'gpt-5.6-terra');
-assert.equal(live.reasoningEffort, 'medium');
+assert.equal(live.model, 'gpt-5-nano');
+assert.equal(live.reasoningEffort, 'low');
 assert.equal(live.authorityBoundary.modelRouterApprovesTrade, false);
 assert.equal(live.authorityBoundary.modelRouterBlocksDiscord, false);
 
@@ -43,7 +43,7 @@ const summary = routeAiObserverModel({
   score: null,
   humanReviewReady: false,
 });
-assert.equal(summary.model, 'gpt-5.6-luna');
+assert.equal(summary.model, 'gpt-5-nano');
 assert.equal(summary.reasoningEffort, 'low');
 
 console.log('AI observer model router verified.');
