@@ -3035,20 +3035,20 @@ function retainedBossZoneState(args: {
     return {
       state: touchedAndHeld ? 'defended' : 'unknown',
       reason: touchedAndHeld
-        ? 'A completed candle touched the zone and closed back on the defended side; latest close is unavailable.'
-        : 'Latest completed close is unavailable, so boss-zone state is context only.',
+        ? 'A completed candle touched the zone and closed back on the defended side; scanner reference price is unavailable.'
+        : 'Scanner reference price is unavailable, so boss-zone state is context only.',
     };
   }
   if (args.direction === 'LONG' && close < args.lower) {
     return {
       state: 'invalidated',
-      reason: `Latest completed close ${close.toFixed(2)} accepted below the bull boss zone floor ${args.lower.toFixed(2)}.`,
+      reason: `Scanner reference price ${close.toFixed(2)} is below the bull boss zone floor ${args.lower.toFixed(2)}.`,
     };
   }
   if (args.direction === 'SHORT' && close > args.upper) {
     return {
       state: 'invalidated',
-      reason: `Latest completed close ${close.toFixed(2)} accepted above the bear boss zone ceiling ${args.upper.toFixed(2)}.`,
+      reason: `Scanner reference price ${close.toFixed(2)} is above the bear boss zone ceiling ${args.upper.toFixed(2)}.`,
     };
   }
   if (touchedAndHeld) {

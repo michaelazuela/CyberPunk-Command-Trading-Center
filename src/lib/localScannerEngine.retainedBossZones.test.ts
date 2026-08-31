@@ -121,7 +121,7 @@ assert.equal(defended.primaryDeskPlay.retainedBossZones.approvalBoundary.changes
 
 const invalidated = deskStateFor(7678.75);
 assert.equal(invalidated.primaryDeskPlay.retainedBossZones.bullBoss?.state, 'invalidated');
-assert.match(invalidated.primaryDeskPlay.retainedBossZones.bullBoss?.stateReason || '', /accepted below/i);
+assert.match(invalidated.primaryDeskPlay.retainedBossZones.bullBoss?.stateReason || '', /scanner reference price/i);
 assert.equal(invalidated.primaryDeskPlay.retainedBossZones.approvalBoundary.changesTradeApprovals, false);
 
 const derivedOnly = deskStateFor(7692.75, false);
