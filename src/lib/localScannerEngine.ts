@@ -2852,13 +2852,22 @@ function latestCompletedCloseForBossLedger(chartContext?: Partial<ChartContext> 
   const fiveMinute = chartContext?.multiTimeframeContext?.fiveMinute.candles || [];
   const rootCandles = chartContext?.candles || [];
   const fifteenMinute = chartContext?.multiTimeframeContext?.fifteenMinute.candles || [];
-  for (const candles of [fiveMinute, rootCandles, fifteenMinute]) {
-    for (const candle of [...candles].reverse()) {
-      const close = completedCandleClose(candle);
-      if (close !== null) return close;
-    }
-  }
-  return null;
+  const candidates = [fiveMinute, rootCandles, fifteenMinute]
+    .flat()
+    .map((candle, fallbackIndex) => ({
+      close: completedCandleClose(candle),
+      timestamp: completedCandleTimestamp(candle),
+      index: completedCandleIndex(candle) ?? fallbackIndex,
+    }))
+    .filter((item): item is { close: number; timestamp: string | null; index: number } => item.close !== null);
+  if (!candidates.length) return null;
+  return candidates
+    .sort((a, b) => {
+      const aTime = a.timestamp ? new Date(a.timestamp).getTime() : Number.NaN;
+      const bTime = b.timestamp ? new Date(b.timestamp).getTime() : Number.NaN;
+      if (Number.isFinite(aTime) && Number.isFinite(bTime)) return bTime - aTime;
+      return b.index - a.index;
+    })[0]?.close ?? null;
 }
 
 function completedCandleTimestamp(candle: unknown): string | null {
@@ -2877,14 +2886,14 @@ function roundBossZonePrice(value: number): number {
   return Math.round(value * 4) / 4;
 }
 
-function bossZoneLookbackFloor(candles: unknown[]): number | null {
-  const timestamps = candles
+function bossZoneRecentTradingDates(candles: unknown[]): Set<string> | null {
+  const dates = candles
     .map(completedCandleTimestamp)
     .filter((value): value is string => Boolean(value))
-    .map((value) => new Date(value).getTime())
-    .filter((value) => Number.isFinite(value));
-  if (!timestamps.length) return null;
-  return Math.max(...timestamps) - (3 * 24 * 60 * 60 * 1000);
+    .map((value) => value.slice(0, 10))
+    .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
+  if (!dates.length) return null;
+  return new Set([...new Set(dates)].sort().slice(-3));
 }
 
 function deriveFifteenMinuteBossZonesFromCandles(chartContext?: Partial<ChartContext> | null): FvgZoneFact[] {
@@ -2903,13 +2912,13 @@ function deriveFifteenMinuteBossZonesFromCandles(chartContext?: Partial<ChartCon
     });
   if (candles.length < 3) return [];
 
-  const floor = bossZoneLookbackFloor(candles);
+  const recentTradingDates = bossZoneRecentTradingDates(candles);
   const derived: FvgZoneFact[] = [];
   for (let index = 2; index < candles.length; index += 1) {
     const current = candles[index];
     const twoBack = candles[index - 2];
     const formedAt = completedCandleTimestamp(current);
-    if (floor !== null && formedAt && new Date(formedAt).getTime() < floor) continue;
+    if (recentTradingDates && formedAt && !recentTradingDates.has(formedAt.slice(0, 10))) continue;
 
     const currentHigh = completedCandleHigh(current);
     const currentLow = completedCandleLow(current);
