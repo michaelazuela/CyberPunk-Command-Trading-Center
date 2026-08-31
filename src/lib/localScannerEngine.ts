@@ -607,9 +607,12 @@ export type DeskFinalBossMssZoneState =
   | 'flipped_reaction'
   | 'expired';
 export type DeskRetainedBossZoneRole = 'final_boss_zone' | 'active_mss_protected_boss_zone' | 'final_boss_mss_zone';
+export type DeskBossZoneSourceKind = 'strict_15m_fvg' | 'mss_protected_imbalance_origin';
 
 export interface DeskRetainedBossZone {
   sourceOfTruth: 'scanner_retained_boss_zone_ledger';
+  sourceKind: DeskBossZoneSourceKind;
+  sourceLabel: string;
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
   role: DeskRetainedBossZoneRole;
   lower: number;
@@ -634,6 +637,8 @@ export interface DeskRetainedBossZone {
 
 export interface DeskFinalBossMssZone {
   sourceOfTruth: 'scanner_final_boss_mss_zone_lifecycle';
+  sourceKind: DeskBossZoneSourceKind;
+  sourceLabel: string;
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
   role: 'final_boss_mss_zone';
   lower: number;
@@ -2934,6 +2939,21 @@ function roundBossZonePrice(value: number): number {
   return Math.round(value * 4) / 4;
 }
 
+type FifteenMinuteBossZoneFact = {
+  zone: FvgZoneFact;
+  lower: number;
+  upper: number;
+  midpoint: number;
+  sourceKind: DeskBossZoneSourceKind;
+  sourceLabel: string;
+};
+
+function bossZoneSourceLabel(sourceKind: DeskBossZoneSourceKind): string {
+  return sourceKind === 'strict_15m_fvg'
+    ? 'strict 15M FVG'
+    : '15M MSS origin';
+}
+
 function bossZoneRecentTradingDates(candles: unknown[]): Set<string> | null {
   const dates = candles
     .map(completedCandleTimestamp)
@@ -2944,8 +2964,20 @@ function bossZoneRecentTradingDates(candles: unknown[]): Set<string> | null {
   return new Set([...new Set(dates)].sort().slice(-3));
 }
 
-function deriveFifteenMinuteBossZonesFromCandles(chartContext?: Partial<ChartContext> | null): FvgZoneFact[] {
-  const candles = [...(chartContext?.multiTimeframeContext?.fifteenMinute.candles || [])]
+function bossZoneBodyHigh(candle: unknown): number | null {
+  const open = completedCandleOpen(candle);
+  const close = completedCandleClose(candle);
+  return open === null || close === null ? null : Math.max(open, close);
+}
+
+function bossZoneBodyLow(candle: unknown): number | null {
+  const open = completedCandleOpen(candle);
+  const close = completedCandleClose(candle);
+  return open === null || close === null ? null : Math.min(open, close);
+}
+
+function sortedRecentFifteenMinuteCandles(chartContext?: Partial<ChartContext> | null): unknown[] {
+  return [...(chartContext?.multiTimeframeContext?.fifteenMinute.candles || [])]
     .filter((candle) =>
       completedCandleHigh(candle) !== null &&
       completedCandleLow(candle) !== null
@@ -2958,10 +2990,14 @@ function deriveFifteenMinuteBossZonesFromCandles(chartContext?: Partial<ChartCon
       const bTime = completedCandleTimestamp(b);
       return (aTime ? new Date(aTime).getTime() : 0) - (bTime ? new Date(bTime).getTime() : 0);
     });
+}
+
+function deriveFifteenMinuteBossZonesFromCandles(chartContext?: Partial<ChartContext> | null): FifteenMinuteBossZoneFact[] {
+  const candles = sortedRecentFifteenMinuteCandles(chartContext);
   if (candles.length < 3) return [];
 
   const recentTradingDates = bossZoneRecentTradingDates(candles);
-  const derived: FvgZoneFact[] = [];
+  const derived: FifteenMinuteBossZoneFact[] = [];
   for (let index = 2; index < candles.length; index += 1) {
     const current = candles[index];
     const twoBack = candles[index - 2];
@@ -2978,14 +3014,21 @@ function deriveFifteenMinuteBossZonesFromCandles(chartContext?: Partial<ChartCon
       const lower = roundBossZonePrice(twoBackHigh);
       const upper = roundBossZonePrice(currentLow);
       derived.push({
-        direction: 'LONG',
+        zone: {
+          direction: 'LONG',
+          lower,
+          upper,
+          midpoint: roundBossZonePrice((lower + upper) / 2),
+          formedAt,
+          formedCandleIndex: completedCandleIndex(current),
+          impulseQualified: true,
+          confidence: 'High',
+        },
         lower,
         upper,
         midpoint: roundBossZonePrice((lower + upper) / 2),
-        formedAt,
-        formedCandleIndex: completedCandleIndex(current),
-        impulseQualified: true,
-        confidence: 'High',
+        sourceKind: 'strict_15m_fvg',
+        sourceLabel: bossZoneSourceLabel('strict_15m_fvg'),
       });
     }
 
@@ -2993,52 +3036,125 @@ function deriveFifteenMinuteBossZonesFromCandles(chartContext?: Partial<ChartCon
       const lower = roundBossZonePrice(currentHigh);
       const upper = roundBossZonePrice(twoBackLow);
       derived.push({
-        direction: 'SHORT',
+        zone: {
+          direction: 'SHORT',
+          lower,
+          upper,
+          midpoint: roundBossZonePrice((lower + upper) / 2),
+          formedAt,
+          formedCandleIndex: completedCandleIndex(current),
+          impulseQualified: true,
+          confidence: 'High',
+        },
         lower,
         upper,
         midpoint: roundBossZonePrice((lower + upper) / 2),
-        formedAt,
-        formedCandleIndex: completedCandleIndex(current),
-        impulseQualified: true,
-        confidence: 'High',
+        sourceKind: 'strict_15m_fvg',
+        sourceLabel: bossZoneSourceLabel('strict_15m_fvg'),
       });
     }
   }
   return derived;
 }
 
-function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null): Array<{
-  zone: FvgZoneFact;
-  lower: number;
-  upper: number;
-  midpoint: number;
-}> {
+function deriveFifteenMinuteMssProtectedImbalanceOriginZones(chartContext?: Partial<ChartContext> | null): FifteenMinuteBossZoneFact[] {
+  const candles = sortedRecentFifteenMinuteCandles(chartContext);
+  if (candles.length < 4) return [];
+  const recentTradingDates = bossZoneRecentTradingDates(candles);
+  const derived: FifteenMinuteBossZoneFact[] = [];
+  for (let index = 3; index < candles.length; index += 1) {
+    const current = candles[index];
+    const twoBack = candles[index - 2];
+    const formedAt = completedCandleTimestamp(current);
+    if (recentTradingDates && formedAt && !recentTradingDates.has(formedAt.slice(0, 10))) continue;
+
+    const currentHigh = completedCandleHigh(current);
+    const currentLow = completedCandleLow(current);
+    const twoBackBodyHigh = bossZoneBodyHigh(twoBack);
+    const twoBackBodyLow = bossZoneBodyLow(twoBack);
+    if (currentHigh === null || currentLow === null || twoBackBodyHigh === null || twoBackBodyLow === null) continue;
+
+    if (isFifteenMinuteDisplacementBreak({ candles, index, direction: 'LONG' }) && currentLow > twoBackBodyHigh) {
+      const lower = roundBossZonePrice(twoBackBodyHigh);
+      const upper = roundBossZonePrice(currentLow);
+      derived.push({
+        zone: {
+          direction: 'LONG',
+          lower,
+          upper,
+          midpoint: roundBossZonePrice((lower + upper) / 2),
+          formedAt,
+          formedCandleIndex: completedCandleIndex(current),
+          impulseQualified: true,
+          confidence: 'High',
+        },
+        lower,
+        upper,
+        midpoint: roundBossZonePrice((lower + upper) / 2),
+        sourceKind: 'mss_protected_imbalance_origin',
+        sourceLabel: bossZoneSourceLabel('mss_protected_imbalance_origin'),
+      });
+    }
+
+    if (isFifteenMinuteDisplacementBreak({ candles, index, direction: 'SHORT' }) && currentHigh < twoBackBodyLow) {
+      const lower = roundBossZonePrice(currentHigh);
+      const upper = roundBossZonePrice(twoBackBodyLow);
+      derived.push({
+        zone: {
+          direction: 'SHORT',
+          lower,
+          upper,
+          midpoint: roundBossZonePrice((lower + upper) / 2),
+          formedAt,
+          formedCandleIndex: completedCandleIndex(current),
+          impulseQualified: true,
+          confidence: 'High',
+        },
+        lower,
+        upper,
+        midpoint: roundBossZonePrice((lower + upper) / 2),
+        sourceKind: 'mss_protected_imbalance_origin',
+        sourceLabel: bossZoneSourceLabel('mss_protected_imbalance_origin'),
+      });
+    }
+  }
+  return derived;
+}
+
+function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null): FifteenMinuteBossZoneFact[] {
   const zones = [
-    ...(chartContext?.multiTimeframeContext?.fifteenMinute.fvgZones || []),
+    ...(chartContext?.multiTimeframeContext?.fifteenMinute.fvgZones || []).map((zone) => ({
+      zone,
+      sourceKind: 'strict_15m_fvg' as const,
+      sourceLabel: bossZoneSourceLabel('strict_15m_fvg'),
+    })),
     ...deriveFifteenMinuteBossZonesFromCandles(chartContext),
+    ...deriveFifteenMinuteMssProtectedImbalanceOriginZones(chartContext),
   ];
   const seen = new Set<string>();
   return zones
-    .filter((zone) =>
-      (zone.direction === 'LONG' || zone.direction === 'SHORT') &&
-      numericOrNull(zone.lower) !== null &&
-      numericOrNull(zone.upper) !== null &&
-      zone.impulseQualified !== false
+    .filter((item) =>
+      (item.zone.direction === 'LONG' || item.zone.direction === 'SHORT') &&
+      numericOrNull(item.zone.lower) !== null &&
+      numericOrNull(item.zone.upper) !== null &&
+      item.zone.impulseQualified !== false
     )
-    .map((zone) => {
-      const lower = numericOrNull(zone.lower) as number;
-      const upper = numericOrNull(zone.upper) as number;
+    .map((item) => {
+      const lower = numericOrNull(item.zone.lower) as number;
+      const upper = numericOrNull(item.zone.upper) as number;
       const low = Math.min(lower, upper);
       const high = Math.max(lower, upper);
       return {
-        zone,
+        zone: item.zone,
         lower: low,
         upper: high,
-        midpoint: numericOrNull(zone.midpoint) ?? (low + high) / 2,
+        midpoint: numericOrNull(item.zone.midpoint) ?? (low + high) / 2,
+        sourceKind: item.sourceKind,
+        sourceLabel: item.sourceLabel,
       };
     })
     .filter((item) => {
-      const key = `${item.zone.direction}:${item.lower.toFixed(2)}:${item.upper.toFixed(2)}:${item.zone.formedAt || ''}`;
+      const key = `${item.zone.direction}:${item.lower.toFixed(2)}:${item.upper.toFixed(2)}:${item.sourceKind}:${item.zone.formedAt || ''}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -3172,7 +3288,14 @@ function controlZoneFromPreBreakCandles(args: {
   candles: unknown[];
   breakIndex: number;
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
-}): { lower: number; upper: number; formedAt: string | null; formedCandleIndex: number | null } | null {
+}): {
+  lower: number;
+  upper: number;
+  formedAt: string | null;
+  formedCandleIndex: number | null;
+  sourceKind: DeskBossZoneSourceKind;
+  sourceLabel: string;
+} | null {
   const prior = args.candles.slice(Math.max(0, args.breakIndex - 8), args.breakIndex);
   if (prior.length < 3) return null;
   const opposite = args.direction === 'LONG' ? 'SHORT' : 'LONG';
@@ -3219,6 +3342,8 @@ function controlZoneFromPreBreakCandles(args: {
     upper,
     formedAt: completedCandleTimestamp(first),
     formedCandleIndex: completedCandleIndex(first),
+    sourceKind: 'mss_protected_imbalance_origin',
+    sourceLabel: bossZoneSourceLabel('mss_protected_imbalance_origin'),
   };
 }
 
@@ -3227,7 +3352,14 @@ function explicitZoneForMssBreak(args: {
   breakCandle: unknown;
   breakTimeMs: number;
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
-}): { lower: number; upper: number; formedAt: string | null; formedCandleIndex: number | null } | null {
+}): {
+  lower: number;
+  upper: number;
+  formedAt: string | null;
+  formedCandleIndex: number | null;
+  sourceKind: DeskBossZoneSourceKind;
+  sourceLabel: string;
+} | null {
   const breakHigh = completedCandleHigh(args.breakCandle);
   const breakLow = completedCandleLow(args.breakCandle);
   const candidates = args.zones
@@ -3245,6 +3377,8 @@ function explicitZoneForMssBreak(args: {
         upper: selected.upper,
         formedAt: selected.zone.formedAt ?? null,
         formedCandleIndex: typeof selected.zone.formedCandleIndex === 'number' ? selected.zone.formedCandleIndex : null,
+        sourceKind: selected.sourceKind,
+        sourceLabel: selected.sourceLabel,
       }
     : null;
 }
@@ -3363,6 +3497,8 @@ function buildFinalBossMssZones(args: {
       });
       built.push({
         sourceOfTruth: 'scanner_final_boss_mss_zone_lifecycle',
+        sourceKind: control.sourceKind,
+        sourceLabel: control.sourceLabel,
         direction,
         role: 'final_boss_mss_zone',
         lower: control.lower,
@@ -3491,6 +3627,8 @@ function buildRetainedBossZone(args: {
       : 'Bear Final Boss Resistance';
   return {
     sourceOfTruth: 'scanner_retained_boss_zone_ledger',
+    sourceKind: args.item.sourceKind,
+    sourceLabel: args.item.sourceLabel,
     direction,
     role,
     lower: args.item.lower,

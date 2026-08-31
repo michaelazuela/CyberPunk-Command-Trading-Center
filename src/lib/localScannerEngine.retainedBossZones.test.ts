@@ -130,7 +130,86 @@ const derivedOnly = deskStateFor(7692.75, false);
 assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.lower, 7679.5);
 assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.upper, 7682.5);
 assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.formedAt, '2026-08-27T16:45:00-04:00');
+assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.sourceKind, 'strict_15m_fvg');
 assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.state, 'defended');
+
+const mssProtectedOriginChartContext = {
+  sessionType: 'morning',
+  instrument: 'MES',
+  tradeDate: '2026-08-31',
+  timeframe: '5m',
+  screenshotUsability: 'usable',
+  keyLevels: { currentPrice: 7696 },
+  candles: [
+    { index: 0, timestamp: '2026-08-31T09:45:00-04:00', open: 7692, high: 7698, low: 7683.5, close: 7696, direction: 'bullish', confidence: 'High' },
+  ],
+  multiTimeframeContext: {
+    source: 'ninjatrader_bridge',
+    authority: 'ohlc_facts_only',
+    alignment: {
+      macroBias: 'LONG',
+      sessionBias: 'LONG',
+      liquidityBias: 'LONG',
+      executionBias: 'LONG',
+      alignedDirection: 'LONG',
+      conflicts: [],
+      notes: [],
+    },
+    fifteenMinute: factSet({
+      timeframe: '15m',
+      candles: [
+        { index: 0, timestamp: '2026-08-30T19:15:00-04:00', open: 7680, high: 7681, low: 7676, close: 7677, direction: 'bearish', confidence: 'High' },
+        { index: 1, timestamp: '2026-08-30T19:30:00-04:00', open: 7677, high: 7684.25, low: 7675.5, close: 7679.75, direction: 'bullish', confidence: 'High' },
+        { index: 2, timestamp: '2026-08-30T19:45:00-04:00', open: 7679.75, high: 7681, low: 7678, close: 7679, direction: 'bearish', confidence: 'High' },
+        { index: 3, timestamp: '2026-08-30T20:00:00-04:00', open: 7684, high: 7740, low: 7683.5, close: 7734, direction: 'bullish', confidence: 'High' },
+        { index: 4, timestamp: '2026-08-30T20:15:00-04:00', open: 7734, high: 7736, low: 7690, close: 7702, direction: 'bearish', confidence: 'High' },
+        { index: 5, timestamp: '2026-08-30T20:30:00-04:00', open: 7702, high: 7704, low: 7682, close: 7696, direction: 'bearish', confidence: 'High' },
+      ],
+      fvgZones: [],
+    }),
+    fiveMinute: factSet({
+      timeframe: '5m',
+      role: 'execution',
+      candles: [
+        { index: 0, timestamp: '2026-08-31T09:45:00-04:00', open: 7692, high: 7698, low: 7683.5, close: 7696, direction: 'bullish', confidence: 'High' },
+      ],
+    }),
+    oneHour: factSet({ timeframe: '1h' }),
+    fourHour: factSet({ timeframe: '4h', role: 'macro_context' }),
+    targetMap: { liquidityTargets: [], imbalanceTargets: [], reactionZones: [], notes: [] },
+  },
+  marketContext: 'Loopback 15M MSS-protected imbalance origin final boss.',
+} as any;
+
+const mssOriginVisibilityMetadata = classifyScannerVisibility({
+  state: 'NoTrade',
+  candidate: null,
+  alertDecision,
+  canExecute: false,
+});
+const mssOriginLifecycle = buildCandidateLifecycleTrace({
+  candidates: [],
+  selectedCandidate: null,
+  state: 'NoTrade',
+  alertDecision,
+  canExecute: false,
+});
+const mssProtectedOrigin = buildDeskState({
+  state: 'NoTrade',
+  candidate: null,
+  visibilityMetadata: mssOriginVisibilityMetadata,
+  candidateLifecycleTrace: mssOriginLifecycle,
+  currentPrice: 7696,
+  canExecute: false,
+  chartContext: mssProtectedOriginChartContext,
+});
+assert.equal(mssProtectedOrigin.primaryDeskPlay.retainedBossZones.bullBoss?.lower, 7679.75);
+assert.equal(mssProtectedOrigin.primaryDeskPlay.retainedBossZones.bullBoss?.upper, 7683.5);
+assert.equal(mssProtectedOrigin.primaryDeskPlay.retainedBossZones.bullBoss?.sourceKind, 'mss_protected_imbalance_origin');
+assert.equal(mssProtectedOrigin.primaryDeskPlay.retainedBossZones.bullBoss?.state, 'defended');
+assert.match(mssProtectedOrigin.primaryDeskPlay.retainedBossZones.bullBoss?.sourceLabel || '', /15M MSS origin/i);
+assert.equal(mssProtectedOrigin.primaryDeskPlay.retainedBossZones.approvalBoundary.changesCanExecute, false);
+assert.equal(mssProtectedOrigin.canExecute, false);
 
 const activeShortChartContext = {
   sessionType: 'evening',

@@ -373,6 +373,8 @@ try {
   assert.equal(audit.planVersionId, 'SCANNER-24H-LOOPBACK');
   assert.equal(audit.deskState.canExecute, false);
   assert.equal(audit.deskState.primaryDeskPlay.retainedBossZones.bullBoss.state, 'defended');
+  assert.equal(audit.deskState.primaryDeskPlay.retainedBossZones.bullBoss.sourceKind, 'strict_15m_fvg');
+  assert.equal(audit.deskState.primaryDeskPlay.retainedBossZones.bullBoss.sourceLabel, 'strict 15M FVG');
   assert.equal(audit.deskState.primaryDeskPlay.retainedBossZones.bearBoss.state, 'alive');
   assert.equal(audit.deskState.primaryDeskPlay.activeMssProtectedBossZone.direction, 'LONG');
   assert.equal(audit.deskState.primaryDeskPlay.activeMssProtectedBossZone.role, 'active_mss_protected_boss_zone');

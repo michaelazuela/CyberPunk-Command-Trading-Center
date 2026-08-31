@@ -302,6 +302,8 @@ export interface CompactDeskStateForDiscord {
 
 interface CompactRetainedBossZone {
   sourceOfTruth?: string;
+  sourceKind?: string | null;
+  sourceLabel?: string | null;
   direction?: 'LONG' | 'SHORT' | string;
   role?: string;
   lower?: number | null;
@@ -321,6 +323,8 @@ interface CompactRetainedBossZone {
 
 interface CompactFinalBossMssZone {
   sourceOfTruth?: string;
+  sourceKind?: string | null;
+  sourceLabel?: string | null;
   direction?: 'LONG' | 'SHORT' | string;
   role?: string;
   lower?: number | null;
@@ -1370,7 +1374,8 @@ function retainedBossZoneLine(zone: CompactRetainedBossZone, label: string): str
   if (!isFinitePrice(zone.lower) || !isFinitePrice(zone.upper)) return null;
   const state = compactLine(String(zone.state || 'alive').replace(/_/g, ' '), 18);
   const formed = zone.formedAt ? ` | formed ${compactLine(zone.formedAt, 24)}` : '';
-  return `${label}: ${zoneRangeLine(zone.lower, zone.upper)} (${state})${formed}`;
+  const source = zone.sourceLabel ? ` | ${compactLine(zone.sourceLabel, 36)}` : '';
+  return `${label}: ${zoneRangeLine(zone.lower, zone.upper)} (${state})${source}${formed}`;
 }
 
 function deskPlayRetainedBossZoneLines(
@@ -1420,7 +1425,8 @@ function finalBossMssZoneLine(zone: CompactFinalBossMssZone, label: string): str
   if (!isFinitePrice(zone.lower) || !isFinitePrice(zone.upper)) return null;
   const state = compactLine(String(zone.state || 'active_control').replace(/_/g, ' '), 18);
   const mssLine = isFinitePrice(zone.mssLine) ? ` | shift line ${priceLine(zone.mssLine)}` : '';
-  return `${label}: ${zoneRangeLine(zone.lower, zone.upper)} (${state})${mssLine}`;
+  const source = zone.sourceLabel ? ` | ${compactLine(zone.sourceLabel, 36)}` : '';
+  return `${label}: ${zoneRangeLine(zone.lower, zone.upper)} (${state})${source}${mssLine}`;
 }
 
 function deskPlayFinalBossMssZoneLines(
