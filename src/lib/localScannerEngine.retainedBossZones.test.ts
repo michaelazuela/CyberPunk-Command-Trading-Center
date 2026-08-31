@@ -210,5 +210,12 @@ assert.equal(activeShort.primaryDeskPlay.retainedBossZones.activeMssProtectedBos
 assert.equal(activeShort.primaryDeskPlay.retainedBossZones.activeMssProtectedBossZone?.upper, 7705);
 assert.equal(activeShort.primaryDeskPlay.retainedBossZones.activeMssProtectedBossZone?.state, 'defended');
 assert.equal(activeShort.primaryDeskPlay.activeMssProtectedBossZone?.role, 'active_mss_protected_boss_zone');
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.direction, 'SHORT');
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.role, 'final_boss_mss_zone');
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.lower, 7701);
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.upper, 7712);
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.mssLine, 7701);
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.state, 'defended');
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.bear.length, 1);
 
 console.log('retained boss-zone ledger loopback test passed');

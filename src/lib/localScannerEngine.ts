@@ -599,7 +599,14 @@ export interface DeskActiveTacticalZone {
 }
 
 export type DeskRetainedBossZoneState = 'alive' | 'defended' | 'invalidated' | 'unknown';
-export type DeskRetainedBossZoneRole = 'final_boss_zone' | 'active_mss_protected_boss_zone';
+export type DeskFinalBossMssZoneState =
+  | 'active_control'
+  | 'defended'
+  | 'pierced'
+  | 'reclaimed'
+  | 'flipped_reaction'
+  | 'expired';
+export type DeskRetainedBossZoneRole = 'final_boss_zone' | 'active_mss_protected_boss_zone' | 'final_boss_mss_zone';
 
 export interface DeskRetainedBossZone {
   sourceOfTruth: 'scanner_retained_boss_zone_ledger';
@@ -625,11 +632,45 @@ export interface DeskRetainedBossZone {
   };
 }
 
+export interface DeskFinalBossMssZone {
+  sourceOfTruth: 'scanner_final_boss_mss_zone_lifecycle';
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  role: 'final_boss_mss_zone';
+  lower: number;
+  upper: number;
+  midpoint: number;
+  mssLine: number;
+  lineInSand: number;
+  sourceTimeframe: '15M';
+  formedAt: string | null;
+  formedCandleIndex: number | null;
+  mssBreakAt: string | null;
+  mssBreakCandleIndex: number | null;
+  state: DeskFinalBossMssZoneState;
+  stateReason: string;
+  ageTradingDays: number | null;
+  expiresAfterTradingDays: 3;
+  flipDirection: Exclude<SetupCandidate['direction'], 'NO TRADE'> | null;
+  use: string;
+  invalidation: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+  };
+}
+
 export interface DeskRetainedBossZoneLedger {
   sourceOfTruth: 'scanner_retained_boss_zone_ledger';
   bullBoss: DeskRetainedBossZone | null;
   bearBoss: DeskRetainedBossZone | null;
   activeMssProtectedBossZone: DeskRetainedBossZone | null;
+  finalBossMssZones: {
+    bull: DeskFinalBossMssZone[];
+    bear: DeskFinalBossMssZone[];
+    primaryBull: DeskFinalBossMssZone | null;
+    primaryBear: DeskFinalBossMssZone | null;
+  };
   zones: DeskRetainedBossZone[];
   summary: string;
   approvalBoundary: {
@@ -2840,6 +2881,11 @@ function completedCandleClose(candle: unknown): number | null {
   return record ? priceFromCandle(record.close) : null;
 }
 
+function completedCandleOpen(candle: unknown): number | null {
+  const record = candle && typeof candle === 'object' ? candle as Record<string, unknown> : null;
+  return record ? priceFromCandle(record.open) : null;
+}
+
 function completedCandleLow(candle: unknown): number | null {
   const record = candle && typeof candle === 'object' ? candle as Record<string, unknown> : null;
   return record ? priceFromCandle(record.low) : null;
@@ -3066,6 +3112,307 @@ function bossZoneHasFifteenMinuteMssProtection(
   return false;
 }
 
+function candleBodyPoints(candle: unknown): number | null {
+  const open = completedCandleOpen(candle);
+  const close = completedCandleClose(candle);
+  return open === null || close === null ? null : Math.abs(close - open);
+}
+
+function candleRangePoints(candle: unknown): number | null {
+  const high = completedCandleHigh(candle);
+  const low = completedCandleLow(candle);
+  return high === null || low === null ? null : Math.abs(high - low);
+}
+
+function candleDirectionForBossMss(candle: unknown): Exclude<SetupCandidate['direction'], 'NO TRADE'> | null {
+  const open = completedCandleOpen(candle);
+  const close = completedCandleClose(candle);
+  if (open === null || close === null || open === close) return null;
+  return close > open ? 'LONG' : 'SHORT';
+}
+
+function bossMssTradingDayAge(formedAt: string | null, latestAt: string | null): number | null {
+  if (!formedAt || !latestAt) return null;
+  const formedDate = formedAt.slice(0, 10);
+  const latestDate = latestAt.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(formedDate) || !/^\d{4}-\d{2}-\d{2}$/.test(latestDate)) return null;
+  const formed = new Date(`${formedDate}T00:00:00Z`).getTime();
+  const latest = new Date(`${latestDate}T00:00:00Z`).getTime();
+  if (!Number.isFinite(formed) || !Number.isFinite(latest)) return null;
+  return Math.max(0, Math.floor((latest - formed) / 86_400_000) + 1);
+}
+
+function isFifteenMinuteDisplacementBreak(args: {
+  candles: unknown[];
+  index: number;
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+}): boolean {
+  const candle = args.candles[args.index];
+  const close = completedCandleClose(candle);
+  const range = candleRangePoints(candle);
+  const body = candleBodyPoints(candle);
+  if (close === null || range === null || body === null || range <= 0) return false;
+  if (candleDirectionForBossMss(candle) !== args.direction) return false;
+  const prior = args.candles.slice(Math.max(0, args.index - 8), args.index);
+  if (prior.length < 3) return false;
+  const priorHighs = prior.map(completedCandleHigh).filter((value): value is number => value !== null);
+  const priorLows = prior.map(completedCandleLow).filter((value): value is number => value !== null);
+  const priorRanges = prior.map(candleRangePoints).filter((value): value is number => value !== null && value > 0);
+  const avgPriorRange = priorRanges.length
+    ? priorRanges.reduce((sum, value) => sum + value, 0) / priorRanges.length
+    : 0;
+  const bodyQuality = body / range >= 0.45;
+  const rangeQuality = !avgPriorRange || range >= avgPriorRange * 0.8;
+  if (!bodyQuality || !rangeQuality) return false;
+  if (args.direction === 'LONG') return priorHighs.length > 0 && close > Math.max(...priorHighs);
+  return priorLows.length > 0 && close < Math.min(...priorLows);
+}
+
+function controlZoneFromPreBreakCandles(args: {
+  candles: unknown[];
+  breakIndex: number;
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+}): { lower: number; upper: number; formedAt: string | null; formedCandleIndex: number | null } | null {
+  const prior = args.candles.slice(Math.max(0, args.breakIndex - 8), args.breakIndex);
+  if (prior.length < 3) return null;
+  const opposite = args.direction === 'LONG' ? 'SHORT' : 'LONG';
+  const cluster: unknown[] = [];
+  let lastTimeMs = completedCandleTimestamp(args.candles[args.breakIndex])
+    ? new Date(completedCandleTimestamp(args.candles[args.breakIndex]) as string).getTime()
+    : Number.NaN;
+  for (const candle of [...prior].reverse()) {
+    const candleTime = completedCandleTimestamp(candle);
+    const candleTimeMs = candleTime ? new Date(candleTime).getTime() : Number.NaN;
+    if (
+      Number.isFinite(lastTimeMs) &&
+      Number.isFinite(candleTimeMs) &&
+      Math.abs(lastTimeMs - candleTimeMs) > 45 * 60 * 1000
+    ) {
+      break;
+    }
+    lastTimeMs = candleTimeMs;
+    const direction = candleDirectionForBossMss(candle);
+    const high = completedCandleHigh(candle);
+    const low = completedCandleLow(candle);
+    if (direction !== null && high !== null && low !== null && (direction === opposite || direction === args.direction)) {
+      cluster.unshift(candle);
+    }
+    if (cluster.length >= 6) break;
+  }
+  const eligibleCluster = cluster
+    .filter((candle) => {
+      const direction = candleDirectionForBossMss(candle);
+      const high = completedCandleHigh(candle);
+      const low = completedCandleLow(candle);
+      return direction !== null && high !== null && low !== null && (direction === opposite || direction === args.direction);
+    });
+  if (eligibleCluster.length < 2) return null;
+  const highs = eligibleCluster.map(completedCandleHigh).filter((value): value is number => value !== null);
+  const lows = eligibleCluster.map(completedCandleLow).filter((value): value is number => value !== null);
+  if (!highs.length || !lows.length) return null;
+  const lower = roundBossZonePrice(Math.min(...lows));
+  const upper = roundBossZonePrice(Math.max(...highs));
+  if (upper <= lower) return null;
+  const first = eligibleCluster[0];
+  return {
+    lower,
+    upper,
+    formedAt: completedCandleTimestamp(first),
+    formedCandleIndex: completedCandleIndex(first),
+  };
+}
+
+function explicitZoneForMssBreak(args: {
+  zones: ReturnType<typeof fifteenMinuteBossZoneFacts>;
+  breakCandle: unknown;
+  breakTimeMs: number;
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+}): { lower: number; upper: number; formedAt: string | null; formedCandleIndex: number | null } | null {
+  const breakHigh = completedCandleHigh(args.breakCandle);
+  const breakLow = completedCandleLow(args.breakCandle);
+  const candidates = args.zones
+    .filter((item) => item.zone.direction === args.direction)
+    .filter((item) => bossZoneFormedAtMs(item) <= args.breakTimeMs)
+    .filter((item) => {
+      if (breakHigh === null || breakLow === null) return true;
+      return breakHigh >= item.lower && breakLow <= item.upper;
+    })
+    .sort((a, b) => bossZoneFormedAtMs(b) - bossZoneFormedAtMs(a));
+  const selected = candidates[0];
+  return selected
+    ? {
+        lower: selected.lower,
+        upper: selected.upper,
+        formedAt: selected.zone.formedAt ?? null,
+        formedCandleIndex: typeof selected.zone.formedCandleIndex === 'number' ? selected.zone.formedCandleIndex : null,
+      }
+    : null;
+}
+
+function finalBossMssZoneState(args: {
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  lower: number;
+  upper: number;
+  candles: unknown[];
+  breakIndex: number;
+  latestTimestamp: string | null;
+  formedAt: string | null;
+}): Pick<DeskFinalBossMssZone, 'state' | 'stateReason' | 'ageTradingDays' | 'flipDirection'> {
+  const ageTradingDays = bossMssTradingDayAge(args.formedAt, args.latestTimestamp);
+  if (ageTradingDays !== null && ageTradingDays > 3) {
+    return {
+      state: 'expired',
+      stateReason: `Zone is older than the 3 trading-day final-boss retention rule (${ageTradingDays} trading days).`,
+      ageTradingDays,
+      flipDirection: null,
+    };
+  }
+  const afterBreak = args.candles.slice(args.breakIndex + 1);
+  let touched = false;
+  let pierced = false;
+  let defended = false;
+  let reclaimed = false;
+  for (const candle of afterBreak) {
+    const high = completedCandleHigh(candle);
+    const low = completedCandleLow(candle);
+    const close = completedCandleClose(candle);
+    if (high === null || low === null || close === null) continue;
+    const overlaps = high >= args.lower && low <= args.upper;
+    if (overlaps) touched = true;
+    if (args.direction === 'LONG') {
+      if (low < args.lower && close >= args.lower) pierced = true;
+      if (overlaps && close >= args.lower) defended = true;
+      if (close < args.lower) reclaimed = true;
+    } else {
+      if (high > args.upper && close <= args.upper) pierced = true;
+      if (overlaps && close <= args.upper) defended = true;
+      if (close > args.upper) reclaimed = true;
+    }
+  }
+  if (reclaimed) {
+    const flipDirection = args.direction === 'LONG' ? 'SHORT' : 'LONG';
+    return {
+      state: 'flipped_reaction',
+      stateReason: `Completed 15M acceptance through the ${args.direction === 'LONG' ? 'bull' : 'bear'} final boss zone. Keep as ${flipDirection.toLowerCase()} reaction context until replacement or expiry.`,
+      ageTradingDays,
+      flipDirection,
+    };
+  }
+  if (pierced) {
+    return {
+      state: 'pierced',
+      stateReason: 'Price pierced the final boss zone but completed candles closed back on the defended side.',
+      ageTradingDays,
+      flipDirection: null,
+    };
+  }
+  if (defended) {
+    return {
+      state: 'defended',
+      stateReason: 'Price returned into the final boss zone and completed candles defended the original control side.',
+      ageTradingDays,
+      flipDirection: null,
+    };
+  }
+  return {
+    state: touched ? 'defended' : 'active_control',
+    stateReason: touched
+      ? 'Price touched the final boss zone without completed acceptance through it.'
+      : 'Final boss zone remains the origin/control area for the completed 15M structure shift.',
+    ageTradingDays,
+    flipDirection: null,
+  };
+}
+
+function buildFinalBossMssZones(args: {
+  zones: ReturnType<typeof fifteenMinuteBossZoneFacts>;
+  chartContext?: Partial<ChartContext> | null;
+}): { bull: DeskFinalBossMssZone[]; bear: DeskFinalBossMssZone[]; primaryBull: DeskFinalBossMssZone | null; primaryBear: DeskFinalBossMssZone | null } {
+  const candles = sortedFifteenMinuteCandles(args.chartContext);
+  if (candles.length < 6) return { bull: [], bear: [], primaryBull: null, primaryBear: null };
+  const latestTimestamp = completedCandleTimestamp(candles[candles.length - 1]);
+  const built: DeskFinalBossMssZone[] = [];
+  for (let index = 3; index < candles.length; index += 1) {
+    for (const direction of ['LONG', 'SHORT'] as const) {
+      if (!isFifteenMinuteDisplacementBreak({ candles, index, direction })) continue;
+      const breakCandle = candles[index];
+      const breakTime = completedCandleTimestamp(breakCandle);
+      const breakTimeMs = breakTime ? new Date(breakTime).getTime() : 0;
+      const explicit = explicitZoneForMssBreak({ zones: args.zones, breakCandle, breakTimeMs, direction });
+      const preBreakControl = controlZoneFromPreBreakCandles({ candles, breakIndex: index, direction });
+      const explicitWidth = explicit ? explicit.upper - explicit.lower : 0;
+      const controlWidth = preBreakControl ? preBreakControl.upper - preBreakControl.lower : 0;
+      const control = preBreakControl && (!explicit || controlWidth >= explicitWidth * 1.5)
+        ? preBreakControl
+        : explicit;
+      if (!control) continue;
+      const prior = candles.slice(Math.max(0, index - 8), index);
+      const priorHighs = prior.map(completedCandleHigh).filter((value): value is number => value !== null);
+      const priorLows = prior.map(completedCandleLow).filter((value): value is number => value !== null);
+      const mssLine = direction === 'LONG'
+        ? roundBossZonePrice(Math.max(...priorHighs))
+        : roundBossZonePrice(Math.min(...priorLows));
+      const state = finalBossMssZoneState({
+        direction,
+        lower: control.lower,
+        upper: control.upper,
+        candles,
+        breakIndex: index,
+        latestTimestamp,
+        formedAt: control.formedAt,
+      });
+      built.push({
+        sourceOfTruth: 'scanner_final_boss_mss_zone_lifecycle',
+        direction,
+        role: 'final_boss_mss_zone',
+        lower: control.lower,
+        upper: control.upper,
+        midpoint: roundBossZonePrice((control.lower + control.upper) / 2),
+        mssLine,
+        lineInSand: mssLine,
+        sourceTimeframe: '15M',
+        formedAt: control.formedAt,
+        formedCandleIndex: control.formedCandleIndex,
+        mssBreakAt: breakTime,
+        mssBreakCandleIndex: completedCandleIndex(breakCandle),
+        state: state.state,
+        stateReason: state.stateReason,
+        ageTradingDays: state.ageTradingDays,
+        expiresAfterTradingDays: 3,
+        flipDirection: state.flipDirection,
+        use: direction === 'LONG'
+          ? 'Bull final boss zone produced the 15M structure shift higher; pullbacks into it are support/reaction context unless completed candles accept below it.'
+          : 'Bear final boss zone produced the 15M structure shift lower; rallies into it are resistance/reaction context unless completed candles accept above it.',
+        invalidation: direction === 'LONG'
+          ? `Bull final boss control fails on completed 15M acceptance below ${control.lower.toFixed(2)}; after reclaim it becomes reaction context.`
+          : `Bear final boss control fails on completed 15M acceptance above ${control.upper.toFixed(2)}; after reclaim it becomes reaction context.`,
+        approvalBoundary: {
+          changesTradeApprovals: false,
+          changesCanExecute: false,
+          changesEntryStopTargets: false,
+        },
+      });
+    }
+  }
+  const bySide = (direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>) => built
+    .filter((zone) => zone.direction === direction && zone.state !== 'expired')
+    .sort((a, b) => {
+      const aFlipped = a.state === 'flipped_reaction' ? 1 : 0;
+      const bFlipped = b.state === 'flipped_reaction' ? 1 : 0;
+      if (aFlipped !== bFlipped) return aFlipped - bFlipped;
+      return (b.mssBreakAt ? new Date(b.mssBreakAt).getTime() : 0) - (a.mssBreakAt ? new Date(a.mssBreakAt).getTime() : 0);
+    })
+    .slice(0, 2);
+  const bull = bySide('LONG');
+  const bear = bySide('SHORT');
+  return {
+    bull,
+    bear,
+    primaryBull: bull[0] || null,
+    primaryBear: bear[0] || null,
+  };
+}
+
 function retainedBossZoneState(args: {
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
   lower: number;
@@ -3231,10 +3578,15 @@ function buildRetainedBossZoneLedger(args: {
     latestClose,
     chartContext: args.chartContext,
   });
+  const finalBossMssZones = buildFinalBossMssZones({
+    zones: facts,
+    chartContext: args.chartContext,
+  });
   const zones = [bull, bear]
     .filter((item): item is NonNullable<typeof item> => Boolean(item))
     .map((item) => buildRetainedBossZone({ item, latestClose, chartContext: args.chartContext }));
   const activeZones = zones.filter((zone) => zone.state !== 'invalidated');
+  const activeFinalBossMssCount = finalBossMssZones.bull.length + finalBossMssZones.bear.length;
   const bullBoss = zones.find((zone) => zone.direction === 'LONG') || null;
   const bearBoss = zones.find((zone) => zone.direction === 'SHORT') || null;
   return {
@@ -3242,9 +3594,10 @@ function buildRetainedBossZoneLedger(args: {
     bullBoss,
     bearBoss,
     activeMssProtectedBossZone,
+    finalBossMssZones,
     zones,
     summary: activeZones.length
-      ? `Retained ${activeZones.length} final-boss FVG zone(s) from 15M OHLC. They remain map context until completed-candle invalidation.`
+      ? `Retained ${activeZones.length} final-boss FVG zone(s) and ${activeFinalBossMssCount} final-boss MSS lifecycle zone(s) from 15M OHLC. They remain map context until completed-candle invalidation, flip, replacement, or 3 trading-day expiry.`
       : 'No retained 15M final-boss FVG zones are active from structured OHLC.',
     approvalBoundary: {
       changesTradeApprovals: false,

@@ -164,6 +164,12 @@ export interface CompactDeskStateForDiscord {
       bullBoss?: CompactRetainedBossZone | null;
       bearBoss?: CompactRetainedBossZone | null;
       activeMssProtectedBossZone?: CompactRetainedBossZone | null;
+      finalBossMssZones?: {
+        bull?: CompactFinalBossMssZone[];
+        bear?: CompactFinalBossMssZone[];
+        primaryBull?: CompactFinalBossMssZone | null;
+        primaryBear?: CompactFinalBossMssZone | null;
+      };
       zones?: CompactRetainedBossZone[];
       summary?: string | null;
     } | null;
@@ -310,6 +316,29 @@ interface CompactRetainedBossZone {
   stateReason?: string | null;
   use?: string | null;
   holdCondition?: string | null;
+  invalidation?: string | null;
+}
+
+interface CompactFinalBossMssZone {
+  sourceOfTruth?: string;
+  direction?: 'LONG' | 'SHORT' | string;
+  role?: string;
+  lower?: number | null;
+  upper?: number | null;
+  midpoint?: number | null;
+  mssLine?: number | null;
+  lineInSand?: number | null;
+  sourceTimeframe?: string | null;
+  formedAt?: string | null;
+  formedCandleIndex?: number | null;
+  mssBreakAt?: string | null;
+  mssBreakCandleIndex?: number | null;
+  state?: string | null;
+  stateReason?: string | null;
+  ageTradingDays?: number | null;
+  expiresAfterTradingDays?: number | null;
+  flipDirection?: 'LONG' | 'SHORT' | string | null;
+  use?: string | null;
   invalidation?: string | null;
 }
 
@@ -1387,6 +1416,41 @@ function deskPlayActiveMssProtectedBossZoneLines(
   ];
 }
 
+function finalBossMssZoneLine(zone: CompactFinalBossMssZone, label: string): string | null {
+  if (!isFinitePrice(zone.lower) || !isFinitePrice(zone.upper)) return null;
+  const state = compactLine(String(zone.state || 'active_control').replace(/_/g, ' '), 18);
+  const mssLine = isFinitePrice(zone.mssLine) ? ` | shift line ${priceLine(zone.mssLine)}` : '';
+  return `${label}: ${zoneRangeLine(zone.lower, zone.upper)} (${state})${mssLine}`;
+}
+
+function deskPlayFinalBossMssZoneLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+): string[] {
+  const zones = play.retainedBossZones?.finalBossMssZones;
+  if (!zones) return [];
+  const bull = zones.primaryBull && zones.primaryBull.state !== 'expired'
+    ? finalBossMssZoneLine(zones.primaryBull, 'Bull Final Boss Shift Zone')
+    : null;
+  const bear = zones.primaryBear && zones.primaryBear.state !== 'expired'
+    ? finalBossMssZoneLine(zones.primaryBear, 'Bear Final Boss Shift Zone')
+    : null;
+  if (!bull && !bear) return [];
+  const details = [
+    zones.primaryBull && bull
+      ? compactLine(zones.primaryBull.use || 'Bull shift origin remains support/reaction context until reclaim, replacement, or 3 trading-day expiry.', 96)
+      : null,
+    zones.primaryBear && bear
+      ? compactLine(zones.primaryBear.use || 'Bear shift origin remains resistance/reaction context until reclaim, replacement, or 3 trading-day expiry.', 96)
+      : null,
+  ].filter((line): line is string => Boolean(line));
+  return [
+    '15M Final Boss Shift Zones:',
+    ...(bull ? [bull] : []),
+    ...(bear ? [bear] : []),
+    ...details,
+  ];
+}
+
 function deskPlayQualityLabel(score: number | null | undefined): string {
   if (typeof score !== 'number' || !Number.isFinite(score)) return 'unavailable';
   if (score >= 75) return 'high';
@@ -1560,6 +1624,10 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     '',
     ...(args.deskState?.primaryDeskPlay && deskPlayRetainedBossZoneLines(args.deskState.primaryDeskPlay).length ? [
       ...deskPlayRetainedBossZoneLines(args.deskState.primaryDeskPlay),
+      '',
+    ] : []),
+    ...(args.deskState?.primaryDeskPlay && deskPlayFinalBossMssZoneLines(args.deskState.primaryDeskPlay).length ? [
+      ...deskPlayFinalBossMssZoneLines(args.deskState.primaryDeskPlay),
       '',
     ] : []),
     ...(args.deskState?.primaryDeskPlay && deskPlayActiveMssProtectedBossZoneLines(args.deskState.primaryDeskPlay).length ? [
@@ -1958,6 +2026,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       ...(waitUsefulHtfRows.length ? ['HTF Lines:', ...waitUsefulHtfRows] : []),
       ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
       ...(deskPlayRetainedBossZoneLines(play).length ? ['', ...deskPlayRetainedBossZoneLines(play)] : []),
+      ...(deskPlayFinalBossMssZoneLines(play).length ? ['', ...deskPlayFinalBossMssZoneLines(play)] : []),
       ...(deskPlayActiveMssProtectedBossZoneLines(play).length ? ['', ...deskPlayActiveMssProtectedBossZoneLines(play)] : []),
       '',
       ...longWaitDisplay.lines,
@@ -2010,6 +2079,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ...(usefulHtfRows.length ? ['HTF Lines:', ...usefulHtfRows] : []),
     ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
     ...(deskPlayRetainedBossZoneLines(play).length ? ['', ...deskPlayRetainedBossZoneLines(play)] : []),
+    ...(deskPlayFinalBossMssZoneLines(play).length ? ['', ...deskPlayFinalBossMssZoneLines(play)] : []),
     ...(deskPlayActiveMssProtectedBossZoneLines(play).length ? ['', ...deskPlayActiveMssProtectedBossZoneLines(play)] : []),
     '',
     ...primary.lines,

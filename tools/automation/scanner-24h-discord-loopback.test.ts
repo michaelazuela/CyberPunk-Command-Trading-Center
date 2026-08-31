@@ -294,6 +294,9 @@ assert.equal(deskState.primaryDeskPlay.retainedBossZones.bearBoss?.state, 'alive
 assert.equal(deskState.primaryDeskPlay.retainedBossZones.activeMssProtectedBossZone?.direction, 'LONG');
 assert.equal(deskState.primaryDeskPlay.activeMssProtectedBossZone?.role, 'active_mss_protected_boss_zone');
 assert.ok((deskState.primaryDeskPlay.activeMssProtectedBossZone?.formedAt || '') > '2026-08-26T13:00:00-04:00');
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull?.direction, 'LONG');
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull?.role, 'final_boss_mss_zone');
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull?.state, 'active_control');
 assert.equal(deskState.primaryDeskPlay.retainedBossZones.approvalBoundary.changesCanExecute, false);
 
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'scanner-24h-loopback-'));
@@ -355,6 +358,8 @@ try {
   assert.ok(text.includes('Retained Boss Zones:'));
   assert.ok(text.includes('Bull Final Boss Support: 7676.00-7678.50'));
   assert.ok(text.includes('Bear Final Boss Resistance: 7723.25-7725.25'));
+  assert.ok(text.includes('15M Final Boss Shift Zones:'));
+  assert.ok(text.includes('Bull Final Boss Shift Zone:'));
   assert.ok(text.includes('Active structure shift-Protected Boss Zone:'));
   assert.ok(text.includes('Active structure shift-Protected Bull Boss:'));
   assert.ok(/Wick-through alone is defense/i.test(text));
@@ -371,6 +376,8 @@ try {
   assert.equal(audit.deskState.primaryDeskPlay.retainedBossZones.bearBoss.state, 'alive');
   assert.equal(audit.deskState.primaryDeskPlay.activeMssProtectedBossZone.direction, 'LONG');
   assert.equal(audit.deskState.primaryDeskPlay.activeMssProtectedBossZone.role, 'active_mss_protected_boss_zone');
+  assert.equal(audit.deskState.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull.direction, 'LONG');
+  assert.equal(audit.deskState.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull.role, 'final_boss_mss_zone');
   assert.equal(audit.visibility.authority.discordEligible, true);
   assert.equal(audit.candidateLifecycleTrace.discordDecision.shouldSend, true);
   assert.equal(audit.candidate.setupType, SetupType.FvgStrengthContinuation);
