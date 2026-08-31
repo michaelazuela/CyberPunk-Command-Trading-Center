@@ -134,11 +134,8 @@ namespace NinjaTrader.NinjaScript.Indicators
                 Draw.HorizontalLine(
                     this,
                     tagBase + "_line",
-                    false,
                     zone.LineInSand,
-                    line,
-                    DashStyleHelper.Solid,
-                    zone.Kind == "final_boss_mss_zone" ? 3 : 2);
+                    line);
 
                 if (ShowLabels)
                 {
