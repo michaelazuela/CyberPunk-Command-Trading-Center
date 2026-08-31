@@ -598,6 +598,47 @@ export interface DeskActiveTacticalZone {
   };
 }
 
+export type DeskRetainedBossZoneState = 'alive' | 'defended' | 'invalidated' | 'unknown';
+export type DeskRetainedBossZoneRole = 'final_boss_zone';
+
+export interface DeskRetainedBossZone {
+  sourceOfTruth: 'scanner_retained_boss_zone_ledger';
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  role: DeskRetainedBossZoneRole;
+  lower: number;
+  upper: number;
+  midpoint: number;
+  lineInSand: number;
+  sourceTimeframe: '15M';
+  formedAt: string | null;
+  formedCandleIndex: number | null;
+  confidence: FvgZoneFact['confidence'];
+  state: DeskRetainedBossZoneState;
+  stateReason: string;
+  use: string;
+  holdCondition: string;
+  invalidation: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+  };
+}
+
+export interface DeskRetainedBossZoneLedger {
+  sourceOfTruth: 'scanner_retained_boss_zone_ledger';
+  bullBoss: DeskRetainedBossZone | null;
+  bearBoss: DeskRetainedBossZone | null;
+  zones: DeskRetainedBossZone[];
+  summary: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    createsNewModel: false;
+  };
+}
+
 export interface PrimaryDeskPlay {
   sourceOfTruth: 'scanner_primary_desk_play';
   direction: DeskPlayDirection;
@@ -638,6 +679,7 @@ export interface PrimaryDeskPlay {
   targetReactionReason: string | null;
   levelTransition: DeskLevelTransitionMap | null;
   fvgDecisionZone?: DeskFvgDecisionZone | null;
+  retainedBossZones?: DeskRetainedBossZoneLedger;
   htfFvgCascade?: DeskHtfFvgCascade | null;
   htfObjectiveLadder: DeskHtfObjectiveLadder;
   htfProtectedStructureMap: DeskHtfProtectedStructureMap;
@@ -2787,6 +2829,207 @@ function htfParentZoneFromFvgFact(args: {
   };
 }
 
+function priceFromCandle(value: unknown): number | null {
+  return numericOrNull(value);
+}
+
+function completedCandleClose(candle: unknown): number | null {
+  const record = candle && typeof candle === 'object' ? candle as Record<string, unknown> : null;
+  return record ? priceFromCandle(record.close) : null;
+}
+
+function completedCandleLow(candle: unknown): number | null {
+  const record = candle && typeof candle === 'object' ? candle as Record<string, unknown> : null;
+  return record ? priceFromCandle(record.low) : null;
+}
+
+function completedCandleHigh(candle: unknown): number | null {
+  const record = candle && typeof candle === 'object' ? candle as Record<string, unknown> : null;
+  return record ? priceFromCandle(record.high) : null;
+}
+
+function latestCompletedCloseForBossLedger(chartContext?: Partial<ChartContext> | null): number | null {
+  const fiveMinute = chartContext?.multiTimeframeContext?.fiveMinute.candles || [];
+  const rootCandles = chartContext?.candles || [];
+  const fifteenMinute = chartContext?.multiTimeframeContext?.fifteenMinute.candles || [];
+  for (const candles of [fiveMinute, rootCandles, fifteenMinute]) {
+    for (const candle of [...candles].reverse()) {
+      const close = completedCandleClose(candle);
+      if (close !== null) return close;
+    }
+  }
+  return null;
+}
+
+function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null): Array<{
+  zone: FvgZoneFact;
+  lower: number;
+  upper: number;
+  midpoint: number;
+}> {
+  const zones = chartContext?.multiTimeframeContext?.fifteenMinute.fvgZones || [];
+  return zones
+    .filter((zone) =>
+      (zone.direction === 'LONG' || zone.direction === 'SHORT') &&
+      numericOrNull(zone.lower) !== null &&
+      numericOrNull(zone.upper) !== null &&
+      zone.impulseQualified !== false
+    )
+    .map((zone) => {
+      const lower = numericOrNull(zone.lower) as number;
+      const upper = numericOrNull(zone.upper) as number;
+      const low = Math.min(lower, upper);
+      const high = Math.max(lower, upper);
+      return {
+        zone,
+        lower: low,
+        upper: high,
+        midpoint: numericOrNull(zone.midpoint) ?? (low + high) / 2,
+      };
+    });
+}
+
+function selectRetainedBossZone(
+  zones: ReturnType<typeof fifteenMinuteBossZoneFacts>,
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>,
+) {
+  const directional = zones.filter((item) => item.zone.direction === direction);
+  if (!directional.length) return null;
+  return [...directional].sort((a, b) => direction === 'LONG'
+    ? a.lower - b.lower || a.upper - b.upper
+    : b.upper - a.upper || b.lower - a.lower
+  )[0] || null;
+}
+
+function retainedBossZoneState(args: {
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  lower: number;
+  upper: number;
+  latestClose: number | null;
+  chartContext?: Partial<ChartContext> | null;
+}): { state: DeskRetainedBossZoneState; reason: string } {
+  const candles = [
+    ...(args.chartContext?.multiTimeframeContext?.fiveMinute.candles || []),
+    ...(args.chartContext?.candles || []),
+    ...(args.chartContext?.multiTimeframeContext?.fifteenMinute.candles || []),
+  ];
+  const touchedAndHeld = candles.some((candle) => {
+    const high = completedCandleHigh(candle);
+    const low = completedCandleLow(candle);
+    const close = completedCandleClose(candle);
+    if (high === null || low === null || close === null) return false;
+    const touched = high >= args.lower && low <= args.upper;
+    if (!touched) return false;
+    return args.direction === 'LONG' ? close >= args.lower : close <= args.upper;
+  });
+  const close = args.latestClose;
+  if (close === null) {
+    return {
+      state: touchedAndHeld ? 'defended' : 'unknown',
+      reason: touchedAndHeld
+        ? 'A completed candle touched the zone and closed back on the defended side; latest close is unavailable.'
+        : 'Latest completed close is unavailable, so boss-zone state is context only.',
+    };
+  }
+  if (args.direction === 'LONG' && close < args.lower) {
+    return {
+      state: 'invalidated',
+      reason: `Latest completed close ${close.toFixed(2)} accepted below the bull boss zone floor ${args.lower.toFixed(2)}.`,
+    };
+  }
+  if (args.direction === 'SHORT' && close > args.upper) {
+    return {
+      state: 'invalidated',
+      reason: `Latest completed close ${close.toFixed(2)} accepted above the bear boss zone ceiling ${args.upper.toFixed(2)}.`,
+    };
+  }
+  if (touchedAndHeld) {
+    return {
+      state: 'defended',
+      reason: 'A completed candle touched the zone and closed back on the defended side; wick-through is treated as defense, not failure.',
+    };
+  }
+  return {
+    state: 'alive',
+    reason: 'Zone remains alive because no completed close accepted through it.',
+  };
+}
+
+function buildRetainedBossZone(args: {
+  item: NonNullable<ReturnType<typeof selectRetainedBossZone>>;
+  latestClose: number | null;
+  chartContext?: Partial<ChartContext> | null;
+}): DeskRetainedBossZone {
+  const direction = args.item.zone.direction;
+  const state = retainedBossZoneState({
+    direction,
+    lower: args.item.lower,
+    upper: args.item.upper,
+    latestClose: args.latestClose,
+    chartContext: args.chartContext,
+  });
+  const label = direction === 'LONG' ? 'Bull Final Boss Support' : 'Bear Final Boss Resistance';
+  return {
+    sourceOfTruth: 'scanner_retained_boss_zone_ledger',
+    direction,
+    role: 'final_boss_zone',
+    lower: args.item.lower,
+    upper: args.item.upper,
+    midpoint: args.item.midpoint,
+    lineInSand: direction === 'LONG' ? args.item.lower : args.item.upper,
+    sourceTimeframe: '15M',
+    formedAt: args.item.zone.formedAt ?? null,
+    formedCandleIndex: typeof args.item.zone.formedCandleIndex === 'number' ? args.item.zone.formedCandleIndex : null,
+    confidence: args.item.zone.confidence,
+    state: state.state,
+    stateReason: state.reason,
+    use: direction === 'LONG'
+      ? `${label}: watch as downside support/reaction context if price pulls back.`
+      : `${label}: watch as upside resistance/reaction context if price rallies.`,
+    holdCondition: direction === 'LONG'
+      ? `Bull zone holds while completed candles defend ${args.item.lower.toFixed(2)}-${args.item.upper.toFixed(2)} and close back above the zone floor.`
+      : `Bear zone holds while completed candles defend ${args.item.lower.toFixed(2)}-${args.item.upper.toFixed(2)} and close back below the zone ceiling.`,
+    invalidation: direction === 'LONG'
+      ? `Invalidated only by completed acceptance below ${args.item.lower.toFixed(2)}. Wick-through alone is defense if it closes back above.`
+      : `Invalidated only by completed acceptance above ${args.item.upper.toFixed(2)}. Wick-through alone is defense if it closes back below.`,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+    },
+  };
+}
+
+function buildRetainedBossZoneLedger(args: {
+  chartContext?: Partial<ChartContext> | null;
+}): DeskRetainedBossZoneLedger {
+  const facts = fifteenMinuteBossZoneFacts(args.chartContext);
+  const latestClose = latestCompletedCloseForBossLedger(args.chartContext);
+  const bull = selectRetainedBossZone(facts, 'LONG');
+  const bear = selectRetainedBossZone(facts, 'SHORT');
+  const zones = [bull, bear]
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .map((item) => buildRetainedBossZone({ item, latestClose, chartContext: args.chartContext }));
+  const activeZones = zones.filter((zone) => zone.state !== 'invalidated');
+  const bullBoss = zones.find((zone) => zone.direction === 'LONG') || null;
+  const bearBoss = zones.find((zone) => zone.direction === 'SHORT') || null;
+  return {
+    sourceOfTruth: 'scanner_retained_boss_zone_ledger',
+    bullBoss,
+    bearBoss,
+    zones,
+    summary: activeZones.length
+      ? `Retained ${activeZones.length} final-boss FVG zone(s) from 15M OHLC. They remain map context until completed-candle invalidation.`
+      : 'No retained 15M final-boss FVG zones are active from structured OHLC.',
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      createsNewModel: false,
+    },
+  };
+}
+
 function htfFvgParentZonesFromChartContext(args: {
   chartContext?: Partial<ChartContext> | null;
   direction?: 'LONG' | 'SHORT' | null;
@@ -3310,6 +3553,9 @@ function buildPrimaryDeskPlay(args: {
     shortBelow: shortBias.lineInSand,
   });
   const fvgDecisionZone = buildFvgDecisionZone(args.candidate, args.currentPrice);
+  const retainedBossZones = buildRetainedBossZoneLedger({
+    chartContext: args.chartContext,
+  });
   const activeTacticalZoneSource = primaryLifecycleItem?.tacticalZone || selectedLifecycleItem?.tacticalZone || args.candidate?.tacticalZone || null;
   const activeTacticalZone = buildActiveTacticalZone({
     direction: primaryDirection,
@@ -3370,6 +3616,7 @@ function buildPrimaryDeskPlay(args: {
     targetReactionReason,
     levelTransition,
     fvgDecisionZone,
+    retainedBossZones,
     htfFvgCascade,
     htfObjectiveLadder,
     htfProtectedStructureMap,
@@ -3389,6 +3636,7 @@ function buildPrimaryDeskPlay(args: {
     notes: [
       'Primary Desk Play is scanner-owned visibility metadata only.',
       'It reports long and short bias without selecting, approving, suppressing, or reranking executable trade candidates.',
+      'Retained boss zones keep bull and bear 15M final-boss FVG context visible until completed-candle invalidation.',
     ],
   };
 }

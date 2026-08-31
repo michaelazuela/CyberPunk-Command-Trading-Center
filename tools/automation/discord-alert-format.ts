@@ -159,6 +159,13 @@ export interface CompactDeskStateForDiscord {
       managementInstruction?: string | null;
       noChase?: string | null;
     } | null;
+    retainedBossZones?: {
+      sourceOfTruth?: string;
+      bullBoss?: CompactRetainedBossZone | null;
+      bearBoss?: CompactRetainedBossZone | null;
+      zones?: CompactRetainedBossZone[];
+      summary?: string | null;
+    } | null;
     htfFvgCascade?: {
       sourceOfTruth?: string;
       direction?: 'LONG' | 'SHORT' | string;
@@ -283,6 +290,25 @@ export interface CompactDeskStateForDiscord {
       blockers?: string[];
     };
   } | null;
+}
+
+interface CompactRetainedBossZone {
+  sourceOfTruth?: string;
+  direction?: 'LONG' | 'SHORT' | string;
+  role?: string;
+  lower?: number | null;
+  upper?: number | null;
+  midpoint?: number | null;
+  lineInSand?: number | null;
+  sourceTimeframe?: string | null;
+  formedAt?: string | null;
+  formedCandleIndex?: number | null;
+  confidence?: string | null;
+  state?: string | null;
+  stateReason?: string | null;
+  use?: string | null;
+  holdCondition?: string | null;
+  invalidation?: string | null;
 }
 
 interface CompactHtfObjective {
@@ -1309,6 +1335,41 @@ function deskPlayFvgDecisionZoneLines(
   ];
 }
 
+function retainedBossZoneLine(zone: CompactRetainedBossZone, label: string): string | null {
+  if (!isFinitePrice(zone.lower) || !isFinitePrice(zone.upper)) return null;
+  const state = compactLine(String(zone.state || 'alive').replace(/_/g, ' '), 18);
+  const formed = zone.formedAt ? ` | formed ${compactLine(zone.formedAt, 24)}` : '';
+  return `${label}: ${zoneRangeLine(zone.lower, zone.upper)} (${state})${formed}`;
+}
+
+function deskPlayRetainedBossZoneLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+): string[] {
+  const ledger = play.retainedBossZones;
+  if (!ledger) return [];
+  const bull = ledger.bullBoss && ledger.bullBoss.state !== 'invalidated'
+    ? retainedBossZoneLine(ledger.bullBoss, 'Bull Final Boss Support')
+    : null;
+  const bear = ledger.bearBoss && ledger.bearBoss.state !== 'invalidated'
+    ? retainedBossZoneLine(ledger.bearBoss, 'Bear Final Boss Resistance')
+    : null;
+  const zones = [
+    ledger.bullBoss && bull ? ledger.bullBoss : null,
+    ledger.bearBoss && bear ? ledger.bearBoss : null,
+  ].filter((zone): zone is CompactRetainedBossZone => Boolean(zone));
+  if (!bull && !bear) return [];
+  const details = zones.flatMap((zone) => [
+    compactLine(zone.use || 'Retained final-boss FVG context; wait for completed 5M proof before any action.', 112),
+    compactLine(zone.invalidation || 'Invalidated only by completed candle acceptance through the zone.', 112),
+  ]);
+  return [
+    'Retained Boss Zones:',
+    ...(bull ? [bull] : []),
+    ...(bear ? [bear] : []),
+    ...details,
+  ];
+}
+
 function deskPlayQualityLabel(score: number | null | undefined): string {
   if (typeof score !== 'number' || !Number.isFinite(score)) return 'unavailable';
   if (score >= 75) return 'high';
@@ -1480,6 +1541,10 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
       `T2: ${priceLine(levels.target2)}`,
     ]),
     '',
+    ...(args.deskState?.primaryDeskPlay && deskPlayRetainedBossZoneLines(args.deskState.primaryDeskPlay).length ? [
+      ...deskPlayRetainedBossZoneLines(args.deskState.primaryDeskPlay),
+      '',
+    ] : []),
     `Invalid ${invalidWord}: ${priceLine(levels.stop)}`,
     candidateHtfTargetLine(candidate, levels),
     '',
@@ -1871,6 +1936,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       '',
       ...(waitUsefulHtfRows.length ? ['HTF Lines:', ...waitUsefulHtfRows] : []),
       ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
+      ...(deskPlayRetainedBossZoneLines(play).length ? ['', ...deskPlayRetainedBossZoneLines(play)] : []),
       '',
       ...longWaitDisplay.lines,
       '',
@@ -1921,6 +1987,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     '',
     ...(usefulHtfRows.length ? ['HTF Lines:', ...usefulHtfRows] : []),
     ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
+    ...(deskPlayRetainedBossZoneLines(play).length ? ['', ...deskPlayRetainedBossZoneLines(play)] : []),
     '',
     ...primary.lines,
     '',

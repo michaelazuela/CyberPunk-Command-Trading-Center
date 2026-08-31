@@ -140,6 +140,76 @@ const chartContext: ChartContext = {
     breaksStructure: true,
     confidence: 'High',
   }],
+  multiTimeframeContext: {
+    source: 'ninjatrader_bridge',
+    authority: 'ohlc_facts_only',
+    alignment: {
+      macroBias: 'LONG',
+      sessionBias: 'LONG',
+      liquidityBias: 'LONG',
+      executionBias: 'LONG',
+      alignedDirection: 'LONG',
+      conflicts: [],
+      notes: [],
+    },
+    fifteenMinute: {
+      timeframe: '15m',
+      role: 'session_structure',
+      barCount: 96,
+      high: 7728,
+      low: 7672,
+      open: 7680,
+      close: 7700.25,
+      midpoint: 7700,
+      rangePoints: 56,
+      trend: 'bullish',
+      candles: [
+        { index: 0, timestamp: '2026-08-26T13:00:00-04:00', open: 7674, high: 7684, low: 7671, close: 7683, direction: 'bullish', confidence: 'High' },
+        { index: 1, timestamp: '2026-08-26T16:00:00-04:00', open: 7692, high: 7711, low: 7686.5, close: 7710.25, direction: 'bullish', confidence: 'High' },
+      ],
+      fvgZones: [
+        { direction: 'LONG', lower: 7676, upper: 7678.5, midpoint: 7677.25, formedAt: '2026-08-26T13:00:00-04:00', formedCandleIndex: 0, impulseQualified: true, confidence: 'High' },
+        { direction: 'LONG', lower: 7691, upper: 7694, midpoint: 7692.5, formedAt: '2026-08-26T15:00:00-04:00', formedCandleIndex: 12, impulseQualified: true, confidence: 'High' },
+        { direction: 'SHORT', lower: 7723.25, upper: 7725.25, midpoint: 7724.25, formedAt: '2026-08-26T15:45:00-04:00', formedCandleIndex: 15, impulseQualified: true, confidence: 'High' },
+      ],
+      liquiditySweeps: [],
+      reclaimEvents: [],
+      failedBreakEvents: [],
+      displacementCandles: [],
+      structuralLevels: [],
+      confidence: 'High',
+      notes: [],
+    },
+    fiveMinute: {
+      timeframe: '5m',
+      role: 'execution',
+      barCount: 145,
+      high: 7711,
+      low: 7671,
+      open: 7698,
+      close: 7700.25,
+      midpoint: 7691,
+      rangePoints: 40,
+      trend: 'bullish',
+      candles: [
+        { index: 0, timestamp: '2026-08-26T15:45:00-04:00', open: 7698, high: 7705, low: 7692, close: 7702, direction: 'bullish', confidence: 'High' },
+        { index: 1, timestamp: '2026-08-26T15:50:00-04:00', open: 7702, high: 7704, low: 7691, close: 7695, direction: 'bearish', confidence: 'High' },
+        { index: 2, timestamp: '2026-08-26T15:55:00-04:00', open: 7695, high: 7698, low: 7686.5, close: 7696.75, direction: 'bullish', confidence: 'High' },
+        { index: 3, timestamp: '2026-08-26T16:00:00-04:00', open: 7696.75, high: 7702, low: 7693, close: 7700.25, direction: 'bullish', confidence: 'High' },
+      ],
+      fvgZones: [],
+      liquiditySweeps: [],
+      reclaimEvents: [],
+      failedBreakEvents: [],
+      displacementCandles: [],
+      structuralLevels: [],
+      confidence: 'High',
+      notes: [],
+    },
+    oneHour: { timeframe: '1h', role: 'session_structure', barCount: 24, high: 7728, low: 7671, open: 7680, close: 7700.25, midpoint: 7700, rangePoints: 57, trend: 'bullish', candles: [], fvgZones: [], liquiditySweeps: [], reclaimEvents: [], failedBreakEvents: [], displacementCandles: [], structuralLevels: [], confidence: 'High', notes: [] },
+    fourHour: { timeframe: '4h', role: 'macro_context', barCount: 8, high: 7728, low: 7671, open: 7680, close: 7700.25, midpoint: 7700, rangePoints: 57, trend: 'bullish', candles: [], fvgZones: [], liquiditySweeps: [], reclaimEvents: [], failedBreakEvents: [], displacementCandles: [], structuralLevels: [], confidence: 'High', notes: [] },
+    targetMap: { liquidityTargets: [], imbalanceTargets: [], reactionZones: [], notes: [] },
+  } as any,
   marketContext: '15M defended FVG support and 5M reclaim continuation. Decision support only.',
 };
 
@@ -209,6 +279,15 @@ const deskState = buildDeskState({
 assert.equal(deskState.discordAction, 'post_review');
 assert.equal(deskState.canExecute, false);
 assert.equal(deskState.sourceOfTruth, 'scanner_desk_state');
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.bullBoss?.direction, 'LONG');
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.bullBoss?.lower, 7676);
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.bullBoss?.upper, 7678.5);
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.bullBoss?.state, 'defended');
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.bearBoss?.direction, 'SHORT');
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.bearBoss?.lower, 7723.25);
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.bearBoss?.upper, 7725.25);
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.bearBoss?.state, 'alive');
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.approvalBoundary.changesCanExecute, false);
 
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'scanner-24h-loopback-'));
 try {
@@ -266,6 +345,10 @@ try {
   assert.ok(text.includes('Stop:'));
   assert.ok(text.includes('T1:'));
   assert.ok(text.includes('T2:'));
+  assert.ok(text.includes('Retained Boss Zones:'));
+  assert.ok(text.includes('Bull Final Boss Support: 7676.00-7678.50'));
+  assert.ok(text.includes('Bear Final Boss Resistance: 7723.25-7725.25'));
+  assert.ok(/Wick-through alone is defense/i.test(text));
   assert.ok(text.includes('Decision support only. No automated orders.'));
   assert.ok(text.includes('FVG Strength Continuation') || text.includes('FVG'));
   assert.ok(/No sweep required/i.test(text));
@@ -275,6 +358,8 @@ try {
   assert.equal(audit.source, 'live-scanner');
   assert.equal(audit.planVersionId, 'SCANNER-24H-LOOPBACK');
   assert.equal(audit.deskState.canExecute, false);
+  assert.equal(audit.deskState.primaryDeskPlay.retainedBossZones.bullBoss.state, 'defended');
+  assert.equal(audit.deskState.primaryDeskPlay.retainedBossZones.bearBoss.state, 'alive');
   assert.equal(audit.visibility.authority.discordEligible, true);
   assert.equal(audit.candidateLifecycleTrace.discordDecision.shouldSend, true);
   assert.equal(audit.candidate.setupType, SetupType.FvgStrengthContinuation);
