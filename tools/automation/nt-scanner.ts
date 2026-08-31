@@ -138,6 +138,7 @@ import {
 } from './discord-rag-persistence';
 import { repairDuplicateAuditTargets } from './audit-target-repair';
 import { aggregateFiveMinuteBarsToTimeframe } from './repair-market-bars-timeframe';
+import { writeScannerZoneFeed } from './scanner-zone-feed';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -8029,6 +8030,16 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     planVersionId,
     dryRun: config.dryRun,
     historyCoverage,
+  });
+  await writeScannerZoneFeed({
+    deskState,
+    instrument: config.instrument,
+    tradeDate,
+    session,
+    completed5m,
+    currentPrice,
+  }).catch((error) => {
+    console.warn(`[scanner-zone-feed] Overlay feed write failed safely; scanner and Discord flow continue: ${sanitizedError(error)}`);
   });
 
   console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${sameCompletedCandle ? 'same completed 5M, refreshed live plan | ' : ''}${alertDecision.reason} | decision tape=${decisionTapePath}`);

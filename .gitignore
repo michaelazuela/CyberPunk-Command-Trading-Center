@@ -26,6 +26,7 @@ tools/automation/.ai-trade-observer-state.json
 tools/automation/.ai-trade-observer-smoke-state.json
 tools/automation/ai-observer-reports/
 tools/automation/ai-observer-smoke/
+tools/automation/scanner-zone-feed/
 tools/automation/diagnostic-reports/
 tools/automation/research-reports/
 tools/automation/research-outcome-reports/
