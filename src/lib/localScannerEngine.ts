@@ -3110,9 +3110,10 @@ function buildRetainedBossZone(args: {
 
 function buildRetainedBossZoneLedger(args: {
   chartContext?: Partial<ChartContext> | null;
+  currentPrice?: number | null;
 }): DeskRetainedBossZoneLedger {
   const facts = fifteenMinuteBossZoneFacts(args.chartContext);
-  const latestClose = latestCompletedCloseForBossLedger(args.chartContext);
+  const latestClose = numericOrNull(args.currentPrice) ?? latestCompletedCloseForBossLedger(args.chartContext);
   const bull = selectRetainedBossZone(facts, 'LONG');
   const bear = selectRetainedBossZone(facts, 'SHORT');
   const zones = [bull, bear]
@@ -3663,6 +3664,7 @@ function buildPrimaryDeskPlay(args: {
   const fvgDecisionZone = buildFvgDecisionZone(args.candidate, args.currentPrice);
   const retainedBossZones = buildRetainedBossZoneLedger({
     chartContext: args.chartContext,
+    currentPrice: args.currentPrice,
   });
   const activeTacticalZoneSource = primaryLifecycleItem?.tacticalZone || selectedLifecycleItem?.tacticalZone || args.candidate?.tacticalZone || null;
   const activeTacticalZone = buildActiveTacticalZone({
