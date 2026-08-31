@@ -165,7 +165,11 @@ const chartContext: ChartContext = {
       trend: 'bullish',
       candles: [
         { index: 0, timestamp: '2026-08-26T13:00:00-04:00', open: 7674, high: 7684, low: 7671, close: 7683, direction: 'bullish', confidence: 'High' },
-        { index: 1, timestamp: '2026-08-26T16:00:00-04:00', open: 7692, high: 7711, low: 7686.5, close: 7710.25, direction: 'bullish', confidence: 'High' },
+        { index: 1, timestamp: '2026-08-26T13:15:00-04:00', open: 7683, high: 7686, low: 7678, close: 7685, direction: 'bullish', confidence: 'High' },
+        { index: 2, timestamp: '2026-08-26T13:30:00-04:00', open: 7685, high: 7688, low: 7682, close: 7687, direction: 'bullish', confidence: 'High' },
+        { index: 3, timestamp: '2026-08-26T14:45:00-04:00', open: 7687, high: 7690, low: 7685, close: 7689, direction: 'bullish', confidence: 'High' },
+        { index: 12, timestamp: '2026-08-26T15:00:00-04:00', open: 7689, high: 7698, low: 7691, close: 7696, direction: 'bullish', confidence: 'High' },
+        { index: 16, timestamp: '2026-08-26T16:00:00-04:00', open: 7692, high: 7711, low: 7686.5, close: 7710.25, direction: 'bullish', confidence: 'High' },
       ],
       fvgZones: [
         { direction: 'LONG', lower: 7676, upper: 7678.5, midpoint: 7677.25, formedAt: '2026-08-26T13:00:00-04:00', formedCandleIndex: 0, impulseQualified: true, confidence: 'High' },
@@ -287,6 +291,9 @@ assert.equal(deskState.primaryDeskPlay.retainedBossZones.bearBoss?.direction, 'S
 assert.equal(deskState.primaryDeskPlay.retainedBossZones.bearBoss?.lower, 7723.25);
 assert.equal(deskState.primaryDeskPlay.retainedBossZones.bearBoss?.upper, 7725.25);
 assert.equal(deskState.primaryDeskPlay.retainedBossZones.bearBoss?.state, 'alive');
+assert.equal(deskState.primaryDeskPlay.retainedBossZones.activeMssProtectedBossZone?.direction, 'LONG');
+assert.equal(deskState.primaryDeskPlay.activeMssProtectedBossZone?.role, 'active_mss_protected_boss_zone');
+assert.ok((deskState.primaryDeskPlay.activeMssProtectedBossZone?.formedAt || '') > '2026-08-26T13:00:00-04:00');
 assert.equal(deskState.primaryDeskPlay.retainedBossZones.approvalBoundary.changesCanExecute, false);
 
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'scanner-24h-loopback-'));
@@ -348,6 +355,8 @@ try {
   assert.ok(text.includes('Retained Boss Zones:'));
   assert.ok(text.includes('Bull Final Boss Support: 7676.00-7678.50'));
   assert.ok(text.includes('Bear Final Boss Resistance: 7723.25-7725.25'));
+  assert.ok(text.includes('Active structure shift-Protected Boss Zone:'));
+  assert.ok(text.includes('Active structure shift-Protected Bull Boss:'));
   assert.ok(/Wick-through alone is defense/i.test(text));
   assert.ok(text.includes('Decision support only. No automated orders.'));
   assert.ok(text.includes('FVG Strength Continuation') || text.includes('FVG'));
@@ -360,6 +369,8 @@ try {
   assert.equal(audit.deskState.canExecute, false);
   assert.equal(audit.deskState.primaryDeskPlay.retainedBossZones.bullBoss.state, 'defended');
   assert.equal(audit.deskState.primaryDeskPlay.retainedBossZones.bearBoss.state, 'alive');
+  assert.equal(audit.deskState.primaryDeskPlay.activeMssProtectedBossZone.direction, 'LONG');
+  assert.equal(audit.deskState.primaryDeskPlay.activeMssProtectedBossZone.role, 'active_mss_protected_boss_zone');
   assert.equal(audit.visibility.authority.discordEligible, true);
   assert.equal(audit.candidateLifecycleTrace.discordDecision.shouldSend, true);
   assert.equal(audit.candidate.setupType, SetupType.FvgStrengthContinuation);

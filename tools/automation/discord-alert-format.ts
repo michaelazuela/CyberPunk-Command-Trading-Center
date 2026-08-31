@@ -163,9 +163,11 @@ export interface CompactDeskStateForDiscord {
       sourceOfTruth?: string;
       bullBoss?: CompactRetainedBossZone | null;
       bearBoss?: CompactRetainedBossZone | null;
+      activeMssProtectedBossZone?: CompactRetainedBossZone | null;
       zones?: CompactRetainedBossZone[];
       summary?: string | null;
     } | null;
+    activeMssProtectedBossZone?: CompactRetainedBossZone | null;
     htfFvgCascade?: {
       sourceOfTruth?: string;
       direction?: 'LONG' | 'SHORT' | string;
@@ -1359,14 +1361,29 @@ function deskPlayRetainedBossZoneLines(
   ].filter((zone): zone is CompactRetainedBossZone => Boolean(zone));
   if (!bull && !bear) return [];
   const details = zones.flatMap((zone) => [
-    compactLine(zone.use || 'Retained final-boss FVG context; wait for completed 5M proof before any action.', 112),
-    compactLine(zone.invalidation || 'Invalidated only by completed candle acceptance through the zone.', 112),
+    compactLine(zone.use || 'Retained final-boss FVG context; wait for completed 5M proof before any action.', 84),
   ]);
   return [
     'Retained Boss Zones:',
     ...(bull ? [bull] : []),
     ...(bear ? [bear] : []),
     ...details,
+  ];
+}
+
+function deskPlayActiveMssProtectedBossZoneLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+): string[] {
+  const zone = play.activeMssProtectedBossZone || play.retainedBossZones?.activeMssProtectedBossZone || null;
+  if (!zone || !isFinitePrice(zone.lower) || !isFinitePrice(zone.upper)) return [];
+  const label = zone.direction === 'SHORT'
+    ? 'Active MSS-Protected Bear Boss'
+    : 'Active MSS-Protected Bull Boss';
+  return [
+    'Active MSS-Protected Boss Zone:',
+    `${label}: ${zoneRangeLine(zone.lower, zone.upper)} (${compactLine(String(zone.state || 'watch').replace(/_/g, ' '), 18)})`,
+    compactLine(zone.use || 'Recent defended 15M FVG battle line; context only until 5M proof and app gates align.', 100),
+    compactLine(zone.invalidation || 'Invalidated only by completed candle acceptance through the zone.', 100),
   ];
 }
 
@@ -1543,6 +1560,10 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     '',
     ...(args.deskState?.primaryDeskPlay && deskPlayRetainedBossZoneLines(args.deskState.primaryDeskPlay).length ? [
       ...deskPlayRetainedBossZoneLines(args.deskState.primaryDeskPlay),
+      '',
+    ] : []),
+    ...(args.deskState?.primaryDeskPlay && deskPlayActiveMssProtectedBossZoneLines(args.deskState.primaryDeskPlay).length ? [
+      ...deskPlayActiveMssProtectedBossZoneLines(args.deskState.primaryDeskPlay),
       '',
     ] : []),
     `Invalid ${invalidWord}: ${priceLine(levels.stop)}`,
@@ -1937,6 +1958,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       ...(waitUsefulHtfRows.length ? ['HTF Lines:', ...waitUsefulHtfRows] : []),
       ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
       ...(deskPlayRetainedBossZoneLines(play).length ? ['', ...deskPlayRetainedBossZoneLines(play)] : []),
+      ...(deskPlayActiveMssProtectedBossZoneLines(play).length ? ['', ...deskPlayActiveMssProtectedBossZoneLines(play)] : []),
       '',
       ...longWaitDisplay.lines,
       '',
@@ -1988,6 +2010,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ...(usefulHtfRows.length ? ['HTF Lines:', ...usefulHtfRows] : []),
     ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
     ...(deskPlayRetainedBossZoneLines(play).length ? ['', ...deskPlayRetainedBossZoneLines(play)] : []),
+    ...(deskPlayActiveMssProtectedBossZoneLines(play).length ? ['', ...deskPlayActiveMssProtectedBossZoneLines(play)] : []),
     '',
     ...primary.lines,
     '',

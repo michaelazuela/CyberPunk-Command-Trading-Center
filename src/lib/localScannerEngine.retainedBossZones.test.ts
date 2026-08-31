@@ -117,6 +117,8 @@ assert.equal(defended.primaryDeskPlay.retainedBossZones.bullBoss?.upper, 7682.5)
 assert.equal(defended.primaryDeskPlay.retainedBossZones.bullBoss?.state, 'defended');
 assert.match(defended.primaryDeskPlay.retainedBossZones.bullBoss?.stateReason || '', /wick-through is treated as defense/i);
 assert.equal(defended.primaryDeskPlay.retainedBossZones.bearBoss?.lower, 7723.25);
+assert.ok(defended.primaryDeskPlay.retainedBossZones.activeMssProtectedBossZone);
+assert.equal(defended.primaryDeskPlay.activeMssProtectedBossZone?.role, 'active_mss_protected_boss_zone');
 assert.equal(defended.primaryDeskPlay.retainedBossZones.approvalBoundary.changesCanExecute, false);
 
 const invalidated = deskStateFor(7678.75);
@@ -129,5 +131,84 @@ assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.lower, 7679
 assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.upper, 7682.5);
 assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.formedAt, '2026-08-27T16:45:00-04:00');
 assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.state, 'defended');
+
+const activeShortChartContext = {
+  sessionType: 'evening',
+  instrument: 'MES',
+  tradeDate: '2026-08-30',
+  timeframe: '5m',
+  screenshotUsability: 'usable',
+  keyLevels: { currentPrice: 7688 },
+  candles: [
+    { index: 0, timestamp: '2026-08-30T21:45:00-04:00', open: 7690, high: 7691, low: 7687.5, close: 7688, direction: 'bearish', confidence: 'High' },
+  ],
+  multiTimeframeContext: {
+    source: 'ninjatrader_bridge',
+    authority: 'ohlc_facts_only',
+    alignment: {
+      macroBias: 'SHORT',
+      sessionBias: 'SHORT',
+      liquidityBias: 'SHORT',
+      executionBias: 'SHORT',
+      alignedDirection: 'SHORT',
+      conflicts: [],
+      notes: [],
+    },
+    fifteenMinute: factSet({
+      timeframe: '15m',
+      candles: [
+        { index: 0, timestamp: '2026-08-28T12:00:00-04:00', open: 7770, high: 7771, low: 7759.5, close: 7761, direction: 'bearish', confidence: 'High' },
+        { index: 1, timestamp: '2026-08-30T20:00:00-04:00', open: 7710, high: 7712, low: 7705, close: 7706, direction: 'bearish', confidence: 'High' },
+        { index: 2, timestamp: '2026-08-30T20:15:00-04:00', open: 7706, high: 7708, low: 7701, close: 7703, direction: 'bearish', confidence: 'High' },
+        { index: 3, timestamp: '2026-08-30T20:30:00-04:00', open: 7699, high: 7702, low: 7690, close: 7692, direction: 'bearish', confidence: 'High' },
+        { index: 4, timestamp: '2026-08-30T20:45:00-04:00', open: 7692, high: 7704, low: 7686, close: 7697, direction: 'bullish', confidence: 'High' },
+        { index: 5, timestamp: '2026-08-30T21:00:00-04:00', open: 7697, high: 7698, low: 7688, close: 7688, direction: 'bearish', confidence: 'High' },
+      ],
+      fvgZones: [
+        { direction: 'SHORT', lower: 7759.5, upper: 7771, midpoint: 7765.25, formedAt: '2026-08-28T12:00:00-04:00', formedCandleIndex: 0, impulseQualified: true, confidence: 'High' },
+      ],
+    }),
+    fiveMinute: factSet({
+      timeframe: '5m',
+      role: 'execution',
+      candles: [
+        { index: 0, timestamp: '2026-08-30T21:45:00-04:00', open: 7690, high: 7691, low: 7687.5, close: 7688, direction: 'bearish', confidence: 'High' },
+      ],
+    }),
+    oneHour: factSet({ timeframe: '1h' }),
+    fourHour: factSet({ timeframe: '4h', role: 'macro_context' }),
+    targetMap: { liquidityTargets: [], imbalanceTargets: [], reactionZones: [], notes: [] },
+  },
+  marketContext: 'Loopback active MSS-protected bear boss zone.',
+} as any;
+
+const shortVisibilityMetadata = classifyScannerVisibility({
+  state: 'NoTrade',
+  candidate: null,
+  alertDecision,
+  canExecute: false,
+});
+const shortLifecycle = buildCandidateLifecycleTrace({
+  candidates: [],
+  selectedCandidate: null,
+  state: 'NoTrade',
+  alertDecision,
+  canExecute: false,
+});
+const activeShort = buildDeskState({
+  state: 'NoTrade',
+  candidate: null,
+  visibilityMetadata: shortVisibilityMetadata,
+  candidateLifecycleTrace: shortLifecycle,
+  currentPrice: 7688,
+  canExecute: false,
+  chartContext: activeShortChartContext,
+});
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.bearBoss?.lower, 7759.5);
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.activeMssProtectedBossZone?.direction, 'SHORT');
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.activeMssProtectedBossZone?.lower, 7702);
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.activeMssProtectedBossZone?.upper, 7705);
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.activeMssProtectedBossZone?.state, 'defended');
+assert.equal(activeShort.primaryDeskPlay.activeMssProtectedBossZone?.role, 'active_mss_protected_boss_zone');
 
 console.log('retained boss-zone ledger loopback test passed');
