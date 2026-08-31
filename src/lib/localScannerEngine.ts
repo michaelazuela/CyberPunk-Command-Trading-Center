@@ -2861,13 +2861,106 @@ function latestCompletedCloseForBossLedger(chartContext?: Partial<ChartContext> 
   return null;
 }
 
+function completedCandleTimestamp(candle: unknown): string | null {
+  const record = candle && typeof candle === 'object' ? candle as Record<string, unknown> : null;
+  const value = record?.timestamp;
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function completedCandleIndex(candle: unknown): number | null {
+  const record = candle && typeof candle === 'object' ? candle as Record<string, unknown> : null;
+  const value = record?.index;
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function roundBossZonePrice(value: number): number {
+  return Math.round(value * 4) / 4;
+}
+
+function bossZoneLookbackFloor(candles: unknown[]): number | null {
+  const timestamps = candles
+    .map(completedCandleTimestamp)
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((value) => Number.isFinite(value));
+  if (!timestamps.length) return null;
+  return Math.max(...timestamps) - (3 * 24 * 60 * 60 * 1000);
+}
+
+function deriveFifteenMinuteBossZonesFromCandles(chartContext?: Partial<ChartContext> | null): FvgZoneFact[] {
+  const candles = [...(chartContext?.multiTimeframeContext?.fifteenMinute.candles || [])]
+    .filter((candle) =>
+      completedCandleHigh(candle) !== null &&
+      completedCandleLow(candle) !== null
+    )
+    .sort((a, b) => {
+      const aIndex = completedCandleIndex(a);
+      const bIndex = completedCandleIndex(b);
+      if (aIndex !== null && bIndex !== null) return aIndex - bIndex;
+      const aTime = completedCandleTimestamp(a);
+      const bTime = completedCandleTimestamp(b);
+      return (aTime ? new Date(aTime).getTime() : 0) - (bTime ? new Date(bTime).getTime() : 0);
+    });
+  if (candles.length < 3) return [];
+
+  const floor = bossZoneLookbackFloor(candles);
+  const derived: FvgZoneFact[] = [];
+  for (let index = 2; index < candles.length; index += 1) {
+    const current = candles[index];
+    const twoBack = candles[index - 2];
+    const formedAt = completedCandleTimestamp(current);
+    if (floor !== null && formedAt && new Date(formedAt).getTime() < floor) continue;
+
+    const currentHigh = completedCandleHigh(current);
+    const currentLow = completedCandleLow(current);
+    const twoBackHigh = completedCandleHigh(twoBack);
+    const twoBackLow = completedCandleLow(twoBack);
+    if (currentHigh === null || currentLow === null || twoBackHigh === null || twoBackLow === null) continue;
+
+    if (currentLow > twoBackHigh) {
+      const lower = roundBossZonePrice(twoBackHigh);
+      const upper = roundBossZonePrice(currentLow);
+      derived.push({
+        direction: 'LONG',
+        lower,
+        upper,
+        midpoint: roundBossZonePrice((lower + upper) / 2),
+        formedAt,
+        formedCandleIndex: completedCandleIndex(current),
+        impulseQualified: true,
+        confidence: 'High',
+      });
+    }
+
+    if (currentHigh < twoBackLow) {
+      const lower = roundBossZonePrice(currentHigh);
+      const upper = roundBossZonePrice(twoBackLow);
+      derived.push({
+        direction: 'SHORT',
+        lower,
+        upper,
+        midpoint: roundBossZonePrice((lower + upper) / 2),
+        formedAt,
+        formedCandleIndex: completedCandleIndex(current),
+        impulseQualified: true,
+        confidence: 'High',
+      });
+    }
+  }
+  return derived;
+}
+
 function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null): Array<{
   zone: FvgZoneFact;
   lower: number;
   upper: number;
   midpoint: number;
 }> {
-  const zones = chartContext?.multiTimeframeContext?.fifteenMinute.fvgZones || [];
+  const zones = [
+    ...(chartContext?.multiTimeframeContext?.fifteenMinute.fvgZones || []),
+    ...deriveFifteenMinuteBossZonesFromCandles(chartContext),
+  ];
+  const seen = new Set<string>();
   return zones
     .filter((zone) =>
       (zone.direction === 'LONG' || zone.direction === 'SHORT') &&
@@ -2886,6 +2979,12 @@ function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null)
         upper: high,
         midpoint: numericOrNull(zone.midpoint) ?? (low + high) / 2,
       };
+    })
+    .filter((item) => {
+      const key = `${item.zone.direction}:${item.lower.toFixed(2)}:${item.upper.toFixed(2)}:${item.zone.formedAt || ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
 }
 

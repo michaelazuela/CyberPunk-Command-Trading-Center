@@ -31,7 +31,7 @@ function factSet(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function chartContext(latestClose: number) {
+function chartContext(latestClose: number, useExplicitFvgZones = true) {
   return {
     sessionType: 'lunch',
     instrument: 'MES',
@@ -57,13 +57,18 @@ function chartContext(latestClose: number) {
       fifteenMinute: factSet({
         timeframe: '15m',
         candles: [
-          { index: 0, timestamp: '2026-08-27T16:45:00-04:00', open: 7681, high: 7740, low: 7671, close: 7734, direction: 'bullish', confidence: 'High' },
-          { index: 1, timestamp: '2026-08-30T10:15:00-04:00', open: 7710, high: 7712, low: 7678.25, close: latestClose, direction: latestClose >= 7680 ? 'bullish' : 'bearish', confidence: 'High' },
+          { index: 0, timestamp: '2026-08-27T16:15:00-04:00', open: 7673, high: 7679.5, low: 7671, close: 7678, direction: 'bullish', confidence: 'High' },
+          { index: 1, timestamp: '2026-08-27T16:30:00-04:00', open: 7678, high: 7681, low: 7676, close: 7680, direction: 'bullish', confidence: 'High' },
+          { index: 2, timestamp: '2026-08-27T16:45:00-04:00', open: 7681, high: 7740, low: 7682.5, close: 7734, direction: 'bullish', confidence: 'High' },
+          { index: 3, timestamp: '2026-08-28T13:00:00-04:00', open: 7720, high: 7723.25, low: 7718, close: 7721, direction: 'bullish', confidence: 'High' },
+          { index: 4, timestamp: '2026-08-28T13:15:00-04:00', open: 7721, high: 7722, low: 7719, close: 7720, direction: 'bearish', confidence: 'High' },
+          { index: 5, timestamp: '2026-08-28T13:30:00-04:00', open: 7718, high: 7721, low: 7715, close: 7716, direction: 'bearish', confidence: 'High' },
+          { index: 6, timestamp: '2026-08-30T10:15:00-04:00', open: 7710, high: 7712, low: 7678.25, close: latestClose, direction: latestClose >= 7680 ? 'bullish' : 'bearish', confidence: 'High' },
         ],
-        fvgZones: [
+        fvgZones: useExplicitFvgZones ? [
           { direction: 'LONG', lower: 7679.5, upper: 7682.5, midpoint: 7681, formedAt: '2026-08-27T16:45:00-04:00', formedCandleIndex: 0, impulseQualified: true, confidence: 'High' },
           { direction: 'SHORT', lower: 7723.25, upper: 7725.25, midpoint: 7724.25, formedAt: '2026-08-28T13:30:00-04:00', formedCandleIndex: 22, impulseQualified: true, confidence: 'High' },
-        ],
+        ] : [],
       }),
       fiveMinute: factSet({
         timeframe: '5m',
@@ -80,7 +85,7 @@ function chartContext(latestClose: number) {
   } as any;
 }
 
-function deskStateFor(latestClose: number) {
+function deskStateFor(latestClose: number, useExplicitFvgZones = true) {
   const visibilityMetadata = classifyScannerVisibility({
     state: 'NoTrade',
     candidate: null,
@@ -101,7 +106,7 @@ function deskStateFor(latestClose: number) {
     candidateLifecycleTrace: lifecycle,
     currentPrice: latestClose,
     canExecute: false,
-    chartContext: chartContext(latestClose),
+    chartContext: chartContext(latestClose, useExplicitFvgZones),
   });
 }
 
@@ -118,5 +123,11 @@ const invalidated = deskStateFor(7678.75);
 assert.equal(invalidated.primaryDeskPlay.retainedBossZones.bullBoss?.state, 'invalidated');
 assert.match(invalidated.primaryDeskPlay.retainedBossZones.bullBoss?.stateReason || '', /accepted below/i);
 assert.equal(invalidated.primaryDeskPlay.retainedBossZones.approvalBoundary.changesTradeApprovals, false);
+
+const derivedOnly = deskStateFor(7692.75, false);
+assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.lower, 7679.5);
+assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.upper, 7682.5);
+assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.formedAt, '2026-08-27T16:45:00-04:00');
+assert.equal(derivedOnly.primaryDeskPlay.retainedBossZones.bullBoss?.state, 'defended');
 
 console.log('retained boss-zone ledger loopback test passed');
