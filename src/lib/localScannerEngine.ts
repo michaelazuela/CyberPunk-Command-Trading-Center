@@ -2949,7 +2949,7 @@ type FifteenMinuteBossZoneFact = {
   derivedFallback?: boolean;
 };
 
-const BOSS_ZONE_RETAINED_TRADING_DATE_COUNT = 5;
+const BOSS_ZONE_RETAINED_TRADING_DATE_COUNT = 4;
 
 function bossZoneSourceLabel(sourceKind: DeskBossZoneSourceKind): string {
   return sourceKind === 'strict_15m_fvg'
