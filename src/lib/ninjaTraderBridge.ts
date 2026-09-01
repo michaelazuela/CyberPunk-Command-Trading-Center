@@ -493,17 +493,20 @@ function detectFvgZones(candles: ChartCandleFact[]): FvgZoneFact[] {
       continue;
     }
 
-    const rightBody =
-      typeof right.open === 'number' && typeof right.close === 'number'
-        ? Math.abs(right.close - right.open)
+    const impulseBody =
+      typeof middle.open === 'number' && typeof middle.close === 'number'
+        ? Math.abs(middle.close - middle.open)
         : 0;
-    const rightRange = Math.max(right.high - right.low, 0);
-    const bodyRatio = avgBody > 0 ? rightBody / avgBody : 0;
-    const rangeRatio = avgRange > 0 ? rightRange / avgRange : 0;
+    const impulseRange =
+      typeof middle.high === 'number' && typeof middle.low === 'number'
+        ? Math.max(middle.high - middle.low, 0)
+        : 0;
+    const bodyRatio = avgBody > 0 ? impulseBody / avgBody : 0;
+    const rangeRatio = avgRange > 0 ? impulseRange / avgRange : 0;
     const impulseQualified =
       bodyRatio >= FVG_IMPULSE_BODY_MULTIPLE ||
       rangeRatio >= FVG_IMPULSE_RANGE_MULTIPLE ||
-      right.isExpansion === true;
+      middle.isExpansion === true;
 
     if (!impulseQualified) continue;
 
