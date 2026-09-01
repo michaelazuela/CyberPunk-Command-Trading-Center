@@ -45,6 +45,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 RefreshSeconds = 5;
                 MaxZones = 6;
                 ShowLabels = true;
+                ShowLineInSand = false;
                 OverlayMode = "Desk";
             }
         }
@@ -69,6 +70,9 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         [NinjaScriptProperty]
         public bool ShowLabels { get; set; }
+
+        [NinjaScriptProperty]
+        public bool ShowLineInSand { get; set; }
 
         [NinjaScriptProperty]
         public string OverlayMode { get; set; }
@@ -140,13 +144,21 @@ namespace NinjaTrader.NinjaScript.Indicators
                     fill,
                     opacity);
 
-                Draw.HorizontalLine(
-                    this,
-                    lineTag,
-                    zone.LineInSand,
-                    line);
                 nextTags.Add(zoneTag);
-                nextTags.Add(lineTag);
+
+                if (ShowLineInSand)
+                {
+                    Draw.HorizontalLine(
+                        this,
+                        lineTag,
+                        zone.LineInSand,
+                        line);
+                    nextTags.Add(lineTag);
+                }
+                else
+                {
+                    RemoveDrawObject(lineTag);
+                }
 
                 if (ShowLabels)
                 {

@@ -551,7 +551,7 @@ function detectFvgZones(candles: ChartCandleFact[]): FvgZoneFact[] {
       });
     }
   }
-  return zones.slice(-8);
+  return zones;
 }
 
 function detectLiquidityAndReclaims(candles: ChartCandleFact[]): {

@@ -226,7 +226,9 @@ function uniqueZones(zones: ScannerZoneFeedZone[]): ScannerZoneFeedZone[] {
 }
 
 function isHiddenInDeskMode(zone: ScannerZoneFeedZone): boolean {
-  return /invalid|expired|pierced/i.test(zone.state);
+  if (/invalid|expired|pierced/i.test(zone.state)) return true;
+  if (zone.sourceKind === 'mss_protected_imbalance_origin') return true;
+  return false;
 }
 
 function zoneDistanceToPrice(zone: ScannerZoneFeedZone, price: number | null | undefined): number {
@@ -238,13 +240,13 @@ function zoneDistanceToPrice(zone: ScannerZoneFeedZone, price: number | null | u
 function deskZonePriority(zone: ScannerZoneFeedZone, price: number | null | undefined): number {
   let priority = 0;
   if (zone.kind === 'active_mss_protected_boss_zone') priority += 100;
-  if (zone.kind === 'final_boss_mss_zone') priority += 85;
+  if (zone.kind === 'final_boss_mss_zone') priority += 45;
   if (zone.kind === 'retained_boss_zone') priority += 75;
   if (zone.role === 'active_mss_protected_boss_zone') priority += 15;
   if (zone.role === 'final_boss_mss_zone') priority += 10;
   if (zone.role === 'final_boss_zone') priority += 8;
   if (zone.sourceKind === 'strict_15m_fvg') priority += 8;
-  if (zone.sourceKind === 'mss_protected_imbalance_origin') priority += 6;
+  if (zone.sourceKind === 'mss_protected_imbalance_origin') priority -= 35;
   if (/defended/i.test(zone.state)) priority += 10;
   if (/active_control/i.test(zone.state)) priority += 8;
   if (/flipped_reaction/i.test(zone.state)) priority -= 8;
@@ -347,8 +349,8 @@ export function buildScannerZoneFeed(args: {
     displayPolicy: {
       mode: 'desk',
       maxZones: 6,
-      hidesStates: ['invalidated', 'expired', 'pierced'],
-      purpose: 'Show the readable final-boss/reaction map while preserving the raw scanner ledger in zones[].',
+      hidesStates: ['invalidated', 'expired', 'pierced', 'mss_protected_imbalance_origin'],
+      purpose: 'Show readable strict 15M FVG final-boss boxes while preserving broad MSS-origin/reaction zones in raw zones[] for audit/debug.',
     },
     summary: feedZones.length
       ? `Scanner overlay feed exported ${displayZones.length}/${feedZones.length} desk-visible 15M boss/FVG zone(s). NinjaTrader display is read-only.`

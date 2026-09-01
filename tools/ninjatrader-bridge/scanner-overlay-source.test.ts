@@ -8,6 +8,8 @@ assert.match(source, /Visual-only overlay/);
 assert.match(source, /quant-desk-scanner-zones\.json/);
 assert.match(source, /Draw\.Rectangle/);
 assert.match(source, /Draw\.HorizontalLine/);
+assert.match(source, /ShowLineInSand = false/);
+assert.match(source, /if \(ShowLineInSand\)/);
 assert.match(source, /scanner-zone-feed/);
 assert.match(source, /OverlayMode = "Desk"/);
 assert.match(source, /displayZones/);

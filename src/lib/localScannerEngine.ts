@@ -3122,6 +3122,7 @@ function deriveFifteenMinuteMssProtectedImbalanceOriginZones(chartContext?: Part
 }
 
 function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null): FifteenMinuteBossZoneFact[] {
+  const recentTradingDates = bossZoneRecentTradingDates(sortedRecentFifteenMinuteCandles(chartContext));
   const zones = [
     ...(chartContext?.multiTimeframeContext?.fifteenMinute.fvgZones || []).map((zone) => ({
       zone,
@@ -3139,6 +3140,10 @@ function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null)
       numericOrNull(item.zone.upper) !== null &&
       item.zone.impulseQualified !== false
     )
+    .filter((item) => {
+      const formedAt = item.zone.formedAt;
+      return !recentTradingDates || !formedAt || recentTradingDates.has(formedAt.slice(0, 10));
+    })
     .map((item) => {
       const lower = numericOrNull(item.zone.lower) as number;
       const upper = numericOrNull(item.zone.upper) as number;

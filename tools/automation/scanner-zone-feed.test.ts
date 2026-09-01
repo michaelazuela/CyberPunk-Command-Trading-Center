@@ -135,9 +135,10 @@ assert.equal(feed.authorityBoundary.placesOrders, false);
 assert.equal(feed.zones.length, 4);
 assert.equal(feed.displayPolicy.mode, 'desk');
 assert.equal(feed.displayPolicy.maxZones, 6);
-assert.deepEqual(feed.displayPolicy.hidesStates, ['invalidated', 'expired', 'pierced']);
-assert.equal(feed.displayZones.length, 3);
+assert.deepEqual(feed.displayPolicy.hidesStates, ['invalidated', 'expired', 'pierced', 'mss_protected_imbalance_origin']);
+assert.equal(feed.displayZones.length, 1);
 assert.equal(feed.displayZones.some((zone) => zone.state === 'pierced'), false);
+assert.equal(feed.displayZones.some((zone) => zone.sourceKind === 'mss_protected_imbalance_origin'), false);
 
 const strict = feed.zones.find((zone) => zone.sourceKind === 'strict_15m_fvg');
 assert.ok(strict);

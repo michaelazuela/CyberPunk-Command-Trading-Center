@@ -31,6 +31,26 @@ function factSet(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function explicitThreeDayFvgZones() {
+  return [
+    { direction: 'LONG', lower: 7679.5, upper: 7682.5, midpoint: 7681, formedAt: '2026-08-27T16:45:00-04:00', formedCandleIndex: 0, impulseQualified: true, confidence: 'High' },
+    ...Array.from({ length: 12 }, (_, index) => {
+      const lower = 7686.5 + index;
+      return {
+        direction: 'LONG',
+        lower,
+        upper: lower + 1,
+        midpoint: lower + 0.5,
+        formedAt: `2026-08-30T${String(1 + index).padStart(2, '0')}:00:00-04:00`,
+        formedCandleIndex: 20 + index,
+        impulseQualified: true,
+        confidence: 'High',
+      };
+    }),
+    { direction: 'SHORT', lower: 7723.25, upper: 7725.25, midpoint: 7724.25, formedAt: '2026-08-28T13:30:00-04:00', formedCandleIndex: 22, impulseQualified: true, confidence: 'High' },
+  ];
+}
+
 function chartContext(latestClose: number, useExplicitFvgZones = true) {
   return {
     sessionType: 'lunch',
@@ -65,10 +85,7 @@ function chartContext(latestClose: number, useExplicitFvgZones = true) {
           { index: 5, timestamp: '2026-08-28T13:30:00-04:00', open: 7718, high: 7721, low: 7715, close: 7716, direction: 'bearish', confidence: 'High' },
           { index: 6, timestamp: '2026-08-30T10:15:00-04:00', open: 7710, high: 7712, low: 7678.25, close: latestClose, direction: latestClose >= 7680 ? 'bullish' : 'bearish', confidence: 'High' },
         ],
-        fvgZones: useExplicitFvgZones ? [
-          { direction: 'LONG', lower: 7679.5, upper: 7682.5, midpoint: 7681, formedAt: '2026-08-27T16:45:00-04:00', formedCandleIndex: 0, impulseQualified: true, confidence: 'High' },
-          { direction: 'SHORT', lower: 7723.25, upper: 7725.25, midpoint: 7724.25, formedAt: '2026-08-28T13:30:00-04:00', formedCandleIndex: 22, impulseQualified: true, confidence: 'High' },
-        ] : [],
+        fvgZones: useExplicitFvgZones ? explicitThreeDayFvgZones() : [],
       }),
       fiveMinute: factSet({
         timeframe: '5m',
