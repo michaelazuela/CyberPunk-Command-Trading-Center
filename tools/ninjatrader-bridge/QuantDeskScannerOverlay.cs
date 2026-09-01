@@ -30,6 +30,7 @@ namespace NinjaTrader.NinjaScript.Indicators
         private DateTime lastReadAt = DateTime.MinValue;
         private DateTime lastWriteTimeUtc = DateTime.MinValue;
         private readonly List<OverlayZone> zones = new List<OverlayZone>();
+        private readonly HashSet<string> drawnTags = new HashSet<string>();
 
         protected override void OnStateChange()
         {
@@ -42,8 +43,9 @@ namespace NinjaTrader.NinjaScript.Indicators
                 IsSuspendedWhileInactive = false;
                 FeedPath = DefaultFeedPath();
                 RefreshSeconds = 5;
-                MaxZones = 12;
+                MaxZones = 6;
                 ShowLabels = true;
+                OverlayMode = "Desk";
             }
         }
 
@@ -67,6 +69,9 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         [NinjaScriptProperty]
         public bool ShowLabels { get; set; }
+
+        [NinjaScriptProperty]
+        public string OverlayMode { get; set; }
 
         private static string DefaultFeedPath()
         {
@@ -105,6 +110,7 @@ namespace NinjaTrader.NinjaScript.Indicators
         private void DrawZones()
         {
             int drawn = 0;
+            HashSet<string> nextTags = new HashSet<string>();
             foreach (OverlayZone zone in zones)
             {
                 if (drawn >= Math.Max(1, MaxZones))
@@ -118,10 +124,13 @@ namespace NinjaTrader.NinjaScript.Indicators
                 int opacity = Math.Max(5, Math.Min(35, zone.Opacity));
                 int startBarsAgo = BarsAgoFor(zone.FormedAt);
                 string tagBase = "QD_" + SanitizeTag(zone.Id);
+                string zoneTag = tagBase + "_zone";
+                string lineTag = tagBase + "_line";
+                string labelTag = tagBase + "_label";
 
                 Draw.Rectangle(
                     this,
-                    tagBase + "_zone",
+                    zoneTag,
                     false,
                     startBarsAgo,
                     zone.Upper,
@@ -133,24 +142,36 @@ namespace NinjaTrader.NinjaScript.Indicators
 
                 Draw.HorizontalLine(
                     this,
-                    tagBase + "_line",
+                    lineTag,
                     zone.LineInSand,
                     line);
+                nextTags.Add(zoneTag);
+                nextTags.Add(lineTag);
 
                 if (ShowLabels)
                 {
                     double labelPrice = zone.Direction == "LONG" ? zone.Upper : zone.Lower;
                     Draw.Text(
                         this,
-                        tagBase + "_label",
+                        labelTag,
                         ZoneLabel(zone),
                         0,
                         labelPrice,
                         line);
+                    nextTags.Add(labelTag);
                 }
 
                 drawn++;
             }
+
+            foreach (string staleTag in drawnTags)
+            {
+                if (!nextTags.Contains(staleTag))
+                    RemoveDrawObject(staleTag);
+            }
+            drawnTags.Clear();
+            foreach (string tag in nextTags)
+                drawnTags.Add(tag);
         }
 
         private int BarsAgoFor(string formedAt)
@@ -175,19 +196,21 @@ namespace NinjaTrader.NinjaScript.Indicators
         {
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "{0} {1} {2:0.00}-{3:0.00} | LIS {4:0.00} | {5}",
+                "{0} {1} {2:0.00}-{3:0.00} | LIS {4:0.00}",
                 zone.Direction == "LONG" ? "Bull" : "Bear",
                 zone.Label,
                 zone.Lower,
                 zone.Upper,
-                zone.LineInSand,
-                zone.State);
+                zone.LineInSand);
         }
 
-        private static List<OverlayZone> ParseZones(string json)
+        private List<OverlayZone> ParseZones(string json)
         {
             List<OverlayZone> parsed = new List<OverlayZone>();
-            string zonesArray = ExtractArray(json, "zones");
+            string arrayName = string.Equals(OverlayMode, "Debug", StringComparison.OrdinalIgnoreCase) ? "zones" : "displayZones";
+            string zonesArray = ExtractArray(json, arrayName);
+            if (string.IsNullOrWhiteSpace(zonesArray) && !string.Equals(arrayName, "zones", StringComparison.OrdinalIgnoreCase))
+                zonesArray = ExtractArray(json, "zones");
             if (string.IsNullOrWhiteSpace(zonesArray))
                 return parsed;
 

@@ -9,6 +9,9 @@ assert.match(source, /quant-desk-scanner-zones\.json/);
 assert.match(source, /Draw\.Rectangle/);
 assert.match(source, /Draw\.HorizontalLine/);
 assert.match(source, /scanner-zone-feed/);
+assert.match(source, /OverlayMode = "Desk"/);
+assert.match(source, /displayZones/);
+assert.match(source, /RemoveDrawObject/);
 assert.doesNotMatch(source, /\bSubmitOrder\b|\bEnterLong\b|\bEnterShort\b|\bExitLong\b|\bExitShort\b|\bAccount\.CreateOrder\b|\bChangeOrder\b|\bCancelOrder\b|\bFlatten\b/);
 assert.match(source, /does not submit, change, cancel, reverse, flatten, or approve orders/i);
 

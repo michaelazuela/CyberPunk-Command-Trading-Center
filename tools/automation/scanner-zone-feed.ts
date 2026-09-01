@@ -73,6 +73,13 @@ export interface ScannerZoneFeed {
     canExecute: boolean;
   };
   zones: ScannerZoneFeedZone[];
+  displayZones: ScannerZoneFeedZone[];
+  displayPolicy: {
+    mode: 'desk';
+    maxZones: number;
+    hidesStates: string[];
+    purpose: string;
+  };
   summary: string;
   authorityBoundary: {
     displayOnly: true;
@@ -218,6 +225,81 @@ function uniqueZones(zones: ScannerZoneFeedZone[]): ScannerZoneFeedZone[] {
   });
 }
 
+function isHiddenInDeskMode(zone: ScannerZoneFeedZone): boolean {
+  return /invalid|expired|pierced/i.test(zone.state);
+}
+
+function zoneDistanceToPrice(zone: ScannerZoneFeedZone, price: number | null | undefined): number {
+  if (typeof price !== 'number' || !Number.isFinite(price)) return 0;
+  if (price >= zone.lower && price <= zone.upper) return 0;
+  return Math.min(Math.abs(price - zone.lower), Math.abs(price - zone.upper));
+}
+
+function deskZonePriority(zone: ScannerZoneFeedZone, price: number | null | undefined): number {
+  let priority = 0;
+  if (zone.kind === 'active_mss_protected_boss_zone') priority += 100;
+  if (zone.kind === 'final_boss_mss_zone') priority += 85;
+  if (zone.kind === 'retained_boss_zone') priority += 75;
+  if (zone.role === 'active_mss_protected_boss_zone') priority += 15;
+  if (zone.role === 'final_boss_mss_zone') priority += 10;
+  if (zone.role === 'final_boss_zone') priority += 8;
+  if (zone.sourceKind === 'strict_15m_fvg') priority += 8;
+  if (zone.sourceKind === 'mss_protected_imbalance_origin') priority += 6;
+  if (/defended/i.test(zone.state)) priority += 10;
+  if (/active_control/i.test(zone.state)) priority += 8;
+  if (/flipped_reaction/i.test(zone.state)) priority -= 8;
+  priority -= Math.min(20, zoneDistanceToPrice(zone, price) / 2);
+  return priority;
+}
+
+function zonesOverlap(a: ScannerZoneFeedZone, b: ScannerZoneFeedZone): boolean {
+  if (a.direction !== b.direction) return false;
+  return Math.max(a.lower, b.lower) <= Math.min(a.upper, b.upper);
+}
+
+function betterDeskZone(
+  a: ScannerZoneFeedZone,
+  b: ScannerZoneFeedZone,
+  price: number | null | undefined,
+): ScannerZoneFeedZone {
+  const aPriority = deskZonePriority(a, price);
+  const bPriority = deskZonePriority(b, price);
+  if (aPriority !== bPriority) return aPriority > bPriority ? a : b;
+
+  const aWidth = a.upper - a.lower;
+  const bWidth = b.upper - b.lower;
+  if (aWidth !== bWidth) return aWidth > bWidth ? a : b;
+
+  return a.formedAt && b.formedAt && a.formedAt > b.formedAt ? a : b;
+}
+
+function buildDisplayZones(
+  zones: ScannerZoneFeedZone[],
+  price: number | null | undefined,
+  maxZones = 6,
+): ScannerZoneFeedZone[] {
+  const candidates = zones.filter((zone) => !isHiddenInDeskMode(zone));
+  const collapsed: ScannerZoneFeedZone[] = [];
+
+  for (const zone of candidates) {
+    const overlapIndex = collapsed.findIndex((existing) => zonesOverlap(existing, zone));
+    if (overlapIndex === -1) {
+      collapsed.push(zone);
+      continue;
+    }
+    collapsed[overlapIndex] = betterDeskZone(collapsed[overlapIndex], zone, price);
+  }
+
+  return collapsed
+    .sort((a, b) => {
+      const priorityDelta = deskZonePriority(b, price) - deskZonePriority(a, price);
+      if (Math.abs(priorityDelta) > 0.0001) return priorityDelta;
+      return zoneDistanceToPrice(a, price) - zoneDistanceToPrice(b, price);
+    })
+    .slice(0, maxZones)
+    .sort((a, b) => b.upper - a.upper || b.lower - a.lower);
+}
+
 export function buildScannerZoneFeed(args: {
   deskState: DeskState;
   instrument: string;
@@ -240,6 +322,7 @@ export function buildScannerZoneFeed(args: {
   for (const zone of ledger?.finalBossMssZones?.bear || []) zones.push(finalBossMssZoneToFeedZone(zone));
 
   const feedZones = uniqueZones(zones);
+  const displayZones = buildDisplayZones(feedZones, args.currentPrice, 6);
   return {
     sourceOfTruth: 'scanner_zone_overlay_feed',
     schemaVersion: SCANNER_ZONE_FEED_VERSION,
@@ -260,8 +343,15 @@ export function buildScannerZoneFeed(args: {
       canExecute: args.deskState.canExecute,
     },
     zones: feedZones,
+    displayZones,
+    displayPolicy: {
+      mode: 'desk',
+      maxZones: 6,
+      hidesStates: ['invalidated', 'expired', 'pierced'],
+      purpose: 'Show the readable final-boss/reaction map while preserving the raw scanner ledger in zones[].',
+    },
     summary: feedZones.length
-      ? `Scanner overlay feed exported ${feedZones.length} 15M boss/FVG zone(s). NinjaTrader display is read-only.`
+      ? `Scanner overlay feed exported ${displayZones.length}/${feedZones.length} desk-visible 15M boss/FVG zone(s). NinjaTrader display is read-only.`
       : 'Scanner overlay feed has no active 15M boss/FVG zones to display.',
     authorityBoundary: {
       displayOnly: true,
