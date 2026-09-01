@@ -178,6 +178,35 @@ assert.equal(repeatedDefended.primaryDeskPlay.retainedBossZones.bullBoss?.upper,
 assert.equal(repeatedDefended.primaryDeskPlay.retainedBossZones.bullBoss?.formedAt, '2026-08-26T13:30:00-04:00');
 assert.equal(repeatedDefended.primaryDeskPlay.retainedBossZones.bullBoss?.sourceKind, 'strict_15m_fvg');
 
+const competingBullBossContext = chartContext(7704.75);
+competingBullBossContext.tradeDate = '2026-09-01';
+competingBullBossContext.multiTimeframeContext.fifteenMinute.candles = [
+  { index: 0, timestamp: '2026-08-25T22:45:00-04:00', open: 7678.5, high: 7690, low: 7676, close: 7688, direction: 'bullish', confidence: 'High' },
+  { index: 1, timestamp: '2026-08-26T13:00:00-04:00', open: 7672, high: 7679.75, low: 7671.25, close: 7679.5, direction: 'bullish', confidence: 'High' },
+  { index: 2, timestamp: '2026-08-26T13:15:00-04:00', open: 7679.25, high: 7683.75, low: 7677.75, close: 7683.5, direction: 'bullish', confidence: 'High' },
+  { index: 3, timestamp: '2026-08-27T09:30:00-04:00', open: 7692, high: 7708, low: 7680.25, close: 7704, direction: 'bullish', confidence: 'High' },
+  { index: 4, timestamp: '2026-08-28T10:15:00-04:00', open: 7702, high: 7714, low: 7681, close: 7708, direction: 'bullish', confidence: 'High' },
+  { index: 5, timestamp: '2026-08-31T15:30:00-04:00', open: 7684, high: 7707, low: 7686.5, close: 7702, direction: 'bullish', confidence: 'High' },
+  { index: 6, timestamp: '2026-09-01T10:15:00-04:00', open: 7701, high: 7710, low: 7680.75, close: 7704.75, direction: 'bullish', confidence: 'High' },
+];
+competingBullBossContext.multiTimeframeContext.fifteenMinute.fvgZones = [
+  { direction: 'LONG', lower: 7676, upper: 7678.5, midpoint: 7677.25, formedAt: '2026-08-25T22:45:00-04:00', formedCandleIndex: 0, impulseQualified: true, confidence: 'High' },
+  { direction: 'LONG', lower: 7679.75, upper: 7683.5, midpoint: 7681.5, formedAt: '2026-08-26T13:15:00-04:00', formedCandleIndex: 2, impulseQualified: true, confidence: 'High' },
+  { direction: 'LONG', lower: 7686.5, upper: 7687.5, midpoint: 7687, formedAt: '2026-08-31T15:30:00-04:00', formedCandleIndex: 5, impulseQualified: true, confidence: 'High' },
+];
+const competingBullBoss = buildDeskState({
+  state: 'NoTrade',
+  candidate: null,
+  visibilityMetadata: repeatedDefendedVisibility,
+  candidateLifecycleTrace: repeatedDefendedLifecycle,
+  currentPrice: 7704.75,
+  canExecute: false,
+  chartContext: competingBullBossContext,
+});
+assert.equal(competingBullBoss.primaryDeskPlay.retainedBossZones.bullBoss?.lower, 7679.75);
+assert.equal(competingBullBoss.primaryDeskPlay.retainedBossZones.bullBoss?.upper, 7683.5);
+assert.equal(competingBullBoss.primaryDeskPlay.retainedBossZones.bullBoss?.formedAt, '2026-08-26T13:15:00-04:00');
+
 const invalidated = deskStateFor(7678.75);
 assert.equal(invalidated.primaryDeskPlay.retainedBossZones.bullBoss?.state, 'invalidated');
 assert.match(invalidated.primaryDeskPlay.retainedBossZones.bullBoss?.stateReason || '', /scanner reference price/i);

@@ -2947,6 +2947,11 @@ type FifteenMinuteBossZoneFact = {
   sourceKind: DeskBossZoneSourceKind;
   sourceLabel: string;
   derivedFallback?: boolean;
+  controlSegment?: {
+    strictLower: number;
+    strictUpper: number;
+    reason: string;
+  };
 };
 
 const BOSS_ZONE_RETAINED_TRADING_DATE_COUNT = 5;
@@ -3144,6 +3149,85 @@ function deriveFifteenMinuteMssProtectedImbalanceOriginZones(chartContext?: Part
   return derived;
 }
 
+function findBossZoneFormedCandleIndex(
+  zone: FvgZoneFact,
+  candles: unknown[],
+): number {
+  if (typeof zone.formedCandleIndex === 'number') {
+    const byIndex = candles.findIndex((candle) => completedCandleIndex(candle) === zone.formedCandleIndex);
+    if (byIndex >= 0) return byIndex;
+  }
+  if (zone.formedAt) {
+    const formedAtMs = new Date(zone.formedAt).getTime();
+    if (Number.isFinite(formedAtMs)) {
+      const byTime = candles.findIndex((candle) => {
+        const timestamp = completedCandleTimestamp(candle);
+        if (!timestamp) return false;
+        const timestampMs = new Date(timestamp).getTime();
+        return Number.isFinite(timestampMs) && Math.abs(timestampMs - formedAtMs) <= 60_000;
+      });
+      if (byTime >= 0) return byTime;
+    }
+  }
+  return -1;
+}
+
+function bossZoneControlSegmentFromStrictFvg(
+  zone: FvgZoneFact,
+  lower: number,
+  upper: number,
+  chartContext?: Partial<ChartContext> | null,
+): Pick<FifteenMinuteBossZoneFact, 'lower' | 'upper' | 'midpoint' | 'controlSegment'> | null {
+  const width = upper - lower;
+  if (width < 3) return null;
+  const candles = sortedRecentFifteenMinuteCandles(chartContext);
+  const formedIndex = findBossZoneFormedCandleIndex(zone, candles);
+  if (formedIndex < 2) return null;
+
+  const left = candles[formedIndex - 2];
+  const middle = candles[formedIndex - 1];
+  const leftBodyHigh = bossZoneBodyHigh(left);
+  const leftBodyLow = bossZoneBodyLow(left);
+  const middleBodyHigh = bossZoneBodyHigh(middle);
+  const middleBodyLow = bossZoneBodyLow(middle);
+  if (
+    leftBodyHigh === null ||
+    leftBodyLow === null ||
+    middleBodyHigh === null ||
+    middleBodyLow === null
+  ) {
+    return null;
+  }
+
+  if (zone.direction === 'LONG') {
+    const controlUpper = roundBossZonePrice(Math.min(upper, Math.max(leftBodyHigh, middleBodyLow)));
+    if (controlUpper <= lower || upper - controlUpper < 1) return null;
+    return {
+      lower,
+      upper: controlUpper,
+      midpoint: roundBossZonePrice((lower + controlUpper) / 2),
+      controlSegment: {
+        strictLower: lower,
+        strictUpper: upper,
+        reason: 'Wide strict 15M FVG narrowed to its lower defended control segment for final-boss display.',
+      },
+    };
+  }
+
+  const controlLower = roundBossZonePrice(Math.max(lower, Math.min(leftBodyLow, middleBodyHigh)));
+  if (controlLower >= upper || controlLower - lower < 1) return null;
+  return {
+    lower: controlLower,
+    upper,
+    midpoint: roundBossZonePrice((controlLower + upper) / 2),
+    controlSegment: {
+      strictLower: lower,
+      strictUpper: upper,
+      reason: 'Wide strict 15M FVG narrowed to its upper defended control segment for final-boss display.',
+    },
+  };
+}
+
 function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null): FifteenMinuteBossZoneFact[] {
   const recentTradingDates = bossZoneRecentTradingDates(sortedRecentFifteenMinuteCandles(chartContext));
   const explicitStrictZones = (chartContext?.multiTimeframeContext?.fifteenMinute.fvgZones || []).map((zone) => ({
@@ -3175,9 +3259,17 @@ function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null)
       const high = Math.max(lower, upper);
       return {
         zone: item.zone,
-        lower: low,
-        upper: high,
-        midpoint: numericOrNull(item.zone.midpoint) ?? (low + high) / 2,
+        ...(item.sourceKind === 'strict_15m_fvg' && !('derivedFallback' in item)
+          ? bossZoneControlSegmentFromStrictFvg(item.zone, low, high, chartContext) || {
+              lower: low,
+              upper: high,
+              midpoint: numericOrNull(item.zone.midpoint) ?? (low + high) / 2,
+            }
+          : {
+              lower: low,
+              upper: high,
+              midpoint: numericOrNull(item.zone.midpoint) ?? (low + high) / 2,
+            }),
         sourceKind: item.sourceKind,
         sourceLabel: item.sourceLabel,
         derivedFallback: 'derivedFallback' in item ? item.derivedFallback : undefined,
@@ -3231,6 +3323,7 @@ function selectRetainedBossZone(
   zones: ReturnType<typeof fifteenMinuteBossZoneFacts>,
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>,
   chartContext?: Partial<ChartContext> | null,
+  latestClose?: number | null,
 ) {
   const directionalAll = zones.filter((item) => item.zone.direction === direction);
   const explicitStrict = directionalAll.filter((item) =>
@@ -3239,6 +3332,7 @@ function selectRetainedBossZone(
   const repeatedDefendedStrict = explicitStrict.filter((item) =>
     bossZoneDefendedReactionCount(item, chartContext) >= 2
   );
+  const preferNearestDisplayZone = repeatedDefendedStrict.length > 0 || explicitStrict.length > 0;
   const directional = repeatedDefendedStrict.length
     ? repeatedDefendedStrict
     : explicitStrict.length
@@ -3248,6 +3342,15 @@ function selectRetainedBossZone(
   return [...directional].sort((a, b) => {
     const priorityDelta = retainedBossZonePriority(b, chartContext) - retainedBossZonePriority(a, chartContext);
     if (Math.abs(priorityDelta) > 5.0001) return priorityDelta;
+    if (preferNearestDisplayZone && typeof latestClose === 'number' && Number.isFinite(latestClose)) {
+      const aDistance = latestClose >= a.lower && latestClose <= a.upper
+        ? 0
+        : Math.min(Math.abs(latestClose - a.lower), Math.abs(latestClose - a.upper));
+      const bDistance = latestClose >= b.lower && latestClose <= b.upper
+        ? 0
+        : Math.min(Math.abs(latestClose - b.lower), Math.abs(latestClose - b.upper));
+      if (aDistance !== bDistance) return aDistance - bDistance;
+    }
     const locationDelta = direction === 'LONG'
       ? a.lower - b.lower || a.upper - b.upper
       : b.upper - a.upper || b.lower - a.lower;
@@ -3795,8 +3898,8 @@ function buildRetainedBossZoneLedger(args: {
 }): DeskRetainedBossZoneLedger {
   const facts = fifteenMinuteBossZoneFacts(args.chartContext);
   const latestClose = numericOrNull(args.currentPrice) ?? latestCompletedCloseForBossLedger(args.chartContext);
-  const bull = selectRetainedBossZone(facts, 'LONG', args.chartContext);
-  const bear = selectRetainedBossZone(facts, 'SHORT', args.chartContext);
+  const bull = selectRetainedBossZone(facts, 'LONG', args.chartContext, latestClose);
+  const bear = selectRetainedBossZone(facts, 'SHORT', args.chartContext, latestClose);
   const activeMssProtectedBossZone = selectActiveMssProtectedBossZone({
     zones: facts,
     latestClose,
