@@ -2946,9 +2946,10 @@ type FifteenMinuteBossZoneFact = {
   midpoint: number;
   sourceKind: DeskBossZoneSourceKind;
   sourceLabel: string;
+  derivedFallback?: boolean;
 };
 
-const BOSS_ZONE_RETAINED_TRADING_DATE_COUNT = 4;
+const BOSS_ZONE_RETAINED_TRADING_DATE_COUNT = 5;
 
 function bossZoneSourceLabel(sourceKind: DeskBossZoneSourceKind): string {
   return sourceKind === 'strict_15m_fvg'
@@ -3048,6 +3049,7 @@ function deriveFifteenMinuteBossZonesFromCandles(chartContext?: Partial<ChartCon
         midpoint: roundBossZonePrice((lower + upper) / 2),
         sourceKind: 'strict_15m_fvg',
         sourceLabel: bossZoneSourceLabel('strict_15m_fvg'),
+        derivedFallback: true,
       });
     }
 
@@ -3070,6 +3072,7 @@ function deriveFifteenMinuteBossZonesFromCandles(chartContext?: Partial<ChartCon
         midpoint: roundBossZonePrice((lower + upper) / 2),
         sourceKind: 'strict_15m_fvg',
         sourceLabel: bossZoneSourceLabel('strict_15m_fvg'),
+        derivedFallback: true,
       });
     }
   }
@@ -3143,12 +3146,13 @@ function deriveFifteenMinuteMssProtectedImbalanceOriginZones(chartContext?: Part
 
 function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null): FifteenMinuteBossZoneFact[] {
   const recentTradingDates = bossZoneRecentTradingDates(sortedRecentFifteenMinuteCandles(chartContext));
+  const explicitStrictZones = (chartContext?.multiTimeframeContext?.fifteenMinute.fvgZones || []).map((zone) => ({
+    zone,
+    sourceKind: 'strict_15m_fvg' as const,
+    sourceLabel: bossZoneSourceLabel('strict_15m_fvg'),
+  }));
   const zones = [
-    ...(chartContext?.multiTimeframeContext?.fifteenMinute.fvgZones || []).map((zone) => ({
-      zone,
-      sourceKind: 'strict_15m_fvg' as const,
-      sourceLabel: bossZoneSourceLabel('strict_15m_fvg'),
-    })),
+    ...explicitStrictZones,
     ...deriveFifteenMinuteBossZonesFromCandles(chartContext),
     ...deriveFifteenMinuteMssProtectedImbalanceOriginZones(chartContext),
   ];
@@ -3176,6 +3180,7 @@ function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null)
         midpoint: numericOrNull(item.zone.midpoint) ?? (low + high) / 2,
         sourceKind: item.sourceKind,
         sourceLabel: item.sourceLabel,
+        derivedFallback: 'derivedFallback' in item ? item.derivedFallback : undefined,
       };
     })
     .filter((item) => {
@@ -3186,16 +3191,60 @@ function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null)
     });
 }
 
+function bossZoneDefendedReactionCount(
+  item: ReturnType<typeof fifteenMinuteBossZoneFacts>[number],
+  chartContext?: Partial<ChartContext> | null,
+): number {
+  const formedAtMs = bossZoneFormedAtMs(item);
+  const candles = sortedFifteenMinuteCandles(chartContext);
+  return candles.filter((candle) => {
+    const timestamp = completedCandleTimestamp(candle);
+    const timestampMs = timestamp ? new Date(timestamp).getTime() : 0;
+    if (formedAtMs && timestampMs <= formedAtMs) return false;
+    const high = completedCandleHigh(candle);
+    const low = completedCandleLow(candle);
+    const close = completedCandleClose(candle);
+    if (high === null || low === null || close === null) return false;
+    const touched = high >= item.lower && low <= item.upper;
+    if (!touched) return false;
+    return item.zone.direction === 'LONG' ? close >= item.lower : close <= item.upper;
+  }).length;
+}
+
+function retainedBossZonePriority(
+  item: ReturnType<typeof fifteenMinuteBossZoneFacts>[number],
+  chartContext?: Partial<ChartContext> | null,
+): number {
+  let priority = 0;
+  if (item.sourceKind === 'strict_15m_fvg') priority += 40;
+  if (item.sourceKind === 'mss_protected_imbalance_origin') priority += 45;
+  if (item.derivedFallback) priority -= 20;
+  priority += Math.min(5, bossZoneDefendedReactionCount(item, chartContext));
+  return priority;
+}
+
 function selectRetainedBossZone(
   zones: ReturnType<typeof fifteenMinuteBossZoneFacts>,
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>,
+  chartContext?: Partial<ChartContext> | null,
 ) {
-  const directional = zones.filter((item) => item.zone.direction === direction);
+  const directionalAll = zones.filter((item) => item.zone.direction === direction);
+  const explicitStrict = directionalAll.filter((item) =>
+    item.sourceKind === 'strict_15m_fvg' && item.derivedFallback !== true
+  );
+  const directional = explicitStrict.length ? explicitStrict : directionalAll;
   if (!directional.length) return null;
-  return [...directional].sort((a, b) => direction === 'LONG'
-    ? a.lower - b.lower || a.upper - b.upper
-    : b.upper - a.upper || b.lower - a.lower
-  )[0] || null;
+  return [...directional].sort((a, b) => {
+    const priorityDelta = retainedBossZonePriority(b, chartContext) - retainedBossZonePriority(a, chartContext);
+    if (Math.abs(priorityDelta) > 5.0001) return priorityDelta;
+    const locationDelta = direction === 'LONG'
+      ? a.lower - b.lower || a.upper - b.upper
+      : b.upper - a.upper || b.lower - a.lower;
+    if (locationDelta !== 0) return locationDelta;
+    return direction === 'LONG'
+      ? a.lower - b.lower || a.upper - b.upper
+      : b.upper - a.upper || b.lower - a.lower;
+  })[0] || null;
 }
 
 function bossZoneFormedAtMs(item: ReturnType<typeof fifteenMinuteBossZoneFacts>[number]): number {
@@ -3735,8 +3784,8 @@ function buildRetainedBossZoneLedger(args: {
 }): DeskRetainedBossZoneLedger {
   const facts = fifteenMinuteBossZoneFacts(args.chartContext);
   const latestClose = numericOrNull(args.currentPrice) ?? latestCompletedCloseForBossLedger(args.chartContext);
-  const bull = selectRetainedBossZone(facts, 'LONG');
-  const bear = selectRetainedBossZone(facts, 'SHORT');
+  const bull = selectRetainedBossZone(facts, 'LONG', args.chartContext);
+  const bear = selectRetainedBossZone(facts, 'SHORT', args.chartContext);
   const activeMssProtectedBossZone = selectActiveMssProtectedBossZone({
     zones: facts,
     latestClose,
