@@ -138,6 +138,46 @@ assert.ok(defended.primaryDeskPlay.retainedBossZones.activeMssProtectedBossZone)
 assert.equal(defended.primaryDeskPlay.activeMssProtectedBossZone?.role, 'active_mss_protected_boss_zone');
 assert.equal(defended.primaryDeskPlay.retainedBossZones.approvalBoundary.changesCanExecute, false);
 
+const repeatedDefendedFvgContext = chartContext(7704.75);
+repeatedDefendedFvgContext.tradeDate = '2026-09-01';
+repeatedDefendedFvgContext.multiTimeframeContext.fifteenMinute.candles = [
+  { index: 0, timestamp: '2026-08-26T13:30:00-04:00', open: 7676, high: 7688, low: 7675.5, close: 7687, direction: 'bullish', confidence: 'High' },
+  { index: 1, timestamp: '2026-08-27T09:30:00-04:00', open: 7692, high: 7708, low: 7680.25, close: 7704, direction: 'bullish', confidence: 'High' },
+  { index: 2, timestamp: '2026-08-28T10:15:00-04:00', open: 7702, high: 7714, low: 7681, close: 7708, direction: 'bullish', confidence: 'High' },
+  { index: 3, timestamp: '2026-08-31T15:30:00-04:00', open: 7684, high: 7707, low: 7686.5, close: 7702, direction: 'bullish', confidence: 'High' },
+  { index: 4, timestamp: '2026-09-01T10:15:00-04:00', open: 7701, high: 7710, low: 7680.75, close: 7704.75, direction: 'bullish', confidence: 'High' },
+];
+repeatedDefendedFvgContext.multiTimeframeContext.fifteenMinute.fvgZones = [
+  { direction: 'LONG', lower: 7679.75, upper: 7683.75, midpoint: 7681.75, formedAt: '2026-08-26T13:30:00-04:00', formedCandleIndex: 0, impulseQualified: true, confidence: 'High' },
+  { direction: 'LONG', lower: 7686.5, upper: 7687.5, midpoint: 7687, formedAt: '2026-08-31T15:30:00-04:00', formedCandleIndex: 3, impulseQualified: true, confidence: 'High' },
+];
+const repeatedDefendedVisibility = classifyScannerVisibility({
+  state: 'NoTrade',
+  candidate: null,
+  alertDecision,
+  canExecute: false,
+});
+const repeatedDefendedLifecycle = buildCandidateLifecycleTrace({
+  candidates: [],
+  selectedCandidate: null,
+  state: 'NoTrade',
+  alertDecision,
+  canExecute: false,
+});
+const repeatedDefended = buildDeskState({
+  state: 'NoTrade',
+  candidate: null,
+  visibilityMetadata: repeatedDefendedVisibility,
+  candidateLifecycleTrace: repeatedDefendedLifecycle,
+  currentPrice: 7704.75,
+  canExecute: false,
+  chartContext: repeatedDefendedFvgContext,
+});
+assert.equal(repeatedDefended.primaryDeskPlay.retainedBossZones.bullBoss?.lower, 7679.75);
+assert.equal(repeatedDefended.primaryDeskPlay.retainedBossZones.bullBoss?.upper, 7683.75);
+assert.equal(repeatedDefended.primaryDeskPlay.retainedBossZones.bullBoss?.formedAt, '2026-08-26T13:30:00-04:00');
+assert.equal(repeatedDefended.primaryDeskPlay.retainedBossZones.bullBoss?.sourceKind, 'strict_15m_fvg');
+
 const invalidated = deskStateFor(7678.75);
 assert.equal(invalidated.primaryDeskPlay.retainedBossZones.bullBoss?.state, 'invalidated');
 assert.match(invalidated.primaryDeskPlay.retainedBossZones.bullBoss?.stateReason || '', /scanner reference price/i);

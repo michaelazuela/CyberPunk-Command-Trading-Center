@@ -2949,7 +2949,7 @@ type FifteenMinuteBossZoneFact = {
   derivedFallback?: boolean;
 };
 
-const BOSS_ZONE_RETAINED_TRADING_DATE_COUNT = 4;
+const BOSS_ZONE_RETAINED_TRADING_DATE_COUNT = 5;
 
 function bossZoneSourceLabel(sourceKind: DeskBossZoneSourceKind): string {
   return sourceKind === 'strict_15m_fvg'
@@ -3219,7 +3219,11 @@ function retainedBossZonePriority(
   if (item.sourceKind === 'strict_15m_fvg') priority += 40;
   if (item.sourceKind === 'mss_protected_imbalance_origin') priority += 45;
   if (item.derivedFallback) priority -= 20;
-  priority += Math.min(5, bossZoneDefendedReactionCount(item, chartContext));
+  if (item.derivedFallback) return priority;
+  priority += Math.min(40, bossZoneDefendedReactionCount(item, chartContext) * 10);
+  const width = item.upper - item.lower;
+  if (width >= 2) priority += 8;
+  if (width < 1.25) priority -= 12;
   return priority;
 }
 
@@ -3232,7 +3236,14 @@ function selectRetainedBossZone(
   const explicitStrict = directionalAll.filter((item) =>
     item.sourceKind === 'strict_15m_fvg' && item.derivedFallback !== true
   );
-  const directional = explicitStrict.length ? explicitStrict : directionalAll;
+  const repeatedDefendedStrict = explicitStrict.filter((item) =>
+    bossZoneDefendedReactionCount(item, chartContext) >= 2
+  );
+  const directional = repeatedDefendedStrict.length
+    ? repeatedDefendedStrict
+    : explicitStrict.length
+      ? explicitStrict
+      : directionalAll;
   if (!directional.length) return null;
   return [...directional].sort((a, b) => {
     const priorityDelta = retainedBossZonePriority(b, chartContext) - retainedBossZonePriority(a, chartContext);
