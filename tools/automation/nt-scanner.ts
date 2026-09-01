@@ -2979,17 +2979,15 @@ async function fetchScannerHistoryFrame(args: {
 
   let repaired: NinjaBridgeBar[] = [];
   const cacheSufficient = barsCoverRequestedLookback(cached, args.from, args.to, args.timeframe);
-  if (cacheSufficient) {
-    const crossChecked = await fetchScannerHistoryBridgeCrosscheck({
-      config: args.config,
-      marketConfig,
-      timeframe: args.timeframe,
-      from: args.from,
-      to: args.to,
-      limit: args.limit,
-    });
-    if (crossChecked.length) repaired = mergeBars(crossChecked, repaired);
-  }
+  const crossChecked = await fetchScannerHistoryBridgeCrosscheck({
+    config: args.config,
+    marketConfig,
+    timeframe: args.timeframe,
+    from: args.from,
+    to: args.to,
+    limit: args.limit,
+  });
+  if (crossChecked.length) repaired = mergeBars(crossChecked, repaired);
   if (!cacheSufficient) {
     const derivedFromFiveMinute = await buildScannerHtfRepairFromCachedFiveMinute({
       config: args.config,
