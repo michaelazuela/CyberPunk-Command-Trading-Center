@@ -762,6 +762,12 @@ function trendToBias(trend: TimeframeFactSet['trend']): MultiTimeframeAlignment[
   return 'UNKNOWN';
 }
 
+function candleFactLimitForTimeframe(timeframe: TimeframeFactSet['timeframe']): number {
+  if (timeframe === '5m') return 60;
+  if (timeframe === '15m') return 1500;
+  return 120;
+}
+
 function summarizeBars(bars: NinjaBridgeBar[]): Pick<TimeframeFactSet, 'high' | 'low' | 'open' | 'close' | 'midpoint' | 'rangePoints' | 'barCount' | 'trend'> {
   const valid = bars.filter(bar => isPrice(bar.open) && isPrice(bar.high) && isPrice(bar.low) && isPrice(bar.close));
   const high = valid.length ? Math.max(...valid.map(bar => bar.high)) : null;
@@ -809,7 +815,7 @@ function buildTimeframeFactSet({
   structuralLevels: StructuralLevel[];
 }): TimeframeFactSet {
   const valid = bars.filter(bar => isPrice(bar.open) && isPrice(bar.high) && isPrice(bar.low) && isPrice(bar.close));
-  const candles = toCandleFacts(valid, timeframe === '5m' ? 60 : 80);
+  const candles = toCandleFacts(valid, candleFactLimitForTimeframe(timeframe));
   const fvgZones = detectFvgZones(candles);
   const liquidityFacts = detectLiquidityAndReclaims(candles);
   const displacementCandles = detectDisplacementCandles(candles, fvgZones);

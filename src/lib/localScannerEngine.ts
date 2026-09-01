@@ -3274,8 +3274,9 @@ function candleDirectionForBossMss(candle: unknown): Exclude<SetupCandidate['dir
 
 function bossMssTradingDayAge(formedAt: string | null, latestAt: string | null): number | null {
   if (!formedAt || !latestAt) return null;
-  const formedDate = formedAt.slice(0, 10);
-  const latestDate = latestAt.slice(0, 10);
+  const formedDate = bossZoneTradingDateFromTimestamp(formedAt);
+  const latestDate = bossZoneTradingDateFromTimestamp(latestAt);
+  if (!formedDate || !latestDate) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(formedDate) || !/^\d{4}-\d{2}-\d{2}$/.test(latestDate)) return null;
   const formed = new Date(`${formedDate}T00:00:00Z`).getTime();
   const latest = new Date(`${latestDate}T00:00:00Z`).getTime();
