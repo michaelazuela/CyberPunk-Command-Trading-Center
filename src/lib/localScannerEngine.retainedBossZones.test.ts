@@ -33,7 +33,7 @@ function factSet(overrides: Record<string, unknown> = {}) {
 
 function explicitThreeDayFvgZones() {
   return [
-    { direction: 'LONG', lower: 7679.5, upper: 7682.5, midpoint: 7681, formedAt: '2026-08-27T16:45:00-04:00', formedCandleIndex: 0, impulseQualified: true, confidence: 'High' },
+    { direction: 'LONG', lower: 7679.5, upper: 7682.5, midpoint: 7681, formedAt: '2026-08-26T22:00:00-04:00', formedCandleIndex: 0, impulseQualified: true, confidence: 'High' },
     ...Array.from({ length: 12 }, (_, index) => {
       const lower = 7686.5 + index;
       return {

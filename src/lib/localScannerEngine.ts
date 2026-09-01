@@ -2948,20 +2948,38 @@ type FifteenMinuteBossZoneFact = {
   sourceLabel: string;
 };
 
+const BOSS_ZONE_RETAINED_TRADING_DATE_COUNT = 4;
+
 function bossZoneSourceLabel(sourceKind: DeskBossZoneSourceKind): string {
   return sourceKind === 'strict_15m_fvg'
     ? 'strict 15M FVG'
     : '15M MSS origin';
 }
 
+function bossZoneTradingDateFromTimestamp(value: string | null): string | null {
+  if (!value) return null;
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+  if (!match) return null;
+  const [, datePart, hourPart, minutePart] = match;
+  const date = new Date(`${datePart}T00:00:00Z`);
+  if (!Number.isFinite(date.getTime())) return null;
+  const minutes = Number(hourPart) * 60 + Number(minutePart);
+  if (minutes >= 18 * 60) date.setUTCDate(date.getUTCDate() + 1);
+  const day = date.getUTCDay();
+  if (day === 0) date.setUTCDate(date.getUTCDate() + 1);
+  if (day === 6) date.setUTCDate(date.getUTCDate() + 2);
+  return date.toISOString().slice(0, 10);
+}
+
 function bossZoneRecentTradingDates(candles: unknown[]): Set<string> | null {
   const dates = candles
     .map(completedCandleTimestamp)
     .filter((value): value is string => Boolean(value))
-    .map((value) => value.slice(0, 10))
+    .map(bossZoneTradingDateFromTimestamp)
+    .filter((value): value is string => Boolean(value))
     .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
   if (!dates.length) return null;
-  return new Set([...new Set(dates)].sort().slice(-3));
+  return new Set([...new Set(dates)].sort().slice(-BOSS_ZONE_RETAINED_TRADING_DATE_COUNT));
 }
 
 function bossZoneBodyHigh(candle: unknown): number | null {
@@ -3002,7 +3020,8 @@ function deriveFifteenMinuteBossZonesFromCandles(chartContext?: Partial<ChartCon
     const current = candles[index];
     const twoBack = candles[index - 2];
     const formedAt = completedCandleTimestamp(current);
-    if (recentTradingDates && formedAt && !recentTradingDates.has(formedAt.slice(0, 10))) continue;
+    const formedTradingDate = bossZoneTradingDateFromTimestamp(formedAt);
+    if (recentTradingDates && formedTradingDate && !recentTradingDates.has(formedTradingDate)) continue;
 
     const currentHigh = completedCandleHigh(current);
     const currentLow = completedCandleLow(current);
@@ -3066,7 +3085,8 @@ function deriveFifteenMinuteMssProtectedImbalanceOriginZones(chartContext?: Part
     const current = candles[index];
     const twoBack = candles[index - 2];
     const formedAt = completedCandleTimestamp(current);
-    if (recentTradingDates && formedAt && !recentTradingDates.has(formedAt.slice(0, 10))) continue;
+    const formedTradingDate = bossZoneTradingDateFromTimestamp(formedAt);
+    if (recentTradingDates && formedTradingDate && !recentTradingDates.has(formedTradingDate)) continue;
 
     const currentHigh = completedCandleHigh(current);
     const currentLow = completedCandleLow(current);
@@ -3141,8 +3161,8 @@ function fifteenMinuteBossZoneFacts(chartContext?: Partial<ChartContext> | null)
       item.zone.impulseQualified !== false
     )
     .filter((item) => {
-      const formedAt = item.zone.formedAt;
-      return !recentTradingDates || !formedAt || recentTradingDates.has(formedAt.slice(0, 10));
+      const formedTradingDate = bossZoneTradingDateFromTimestamp(item.zone.formedAt ?? null);
+      return !recentTradingDates || !formedTradingDate || recentTradingDates.has(formedTradingDate);
     })
     .map((item) => {
       const lower = numericOrNull(item.zone.lower) as number;
