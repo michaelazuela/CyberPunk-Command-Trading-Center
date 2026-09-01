@@ -597,6 +597,7 @@ const MARKET_DATA_GAP_FALLBACK_LEDGER = path.join(__dirname, '.market-data-gap-e
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
 export const SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS = 30;
+const SCANNER_HISTORY_BRIDGE_CROSSCHECK_TIMEFRAMES = new Set<MarketBarTimeframe>(['15m']);
 const SCANNER_HISTORY_MIN_BARS: Record<MarketBarTimeframe, number> = {
   '5m': 500,
   '15m': 500,
@@ -2840,6 +2841,54 @@ function scannerHistoryRepairBarsForTimeframe(
   return [];
 }
 
+async function fetchScannerHistoryBridgeCrosscheck(args: {
+  config: ScannerConfig;
+  timeframe: MarketBarTimeframe;
+  from: string;
+  to: string;
+  limit: number;
+  marketConfig: MarketDataConfig | null;
+}): Promise<NinjaBridgeBar[]> {
+  if (!SCANNER_HISTORY_BRIDGE_CROSSCHECK_TIMEFRAMES.has(args.timeframe)) return [];
+  try {
+    const historical = await getNinjaHistoricalBars({
+      instrument: args.config.bridgeInstrument,
+      timeframe: args.timeframe,
+      from: args.from,
+      to: args.to,
+      limit: args.limit,
+      baseUrl: args.config.bridgeUrl,
+    });
+    const repaired = scannerHistoryRepairBarsForTimeframe(
+      args.timeframe,
+      historical.ok ? historical.bars || [] : [],
+      'bridge cross-check',
+    );
+    if (!repaired.length) {
+      console.warn(`[scanner-history] ${args.timeframe}: bridge cross-check returned no usable bars for ${args.from} to ${args.to}: ${historical.error || 'unknown error'}`);
+      return [];
+    }
+    if (args.marketConfig) {
+      try {
+        await upsertMarketBars({
+          bars: repaired,
+          instrument: args.config.instrument,
+          bridgeInstrument: args.config.bridgeInstrument,
+          timeframe: args.timeframe,
+          config: args.marketConfig,
+        });
+      } catch (error) {
+        console.warn(`[scanner-history] ${args.timeframe}: bridge cross-check bars loaded but cache upsert failed: ${formatError(error)}`);
+      }
+    }
+    console.log(`[scanner-history] ${args.timeframe}: cross-checked sufficient market_bars with ${repaired.length} NinjaTrader historical bars.`);
+    return repaired;
+  } catch (error) {
+    console.warn(`[scanner-history] ${args.timeframe}: bridge cross-check failed safely: ${formatError(error)}`);
+    return [];
+  }
+}
+
 async function buildScannerHtfRepairFromCachedFiveMinute(args: {
   config: ScannerConfig;
   marketConfig: MarketDataConfig | null;
@@ -2930,6 +2979,17 @@ async function fetchScannerHistoryFrame(args: {
 
   let repaired: NinjaBridgeBar[] = [];
   const cacheSufficient = barsCoverRequestedLookback(cached, args.from, args.to, args.timeframe);
+  if (cacheSufficient) {
+    const crossChecked = await fetchScannerHistoryBridgeCrosscheck({
+      config: args.config,
+      marketConfig,
+      timeframe: args.timeframe,
+      from: args.from,
+      to: args.to,
+      limit: args.limit,
+    });
+    if (crossChecked.length) repaired = mergeBars(crossChecked, repaired);
+  }
   if (!cacheSufficient) {
     const derivedFromFiveMinute = await buildScannerHtfRepairFromCachedFiveMinute({
       config: args.config,
