@@ -206,6 +206,12 @@ const competingBullBoss = buildDeskState({
 assert.equal(competingBullBoss.primaryDeskPlay.retainedBossZones.bullBoss?.lower, 7679.75);
 assert.equal(competingBullBoss.primaryDeskPlay.retainedBossZones.bullBoss?.upper, 7683.5);
 assert.equal(competingBullBoss.primaryDeskPlay.retainedBossZones.bullBoss?.formedAt, '2026-08-26T13:15:00-04:00');
+assert.deepEqual(
+  competingBullBoss.primaryDeskPlay.retainedBossZones.zones
+    .filter((zone) => zone.direction === 'LONG')
+    .map((zone) => `${zone.lower}-${zone.upper}`),
+  ['7679.75-7683.5', '7676-7678.5', '7686.5-7687.5'],
+);
 
 const invalidated = deskStateFor(7678.75);
 assert.equal(invalidated.primaryDeskPlay.retainedBossZones.bullBoss?.state, 'invalidated');

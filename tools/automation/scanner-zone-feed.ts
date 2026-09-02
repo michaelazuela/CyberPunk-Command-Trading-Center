@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 
 export const SCANNER_ZONE_FEED_DIR = path.join(__dirname, 'scanner-zone-feed');
 export const SCANNER_ZONE_FEED_FILE = path.join(SCANNER_ZONE_FEED_DIR, 'quant-desk-scanner-zones.json');
-export const SCANNER_ZONE_FEED_VERSION = 2;
+export const SCANNER_ZONE_FEED_VERSION = 3;
 
 export type ScannerZoneFeedZoneKind =
   | 'retained_boss_zone'
@@ -225,7 +225,7 @@ function uniqueZones(zones: ScannerZoneFeedZone[]): ScannerZoneFeedZone[] {
 }
 
 function isHiddenInDeskMode(zone: ScannerZoneFeedZone): boolean {
-  if (/invalid|expired|pierced|flipped|reaction/i.test(zone.state)) return true;
+  if (/invalid|expired/i.test(zone.state)) return true;
   if (zone.kind === 'active_mss_protected_boss_zone') return true;
   return false;
 }
@@ -348,7 +348,7 @@ export function buildScannerZoneFeed(args: {
     displayPolicy: {
       mode: 'desk',
       maxZones: 6,
-      hidesStates: ['invalidated', 'expired', 'pierced', 'flipped_reaction'],
+      hidesStates: ['invalidated', 'expired'],
       hidesKinds: ['active_mss_protected_boss_zone'],
       purpose: 'Show readable 15M Final Boss boxes while preserving active micro/MSS-protected context in raw zones[] for audit/debug.',
     },

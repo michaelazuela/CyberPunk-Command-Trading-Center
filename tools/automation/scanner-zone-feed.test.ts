@@ -127,7 +127,7 @@ const feed = buildScannerZoneFeed({
 });
 
 assert.equal(feed.sourceOfTruth, 'scanner_zone_overlay_feed');
-assert.equal(feed.schemaVersion, 2);
+assert.equal(feed.schemaVersion, 3);
 assert.equal(feed.primaryDeskPlay.canExecute, false);
 assert.equal(feed.authorityBoundary.displayOnly, true);
 assert.equal(feed.authorityBoundary.ninjaTraderIndicatorOwnsRules, false);
@@ -135,10 +135,10 @@ assert.equal(feed.authorityBoundary.placesOrders, false);
 assert.equal(feed.zones.length, 4);
 assert.equal(feed.displayPolicy.mode, 'desk');
 assert.equal(feed.displayPolicy.maxZones, 6);
-assert.deepEqual(feed.displayPolicy.hidesStates, ['invalidated', 'expired', 'pierced', 'flipped_reaction']);
+assert.deepEqual(feed.displayPolicy.hidesStates, ['invalidated', 'expired']);
 assert.deepEqual(feed.displayPolicy.hidesKinds, ['active_mss_protected_boss_zone']);
-assert.equal(feed.displayZones.length, 2);
-assert.equal(feed.displayZones.some((zone) => zone.state === 'pierced'), false);
+assert.equal(feed.displayZones.length, 3);
+assert.equal(feed.displayZones.some((zone) => zone.state === 'flipped_reaction'), true);
 assert.equal(feed.displayZones.some((zone) => zone.kind === 'active_mss_protected_boss_zone'), false);
 
 const strict = feed.zones.find((zone) => zone.sourceKind === 'strict_15m_fvg');

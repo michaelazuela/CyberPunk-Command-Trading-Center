@@ -2955,6 +2955,7 @@ type FifteenMinuteBossZoneFact = {
 };
 
 const BOSS_ZONE_RETAINED_TRADING_DATE_COUNT = 5;
+const BOSS_ZONE_DISPLAY_PER_SIDE = 3;
 
 function bossZoneSourceLabel(sourceKind: DeskBossZoneSourceKind): string {
   return sourceKind === 'strict_15m_fvg'
@@ -3325,6 +3326,16 @@ function selectRetainedBossZone(
   chartContext?: Partial<ChartContext> | null,
   latestClose?: number | null,
 ) {
+  return selectRetainedBossZones(zones, direction, chartContext, latestClose, 1)[0] || null;
+}
+
+function selectRetainedBossZones(
+  zones: ReturnType<typeof fifteenMinuteBossZoneFacts>,
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>,
+  chartContext?: Partial<ChartContext> | null,
+  latestClose?: number | null,
+  limit = BOSS_ZONE_DISPLAY_PER_SIDE,
+) {
   const directionalAll = zones.filter((item) => item.zone.direction === direction);
   const explicitStrict = directionalAll.filter((item) =>
     item.sourceKind === 'strict_15m_fvg' && item.derivedFallback !== true
@@ -3333,12 +3344,16 @@ function selectRetainedBossZone(
     bossZoneDefendedReactionCount(item, chartContext) >= 2
   );
   const preferNearestDisplayZone = repeatedDefendedStrict.length > 0 || explicitStrict.length > 0;
-  const directional = repeatedDefendedStrict.length
-    ? repeatedDefendedStrict
-    : explicitStrict.length
+  const directional = limit > 1
+    ? explicitStrict.length
       ? explicitStrict
-      : directionalAll;
-  if (!directional.length) return null;
+      : directionalAll
+    : repeatedDefendedStrict.length
+      ? repeatedDefendedStrict
+      : explicitStrict.length
+        ? explicitStrict
+        : directionalAll;
+  if (!directional.length) return [];
   return [...directional].sort((a, b) => {
     const priorityDelta = retainedBossZonePriority(b, chartContext) - retainedBossZonePriority(a, chartContext);
     if (Math.abs(priorityDelta) > 5.0001) return priorityDelta;
@@ -3358,7 +3373,7 @@ function selectRetainedBossZone(
     return direction === 'LONG'
       ? a.lower - b.lower || a.upper - b.upper
       : b.upper - a.upper || b.lower - a.lower;
-  })[0] || null;
+  }).slice(0, limit);
 }
 
 function bossZoneFormedAtMs(item: ReturnType<typeof fifteenMinuteBossZoneFacts>[number]): number {
@@ -3898,8 +3913,8 @@ function buildRetainedBossZoneLedger(args: {
 }): DeskRetainedBossZoneLedger {
   const facts = fifteenMinuteBossZoneFacts(args.chartContext);
   const latestClose = numericOrNull(args.currentPrice) ?? latestCompletedCloseForBossLedger(args.chartContext);
-  const bull = selectRetainedBossZone(facts, 'LONG', args.chartContext, latestClose);
-  const bear = selectRetainedBossZone(facts, 'SHORT', args.chartContext, latestClose);
+  const bullZones = selectRetainedBossZones(facts, 'LONG', args.chartContext, latestClose);
+  const bearZones = selectRetainedBossZones(facts, 'SHORT', args.chartContext, latestClose);
   const activeMssProtectedBossZone = selectActiveMssProtectedBossZone({
     zones: facts,
     latestClose,
@@ -3909,13 +3924,16 @@ function buildRetainedBossZoneLedger(args: {
     zones: facts,
     chartContext: args.chartContext,
   });
-  const zones = [bull, bear]
-    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+  const zones = [...bullZones, ...bearZones]
     .map((item) => buildRetainedBossZone({ item, latestClose, chartContext: args.chartContext }));
   const activeZones = zones.filter((zone) => zone.state !== 'invalidated');
   const activeFinalBossMssCount = finalBossMssZones.bull.length + finalBossMssZones.bear.length;
-  const bullBoss = zones.find((zone) => zone.direction === 'LONG') || null;
-  const bearBoss = zones.find((zone) => zone.direction === 'SHORT') || null;
+  const bullBoss = bullZones[0]
+    ? buildRetainedBossZone({ item: bullZones[0], latestClose, chartContext: args.chartContext })
+    : null;
+  const bearBoss = bearZones[0]
+    ? buildRetainedBossZone({ item: bearZones[0], latestClose, chartContext: args.chartContext })
+    : null;
   return {
     sourceOfTruth: 'scanner_retained_boss_zone_ledger',
     bullBoss,
