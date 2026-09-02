@@ -141,8 +141,8 @@ assert.equal(feed.displayPolicy.mode, 'desk');
 assert.equal(feed.displayPolicy.maxZones, 6);
 assert.deepEqual(feed.displayPolicy.hidesStates, ['invalidated', 'expired']);
 assert.deepEqual(feed.displayPolicy.hidesKinds, ['active_mss_protected_boss_zone']);
-assert.equal(feed.displayZones.length, 3);
-assert.equal(feed.displayZones.some((zone) => zone.state === 'flipped_reaction'), true);
+assert.equal(feed.displayZones.length, 1);
+assert.equal(feed.displayZones.some((zone) => zone.state === 'flipped_reaction'), false);
 assert.equal(feed.displayZones.some((zone) => zone.kind === 'active_mss_protected_boss_zone'), false);
 assert.equal(feed.debugZones.some((zone) => zone.kind === 'active_mss_protected_boss_zone'), false);
 
@@ -171,11 +171,7 @@ assert.equal(displayStrict?.state, 'defended');
 assert.equal(displayStrict?.category, 'final_boss');
 
 const displayMssBoss = feed.displayZones.find((zone) => zone.kind === 'final_boss_mss_zone' && zone.direction === 'SHORT');
-assert.ok(displayMssBoss);
-assert.equal(displayMssBoss?.lower, 7705);
-assert.equal(displayMssBoss?.upper, 7723);
-assert.equal(displayMssBoss?.category, 'reaction_zone');
-assert.equal(displayMssBoss?.draw.label, 'Bear Reaction Zone');
+assert.equal(displayMssBoss, undefined);
 
 assert.equal(feed.finalBossZones.some((zone) => zone.sourceKind === 'strict_15m_fvg'), true);
 assert.equal(feed.finalBossZones.some((zone) => zone.sourceKind === 'mss_protected_imbalance_origin' && zone.upper - zone.lower > 8), false);

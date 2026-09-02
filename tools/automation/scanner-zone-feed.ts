@@ -471,7 +471,7 @@ export function buildScannerZoneFeed(args: {
   const feedZones = uniqueZones(zones).map((zone) => enrichZone(zone, args.currentPrice));
   const buckets = buildZoneBuckets(feedZones, args.currentPrice);
   const displayZones = buildDisplayZones(
-    [...buckets.finalBossZones, ...buckets.tradeBoxes, ...buckets.reactionZones],
+    [...buckets.finalBossZones, ...buckets.tradeBoxes],
     args.currentPrice,
     6,
   );
@@ -505,7 +505,7 @@ export function buildScannerZoneFeed(args: {
       maxZones: 6,
       hidesStates: ['invalidated', 'expired'],
       hidesKinds: ['active_mss_protected_boss_zone'],
-      purpose: 'Show clean scanner-owned Final Boss, Trade Box, and Reaction Zone buckets while preserving noisy MSS-origin internals in raw/debug zones for audit.',
+      purpose: 'Show clean scanner-owned Final Boss and Trade Box buckets by default while preserving reaction zones and noisy MSS-origin internals for explicit overlay modes/audit.',
     },
     summary: feedZones.length
       ? `Scanner overlay feed exported ${displayZones.length}/${feedZones.length} desk-visible zone(s): ${buckets.finalBossZones.length} final boss, ${buckets.tradeBoxes.length} trade box, ${buckets.reactionZones.length} reaction. NinjaTrader display is read-only.`
