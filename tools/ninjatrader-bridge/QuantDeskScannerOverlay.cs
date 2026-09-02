@@ -46,6 +46,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 MaxZones = 6;
                 ShowLabels = true;
                 ShowLineInSand = false;
+                ShowReactionGrade = true;
                 OverlayMode = "Desk";
             }
         }
@@ -73,6 +74,9 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         [NinjaScriptProperty]
         public bool ShowLineInSand { get; set; }
+
+        [NinjaScriptProperty]
+        public bool ShowReactionGrade { get; set; }
 
         [NinjaScriptProperty]
         public string OverlayMode { get; set; }
@@ -166,7 +170,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                     Draw.Text(
                         this,
                         labelTag,
-                        ZoneLabel(zone),
+                        ZoneLabelWithOptionalLine(zone),
                         0,
                         labelPrice,
                         line);
@@ -204,22 +208,25 @@ namespace NinjaTrader.NinjaScript.Indicators
             return Math.Min(CurrentBar, 500);
         }
 
-        private static string ZoneLabel(OverlayZone zone)
+        private string ZoneLabel(OverlayZone zone)
         {
-            return string.Format(
-                CultureInfo.InvariantCulture,
-                "{0} {1} {2:0.00}-{3:0.00} | LIS {4:0.00}",
-                zone.Direction == "LONG" ? "Bull" : "Bear",
-                zone.Label,
-                zone.Lower,
-                zone.Upper,
-                zone.LineInSand);
+            string side = zone.Direction == "LONG" ? "Bull" : "Bear";
+            string grade = ShowReactionGrade && !string.IsNullOrWhiteSpace(zone.ReactionGrade) ? zone.ReactionGrade + " " : "";
+            return string.Format(CultureInfo.InvariantCulture, "{0}{1} {2:0.00}-{3:0.00}", grade, side + " " + zone.Label, zone.Lower, zone.Upper);
+        }
+
+        private string ZoneLabelWithOptionalLine(OverlayZone zone)
+        {
+            string label = ZoneLabel(zone);
+            if (!ShowLineInSand)
+                return label;
+            return string.Format(CultureInfo.InvariantCulture, "{0} | LIS {1:0.00}", label, zone.LineInSand);
         }
 
         private List<OverlayZone> ParseZones(string json)
         {
             List<OverlayZone> parsed = new List<OverlayZone>();
-            string arrayName = string.Equals(OverlayMode, "Debug", StringComparison.OrdinalIgnoreCase) ? "zones" : "displayZones";
+            string arrayName = ZoneArrayName();
             string zonesArray = ExtractArray(json, arrayName);
             if (string.IsNullOrWhiteSpace(zonesArray) && !string.Equals(arrayName, "zones", StringComparison.OrdinalIgnoreCase))
                 zonesArray = ExtractArray(json, "zones");
@@ -232,6 +239,7 @@ namespace NinjaTrader.NinjaScript.Indicators
                 {
                     Id = StringValue(item, "id"),
                     Kind = StringValue(item, "kind"),
+                    Category = StringValue(item, "category"),
                     Direction = StringValue(item, "direction"),
                     SourceLabel = StringValue(item, "sourceLabel"),
                     Role = StringValue(item, "role"),
@@ -242,6 +250,8 @@ namespace NinjaTrader.NinjaScript.Indicators
                     FormedAt = StringValue(item, "formedAt"),
                     State = StringValue(item, "state"),
                     Label = StringValue(item, "label"),
+                    ReactionGrade = StringValue(item, "reactionGrade"),
+                    GradeReason = StringValue(item, "gradeReason"),
                     Fill = StringValue(item, "fill"),
                     Outline = StringValue(item, "outline"),
                     Line = StringValue(item, "line"),
@@ -256,6 +266,19 @@ namespace NinjaTrader.NinjaScript.Indicators
             }
 
             return parsed;
+        }
+
+        private string ZoneArrayName()
+        {
+            if (string.Equals(OverlayMode, "FinalBoss", StringComparison.OrdinalIgnoreCase))
+                return "finalBossZones";
+            if (string.Equals(OverlayMode, "TradeBoxes", StringComparison.OrdinalIgnoreCase))
+                return "tradeBoxes";
+            if (string.Equals(OverlayMode, "ReactionZones", StringComparison.OrdinalIgnoreCase))
+                return "reactionZones";
+            if (string.Equals(OverlayMode, "Debug", StringComparison.OrdinalIgnoreCase))
+                return "zones";
+            return "displayZones";
         }
 
         private static string ExtractArray(string json, string propertyName)
@@ -385,6 +408,7 @@ namespace NinjaTrader.NinjaScript.Indicators
         {
             public string Id { get; set; }
             public string Kind { get; set; }
+            public string Category { get; set; }
             public string Direction { get; set; }
             public string SourceLabel { get; set; }
             public string Role { get; set; }
@@ -395,6 +419,8 @@ namespace NinjaTrader.NinjaScript.Indicators
             public string FormedAt { get; set; }
             public string State { get; set; }
             public string Label { get; set; }
+            public string ReactionGrade { get; set; }
+            public string GradeReason { get; set; }
             public string Fill { get; set; }
             public string Outline { get; set; }
             public string Line { get; set; }

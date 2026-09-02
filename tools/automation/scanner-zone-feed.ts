@@ -13,16 +13,19 @@ const __dirname = path.dirname(__filename);
 
 export const SCANNER_ZONE_FEED_DIR = path.join(__dirname, 'scanner-zone-feed');
 export const SCANNER_ZONE_FEED_FILE = path.join(SCANNER_ZONE_FEED_DIR, 'quant-desk-scanner-zones.json');
-export const SCANNER_ZONE_FEED_VERSION = 3;
+export const SCANNER_ZONE_FEED_VERSION = 4;
 
 export type ScannerZoneFeedZoneKind =
   | 'retained_boss_zone'
   | 'active_mss_protected_boss_zone'
   | 'final_boss_mss_zone';
+export type ScannerZoneFeedZoneCategory = 'final_boss' | 'trade_box' | 'reaction_zone' | 'debug';
+export type ScannerZoneFeedReactionGrade = 'A+' | 'A' | 'B' | 'C' | null;
 
 export interface ScannerZoneFeedZone {
   id: string;
   kind: ScannerZoneFeedZoneKind;
+  category: ScannerZoneFeedZoneCategory;
   direction: 'LONG' | 'SHORT';
   sourceKind: string;
   sourceLabel: string;
@@ -37,6 +40,9 @@ export interface ScannerZoneFeedZone {
   stateReason: string;
   use: string;
   invalidation: string;
+  reactionGrade: ScannerZoneFeedReactionGrade;
+  reactionConfidence: number;
+  gradeReason: string;
   draw: {
     label: string;
     fill: string;
@@ -73,6 +79,10 @@ export interface ScannerZoneFeed {
     canExecute: boolean;
   };
   zones: ScannerZoneFeedZone[];
+  finalBossZones: ScannerZoneFeedZone[];
+  tradeBoxes: ScannerZoneFeedZone[];
+  reactionZones: ScannerZoneFeedZone[];
+  debugZones: ScannerZoneFeedZone[];
   displayZones: ScannerZoneFeedZone[];
   displayPolicy: {
     mode: 'desk';
@@ -90,6 +100,110 @@ export interface ScannerZoneFeed {
     changesCanExecute: false;
     changesEntryStopTargets: false;
     placesOrders: false;
+  };
+}
+
+function zoneWidth(zone: Pick<ScannerZoneFeedZone, 'lower' | 'upper'>): number {
+  return Math.max(0, zone.upper - zone.lower);
+}
+
+function isInvalidOrExpiredState(state: string): boolean {
+  return /invalid|expired/i.test(state);
+}
+
+function isFlippedReactionState(state: string): boolean {
+  return /flipped|reaction/i.test(state);
+}
+
+function isBroadMssOriginZone(zone: Pick<ScannerZoneFeedZone, 'sourceKind' | 'kind' | 'lower' | 'upper'>): boolean {
+  return zone.sourceKind === 'mss_protected_imbalance_origin'
+    && zone.kind === 'final_boss_mss_zone'
+    && zoneWidth(zone) > 8;
+}
+
+function reactionConfidenceScore(zone: ScannerZoneFeedZone, price: number | null | undefined): number {
+  if (isInvalidOrExpiredState(zone.state)) return 0;
+
+  let score = 0;
+  if (zone.kind === 'retained_boss_zone') score += 35;
+  if (zone.kind === 'final_boss_mss_zone') score += 25;
+  if (zone.role === 'final_boss_zone' || zone.role === 'final_boss_mss_zone') score += 20;
+  if (zone.sourceKind === 'strict_15m_fvg') score += 25;
+  if (/defended/i.test(zone.state)) score += 18;
+  if (/active_control/i.test(zone.state)) score += 12;
+  if (/pierced/i.test(zone.state)) score += 8;
+  if (isFlippedReactionState(zone.state)) score -= 20;
+  if (isBroadMssOriginZone(zone)) score -= 25;
+
+  const distance = zoneDistanceToPrice(zone, price);
+  if (distance === 0) score += 8;
+  else if (distance <= 5) score += 6;
+  else if (distance <= 10) score += 3;
+  else score -= Math.min(12, distance / 4);
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function reactionGrade(score: number): ScannerZoneFeedReactionGrade {
+  if (score >= 85) return 'A+';
+  if (score >= 70) return 'A';
+  if (score >= 55) return 'B';
+  if (score > 0) return 'C';
+  return null;
+}
+
+function classifyZone(zone: ScannerZoneFeedZone): ScannerZoneFeedZoneCategory {
+  if (isInvalidOrExpiredState(zone.state)) return 'debug';
+  if (zone.kind === 'active_mss_protected_boss_zone') return 'debug';
+  if (isFlippedReactionState(zone.state)) return 'reaction_zone';
+  if (isBroadMssOriginZone(zone)) return 'reaction_zone';
+  if (zone.sourceKind === 'strict_15m_fvg' && /defended|active_control|pierced/i.test(zone.state)) {
+    return 'final_boss';
+  }
+  if (zone.kind === 'retained_boss_zone' && /final_boss/i.test(zone.role)) return 'final_boss';
+  if (zone.kind === 'final_boss_mss_zone' && zoneWidth(zone) <= 8) return 'final_boss';
+  return 'reaction_zone';
+}
+
+function gradeReasonFor(zone: ScannerZoneFeedZone): string {
+  if (isInvalidOrExpiredState(zone.state)) return 'Hidden from desk view because the zone is invalidated or expired.';
+  if (zone.kind === 'active_mss_protected_boss_zone') {
+    return 'Kept for debug because active MSS-protected origin zones are too noisy for default desk view.';
+  }
+  if (isFlippedReactionState(zone.state)) {
+    return 'Kept as reaction context because prior boss control flipped.';
+  }
+  if (isBroadMssOriginZone(zone)) {
+    return 'Kept as reaction context because the MSS-origin area is broad and not a clean strict FVG boss.';
+  }
+  if (zone.sourceKind === 'strict_15m_fvg') {
+    return 'Clean strict 15M FVG retained as Final Boss context.';
+  }
+  return 'Retained scanner-owned zone; visible only when it remains useful map context.';
+}
+
+function enrichZone(zone: ScannerZoneFeedZone, price: number | null | undefined): ScannerZoneFeedZone {
+  const reactionConfidence = reactionConfidenceScore(zone, price);
+  const category = classifyZone(zone);
+  const grade = category === 'debug' ? null : reactionGrade(reactionConfidence);
+  const labelSide = zone.direction === 'LONG' ? 'Bull' : 'Bear';
+  const labelByCategory: Record<ScannerZoneFeedZoneCategory, string> = {
+    final_boss: `${labelSide} Final Boss`,
+    trade_box: `${labelSide} Trade Box`,
+    reaction_zone: `${labelSide} Reaction Zone`,
+    debug: `${labelSide} Debug Zone`,
+  };
+  return {
+    ...zone,
+    category,
+    reactionGrade: grade,
+    reactionConfidence,
+    gradeReason: gradeReasonFor(zone),
+    draw: {
+      ...zone.draw,
+      label: labelByCategory[category],
+      opacity: category === 'debug' ? 10 : zone.draw.opacity,
+    },
   };
 }
 
@@ -143,6 +257,7 @@ function retainedZoneToFeedZone(zone: DeskRetainedBossZone, kind: ScannerZoneFee
       zone.formedAt,
     ].map(cleanIdPart).join(':'),
     kind,
+    category: 'debug',
     direction: zone.direction,
     sourceKind: zone.sourceKind,
     sourceLabel: zone.sourceLabel,
@@ -157,6 +272,9 @@ function retainedZoneToFeedZone(zone: DeskRetainedBossZone, kind: ScannerZoneFee
     stateReason: zone.stateReason,
     use: zone.use,
     invalidation: zone.invalidation,
+    reactionGrade: null,
+    reactionConfidence: 0,
+    gradeReason: '',
     draw: {
       ...draw,
       label: `${labelSide} ${labelRole}`,
@@ -184,6 +302,7 @@ function finalBossMssZoneToFeedZone(zone: DeskFinalBossMssZone): ScannerZoneFeed
       zone.mssBreakAt,
     ].map(cleanIdPart).join(':'),
     kind: 'final_boss_mss_zone',
+    category: 'debug',
     direction: zone.direction,
     sourceKind: zone.sourceKind,
     sourceLabel: zone.sourceLabel,
@@ -198,6 +317,9 @@ function finalBossMssZoneToFeedZone(zone: DeskFinalBossMssZone): ScannerZoneFeed
     stateReason: zone.stateReason,
     use: zone.use,
     invalidation: zone.invalidation,
+    reactionGrade: null,
+    reactionConfidence: 0,
+    gradeReason: '',
     draw: {
       ...draw,
       label: `${labelSide} Final Boss`,
@@ -225,9 +347,7 @@ function uniqueZones(zones: ScannerZoneFeedZone[]): ScannerZoneFeedZone[] {
 }
 
 function isHiddenInDeskMode(zone: ScannerZoneFeedZone): boolean {
-  if (/invalid|expired/i.test(zone.state)) return true;
-  if (zone.kind === 'active_mss_protected_boss_zone') return true;
-  return false;
+  return zone.category === 'debug';
 }
 
 function zoneDistanceToPrice(zone: ScannerZoneFeedZone, price: number | null | undefined): number {
@@ -245,12 +365,38 @@ function deskZonePriority(zone: ScannerZoneFeedZone, price: number | null | unde
   if (zone.role === 'final_boss_mss_zone') priority += 10;
   if (zone.role === 'final_boss_zone') priority += 8;
   if (zone.sourceKind === 'strict_15m_fvg') priority += 8;
+  if (zone.category === 'final_boss') priority += 35;
+  if (zone.category === 'trade_box') priority += 20;
+  if (zone.category === 'reaction_zone') priority -= 10;
   if (zone.sourceKind === 'mss_protected_imbalance_origin' && zone.kind !== 'final_boss_mss_zone') priority -= 35;
   if (/defended/i.test(zone.state)) priority += 10;
   if (/active_control/i.test(zone.state)) priority += 8;
   if (/flipped_reaction/i.test(zone.state)) priority -= 8;
   priority -= Math.min(20, zoneDistanceToPrice(zone, price) / 2);
   return priority;
+}
+
+function buildZoneBuckets(
+  zones: ScannerZoneFeedZone[],
+  price: number | null | undefined,
+): Pick<ScannerZoneFeed, 'finalBossZones' | 'tradeBoxes' | 'reactionZones' | 'debugZones'> {
+  const finalBossZones = buildDisplayZones(
+    zones.filter((zone) => zone.category === 'final_boss'),
+    price,
+    6,
+  );
+  const reactionZones = buildDisplayZones(
+    zones.filter((zone) => zone.category === 'reaction_zone'),
+    price,
+    6,
+  );
+  const tradeBoxes = buildDisplayZones(
+    zones.filter((zone) => zone.category !== 'debug' && (zone.reactionGrade === 'A+' || zone.reactionGrade === 'A')),
+    price,
+    6,
+  );
+  const debugZones = zones.filter((zone) => zone.category === 'debug');
+  return { finalBossZones, tradeBoxes, reactionZones, debugZones };
 }
 
 function zonesOverlap(a: ScannerZoneFeedZone, b: ScannerZoneFeedZone): boolean {
@@ -322,8 +468,13 @@ export function buildScannerZoneFeed(args: {
   for (const zone of ledger?.finalBossMssZones?.bull || []) zones.push(finalBossMssZoneToFeedZone(zone));
   for (const zone of ledger?.finalBossMssZones?.bear || []) zones.push(finalBossMssZoneToFeedZone(zone));
 
-  const feedZones = uniqueZones(zones);
-  const displayZones = buildDisplayZones(feedZones, args.currentPrice, 6);
+  const feedZones = uniqueZones(zones).map((zone) => enrichZone(zone, args.currentPrice));
+  const buckets = buildZoneBuckets(feedZones, args.currentPrice);
+  const displayZones = buildDisplayZones(
+    [...buckets.finalBossZones, ...buckets.tradeBoxes, ...buckets.reactionZones],
+    args.currentPrice,
+    6,
+  );
   return {
     sourceOfTruth: 'scanner_zone_overlay_feed',
     schemaVersion: SCANNER_ZONE_FEED_VERSION,
@@ -344,16 +495,20 @@ export function buildScannerZoneFeed(args: {
       canExecute: args.deskState.canExecute,
     },
     zones: feedZones,
+    finalBossZones: buckets.finalBossZones,
+    tradeBoxes: buckets.tradeBoxes,
+    reactionZones: buckets.reactionZones,
+    debugZones: buckets.debugZones,
     displayZones,
     displayPolicy: {
       mode: 'desk',
       maxZones: 6,
       hidesStates: ['invalidated', 'expired'],
       hidesKinds: ['active_mss_protected_boss_zone'],
-      purpose: 'Show readable 15M Final Boss boxes while preserving active micro/MSS-protected context in raw zones[] for audit/debug.',
+      purpose: 'Show clean scanner-owned Final Boss, Trade Box, and Reaction Zone buckets while preserving noisy MSS-origin internals in raw/debug zones for audit.',
     },
     summary: feedZones.length
-      ? `Scanner overlay feed exported ${displayZones.length}/${feedZones.length} desk-visible 15M boss/FVG zone(s). NinjaTrader display is read-only.`
+      ? `Scanner overlay feed exported ${displayZones.length}/${feedZones.length} desk-visible zone(s): ${buckets.finalBossZones.length} final boss, ${buckets.tradeBoxes.length} trade box, ${buckets.reactionZones.length} reaction. NinjaTrader display is read-only.`
       : 'Scanner overlay feed has no active 15M boss/FVG zones to display.',
     authorityBoundary: {
       displayOnly: true,
