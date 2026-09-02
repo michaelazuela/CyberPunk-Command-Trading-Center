@@ -127,7 +127,7 @@ const feed = buildScannerZoneFeed({
 });
 
 assert.equal(feed.sourceOfTruth, 'scanner_zone_overlay_feed');
-assert.equal(feed.schemaVersion, 1);
+assert.equal(feed.schemaVersion, 2);
 assert.equal(feed.primaryDeskPlay.canExecute, false);
 assert.equal(feed.authorityBoundary.displayOnly, true);
 assert.equal(feed.authorityBoundary.ninjaTraderIndicatorOwnsRules, false);
@@ -135,16 +135,17 @@ assert.equal(feed.authorityBoundary.placesOrders, false);
 assert.equal(feed.zones.length, 4);
 assert.equal(feed.displayPolicy.mode, 'desk');
 assert.equal(feed.displayPolicy.maxZones, 6);
-assert.deepEqual(feed.displayPolicy.hidesStates, ['invalidated', 'expired', 'pierced', 'mss_protected_imbalance_origin']);
-assert.equal(feed.displayZones.length, 1);
+assert.deepEqual(feed.displayPolicy.hidesStates, ['invalidated', 'expired', 'pierced', 'flipped_reaction']);
+assert.deepEqual(feed.displayPolicy.hidesKinds, ['active_mss_protected_boss_zone']);
+assert.equal(feed.displayZones.length, 2);
 assert.equal(feed.displayZones.some((zone) => zone.state === 'pierced'), false);
-assert.equal(feed.displayZones.some((zone) => zone.sourceKind === 'mss_protected_imbalance_origin'), false);
+assert.equal(feed.displayZones.some((zone) => zone.kind === 'active_mss_protected_boss_zone'), false);
 
 const strict = feed.zones.find((zone) => zone.sourceKind === 'strict_15m_fvg');
 assert.ok(strict);
 assert.equal(strict?.lower, 7679.75);
 assert.equal(strict?.upper, 7683.5);
-assert.equal(strict?.draw.label, 'Bull Final Boss (strict 15M FVG)');
+assert.equal(strict?.draw.label, 'Bull Final Boss');
 assert.equal(strict?.authorityBoundary.placesOrders, false);
 
 const mss = feed.zones.find((zone) => zone.sourceKind === 'mss_protected_imbalance_origin' && zone.direction === 'SHORT');
@@ -152,13 +153,19 @@ assert.ok(mss);
 assert.equal(mss?.direction, 'SHORT');
 assert.equal(mss?.kind, 'final_boss_mss_zone');
 assert.equal(mss?.lineInSand, 7705);
-assert.equal(mss?.draw.label, 'Bear Final Boss Shift (15M MSS origin)');
+assert.equal(mss?.draw.label, 'Bear Final Boss');
 
 const displayStrict = feed.displayZones.find((zone) => zone.sourceKind === 'strict_15m_fvg');
 assert.ok(displayStrict);
 assert.equal(displayStrict?.lower, 7679.75);
 assert.equal(displayStrict?.upper, 7683.5);
 assert.equal(displayStrict?.state, 'defended');
+
+const displayMssBoss = feed.displayZones.find((zone) => zone.kind === 'final_boss_mss_zone' && zone.direction === 'SHORT');
+assert.ok(displayMssBoss);
+assert.equal(displayMssBoss?.lower, 7705);
+assert.equal(displayMssBoss?.upper, 7723);
+assert.equal(displayMssBoss?.draw.label, 'Bear Final Boss');
 
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'scanner-zone-feed-'));
 try {

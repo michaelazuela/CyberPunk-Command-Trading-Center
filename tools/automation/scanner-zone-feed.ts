@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 
 export const SCANNER_ZONE_FEED_DIR = path.join(__dirname, 'scanner-zone-feed');
 export const SCANNER_ZONE_FEED_FILE = path.join(SCANNER_ZONE_FEED_DIR, 'quant-desk-scanner-zones.json');
-export const SCANNER_ZONE_FEED_VERSION = 1;
+export const SCANNER_ZONE_FEED_VERSION = 2;
 
 export type ScannerZoneFeedZoneKind =
   | 'retained_boss_zone'
@@ -78,6 +78,7 @@ export interface ScannerZoneFeed {
     mode: 'desk';
     maxZones: number;
     hidesStates: string[];
+    hidesKinds: ScannerZoneFeedZoneKind[];
     purpose: string;
   };
   summary: string;
@@ -130,9 +131,7 @@ function zoneDrawStyle(args: {
 function retainedZoneToFeedZone(zone: DeskRetainedBossZone, kind: ScannerZoneFeedZoneKind): ScannerZoneFeedZone {
   const draw = zoneDrawStyle({ direction: zone.direction, kind, state: zone.state });
   const labelSide = zone.direction === 'LONG' ? 'Bull' : 'Bear';
-  const labelRole = kind === 'active_mss_protected_boss_zone'
-    ? 'Active MSS Boss'
-    : 'Final Boss';
+  const labelRole = 'Final Boss';
   return {
     id: [
       kind,
@@ -160,7 +159,7 @@ function retainedZoneToFeedZone(zone: DeskRetainedBossZone, kind: ScannerZoneFee
     invalidation: zone.invalidation,
     draw: {
       ...draw,
-      label: `${labelSide} ${labelRole} (${zone.sourceLabel})`,
+      label: `${labelSide} ${labelRole}`,
     },
     authorityBoundary: {
       displayOnly: true,
@@ -201,7 +200,7 @@ function finalBossMssZoneToFeedZone(zone: DeskFinalBossMssZone): ScannerZoneFeed
     invalidation: zone.invalidation,
     draw: {
       ...draw,
-      label: `${labelSide} Final Boss Shift (${zone.sourceLabel})`,
+      label: `${labelSide} Final Boss`,
     },
     authorityBoundary: {
       displayOnly: true,
@@ -226,8 +225,8 @@ function uniqueZones(zones: ScannerZoneFeedZone[]): ScannerZoneFeedZone[] {
 }
 
 function isHiddenInDeskMode(zone: ScannerZoneFeedZone): boolean {
-  if (/invalid|expired|pierced/i.test(zone.state)) return true;
-  if (zone.sourceKind === 'mss_protected_imbalance_origin') return true;
+  if (/invalid|expired|pierced|flipped|reaction/i.test(zone.state)) return true;
+  if (zone.kind === 'active_mss_protected_boss_zone') return true;
   return false;
 }
 
@@ -246,7 +245,7 @@ function deskZonePriority(zone: ScannerZoneFeedZone, price: number | null | unde
   if (zone.role === 'final_boss_mss_zone') priority += 10;
   if (zone.role === 'final_boss_zone') priority += 8;
   if (zone.sourceKind === 'strict_15m_fvg') priority += 8;
-  if (zone.sourceKind === 'mss_protected_imbalance_origin') priority -= 35;
+  if (zone.sourceKind === 'mss_protected_imbalance_origin' && zone.kind !== 'final_boss_mss_zone') priority -= 35;
   if (/defended/i.test(zone.state)) priority += 10;
   if (/active_control/i.test(zone.state)) priority += 8;
   if (/flipped_reaction/i.test(zone.state)) priority -= 8;
@@ -349,8 +348,9 @@ export function buildScannerZoneFeed(args: {
     displayPolicy: {
       mode: 'desk',
       maxZones: 6,
-      hidesStates: ['invalidated', 'expired', 'pierced', 'mss_protected_imbalance_origin'],
-      purpose: 'Show readable strict 15M FVG final-boss boxes while preserving broad MSS-origin/reaction zones in raw zones[] for audit/debug.',
+      hidesStates: ['invalidated', 'expired', 'pierced', 'flipped_reaction'],
+      hidesKinds: ['active_mss_protected_boss_zone'],
+      purpose: 'Show readable 15M Final Boss boxes while preserving active micro/MSS-protected context in raw zones[] for audit/debug.',
     },
     summary: feedZones.length
       ? `Scanner overlay feed exported ${displayZones.length}/${feedZones.length} desk-visible 15M boss/FVG zone(s). NinjaTrader display is read-only.`
