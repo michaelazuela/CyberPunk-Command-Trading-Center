@@ -84,6 +84,25 @@ const flippedBullZone = {
   use: 'Bull final boss flipped into reaction context.',
 } as any;
 
+const farHistoricalBullMssZone = {
+  ...mssBearZone,
+  sourceOfTruth: 'scanner_final_boss_mss_zone_lifecycle',
+  sourceKind: 'strict_15m_fvg',
+  sourceLabel: 'strict 15M FVG',
+  direction: 'LONG',
+  bossRole: 'active_final_boss',
+  lower: 7636.5,
+  upper: 7637,
+  midpoint: 7636.75,
+  lineInSand: 7641.75,
+  formedAt: '2026-08-29T03:00:00-04:00',
+  mssBreakAt: '2026-08-29T08:00:00-04:00',
+  state: 'active_control',
+  stateReason: 'Old Final Boss remains in full retained memory.',
+  use: 'Bull final boss zone produced an older 15M structure shift higher.',
+  invalidation: 'Old zone is hidden from clean desk view unless price returns near it.',
+} as any;
+
 const deskState = {
   canExecute: false,
   primaryDeskPlay: {
@@ -100,7 +119,7 @@ const deskState = {
       bearBoss: null,
       activeMssProtectedBossZone: null,
       finalBossMssZones: {
-        bull: [],
+        bull: [farHistoricalBullMssZone],
         bear: [mssBearZone],
         primaryBull: null,
         primaryBear: mssBearZone,
@@ -128,18 +147,19 @@ const feed = buildScannerZoneFeed({
 });
 
 assert.equal(feed.sourceOfTruth, 'scanner_zone_overlay_feed');
-assert.equal(feed.schemaVersion, 5);
+assert.equal(feed.schemaVersion, 6);
 assert.equal(feed.primaryDeskPlay.canExecute, false);
 assert.equal(feed.authorityBoundary.displayOnly, true);
 assert.equal(feed.authorityBoundary.ninjaTraderIndicatorOwnsRules, false);
 assert.equal(feed.authorityBoundary.placesOrders, false);
-assert.equal(feed.zones.length, 4);
+assert.equal(feed.zones.length, 5);
 assert.ok(Array.isArray(feed.finalBossZones));
 assert.ok(Array.isArray(feed.tradeBoxes));
 assert.ok(Array.isArray(feed.reactionZones));
 assert.ok(Array.isArray(feed.debugZones));
-assert.equal(feed.displayPolicy.mode, 'desk');
-assert.equal(feed.displayPolicy.maxZones, 6);
+assert.equal(feed.displayPolicy.mode, 'clean_desk');
+assert.equal(feed.displayPolicy.maxZones, 4);
+assert.equal(feed.displayPolicy.maxDistancePoints, 18);
 assert.deepEqual(feed.displayPolicy.hidesStates, ['invalidated', 'expired']);
 assert.deepEqual(feed.displayPolicy.hidesKinds, ['active_mss_protected_boss_zone']);
 assert.equal(feed.displayZones.length, 1);
@@ -147,7 +167,7 @@ assert.equal(feed.displayZones.some((zone) => zone.state === 'flipped_reaction')
 assert.equal(feed.displayZones.some((zone) => zone.kind === 'active_mss_protected_boss_zone'), false);
 assert.equal(feed.debugZones.some((zone) => zone.kind === 'active_mss_protected_boss_zone'), false);
 
-const strict = feed.zones.find((zone) => zone.sourceKind === 'strict_15m_fvg');
+const strict = feed.zones.find((zone) => zone.lower === 7679.75 && zone.upper === 7683.5);
 assert.ok(strict);
 assert.equal(strict?.lower, 7679.75);
 assert.equal(strict?.upper, 7683.5);
@@ -174,6 +194,11 @@ assert.equal(displayStrict?.category, 'final_boss');
 
 const displayMssBoss = feed.displayZones.find((zone) => zone.kind === 'final_boss_mss_zone' && zone.direction === 'SHORT');
 assert.equal(displayMssBoss, undefined);
+
+const farHistorical = feed.zones.find((zone) => zone.lower === 7636.5 && zone.upper === 7637);
+assert.ok(farHistorical);
+assert.equal(farHistorical?.bossRole, 'active_final_boss');
+assert.equal(feed.displayZones.some((zone) => zone.id === farHistorical?.id), false);
 
 assert.equal(feed.finalBossZones.some((zone) => zone.sourceKind === 'strict_15m_fvg'), true);
 assert.equal(feed.finalBossZones.some((zone) => zone.sourceKind === 'mss_protected_imbalance_origin' && zone.upper - zone.lower > 8), false);

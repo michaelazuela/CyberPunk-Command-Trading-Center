@@ -13,7 +13,9 @@ const __dirname = path.dirname(__filename);
 
 export const SCANNER_ZONE_FEED_DIR = path.join(__dirname, 'scanner-zone-feed');
 export const SCANNER_ZONE_FEED_FILE = path.join(SCANNER_ZONE_FEED_DIR, 'quant-desk-scanner-zones.json');
-export const SCANNER_ZONE_FEED_VERSION = 5;
+export const SCANNER_ZONE_FEED_VERSION = 6;
+const CLEAN_DESK_MAX_ZONES = 4;
+const CLEAN_DESK_MAX_DISTANCE_POINTS = 18;
 
 export type ScannerZoneFeedZoneKind =
   | 'retained_boss_zone'
@@ -86,8 +88,9 @@ export interface ScannerZoneFeed {
   debugZones: ScannerZoneFeedZone[];
   displayZones: ScannerZoneFeedZone[];
   displayPolicy: {
-    mode: 'desk';
+    mode: 'clean_desk';
     maxZones: number;
+    maxDistancePoints: number;
     hidesStates: string[];
     hidesKinds: ScannerZoneFeedZoneKind[];
     purpose: string;
@@ -453,6 +456,66 @@ function buildDisplayZones(
     .sort((a, b) => b.upper - a.upper || b.lower - a.lower);
 }
 
+function isWithinCleanDeskDistance(zone: ScannerZoneFeedZone, price: number | null | undefined): boolean {
+  if (typeof price !== 'number' || !Number.isFinite(price)) return true;
+  return zoneDistanceToPrice(zone, price) <= CLEAN_DESK_MAX_DISTANCE_POINTS;
+}
+
+function nearestZone(
+  zones: ScannerZoneFeedZone[],
+  price: number | null | undefined,
+  direction: 'LONG' | 'SHORT',
+): ScannerZoneFeedZone | null {
+  const candidates = zones
+    .filter((zone) => zone.direction === direction)
+    .filter((zone) => zone.category === 'final_boss' || zone.category === 'trade_box')
+    .filter((zone) => isWithinCleanDeskDistance(zone, price));
+
+  if (typeof price === 'number' && Number.isFinite(price)) {
+    const sided = candidates.filter((zone) =>
+      direction === 'LONG'
+        ? zone.lower <= price
+        : zone.upper >= price,
+    );
+    if (sided.length > 0) {
+      return sided.sort((a, b) => {
+        const distanceDelta = zoneDistanceToPrice(a, price) - zoneDistanceToPrice(b, price);
+        if (Math.abs(distanceDelta) > 0.0001) return distanceDelta;
+        return deskZonePriority(b, price) - deskZonePriority(a, price);
+      })[0] || null;
+    }
+  }
+
+  return candidates.sort((a, b) => {
+    const distanceDelta = zoneDistanceToPrice(a, price) - zoneDistanceToPrice(b, price);
+    if (Math.abs(distanceDelta) > 0.0001) return distanceDelta;
+    return deskZonePriority(b, price) - deskZonePriority(a, price);
+  })[0] || null;
+}
+
+function buildCleanDeskDisplayZones(
+  zones: ScannerZoneFeedZone[],
+  price: number | null | undefined,
+): ScannerZoneFeedZone[] {
+  const visible = zones.filter((zone) => !isHiddenInDeskMode(zone));
+  const selected = new Map<string, ScannerZoneFeedZone>();
+  const add = (zone: ScannerZoneFeedZone | null | undefined) => {
+    if (!zone || !isWithinCleanDeskDistance(zone, price)) return;
+    selected.set(zone.id, zone);
+  };
+
+  add(nearestZone(visible, price, 'SHORT'));
+  add(nearestZone(visible, price, 'LONG'));
+
+  for (const zone of visible) {
+    if (zone.kind !== 'final_boss_mss_zone') continue;
+    if (zone.bossRole !== 'active_final_boss' && zone.bossRole !== 'flipped_reaction_boss') continue;
+    add(zone);
+  }
+
+  return buildDisplayZones([...selected.values()], price, CLEAN_DESK_MAX_ZONES);
+}
+
 export function buildScannerZoneFeed(args: {
   deskState: DeskState;
   instrument: string;
@@ -477,9 +540,9 @@ export function buildScannerZoneFeed(args: {
   const feedZones = uniqueZones(zones).map((zone) => enrichZone(zone, args.currentPrice));
   const buckets = buildZoneBuckets(feedZones, args.currentPrice);
   const displayZones = buildDisplayZones(
-    [...buckets.finalBossZones, ...buckets.tradeBoxes],
+    buildCleanDeskDisplayZones([...buckets.finalBossZones, ...buckets.tradeBoxes], args.currentPrice),
     args.currentPrice,
-    6,
+    CLEAN_DESK_MAX_ZONES,
   );
   return {
     sourceOfTruth: 'scanner_zone_overlay_feed',
@@ -507,11 +570,12 @@ export function buildScannerZoneFeed(args: {
     debugZones: buckets.debugZones,
     displayZones,
     displayPolicy: {
-      mode: 'desk',
-      maxZones: 6,
+      mode: 'clean_desk',
+      maxZones: CLEAN_DESK_MAX_ZONES,
+      maxDistancePoints: CLEAN_DESK_MAX_DISTANCE_POINTS,
       hidesStates: ['invalidated', 'expired'],
       hidesKinds: ['active_mss_protected_boss_zone'],
-      purpose: 'Show clean scanner-owned Final Boss and Trade Box buckets by default while preserving reaction zones and noisy MSS-origin internals for explicit overlay modes/audit.',
+      purpose: 'Show the current battlefield only: nearest overhead bear boss, nearest under-price bull boss, and nearby active MSS-created boss zones. Full retained memory remains available in zones/debug arrays for audit.',
     },
     summary: feedZones.length
       ? `Scanner overlay feed exported ${displayZones.length}/${feedZones.length} desk-visible zone(s): ${buckets.finalBossZones.length} final boss, ${buckets.tradeBoxes.length} trade box, ${buckets.reactionZones.length} reaction. NinjaTrader display is read-only.`
