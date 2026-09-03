@@ -119,6 +119,10 @@ function isFlippedReactionState(state: string): boolean {
   return /flipped|reaction/i.test(state);
 }
 
+function isUnflippedControlState(state: string): boolean {
+  return /active_control|defended|pierced/i.test(state) && !isFlippedReactionState(state);
+}
+
 function isBroadMssOriginZone(zone: Pick<ScannerZoneFeedZone, 'sourceKind' | 'kind' | 'lower' | 'upper'>): boolean {
   return zone.sourceKind === 'mss_protected_imbalance_origin'
     && zone.kind === 'final_boss_mss_zone'
@@ -504,12 +508,28 @@ function buildCleanDeskDisplayZones(
     selected.set(zone.id, zone);
   };
 
-  add(nearestZone(visible, price, 'SHORT'));
-  add(nearestZone(visible, price, 'LONG'));
+  const cleanSideZones = visible.filter((zone) => {
+    if (typeof price !== 'number' || !Number.isFinite(price)) return true;
+    if (!isUnflippedControlState(zone.state)) return true;
+    return zone.direction === 'LONG'
+      ? zone.lower <= price
+      : zone.upper >= price;
+  });
+
+  add(nearestZone(cleanSideZones, price, 'SHORT'));
+  add(nearestZone(cleanSideZones, price, 'LONG'));
 
   for (const zone of visible) {
     if (zone.kind !== 'final_boss_mss_zone') continue;
     if (zone.bossRole !== 'active_final_boss' && zone.bossRole !== 'flipped_reaction_boss') continue;
+    if (
+      typeof price === 'number'
+      && Number.isFinite(price)
+      && isUnflippedControlState(zone.state)
+      && ((zone.direction === 'LONG' && zone.lower > price) || (zone.direction === 'SHORT' && zone.upper < price))
+    ) {
+      continue;
+    }
     add(zone);
   }
 

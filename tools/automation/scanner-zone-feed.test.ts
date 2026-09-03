@@ -103,6 +103,22 @@ const farHistoricalBullMssZone = {
   invalidation: 'Old zone is hidden from clean desk view unless price returns near it.',
 } as any;
 
+const unflippedBearBelowPriceZone = {
+  ...strictBullZone,
+  sourceKind: 'strict_15m_fvg',
+  sourceLabel: 'strict 15M FVG',
+  direction: 'SHORT',
+  lower: 7672.25,
+  upper: 7677.25,
+  midpoint: 7674.75,
+  lineInSand: 7677.25,
+  formedAt: '2026-09-02T16:45:00-04:00',
+  state: 'defended',
+  stateReason: 'Bear zone has not accepted through or flipped yet.',
+  use: 'Bear Final Boss Resistance: watch only while price remains below the zone ceiling.',
+  invalidation: 'Not a flipped short boss unless completed acceptance proves the flip.',
+} as any;
+
 const deskState = {
   canExecute: false,
   primaryDeskPlay: {
@@ -124,7 +140,7 @@ const deskState = {
         primaryBull: null,
         primaryBear: mssBearZone,
       },
-      zones: [strictBullZone, noisyBullZone, flippedBullZone],
+      zones: [strictBullZone, noisyBullZone, flippedBullZone, unflippedBearBelowPriceZone],
       summary: 'Loopback zones.',
       approvalBoundary: {
         changesTradeApprovals: false,
@@ -152,7 +168,7 @@ assert.equal(feed.primaryDeskPlay.canExecute, false);
 assert.equal(feed.authorityBoundary.displayOnly, true);
 assert.equal(feed.authorityBoundary.ninjaTraderIndicatorOwnsRules, false);
 assert.equal(feed.authorityBoundary.placesOrders, false);
-assert.equal(feed.zones.length, 5);
+assert.equal(feed.zones.length, 6);
 assert.ok(Array.isArray(feed.finalBossZones));
 assert.ok(Array.isArray(feed.tradeBoxes));
 assert.ok(Array.isArray(feed.reactionZones));
@@ -199,6 +215,12 @@ const farHistorical = feed.zones.find((zone) => zone.lower === 7636.5 && zone.up
 assert.ok(farHistorical);
 assert.equal(farHistorical?.bossRole, 'active_final_boss');
 assert.equal(feed.displayZones.some((zone) => zone.id === farHistorical?.id), false);
+
+const unflippedBearBelowPrice = feed.zones.find((zone) => zone.lower === 7672.25 && zone.upper === 7677.25);
+assert.ok(unflippedBearBelowPrice);
+assert.equal(unflippedBearBelowPrice?.direction, 'SHORT');
+assert.equal(unflippedBearBelowPrice?.state, 'defended');
+assert.equal(feed.displayZones.some((zone) => zone.id === unflippedBearBelowPrice?.id), false);
 
 assert.equal(feed.finalBossZones.some((zone) => zone.sourceKind === 'strict_15m_fvg'), true);
 assert.equal(feed.finalBossZones.some((zone) => zone.sourceKind === 'mss_protected_imbalance_origin' && zone.upper - zone.lower > 8), false);
