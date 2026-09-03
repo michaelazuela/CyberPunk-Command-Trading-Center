@@ -36,6 +36,7 @@ const mssBearZone = {
   sourceLabel: '15M MSS origin',
   direction: 'SHORT',
   role: 'final_boss_mss_zone',
+  bossRole: 'prior_boss',
   lower: 7705,
   upper: 7723,
   midpoint: 7714,
@@ -127,7 +128,7 @@ const feed = buildScannerZoneFeed({
 });
 
 assert.equal(feed.sourceOfTruth, 'scanner_zone_overlay_feed');
-assert.equal(feed.schemaVersion, 4);
+assert.equal(feed.schemaVersion, 5);
 assert.equal(feed.primaryDeskPlay.canExecute, false);
 assert.equal(feed.authorityBoundary.displayOnly, true);
 assert.equal(feed.authorityBoundary.ninjaTraderIndicatorOwnsRules, false);
@@ -160,6 +161,7 @@ assert.ok(mss);
 assert.equal(mss?.direction, 'SHORT');
 assert.equal(mss?.kind, 'final_boss_mss_zone');
 assert.equal(mss?.lineInSand, 7705);
+assert.equal(mss?.bossRole, 'prior_boss');
 assert.equal(mss?.category, 'reaction_zone');
 assert.equal(mss?.draw.label, 'Bear Reaction Zone');
 

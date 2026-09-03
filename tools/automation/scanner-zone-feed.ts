@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 
 export const SCANNER_ZONE_FEED_DIR = path.join(__dirname, 'scanner-zone-feed');
 export const SCANNER_ZONE_FEED_FILE = path.join(SCANNER_ZONE_FEED_DIR, 'quant-desk-scanner-zones.json');
-export const SCANNER_ZONE_FEED_VERSION = 4;
+export const SCANNER_ZONE_FEED_VERSION = 5;
 
 export type ScannerZoneFeedZoneKind =
   | 'retained_boss_zone'
@@ -30,6 +30,7 @@ export interface ScannerZoneFeedZone {
   sourceKind: string;
   sourceLabel: string;
   role: string;
+  bossRole: string | null;
   lower: number;
   upper: number;
   midpoint: number;
@@ -154,7 +155,10 @@ function reactionGrade(score: number): ScannerZoneFeedReactionGrade {
 
 function classifyZone(zone: ScannerZoneFeedZone): ScannerZoneFeedZoneCategory {
   if (isInvalidOrExpiredState(zone.state)) return 'debug';
+  if (zone.bossRole === 'debug_only') return 'debug';
   if (zone.kind === 'active_mss_protected_boss_zone') return 'debug';
+  if (zone.bossRole === 'flipped_reaction_boss') return 'reaction_zone';
+  if (zone.bossRole === 'active_final_boss') return 'final_boss';
   if (isFlippedReactionState(zone.state)) return 'reaction_zone';
   if (isBroadMssOriginZone(zone)) return 'reaction_zone';
   if (zone.sourceKind === 'strict_15m_fvg' && /defended|active_control|pierced/i.test(zone.state)) {
@@ -262,6 +266,7 @@ function retainedZoneToFeedZone(zone: DeskRetainedBossZone, kind: ScannerZoneFee
     sourceKind: zone.sourceKind,
     sourceLabel: zone.sourceLabel,
     role: zone.role,
+    bossRole: null,
     lower: zone.lower,
     upper: zone.upper,
     midpoint: zone.midpoint,
@@ -307,6 +312,7 @@ function finalBossMssZoneToFeedZone(zone: DeskFinalBossMssZone): ScannerZoneFeed
     sourceKind: zone.sourceKind,
     sourceLabel: zone.sourceLabel,
     role: zone.role,
+    bossRole: zone.bossRole || null,
     lower: zone.lower,
     upper: zone.upper,
     midpoint: zone.midpoint,

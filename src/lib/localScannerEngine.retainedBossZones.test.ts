@@ -383,10 +383,82 @@ assert.equal(activeShort.primaryDeskPlay.retainedBossZones.activeMssProtectedBos
 assert.equal(activeShort.primaryDeskPlay.activeMssProtectedBossZone?.role, 'active_mss_protected_boss_zone');
 assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.direction, 'SHORT');
 assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.role, 'final_boss_mss_zone');
-assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.lower, 7701);
-assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.upper, 7712);
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.bossRole, 'active_final_boss');
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.sourceKind, 'strict_15m_fvg');
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.lower, 7702);
+assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.upper, 7705);
 assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.mssLine, 7701);
 assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBear?.state, 'defended');
 assert.equal(activeShort.primaryDeskPlay.retainedBossZones.finalBossMssZones.bear.length, 1);
+
+const strictBullMssContext = {
+  sessionType: 'lunch',
+  instrument: 'MES',
+  tradeDate: '2026-09-02',
+  timeframe: '5m',
+  screenshotUsability: 'usable',
+  keyLevels: { currentPrice: 7680.75 },
+  candles: [
+    { index: 0, timestamp: '2026-09-02T15:45:00-04:00', open: 7675, high: 7682, low: 7674, close: 7680.75, direction: 'bullish', confidence: 'High' },
+  ],
+  multiTimeframeContext: {
+    source: 'ninjatrader_bridge',
+    authority: 'ohlc_facts_only',
+    alignment: {
+      macroBias: 'LONG',
+      sessionBias: 'LONG',
+      liquidityBias: 'LONG',
+      executionBias: 'LONG',
+      alignedDirection: 'LONG',
+      conflicts: [],
+      notes: [],
+    },
+    fifteenMinute: factSet({
+      timeframe: '15m',
+      candles: [
+        { index: 0, timestamp: '2026-09-02T07:15:00-04:00', open: 7638, high: 7646, low: 7634, close: 7644, direction: 'bullish', confidence: 'High' },
+        { index: 1, timestamp: '2026-09-02T07:30:00-04:00', open: 7644, high: 7650, low: 7639, close: 7642, direction: 'bearish', confidence: 'High' },
+        { index: 2, timestamp: '2026-09-02T07:45:00-04:00', open: 7642, high: 7648, low: 7636, close: 7646, direction: 'bullish', confidence: 'High' },
+        { index: 3, timestamp: '2026-09-02T08:00:00-04:00', open: 7644, high: 7652, low: 7640, close: 7648, direction: 'bullish', confidence: 'High' },
+        { index: 4, timestamp: '2026-09-02T08:15:00-04:00', open: 7648, high: 7651, low: 7642, close: 7644, direction: 'bearish', confidence: 'High' },
+        { index: 5, timestamp: '2026-09-02T08:30:00-04:00', open: 7644, high: 7674, low: 7653.25, close: 7668, direction: 'bullish', confidence: 'High' },
+        { index: 6, timestamp: '2026-09-02T08:45:00-04:00', open: 7668, high: 7690, low: 7666, close: 7684, direction: 'bullish', confidence: 'High' },
+        { index: 7, timestamp: '2026-09-02T12:15:00-04:00', open: 7676, high: 7688, low: 7668, close: 7672, direction: 'bearish', confidence: 'High' },
+        { index: 8, timestamp: '2026-09-02T12:30:00-04:00', open: 7672, high: 7680, low: 7653.5, close: 7665, direction: 'bearish', confidence: 'High' },
+        { index: 9, timestamp: '2026-09-02T13:00:00-04:00', open: 7658, high: 7683, low: 7652.75, close: 7678, direction: 'bullish', confidence: 'High' },
+      ],
+      fvgZones: [],
+    }),
+    fiveMinute: factSet({
+      timeframe: '5m',
+      role: 'execution',
+      candles: [
+        { index: 0, timestamp: '2026-09-02T15:45:00-04:00', open: 7675, high: 7682, low: 7674, close: 7680.75, direction: 'bullish', confidence: 'High' },
+      ],
+    }),
+    oneHour: factSet({ timeframe: '1h' }),
+    fourHour: factSet({ timeframe: '4h', role: 'macro_context' }),
+    targetMap: { liquidityTargets: [], imbalanceTargets: [], reactionZones: [], notes: [] },
+  },
+  marketContext: 'Loopback strict 15M MSS FVG origin must beat broad pre-break cluster.',
+} as any;
+
+const strictBullMss = buildDeskState({
+  state: 'NoTrade',
+  candidate: null,
+  visibilityMetadata: shortVisibilityMetadata,
+  candidateLifecycleTrace: shortLifecycle,
+  currentPrice: 7680.75,
+  canExecute: false,
+  chartContext: strictBullMssContext,
+});
+assert.equal(strictBullMss.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull?.direction, 'LONG');
+assert.equal(strictBullMss.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull?.bossRole, 'active_final_boss');
+assert.equal(strictBullMss.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull?.sourceKind, 'strict_15m_fvg');
+assert.equal(strictBullMss.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull?.lower, 7652);
+assert.equal(strictBullMss.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull?.upper, 7653.25);
+assert.equal(strictBullMss.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull?.mssLine, 7652);
+assert.equal(strictBullMss.primaryDeskPlay.retainedBossZones.finalBossMssZones.primaryBull?.state, 'defended');
+assert.equal(strictBullMss.canExecute, false);
 
 console.log('retained boss-zone ledger loopback test passed');

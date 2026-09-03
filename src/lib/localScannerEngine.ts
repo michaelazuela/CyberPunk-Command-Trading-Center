@@ -641,6 +641,7 @@ export interface DeskFinalBossMssZone {
   sourceLabel: string;
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
   role: 'final_boss_mss_zone';
+  bossRole: 'active_final_boss' | 'flipped_reaction_boss' | 'prior_boss' | 'debug_only';
   lower: number;
   upper: number;
   midpoint: number;
@@ -3568,12 +3569,18 @@ function explicitZoneForMssBreak(args: {
   const breakLow = completedCandleLow(args.breakCandle);
   const candidates = args.zones
     .filter((item) => item.zone.direction === args.direction)
+    .filter((item) => item.sourceKind === 'strict_15m_fvg')
     .filter((item) => bossZoneFormedAtMs(item) <= args.breakTimeMs)
     .filter((item) => {
       if (breakHigh === null || breakLow === null) return true;
       return breakHigh >= item.lower && breakLow <= item.upper;
     })
-    .sort((a, b) => bossZoneFormedAtMs(b) - bossZoneFormedAtMs(a));
+    .sort((a, b) => {
+      const aDerived = a.derivedFallback ? 1 : 0;
+      const bDerived = b.derivedFallback ? 1 : 0;
+      if (aDerived !== bDerived) return aDerived - bDerived;
+      return bossZoneFormedAtMs(b) - bossZoneFormedAtMs(a);
+    });
   const selected = candidates[0];
   return selected
     ? {
@@ -3585,6 +3592,16 @@ function explicitZoneForMssBreak(args: {
         sourceLabel: selected.sourceLabel,
       }
     : null;
+}
+
+function finalBossMssBossRole(
+  state: DeskFinalBossMssZoneState,
+  sourceKind: DeskBossZoneSourceKind,
+): DeskFinalBossMssZone['bossRole'] {
+  if (state === 'expired') return 'debug_only';
+  if (state === 'flipped_reaction') return 'flipped_reaction_boss';
+  if (sourceKind !== 'strict_15m_fvg') return 'prior_boss';
+  return 'active_final_boss';
 }
 
 function finalBossMssZoneState(args: {
@@ -3678,11 +3695,7 @@ function buildFinalBossMssZones(args: {
       const breakTimeMs = breakTime ? new Date(breakTime).getTime() : 0;
       const explicit = explicitZoneForMssBreak({ zones: args.zones, breakCandle, breakTimeMs, direction });
       const preBreakControl = controlZoneFromPreBreakCandles({ candles, breakIndex: index, direction });
-      const explicitWidth = explicit ? explicit.upper - explicit.lower : 0;
-      const controlWidth = preBreakControl ? preBreakControl.upper - preBreakControl.lower : 0;
-      const control = preBreakControl && (!explicit || controlWidth >= explicitWidth * 1.5)
-        ? preBreakControl
-        : explicit;
+      const control = explicit || preBreakControl;
       if (!control) continue;
       const prior = candles.slice(Math.max(0, index - 8), index);
       const priorHighs = prior.map(completedCandleHigh).filter((value): value is number => value !== null);
@@ -3705,6 +3718,7 @@ function buildFinalBossMssZones(args: {
         sourceLabel: control.sourceLabel,
         direction,
         role: 'final_boss_mss_zone',
+        bossRole: finalBossMssBossRole(state.state, control.sourceKind),
         lower: control.lower,
         upper: control.upper,
         midpoint: roundBossZonePrice((control.lower + control.upper) / 2),
@@ -3740,7 +3754,15 @@ function buildFinalBossMssZones(args: {
       const aFlipped = a.state === 'flipped_reaction' ? 1 : 0;
       const bFlipped = b.state === 'flipped_reaction' ? 1 : 0;
       if (aFlipped !== bFlipped) return aFlipped - bFlipped;
-      return (b.mssBreakAt ? new Date(b.mssBreakAt).getTime() : 0) - (a.mssBreakAt ? new Date(a.mssBreakAt).getTime() : 0);
+      const aStrict = a.sourceKind === 'strict_15m_fvg' ? 0 : 1;
+      const bStrict = b.sourceKind === 'strict_15m_fvg' ? 0 : 1;
+      if (aStrict !== bStrict) return aStrict - bStrict;
+      const aBreakTime = a.mssBreakAt ? new Date(a.mssBreakAt).getTime() : 0;
+      const bBreakTime = b.mssBreakAt ? new Date(b.mssBreakAt).getTime() : 0;
+      if (aBreakTime !== bBreakTime) return aBreakTime - bBreakTime;
+      return direction === 'LONG'
+        ? a.lower - b.lower || a.upper - b.upper
+        : b.upper - a.upper || b.lower - a.lower;
     })
     .slice(0, 2);
   const bull = bySide('LONG');
