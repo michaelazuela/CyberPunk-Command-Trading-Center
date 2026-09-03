@@ -512,8 +512,8 @@ function buildCleanDeskDisplayZones(
     if (typeof price !== 'number' || !Number.isFinite(price)) return true;
     if (!isUnflippedControlState(zone.state)) return true;
     return zone.direction === 'LONG'
-      ? zone.lower <= price
-      : zone.upper >= price;
+      ? zone.upper <= price
+      : zone.lower >= price;
   });
 
   add(nearestZone(cleanSideZones, price, 'SHORT'));
@@ -526,7 +526,7 @@ function buildCleanDeskDisplayZones(
       typeof price === 'number'
       && Number.isFinite(price)
       && isUnflippedControlState(zone.state)
-      && ((zone.direction === 'LONG' && zone.lower > price) || (zone.direction === 'SHORT' && zone.upper < price))
+      && ((zone.direction === 'LONG' && zone.upper > price) || (zone.direction === 'SHORT' && zone.lower < price))
     ) {
       continue;
     }

@@ -227,6 +227,33 @@ assert.equal(feed.finalBossZones.some((zone) => zone.sourceKind === 'mss_protect
 assert.equal(feed.reactionZones.some((zone) => zone.sourceKind === 'mss_protected_imbalance_origin' && zone.direction === 'SHORT'), true);
 assert.equal(feed.tradeBoxes.some((zone) => zone.sourceKind === 'strict_15m_fvg'), true);
 
+const insideUnflippedBearFeed = buildScannerZoneFeed({
+  deskState: {
+    ...deskState,
+    primaryDeskPlay: {
+      ...deskState.primaryDeskPlay,
+      retainedBossZones: {
+        ...deskState.primaryDeskPlay.retainedBossZones,
+        zones: [unflippedBearBelowPriceZone],
+        finalBossMssZones: {
+          bull: [],
+          bear: [],
+          primaryBull: null,
+          primaryBear: null,
+        },
+      },
+    },
+  },
+  instrument: 'MES',
+  tradeDate: '2026-09-02',
+  session: 'evening',
+  completed5m: { time: '2026-09-02T21:45:00-04:00' },
+  currentPrice: 7674.5,
+  generatedAt: '2026-09-03T01:55:00.000Z',
+});
+assert.equal(insideUnflippedBearFeed.zones.length, 1);
+assert.equal(insideUnflippedBearFeed.displayZones.length, 0);
+
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'scanner-zone-feed-'));
 try {
   const filePath = path.join(tempDir, 'feed.json');
